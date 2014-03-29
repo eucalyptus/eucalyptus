@@ -67,6 +67,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
@@ -114,6 +115,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         }
 
         final String etag;
+        Date lastModified;
         CopyObjectResponseType response;
 
         try {
@@ -161,7 +163,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 }
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
-            // lastModified = response.getLastModified(); // TODO should CopyObjectResponseType.getLastModified return a Date?
+            // Last modified date in copy response is in ISO8601 format as per S3 spec
+            lastModified = DateFormatter.dateFromListingFormattedString(response.getLastModified()); 
             etag = response.getEtag();
 
         } catch(Exception e) {
@@ -181,7 +184,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         try {
             //fireRepairTask(bucket, savedEntity.getObjectKey());
             //Update metadata to "extant". Retry as necessary
-            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, new Date(), etag);
+            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
         } catch(Exception e) {
             LOG.warn("Failed to update object metadata for finalization. Failing PUT operation", e);
             throw new InternalErrorException(entity.getResourceFullName());
@@ -235,6 +238,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
         response.setStatusMessage(port.getStatusMessage());
         response.setEtag(port.getEtag());
         response.setMetaData(port.getMetaData());
+        // Last modified date in copy response is in ISO8601 format as per S3 API
+        response.setLastModified(DateFormatter.dateToListingFormattedString(port.getLastModified())); 
         return response;
     }
 

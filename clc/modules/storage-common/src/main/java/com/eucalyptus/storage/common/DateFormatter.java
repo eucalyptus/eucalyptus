@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,52 +60,82 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.handlers;
-
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.common.DateFormatter;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.google.common.base.Strings;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+package com.eucalyptus.storage.common;
 
 import java.util.Date;
 
-@ChannelPipelineCoverage("one")
-public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
-    private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
+import org.apache.tools.ant.util.DateUtils;
 
-    @Override
-    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if (event.getMessage() instanceof MappingHttpResponse) {
-            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
-            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-            httpResponse.setHeader("Date", DateFormatter.dateToHeaderFormattedString(new Date()));
-            httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
-            if (msg instanceof ObjectStorageDataResponseType) {
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType) msg).getEtag() + "\""); //etag in quotes, per s3-spec.
+public class DateFormatter {
+	/**
+	 * Helper to do the ISO8601 formatting as found in object/bucket lists
+	 * 
+	 * @param d
+	 * @return
+	 */
+	public static String dateToListingFormattedString(Date d) {
+		if (d == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.format(d.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
 
-                if (!Strings.isNullOrEmpty(((ObjectStorageDataResponseType) msg).getVersionId()) &&
-                        !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
-                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
-                }
+	/**
+	 * Helper to parse the ISO8601 date, as found in listings
+	 * 
+	 * @param header
+	 * @return
+	 */
+	public static Date dateFromListingFormattedString(String header) {
+		if (header == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.parseIso8601DateTimeOrDate(header);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
 
-                //Add user metadata
-                for (MetaDataEntry m : ((ObjectStorageDataResponseType) msg).getMetaData()) {
-                    httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
-                }
-            }
-            //Since a HEAD response, never include a body
-            httpResponse.setMessage(null);
-        }
-    }
+	/**
+	 * Parses an RFC-822 formated date, as found in headers
+	 * 
+	 * @param dateStr
+	 * @return
+	 */
+	public static Date dateFromHeaderFormattedString(String dateStr) {
+		if (dateStr == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.parseRfc822DateTime(dateStr);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
 
+	/**
+	 * Helper to do the RFC822 formatting for placement in HTTP headers
+	 * 
+	 * @param d
+	 * @return
+	 */
+	public static String dateToHeaderFormattedString(Date d) {
+		if (d == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.format(d.getTime(), DateUtils.RFC822_DATETIME_PATTERN);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
 }

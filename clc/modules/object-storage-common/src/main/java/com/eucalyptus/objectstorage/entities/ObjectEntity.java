@@ -26,6 +26,7 @@ import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
@@ -433,7 +434,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         ListEntry e = new ListEntry();
         e.setEtag("\"" + this.geteTag() + "\"");
         e.setKey(this.getObjectKey());
-        e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+        e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
         e.setSize(this.getSize());
         e.setStorageClass(this.getStorageClass());
         e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
@@ -451,7 +452,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
             e.setEtag("\"" + this.geteTag() + "\"");
             e.setKey(this.getObjectKey());
             e.setVersionId(this.getVersionId());
-            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
             e.setSize(this.getSize());
             e.setIsLatest(this.isLatest);
             e.setStorageClass(this.getStorageClass());
@@ -461,7 +462,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
             DeleteMarkerEntry e = new DeleteMarkerEntry();
             e.setKey(this.getObjectKey());
             e.setVersionId(this.getVersionId());
-            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
             e.setIsLatest(this.isLatest);
             e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
             return e;

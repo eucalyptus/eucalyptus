@@ -99,7 +99,6 @@ import com.eucalyptus.walrus.entities.LifecycleRuleInfo;
 import com.eucalyptus.walrus.exceptions.NoSuchLifecycleConfigurationException;
 
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
@@ -126,6 +125,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -353,8 +353,7 @@ public class WalrusFSManager extends WalrusManager {
                     if (bucketHasSnapshots(bucketInfo.getBucketName())) {
                         continue;
                     } else {
-                        buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(),
-                                DateUtils.ALT_ISO8601_DATE_PATTERN)));
+                        buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateFormatter.dateToListingFormattedString(bucketInfo.getCreationDate())));
                     }
                 } catch (Exception e) {
                     LOG.debug(e, e);
@@ -1313,7 +1312,7 @@ public class WalrusFSManager extends WalrusManager {
         }
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
@@ -1541,7 +1540,7 @@ public class WalrusFSManager extends WalrusManager {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
@@ -1997,7 +1996,7 @@ public class WalrusFSManager extends WalrusManager {
                             ListEntry listEntry = new ListEntry();
                             listEntry.setKey(objectKey);
                             listEntry.setEtag(objectInfo.getEtag());
-                            listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                            listEntry.setLastModified(DateFormatter.dateToListingFormattedString(objectInfo.getLastModified()));
                             listEntry.setStorageClass(objectInfo.getStorageClass());
                             listEntry.setSize(objectInfo.getSize());
                             listEntry.setStorageClass(objectInfo.getStorageClass());
@@ -2641,23 +2640,22 @@ public class WalrusFSManager extends WalrusManager {
                         } else {
                             reply.setHasStreamingData(true);
                             // support for large objects
-                            storageManager.sendObject(request, httpResponse, bucketName, objectName, size, etag,
-                                    DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
-                                    request.getIsCompressed(), versionId, logData);
+							storageManager.sendObject(request, httpResponse, bucketName, objectName, size, etag,
+									DateFormatter.dateToHeaderFormattedString(lastModified), contentType, contentDisposition, request.getIsCompressed(),
+									versionId, logData);
 
                             return null;
                         }
                     }
                 } else {
                     // Request is for headers/metadata only
-                    storageManager.sendHeaders(request, httpResponse, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition, versionId,
-                            logData);
+					storageManager.sendHeaders(request, httpResponse, size, etag, DateFormatter.dateToHeaderFormattedString(lastModified), contentType,
+							contentDisposition, versionId, logData);
                     return null;
 
                 }
                 reply.setEtag(etag);
-                reply.setLastModified(DateUtils.format(lastModified, DateUtils.RFC822_DATETIME_PATTERN));
+                reply.setLastModified(lastModified);
                 reply.setSize(size);
                 reply.setContentType(contentType);
                 reply.setContentDisposition(contentDisposition);
@@ -2798,14 +2796,13 @@ public class WalrusFSManager extends WalrusManager {
                     versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : WalrusProperties.NULL_VERSION_ID;
                 }
                 if (request.getGetData()) {
-                    storageManager.sendObject(request, httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd + 1, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
-                            request.getIsCompressed(), versionId, logData);
+					storageManager.sendObject(request, httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd + 1, size, etag,
+							DateFormatter.dateToHeaderFormattedString(lastModified), contentType, contentDisposition, request.getIsCompressed(), versionId,
+							logData);
                     return null;
                 } else {
-                    storageManager.sendHeaders(request, httpResponse, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition, versionId,
-                            logData);
+					storageManager.sendHeaders(request, httpResponse, size, etag, DateFormatter.dateToHeaderFormattedString(lastModified), contentType,
+							contentDisposition, versionId, logData);
                     return null;
                 }
             } else {
@@ -2881,9 +2878,9 @@ public class WalrusFSManager extends WalrusManager {
         } else {
             response.setHasStreamingData(true);
             // support for large objects
-            storageManager.sendObject(request, httpResponse, parts, objectInfo.getSize(), objectInfo.getEtag(),
-                    DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN), objectInfo.getContentType(), objectInfo.getContentDisposition(),
-                    request.getIsCompressed(), objectInfo.getVersionId());
+			storageManager.sendObject(request, httpResponse, parts, objectInfo.getSize(), objectInfo.getEtag(),
+					DateFormatter.dateToHeaderFormattedString(objectInfo.getLastModified()), objectInfo.getContentType(), objectInfo.getContentDisposition(),
+					request.getIsCompressed(), objectInfo.getVersionId());
 
             return null;
         }
@@ -3070,7 +3067,8 @@ public class WalrusFSManager extends WalrusManager {
                             dbObject.add(destinationObjectInfo);
 
                         reply.setEtag(etag);
-                        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                        // Last modified date in copy response is in ISO8601 format as per S3 spec
+                        reply.setLastModified(DateFormatter.dateToListingFormattedString(lastModified));
 
                         if (foundDestinationBucketInfo.isVersioningEnabled()) {
                             reply.setCopySourceVersionId(sourceVersionId);
@@ -3494,7 +3492,7 @@ public class WalrusFSManager extends WalrusManager {
                             keyEntry.setKey(objectKey);
                             keyEntry.setVersionId(objectInfo.getVersionId());
                             keyEntry.setIsLatest(objectInfo.getLast());
-                            keyEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                            keyEntry.setLastModified(DateFormatter.dateToListingFormattedString(objectInfo.getLastModified()));
                             try {
                                 Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
                                 keyEntry.setOwner(new CanonicalUser(ownerAccount.getCanonicalId(), ownerAccount.getName()));
@@ -3972,7 +3970,7 @@ public class WalrusFSManager extends WalrusManager {
         }
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
@@ -4103,6 +4101,7 @@ public class WalrusFSManager extends WalrusManager {
                             }
 
                             ObjectInfo objectInfo = new ObjectInfo(bucketName, objectKey);
+                            objectInfo.setOwnerId(account.getAccountNumber());
                             objectInfo.setCleanup(false);
                             objectInfo.setEtag(eTag);
                             objectInfo.setUploadId(foundManifest.getUploadId());
@@ -4116,6 +4115,7 @@ public class WalrusFSManager extends WalrusManager {
                             objectInfo.setLast(true);
                             objectInfo.setDeleted(false);
                             objectInfo.updateGrants(foundManifest);
+                            objectInfo.setLastModified(new Date());
                             EntityWrapper<ObjectInfo> dbOject = db.recast(ObjectInfo.class);
                             dbOject.add(objectInfo);
 
@@ -4130,6 +4130,7 @@ public class WalrusFSManager extends WalrusManager {
                             reply.setLocation("WalrusBackend" + foundManifest.getBucketName() + "/" + foundManifest.getObjectKey());
                             reply.setBucket(foundManifest.getBucketName());
                             reply.setKey(foundManifest.getObjectKey());
+                            reply.setLastModified(objectInfo.getLastModified());
                             //fire cleanup
                             firePartsCleanupTask(foundManifest.getBucketName(), request.getKey(), request.getUploadId());
                         }
