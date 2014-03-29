@@ -89,7 +89,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Channel connect timeout (ms).",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerAndRestartWebServicesListener.class )
   public static Integer       CHANNEL_CONNECT_TIMEOUT           = 500;
   @ConfigurableField( changeListener = TimeChangeListener.class,
                       description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
@@ -98,52 +98,52 @@ public class StackConfiguration extends AbstractPersistent {
                       changeListener = TimeChangeListener.class )
   public static Integer       CLOCK_SKEW_SEC                    = 20;
   @ConfigurableField( description = "Server socket reuse address.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckBooleanAndRestartWebServicesListener.class )
   public static final Boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
   @ConfigurableField( description = "Server socket TCP_NODELAY.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckBooleanAndRestartWebServicesListener.class )
   public static final Boolean SERVER_CHANNEL_NODELAY            = true;
   @ConfigurableField( description = "Socket reuse address.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckBooleanAndRestartWebServicesListener.class )
   public static final Boolean CHANNEL_REUSE_ADDRESS             = true;
   @ConfigurableField( description = "Socket keep alive.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckBooleanAndRestartWebServicesListener.class )
   public static final Boolean CHANNEL_KEEP_ALIVE                = true;
   @ConfigurableField( description = "Server socket TCP_NODELAY.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckBooleanAndRestartWebServicesListener.class )
   public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( description = "Server worker thread pool max.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerAndRestartWebServicesListener.class )
   public static Integer       SERVER_POOL_MAX_THREADS           = 128;
   @ConfigurableField( description = "Server max worker memory per connection.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongAndRestartWebServicesListener.class )
   public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
   @ConfigurableField( description = "Server max worker memory total.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerAndRestartWebServicesListener.class )
   public static Long          SERVER_POOL_TOTAL_MEM             = 0L;
   
   @ConfigurableField( description = "Service socket select timeout (ms).",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongAndRestartWebServicesListener.class )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
   
   @ConfigurableField( description = "Server selector thread pool max.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerAndRestartWebServicesListener.class )
   public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
   @ConfigurableField( description = "Server max selector memory per connection.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongAndRestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
   
   @ConfigurableField( description = "Server worker thread pool max.",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongAndRestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
   
   @ConfigurableField( description = "Service socket select timeout (ms).",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongAndRestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
   
   @ConfigurableField( description = "Port to bind (note: port 8773 is always bound regardless).",
-                      changeListener = WebServices.RestartWebServicesListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerAndRestartWebServicesListener.class )
   public static Integer       PORT                              = 8773;
   public static final Integer INTERNAL_PORT                     = 8773;
   
