@@ -70,6 +70,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -166,7 +167,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         TreeMap<String, MemoryMpu> uploads = new TreeMap<>();
 
         BucketListEntry toBucketListEntry() {
-            return new BucketListEntry(this.name, OSGUtil.dateToListingFormattedString(this.createdDate));
+            return new BucketListEntry(this.name, DateFormatter.dateToListingFormattedString(this.createdDate));
         }
     }
 

@@ -70,6 +70,7 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -121,7 +122,7 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
                 PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
                 httpResponse.setHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
                 if (putObjectResponse.getLastModified() != null) {
-                    httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
+                    httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
                 }
                 if (putObjectResponse.getVersionId() != null) {
                     httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
@@ -132,7 +133,7 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
                     httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
                 }
                 if (response.getLastModified() != null) {
-                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(response.getLastModified()));
+                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(response.getLastModified()));
                 }
                 if (response.getVersionId() != null) {
                     httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, response.getVersionId());

@@ -34,6 +34,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -112,7 +113,20 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				if(address==null || address.length()<=0)
 					continue;
 				try{
-					EucalyptusActivityTasks.getInstance().removeARecord(dns.getZone(), dns.getName(), address);
+				  EucalyptusActivityTasks.getInstance().removeARecord(dns.getZone(), dns.getName(), address);
+				  try ( final TransactionResource db =
+				      Entities.transactionFor(LoadBalancerServoInstance.class)){
+				    try{
+				      final LoadBalancerServoInstance entity = 
+				          Entities.uniqueResult(LoadBalancerServoInstance.named(instance.getInstanceId()));
+				      entity.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
+				      Entities.persist(entity);
+				      db.commit();
+				    }catch(final Exception ex){
+				      LOG.error(String.format("failed to set servo instance(%s)'s dns state to deregistered", 
+				          instance.getInstanceId()), ex);
+				    }
+				  }
 				}catch(Exception ex){
 					LOG.error(String.format("failed to remove dns a record (zone=%s, name=%s, address=%s)", 
 							dns.getZone(), dns.getName(), address), ex);
@@ -448,51 +462,56 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 			if(retired == null || retired.size()<=0)
 				return;
-			
-			  /// for each:
+			final List<LoadBalancerServoInstance> retiredAndDnsClean = Lists.newArrayList();
+			for(final LoadBalancerServoInstance instance: retired){
+  		/// make sure DNS is deregistered
+        if(LoadBalancerServoInstance.DNS_STATE.Deregistered.equals(instance.getDnsState()))
+          retiredAndDnsClean.add(instance);
+			}
+			/// for each:
 			// describe instances
-	    	final List<String> param = Lists.newArrayList();
-	    	final Map<String, String> latestState = Maps.newHashMap();
-	    	for(final LoadBalancerServoInstance instance : retired){
-	    		/// 	call describe instance
-		    	String instanceId = instance.getInstanceId();
-	    		if(instanceId == null)
-	    			continue;
-	    		param.clear();
-	    		param.add(instanceId);
-	    		String instanceState = null;
-	    		try{
-	    			final List<RunningInstancesItemType> result = 
-	    					  EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
-	    			if (result.isEmpty())
-	    				instanceState= "terminated";
-	    			else
-	    				instanceState = result.get(0).getStateName();
-	    		}catch(final Exception ex){
-	    			LOG.warn("failed to query instances", ex);
-	    			continue;
-	    		}
-	    		latestState.put(instanceId, instanceState);
-	    	}
-			
+			final List<String> param = Lists.newArrayList();
+			final Map<String, String> latestState = Maps.newHashMap();
+			for(final LoadBalancerServoInstance instance : retiredAndDnsClean){
+			  /// 	call describe instance
+			  String instanceId = instance.getInstanceId();
+			  if(instanceId == null)
+			    continue;
+			  param.clear();
+			  param.add(instanceId);
+			  String instanceState = null;
+			  try{
+			    final List<RunningInstancesItemType> result = 
+			        EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
+			    if (result.isEmpty())
+			      instanceState= "terminated";
+			    else
+			      instanceState = result.get(0).getStateName();
+			  }catch(final Exception ex){
+			    LOG.warn("failed to query instances", ex);
+			    continue;
+			  }
+			  latestState.put(instanceId, instanceState);
+			}
+
 			// if state==terminated or describe instances return no result,
 			//    delete the database record
-	    	for(String instanceId : latestState.keySet()){
-	    		String state = latestState.get(instanceId);
-	    		if(state.equals("terminated")){
-	    			final EntityTransaction db2 = Entities.get( LoadBalancerServoInstance.class );
-	    			try{
-	    				LoadBalancerServoInstance toDelete = Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
-	    				Entities.delete(toDelete);
-	    				db2.commit();
-	    			}catch(Exception ex){
-	    				db2.rollback();
-	    			}finally {
-	    				if(db2.isActive())
-	    					db2.rollback();
-	    			}
-	    		}
-	    	}
+			for(String instanceId : latestState.keySet()){
+			  String state = latestState.get(instanceId);
+			  if(state.equals("terminated")){
+			    final EntityTransaction db2 = Entities.get( LoadBalancerServoInstance.class );
+			    try{
+			      LoadBalancerServoInstance toDelete = Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+			      Entities.delete(toDelete);
+			      db2.commit();
+			    }catch(Exception ex){
+			      db2.rollback();
+			    }finally {
+			      if(db2.isActive())
+			        db2.rollback();
+			    }
+			  }
+			}
 		}
 	}
 }

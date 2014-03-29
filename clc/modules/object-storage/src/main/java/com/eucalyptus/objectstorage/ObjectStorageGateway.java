@@ -140,9 +140,9 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
-import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -163,7 +163,6 @@ import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -1017,7 +1016,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 		if(etag != null)
 			httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + etag + "\""); //etag in quotes, per s3-spec.
-		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(lastModified));
+		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
 		if(contentDisposition != null) {
 			httpResponse.addHeader("Content-Disposition", contentDisposition);
 		}
@@ -1026,7 +1025,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		if(versionId != null) {
 			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
 		}
-		httpResponse.setHeader(HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
+		httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 		
 		//write extra headers
 		if(reply.getByteRangeEnd() != null) {
@@ -1290,8 +1289,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 destObject.setObjectModifiedTimestamp(srcLastMod);
                 destObject.setIsLatest(Boolean.TRUE);
 
-                reply.setEtag(etag);
-                reply.setLastModified(DateUtils.format(srcLastMod.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
                 if (destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) {
                     reply.setCopySourceVersionId(versionId);
                     reply.setVersionId(versionId);
@@ -1307,7 +1304,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 request.setDestinationObject(destObjUuid);
                 request.setDestinationBucket(destBckUuid);
                 try {
-                    OsgObjectFactory.getFactory().copyObject(ospClient, destObject, request, requestUser, metadataDirective);
+                    ObjectEntity objectEntity = OsgObjectFactory.getFactory().copyObject(ospClient, destObject, request, requestUser, metadataDirective);
+                    reply.setLastModified(DateFormatter.dateToListingFormattedString(objectEntity.getObjectModifiedTimestamp()));
+                    reply.setEtag(objectEntity.geteTag());
                     try {
                         fireObjectCreationEvent(destBucket.getBucketName(), destObject.getObjectKey(), versionId,
                                 requestUser.getUserId(), destObject.getSize(), origDestObjectSize);
