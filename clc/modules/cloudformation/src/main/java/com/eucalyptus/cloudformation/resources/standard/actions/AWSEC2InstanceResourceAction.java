@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -28,29 +27,26 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InstanceResou
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
 import com.eucalyptus.cloudformation.template.JsonHelper;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.RunInstancesResponseType;
+import com.eucalyptus.compute.common.RunInstancesType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.GroupItemType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,15 +112,15 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     for (EC2BlockDeviceMapping ec2BlockDeviceMapping: blockDeviceMappings) {
       BlockDeviceMappingItemType itemType = new BlockDeviceMappingItemType();
       itemType.setDeviceName(ec2BlockDeviceMapping.getDeviceName());
-      itemType.setNoDevice(ec2BlockDeviceMapping.getNoDevice() != null);
+      itemType.setNoDevice(ec2BlockDeviceMapping.getNoDevice() != null ? Boolean.TRUE : null);
       itemType.setVirtualName(ec2BlockDeviceMapping.getVirtualName());
       if (ec2BlockDeviceMapping.getEbs() != null) {
         EbsDeviceMapping ebs = new EbsDeviceMapping();
-        ebs.setDeleteOnTermination(ec2BlockDeviceMapping.getEbs().getDeleteOnTermination());
+        ebs.setDeleteOnTermination(ec2BlockDeviceMapping.getEbs().getDeleteOnTermination() == null ? Boolean.TRUE : ec2BlockDeviceMapping.getEbs().getDeleteOnTermination());
         ebs.setIops(ec2BlockDeviceMapping.getEbs().getIops());
         ebs.setSnapshotId(ec2BlockDeviceMapping.getEbs().getSnapshotId());
-        ebs.setVolumeSize(Integer.valueOf(ec2BlockDeviceMapping.getEbs().getVolumeSize()));
-        ebs.setVolumeType(ec2BlockDeviceMapping.getEbs().getVolumeType());
+        ebs.setVolumeSize(ec2BlockDeviceMapping.getEbs().getVolumeSize() == null ? null : Integer.valueOf(ec2BlockDeviceMapping.getEbs().getVolumeSize()));
+        ebs.setVolumeType(ec2BlockDeviceMapping.getEbs().getVolumeType() != null ? ec2BlockDeviceMapping.getEbs().getVolumeType() : "standard");
         itemType.setEbs(ebs);
       }
       blockDeviceMappingItemTypes.add(itemType);
@@ -134,7 +130,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
   @Override
   public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     RunInstancesType runInstancesType = new RunInstancesType();
     runInstancesType.setImageId(properties.getImageId());
     if (properties.getAvailabilityZone() != null && !properties.getAvailabilityZone().isEmpty()) {
@@ -194,7 +190,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
-    for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
+    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType = new DescribeInstancesType();
       describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
@@ -219,7 +215,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
   @Override
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     // First see if instance exists or has been terminated
     DescribeInstancesType describeInstancesType = new DescribeInstancesType();
     describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
@@ -234,7 +230,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     terminateInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     AsyncRequests.<TerminateInstancesType,TerminateInstancesResponseType> sendSync(configuration, terminateInstancesType);
     boolean terminated = false;
-    for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
+    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType2 = new DescribeInstancesType();
       describeInstancesType2.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));

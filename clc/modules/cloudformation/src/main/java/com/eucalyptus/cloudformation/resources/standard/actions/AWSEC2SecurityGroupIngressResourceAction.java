@@ -29,20 +29,20 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Secu
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.UserIdGroupPairType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -78,7 +78,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
 
   @Override
   public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
     // Is there a better way?
     DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
@@ -96,7 +96,6 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
     authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
 
     String groupName = null;
-    LOG.info("properties" + properties);
     if (properties.getGroupName() != null && !properties.getGroupName().isEmpty()) {
       groupName = properties.getGroupName();
     }
@@ -162,7 +161,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
 
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
     // Is there a better way?
     DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();

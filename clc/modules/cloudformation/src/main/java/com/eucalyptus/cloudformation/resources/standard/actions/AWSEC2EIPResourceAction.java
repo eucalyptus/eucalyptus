@@ -29,29 +29,28 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPP
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.AllocateAddressType;
+import com.eucalyptus.compute.common.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.AssociateAddressType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeAddressesResponseType;
+import com.eucalyptus.compute.common.DescribeAddressesType;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.ReleaseAddressResponseType;
+import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
-import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
-import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
-import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
+import org.apache.log4j.Logger;
+
 
 /**
  * Created by ethomas on 2/3/14.
  */
 public class AWSEC2EIPResourceAction extends ResourceAction {
-
+  private static final Logger LOG = Logger.getLogger(AWSEC2EIPResourceAction.class);
   private AWSEC2EIPProperties properties = new AWSEC2EIPProperties();
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
   @Override
@@ -76,7 +75,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
 
   @Override
   public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     AllocateAddressType allocateAddressType = new AllocateAddressType();
     allocateAddressType.setEffectiveUserId(info.getEffectiveUserId());
     AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
@@ -95,13 +94,14 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
       associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
       AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
     }
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(publicIp)));
+    info.setPhysicalResourceId(publicIp);
+    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
   }
 
   @Override
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeAddressesType describeAddressesType = new DescribeAddressesType();
     describeAddressesType.setPublicIpsSet(Lists.newArrayList(info.getPhysicalResourceId()));
     describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());

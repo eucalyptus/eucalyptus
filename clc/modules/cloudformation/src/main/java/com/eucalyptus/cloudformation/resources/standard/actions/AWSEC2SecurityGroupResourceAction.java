@@ -29,25 +29,25 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Securit
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
+import com.eucalyptus.compute.common.CreateSecurityGroupType;
+import com.eucalyptus.compute.common.DeleteSecurityGroupResponseType;
+import com.eucalyptus.compute.common.DeleteSecurityGroupType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.UserIdGroupPairType;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -81,7 +81,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
 
   @Override
   public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     CreateSecurityGroupType createSecurityGroupType = new CreateSecurityGroupType();
     if (properties.getGroupDescription() != null && !properties.getGroupDescription().isEmpty()) {
       createSecurityGroupType.setGroupDescription(properties.getGroupDescription());
@@ -135,7 +135,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   @Override
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
 
     String groupName = info.getPhysicalResourceId();
     String groupId = info.getGroupId();
