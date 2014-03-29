@@ -46,13 +46,14 @@ class DownloadImage(object):
         parser.add_argument('-m', '--manifest', dest='manifest', required=True,
                             help='''Path to 'download-manifest. Use '-' to read
                             manifest from stdin''')
-        parser.add_argument('-d', '--dest', dest='destination', required=False,
+        parser.add_argument('-d', '--dest', dest='destination',
                             help='''Destination path to write image to.
                             Use '-' for stdout.''')
         parser.add_argument('-k', '--privatekey', dest='privatekey',
                             help='''file containing the private key to decrypt
                             the bundle with.''')
         parser.add_argument('-c', '--cloudcert', dest='cloudcert',
+                            required=True,
                             help='''file containing the cloud cert used
                             to verify manifest signature.''')
         parser.add_argument('-x', '--xsd', dest='xsd', default=None,
@@ -63,9 +64,6 @@ class DownloadImage(object):
         parser.add_argument('--maxbytes', dest='maxbytes', default=0,
                             help='''Maximum bytes allowed to be written to the
                             destination.''')
-        parser.add_argument('--euca_prefix', dest='euca_prefix', default=None,
-                            help='''Path to eucalyptus install.
-                            ie: /opt/eucalyptus/''')
         parser.add_argument('--debug', dest='debug', default=False,
                             action='store_true',
                             help='''Enable debug to a log file''')
@@ -97,8 +95,8 @@ class DownloadImage(object):
                         arg_value.append(kwargs[kwarg])
                     arg_list.extend(arg_value)
         self.args = parser.parse_args(arg_list)
-	if dest_file != None:
-		self.args.destination = dest_file
+        if dest_file is not None:
+            self.args.destination = dest_file
         if self.args.destination == "-":
             force_stderr = True
         else:
@@ -126,24 +124,6 @@ class DownloadImage(object):
             if not isinstance(xsd_file, file):
                 xsd_file = os.path.expanduser(os.path.abspath(xsd_file))
                 self.args.xsd = xsd_file
-        if self.args.euca_prefix is None:
-            self.args.euca_prefix = ""
-            for path in ['/opt/eucalyptus/', '/']:
-                if os.path.exists(path):
-                    self.args.euca_prefix = path
-                    break
-        #if private key was not provided try to find it
-        if not self.args.privatekey:
-            keypath = os.path.join(self.args.euca_prefix,
-                                   'var/lib/eucalyptus/keys/node-pk.pem')
-            if os.path.isfile(keypath):
-                self.args.privatekey = keypath
-        #if mandatory cloudcert was not provided try to find it
-        if not self.args.cloudcert:
-            certpath = os.path.join(self.args.euca_prefix,
-                                    'var/lib/eucalyptus/keys/cloud-cert.pem')
-            if os.path.isfile(certpath):
-                self.args.cloudcert = certpath
         if not self.args.cloudcert:
             raise argparse.ArgumentError(self.args.cloudcert,
                                          "Cloud cert must be provided to "
@@ -231,8 +211,8 @@ class DownloadImage(object):
                     if not parsed_url or not parsed_url.scheme:
                         self.args.manifest = self._read_manifest_from_file()
                     else:
-                        self.log.debug('Reading from remote manifest from url')
-                        #For now limit urls to http(s)...
+                        # Reading from remote manifest from url
+                        # For now limit urls to http(s)...
                         if not parsed_url.scheme in ['http', 'https']:
                             raise ArgumentTypeError('Manifest url only '
                                                     'supports http, https at '
@@ -255,7 +235,7 @@ class DownloadImage(object):
         bytes = 0
         for part_index in xrange(0, manifest.part_count):
             part = manifest.get_part_by_index(part_index)
-            self.log.debug('Downloading part:' + str(part.get_url))
+            self.log.debug('Downloading part#:' + str(part.part_index))
             bytes += part.download(dest_fileobj=dest_fileobj) or 0
             self.log.debug('Wrote bytes:' + str(bytes) + "/"
                            + str(manifest.download_image_size) + ", digest:"
@@ -282,7 +262,7 @@ class DownloadImage(object):
                                     dest_fileobj,
                                     manifest=None,
                                     tools_path=None,
-                                    inactivity_timeout=30):
+                                    inactivity_timeout=120):
         '''
         Attempts to iterate through all parts contained in 'manifest' and
         download and concatenate each part to euca2ools unbundle stream.
@@ -385,7 +365,7 @@ class DownloadImage(object):
         '''
         self.log.debug('Validating size:"{0}", for file:{1}:'
                        .format(expected_size, filepath))
-        #Check size raise os.error if file is not accessible...
+        # Check size raise os.error if file is not accessible...
         file_size = os.path.getsize(filepath)
         if file_size != expected_size:
             raise ValueError('Written Image size:{0} does not equal expected '
@@ -397,7 +377,6 @@ class DownloadImage(object):
         if self.args.dumpmanifest:
             print str(manifest)
             os.sys.exit(0)
-        self.log.debug('\nMANIFEST:' + str(manifest))
         dest_file = self.args.destination
         dest_file_name = self.args.destination
         bytes = 0
@@ -419,8 +398,8 @@ class DownloadImage(object):
                 if not self.args.privatekey:
                     raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
-                bytes = self._download_to_unbundlestream(dest_fileobj=dest_fileobj,
-                                                     manifest=manifest)
+                bytes = self._download_to_unbundlestream(
+                    dest_fileobj=dest_fileobj, manifest=manifest)
             else:
                 with dest_fileobj:
                     bytes = self._download_parts_to_fileobj(

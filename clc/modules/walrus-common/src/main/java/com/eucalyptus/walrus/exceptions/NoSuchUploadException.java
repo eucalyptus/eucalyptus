@@ -69,18 +69,18 @@ public class NoSuchUploadException extends WalrusException {
 
   public NoSuchUploadException()
   {
-    super( "Not Found" );
+    super( "NoSuchUpload" );
   }
 
-  public NoSuchUploadException(String bucket)
+  public NoSuchUploadException(String resource)
   {
-    super("NoSuchBucket", "The specified bucket was not found", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
+      super("NoSuchUpload", "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.", "upload id: ", resource, HttpResponseStatus.NOT_FOUND);
   }
 
 
   public NoSuchUploadException(Throwable ex)
   {
-    super("Not Found", ex);
+    super("NoSuchUpload", ex);
   }
 
   public NoSuchUploadException(String message, Throwable ex)

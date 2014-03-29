@@ -81,7 +81,7 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "drbd_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrus", alias = "drbd", description = "DRBD configuration.", deferred = true)
+@ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
 public class DRBDInfo extends AbstractPersistent {
 	@Column(name = "walrus_name", unique=true)
 	private String name;

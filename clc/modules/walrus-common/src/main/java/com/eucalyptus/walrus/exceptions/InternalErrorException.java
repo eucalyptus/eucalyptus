@@ -69,12 +69,12 @@ public class InternalErrorException extends WalrusException {
 
   public InternalErrorException()
   {
-    super( "Not Found" );
+    super( "Internal Error" );
   }
 
-  public InternalErrorException(String bucket)
+  public InternalErrorException(String resource)
   {
-    super("NoSuchBucket", "The specified bucket was not found", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
+    super("InternalError", "Server reported Internal Error", "Resource", resource, HttpResponseStatus.INTERNAL_SERVER_ERROR);
   }
 
 

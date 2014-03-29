@@ -85,6 +85,9 @@ import javax.persistence.RollbackException;
 
 
 import com.eucalyptus.walrus.entities.PartInfo;
+import com.eucalyptus.walrus.exceptions.InternalErrorException;
+import com.eucalyptus.walrus.exceptions.InvalidPartException;
+import com.eucalyptus.walrus.exceptions.NoSuchUploadException;
 import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
 import com.eucalyptus.walrus.msgs.GetLifecycleType;
 import com.eucalyptus.walrus.msgs.LifecycleConfigurationType;
@@ -99,7 +102,6 @@ import com.eucalyptus.walrus.entities.LifecycleRuleInfo;
 import com.eucalyptus.walrus.exceptions.NoSuchLifecycleConfigurationException;
 
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
@@ -126,6 +128,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -274,11 +277,11 @@ public class WalrusFSManager extends WalrusManager {
         if (!bukkits.exists()) {
             if (!bukkits.mkdirs()) {
                 LOG.fatal("Unable to make bucket root directory: " + bukkitDir);
-                throw new EucalyptusCloudException("Invalid bucket root directory");
+                throw new InternalErrorException("Invalid bucket root directory");
             }
         } else if (!bukkits.canWrite()) {
             LOG.fatal("Cannot write to bucket root directory: " + bukkitDir);
-            throw new EucalyptusCloudException("Invalid bucket root directory");
+            throw new InternalErrorException("Invalid bucket root directory");
         }
         try {
             SystemUtil.setEucaReadWriteOnly(bukkitDir);
@@ -325,7 +328,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public ListAllMyBucketsResponseType listAllMyBuckets(
-            ListAllMyBucketsType request) throws EucalyptusCloudException {
+            ListAllMyBucketsType request) throws WalrusException {
         LOG.info("Handling ListAllBuckets request");
 
         ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
@@ -353,8 +356,7 @@ public class WalrusFSManager extends WalrusManager {
                     if (bucketHasSnapshots(bucketInfo.getBucketName())) {
                         continue;
                     } else {
-                        buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(),
-                                DateUtils.ALT_ISO8601_DATE_PATTERN)));
+                        buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateFormatter.dateToListingFormattedString(bucketInfo.getCreationDate())));
                     }
                 } catch (Exception e) {
                     LOG.debug(e, e);
@@ -375,7 +377,7 @@ public class WalrusFSManager extends WalrusManager {
             }
         } catch (EucalyptusCloudException e) {
             db.rollback();
-            throw e;
+            throw new InternalErrorException(e);
         } catch (Exception e) {
             LOG.debug(e, e);
             db.rollback();
@@ -391,7 +393,7 @@ public class WalrusFSManager extends WalrusManager {
      * @throws EucalyptusCloudException
      */
     @Override
-    public HeadBucketResponseType headBucket(HeadBucketType request) throws EucalyptusCloudException {
+    public HeadBucketResponseType headBucket(HeadBucketType request) throws WalrusException {
         HeadBucketResponseType reply = (HeadBucketResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -406,7 +408,7 @@ public class WalrusFSManager extends WalrusManager {
         } catch (TransactionException e) {
             LOG.error("DB transaction error looking up bucket " + bucketName + ": " + e.getMessage());
             LOG.debug("DB tranction exception looking up bucket " + bucketName, e);
-            throw new EucalyptusCloudException("Internal error doing db lookup for " + bucketName, e);
+            throw new HeadNoSuchBucketException("Internal error doing db lookup for " + bucketName, e);
         } finally {
             // Nothing to commit, always rollback.
             db.rollback();
@@ -415,7 +417,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public CreateBucketResponseType createBucket(CreateBucketType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         CreateBucketResponseType reply = (CreateBucketResponseType) request
                 .getReply();
         Context ctx = Contexts.lookup();
@@ -480,7 +482,7 @@ public class WalrusFSManager extends WalrusManager {
                     if (Exceptions.isCausedBy(ex, ConstraintViolationException.class)) {
                         throw new BucketAlreadyExistsException(bucketName);
                     } else {
-                        throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);
+                        throw new InternalErrorException("Unable to create bucket: " + bucketName);
                     }
                 }
 
@@ -540,7 +542,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+    public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws WalrusException {
         DeleteBucketResponseType reply = (DeleteBucketResponseType) request.getReply();
         String bucketName = request.getBucket();
         Context ctx = Contexts.lookup();
@@ -599,7 +601,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
             GetBucketAccessControlPolicyType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         GetBucketAccessControlPolicyResponseType reply = (GetBucketAccessControlPolicyResponseType) request
                 .getReply();
 
@@ -730,7 +732,7 @@ public class WalrusFSManager extends WalrusManager {
         }
     }
 
-    public PutLifecycleResponseType putLifecycle( PutLifecycleType request) throws EucalyptusCloudException {
+    public PutLifecycleResponseType putLifecycle( PutLifecycleType request) throws WalrusException {
         PutLifecycleResponseType response = request.getReply();
         String bucketName = request.getBucket();
 
@@ -864,7 +866,7 @@ public class WalrusFSManager extends WalrusManager {
         return bucket;
     }
 
-    public GetLifecycleResponseType getLifecycle( GetLifecycleType request) throws EucalyptusCloudException {
+    public GetLifecycleResponseType getLifecycle( GetLifecycleType request) throws WalrusException {
         GetLifecycleResponseType response = request.getReply();
         String bucketName = request.getBucket();
 
@@ -978,7 +980,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public PutObjectResponseType putObject(PutObjectType request) throws EucalyptusCloudException {
+    public PutObjectResponseType putObject(PutObjectType request) throws WalrusException {
         PutObjectResponseType reply = (PutObjectResponseType) request.getReply();
 
         Context ctx = Contexts.lookup();
@@ -1125,7 +1127,7 @@ public class WalrusFSManager extends WalrusManager {
                                 fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
                             } catch (Exception ex) {
                                 messenger.removeQueue(key, randomKey);
-                                throw new EucalyptusCloudException(ex);
+                                throw new AccessDeniedException(ex);
                             }
                         } else if (WalrusDataMessage.isEOF(dataMessage)) {
                             if (digest != null) {
@@ -1187,7 +1189,7 @@ public class WalrusFSManager extends WalrusManager {
                             } catch (IOException ex) {
                                 LOG.error(ex);
                                 messenger.removeQueue(key, randomKey);
-                                throw new EucalyptusCloudException(objectKey);
+                                throw new AccessDeniedException(objectKey);
                             }
                             lastModified = new Date();
                             ObjectInfo searchObject = new ObjectInfo(bucketName, objectKey);
@@ -1222,7 +1224,7 @@ public class WalrusFSManager extends WalrusManager {
                                     foundObject = objectInfo;
                                 } else {
                                     dbObject.rollback();
-                                    throw new EucalyptusCloudException("Unable to update object: " + bucketName + "/" + objectKey);
+                                    throw new InternalErrorException("Unable to update object: " + bucketName + "/" + objectKey);
                                 }
                             }
                             foundObject.setVersionId(versionId);
@@ -1304,7 +1306,7 @@ public class WalrusFSManager extends WalrusManager {
                 } catch (InterruptedException ex) {
                     LOG.error(ex, ex);
                     messenger.removeQueue(key, randomKey);
-                    throw new EucalyptusCloudException("Transfer interrupted: " + key + "." + randomKey);
+                    throw new InternalErrorException("Transfer interrupted: " + key + "." + randomKey);
                 }
         } else {
             db.rollback();
@@ -1313,7 +1315,7 @@ public class WalrusFSManager extends WalrusManager {
         }
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
@@ -1334,7 +1336,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public PostObjectResponseType postObject(PostObjectType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         PostObjectResponseType reply = (PostObjectResponseType) request
                 .getReply();
 
@@ -1400,7 +1402,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public PutObjectInlineResponseType putObjectInline(
-            PutObjectInlineType request) throws EucalyptusCloudException {
+            PutObjectInlineType request) throws WalrusException {
         PutObjectInlineResponseType reply = (PutObjectInlineResponseType) request
                 .getReply();
         Context ctx = Contexts.lookup();
@@ -1508,7 +1510,7 @@ public class WalrusFSManager extends WalrusManager {
                         }
                     } catch (Exception ex) {
                         db.rollback();
-                        throw new EucalyptusCloudException(ex);
+                        throw new AccessDeniedException(ex);
                     }
                     md5 = Hashes.getHexString(Digest.MD5.get().digest(base64Data));
                     foundObject.setEtag(md5);
@@ -1531,7 +1533,7 @@ public class WalrusFSManager extends WalrusManager {
                 } catch (Exception ex) {
                     LOG.error(ex);
                     db.rollback();
-                    throw new EucalyptusCloudException(bucketName);
+                    throw new InternalErrorException(bucketName);
                 }
         } else {
             db.rollback();
@@ -1541,13 +1543,13 @@ public class WalrusFSManager extends WalrusManager {
         db.commit();
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
     @Override
     public AddObjectResponseType addObject(AddObjectType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
 
         AddObjectResponseType reply = (AddObjectResponseType) request.getReply();
         String bucketName = request.getBucket();
@@ -1575,7 +1577,7 @@ public class WalrusFSManager extends WalrusManager {
                 if (objectInfo.getObjectKey().equals(key)) {
                     // key (object) exists.
                     db.rollback();
-                    throw new EucalyptusCloudException("object already exists " + key);
+                    throw new InternalErrorException("object already exists " + key);
                 }
             }
             // write object to bucket
@@ -1602,7 +1604,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public DeleteObjectResponseType deleteObject(DeleteObjectType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         DeleteObjectResponseType reply = (DeleteObjectResponseType) request
                 .getReply();
         String bucketName = request.getBucket();
@@ -1622,7 +1624,7 @@ public class WalrusFSManager extends WalrusManager {
                 bucketInfo = null;
             } catch(TransactionException e) {
                 LOG.error("Transaction error looking up bucket: " + bucketName,e);
-                throw new EucalyptusCloudException(e);
+                throw new NoSuchBucketException(e);
             }
 
             if(bucketInfo != null) {
@@ -1683,7 +1685,7 @@ public class WalrusFSManager extends WalrusManager {
                         if (objectInfos.size() > 1) {
                             // This shouldn't happen, so bail if it does
                             db.rollback();
-                            throw new EucalyptusCloudException("More than one object set to 'last' found");
+                            throw new InternalErrorException("More than one object set to 'last' found");
                         }
                         ObjectInfo lastObject = objectInfos.get(0);
                         if (lastObject.getVersionId().equals(WalrusProperties.NULL_VERSION_ID)) {
@@ -1712,7 +1714,7 @@ public class WalrusFSManager extends WalrusManager {
                                 lastObject.setLast(false);
                             } else {
                                 db.rollback();
-                                throw new EucalyptusCloudException(
+                                throw new InternalErrorException(
                                         "Non 'null' versioned object found in a versioning disabled bucket, not sure how to proceed with delete.");
                             }
                         }
@@ -1749,7 +1751,7 @@ public class WalrusFSManager extends WalrusManager {
             return reply;
         } catch(EucalyptusCloudException e) {
             LOG.error("DeleteObject operation for " + bucketName + "/" + objectKey + " failed with: " + e.getMessage());
-            throw e;
+            throw new InternalErrorException(e);
         } finally {
             if(db != null && db.isActive()) {
                 db.rollback();
@@ -1844,7 +1846,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public ListBucketResponseType listBucket(ListBucketType request) throws EucalyptusCloudException {
+    public ListBucketResponseType listBucket(ListBucketType request) throws WalrusException {
         ListBucketResponseType reply = (ListBucketResponseType) request.getReply();
 
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
@@ -1885,7 +1887,7 @@ public class WalrusFSManager extends WalrusManager {
                         }
                     } catch (Exception e) {
                         db.rollback();
-                        throw new EucalyptusCloudException(e);
+                        throw new InternalErrorException(e);
                     }
                 }
 
@@ -1997,7 +1999,7 @@ public class WalrusFSManager extends WalrusManager {
                             ListEntry listEntry = new ListEntry();
                             listEntry.setKey(objectKey);
                             listEntry.setEtag(objectInfo.getEtag());
-                            listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                            listEntry.setLastModified(DateFormatter.dateToListingFormattedString(objectInfo.getLastModified()));
                             listEntry.setStorageClass(objectInfo.getStorageClass());
                             listEntry.setSize(objectInfo.getSize());
                             listEntry.setStorageClass(objectInfo.getStorageClass());
@@ -2086,7 +2088,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
             GetObjectAccessControlPolicyType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         GetObjectAccessControlPolicyResponseType reply = (GetObjectAccessControlPolicyResponseType) request
                 .getReply();
 
@@ -2207,7 +2209,7 @@ public class WalrusFSManager extends WalrusManager {
         }
     }
 
-    public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws EucalyptusCloudException {
+    public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws WalrusException {
         SetBucketAccessControlPolicyResponseType reply = (SetBucketAccessControlPolicyResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -2252,7 +2254,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(
             SetRESTBucketAccessControlPolicyType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         SetRESTBucketAccessControlPolicyResponseType reply = (SetRESTBucketAccessControlPolicyResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -2301,7 +2303,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(
             SetObjectAccessControlPolicyType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         SetObjectAccessControlPolicyResponseType reply = (SetObjectAccessControlPolicyResponseType) request
                 .getReply();
         Context ctx = Contexts.lookup();
@@ -2383,7 +2385,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(
             SetRESTObjectAccessControlPolicyType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         SetRESTObjectAccessControlPolicyResponseType reply = (SetRESTObjectAccessControlPolicyResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -2467,7 +2469,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public GetObjectResponseType getObject(GetObjectType request) throws EucalyptusCloudException {
+    public GetObjectResponseType getObject(GetObjectType request) throws WalrusException {
         GetObjectResponseType reply = (GetObjectResponseType) request.getReply();
         // Must explicitly set to true for streaming large objects.
         reply.setHasStreamingData(false);
@@ -2529,7 +2531,7 @@ public class WalrusFSManager extends WalrusManager {
                     if (objectInfo.isGlobalRead()) {
                         if (!WalrusProperties.enableTorrents) {
                             LOG.warn("Bittorrent support has been disabled. Please check pre-requisites");
-                            throw new EucalyptusCloudException("Torrents disabled");
+                            throw new InternalErrorException("Torrents disabled");
                         }
                         EntityWrapper<TorrentInfo> dbTorrent = EntityWrapper.get(TorrentInfo.class);
                         TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
@@ -2546,7 +2548,7 @@ public class WalrusFSManager extends WalrusManager {
                                 torrentCreator.create();
                             } catch (Exception e) {
                                 LOG.error(e);
-                                throw new EucalyptusCloudException("could not create torrent file " + torrentFile);
+                                throw new InternalErrorException("could not create torrent file " + torrentFile);
                             }
                             torrentInfo.setTorrentFile(torrentFile);
                             dbTorrent.add(torrentInfo);
@@ -2582,7 +2584,7 @@ public class WalrusFSManager extends WalrusManager {
                             db.rollback();
                             String errorString = "Could not get torrent file " + torrentFilePath;
                             LOG.error(errorString);
-                            throw new EucalyptusCloudException(errorString);
+                            throw new InternalErrorException(errorString);
                         }
                     } else {
                         // No global object read permission
@@ -2634,30 +2636,29 @@ public class WalrusFSManager extends WalrusManager {
                                 fileIO.finish();
                             } catch (Exception e) {
                                 LOG.error(e, e);
-                                throw new EucalyptusCloudException(e);
+                                throw new InternalErrorException(e);
                             }
                             reply.setBase64Data(Hashes.base64encode(base64Data));
 
                         } else {
                             reply.setHasStreamingData(true);
                             // support for large objects
-                            storageManager.sendObject(request, httpResponse, bucketName, objectName, size, etag,
-                                    DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
-                                    request.getIsCompressed(), versionId, logData);
+							storageManager.sendObject(request, httpResponse, bucketName, objectName, size, etag,
+									DateFormatter.dateToHeaderFormattedString(lastModified), contentType, contentDisposition, request.getIsCompressed(),
+									versionId, logData);
 
                             return null;
                         }
                     }
                 } else {
                     // Request is for headers/metadata only
-                    storageManager.sendHeaders(request, httpResponse, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition, versionId,
-                            logData);
+					storageManager.sendHeaders(request, httpResponse, size, etag, DateFormatter.dateToHeaderFormattedString(lastModified), contentType,
+							contentDisposition, versionId, logData);
                     return null;
 
                 }
                 reply.setEtag(etag);
-                reply.setLastModified(DateUtils.format(lastModified, DateUtils.RFC822_DATETIME_PATTERN));
+                reply.setLastModified(lastModified);
                 reply.setSize(size);
                 reply.setContentType(contentType);
                 reply.setContentDisposition(contentDisposition);
@@ -2692,7 +2693,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
+    public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws WalrusException {
         GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request.getReply();
         Date ifModifiedSince = request.getIfModifiedSince();
         Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
@@ -2798,14 +2799,13 @@ public class WalrusFSManager extends WalrusManager {
                     versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : WalrusProperties.NULL_VERSION_ID;
                 }
                 if (request.getGetData()) {
-                    storageManager.sendObject(request, httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd + 1, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
-                            request.getIsCompressed(), versionId, logData);
+					storageManager.sendObject(request, httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd + 1, size, etag,
+							DateFormatter.dateToHeaderFormattedString(lastModified), contentType, contentDisposition, request.getIsCompressed(), versionId,
+							logData);
                     return null;
                 } else {
-                    storageManager.sendHeaders(request, httpResponse, size, etag,
-                            DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition, versionId,
-                            logData);
+					storageManager.sendHeaders(request, httpResponse, size, etag, DateFormatter.dateToHeaderFormattedString(lastModified), contentType,
+							contentDisposition, versionId, logData);
                     return null;
                 }
             } else {
@@ -2831,7 +2831,7 @@ public class WalrusFSManager extends WalrusManager {
         }
     }
 
-    private String getMultipartData(DefaultHttpResponse httpResponse, ObjectInfo objectInfo, GetObjectType request, GetObjectResponseType response) throws EucalyptusCloudException {
+    private String getMultipartData(DefaultHttpResponse httpResponse, ObjectInfo objectInfo, GetObjectType request, GetObjectResponseType response) throws WalrusException {
         //get all parts
         PartInfo searchPart = new PartInfo(request.getBucket(), request.getKey());
         searchPart.setCleanup(false);
@@ -2847,7 +2847,7 @@ public class WalrusFSManager extends WalrusManager {
 
             parts = partCriteria.list();
             if(parts.size() == 0) {
-                throw new EucalyptusCloudException("No parts found corresponding to uploadId: " + objectInfo.getUploadId());
+                throw new InternalErrorException("No parts found corresponding to uploadId: " + objectInfo.getUploadId());
             }
         } finally {
             db.rollback();
@@ -2874,16 +2874,16 @@ public class WalrusFSManager extends WalrusManager {
                     fileIO.finish();
                 } catch (Exception e) {
                     LOG.error(e, e);
-                    throw new EucalyptusCloudException(e);
+                    throw new InternalErrorException(e);
                 }
             }
             return Hashes.base64encode(base64Data);
         } else {
             response.setHasStreamingData(true);
             // support for large objects
-            storageManager.sendObject(request, httpResponse, parts, objectInfo.getSize(), objectInfo.getEtag(),
-                    DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN), objectInfo.getContentType(), objectInfo.getContentDisposition(),
-                    request.getIsCompressed(), objectInfo.getVersionId());
+			storageManager.sendObject(request, httpResponse, parts, objectInfo.getSize(), objectInfo.getEtag(),
+					DateFormatter.dateToHeaderFormattedString(objectInfo.getLastModified()), objectInfo.getContentType(), objectInfo.getContentDisposition(),
+					request.getIsCompressed(), objectInfo.getVersionId());
 
             return null;
         }
@@ -2891,7 +2891,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public GetBucketLocationResponseType getBucketLocation(
-            GetBucketLocationType request) throws EucalyptusCloudException {
+            GetBucketLocationType request) throws WalrusException {
         GetBucketLocationResponseType reply = (GetBucketLocationResponseType) request
                 .getReply();
         String bucketName = request.getBucket();
@@ -2925,7 +2925,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public CopyObjectResponseType copyObject(CopyObjectType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         CopyObjectResponseType reply = (CopyObjectResponseType) request
                 .getReply();
         Context ctx = Contexts.lookup();
@@ -3064,13 +3064,14 @@ public class WalrusFSManager extends WalrusManager {
                         } catch (Exception ex) {
                             LOG.error(ex);
                             db.rollback();
-                            throw new EucalyptusCloudException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
+                            throw new InternalErrorException("Could not rename " + sourceObjectName + " to " + destinationObjectName);
                         }
                         if (addNew)
                             dbObject.add(destinationObjectInfo);
 
                         reply.setEtag(etag);
-                        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                        // Last modified date in copy response is in ISO8601 format as per S3 spec
+                        reply.setLastModified(DateFormatter.dateToListingFormattedString(lastModified));
 
                         if (foundDestinationBucketInfo.isVersioningEnabled()) {
                             reply.setCopySourceVersionId(sourceVersionId);
@@ -3099,7 +3100,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public SetBucketLoggingStatusResponseType setBucketLoggingStatus(
-            SetBucketLoggingStatusType request) throws EucalyptusCloudException {
+            SetBucketLoggingStatusType request) throws WalrusException {
         SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request
                 .getReply();
         String bucket = request.getBucket();
@@ -3185,7 +3186,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public GetBucketLoggingStatusResponseType getBucketLoggingStatus(
-            GetBucketLoggingStatusType request) throws EucalyptusCloudException {
+            GetBucketLoggingStatusType request) throws WalrusException {
         GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request
                 .getReply();
         String bucket = request.getBucket();
@@ -3232,7 +3233,7 @@ public class WalrusFSManager extends WalrusManager {
 
     @Override
     public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         GetBucketVersioningStatusResponseType reply = (GetBucketVersioningStatusResponseType) request.getReply();
         String bucket = request.getBucket();
         Context ctx = Contexts.lookup();
@@ -3260,7 +3261,7 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public SetBucketVersioningStatusResponseType setBucketVersioningStatus(
             SetBucketVersioningStatusType request)
-            throws EucalyptusCloudException {
+            throws WalrusException {
         SetBucketVersioningStatusResponseType reply = (SetBucketVersioningStatusResponseType) request
                 .getReply();
         String bucket = request.getBucket();
@@ -3307,7 +3308,7 @@ public class WalrusFSManager extends WalrusManager {
      * Significantly re-done version of listVersions that is based on listBuckets and the old listVersions.
      */
     @Override
-    public ListVersionsResponseType listVersions(ListVersionsType request) throws EucalyptusCloudException {
+    public ListVersionsResponseType listVersions(ListVersionsType request) throws WalrusException {
         ListVersionsResponseType reply = (ListVersionsResponseType) request.getReply();
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 
@@ -3402,7 +3403,7 @@ public class WalrusFSManager extends WalrusManager {
                         } catch (TransactionException e) {
                             LOG.error(e);
                             dbObject.rollback();
-                            throw new EucalyptusCloudException("Next-Key-Marker or Next-Version-Id marker invalid");
+                            throw new InternalErrorException("Next-Key-Marker or Next-Version-Id marker invalid");
                         }
                         // The result set should be exclusive of the key with the key-marker version-id-marker pair. Look for keys that lexicographically
                         // follow the version-id-marker for a given key-marker and also the keys that follow the key-marker.
@@ -3494,7 +3495,7 @@ public class WalrusFSManager extends WalrusManager {
                             keyEntry.setKey(objectKey);
                             keyEntry.setVersionId(objectInfo.getVersionId());
                             keyEntry.setIsLatest(objectInfo.getLast());
-                            keyEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                            keyEntry.setLastModified(DateFormatter.dateToListingFormattedString(objectInfo.getLastModified()));
                             try {
                                 Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
                                 keyEntry.setOwner(new CanonicalUser(ownerAccount.getCanonicalId(), ownerAccount.getName()));
@@ -3542,7 +3543,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+    public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws WalrusException {
         DeleteVersionResponseType reply = (DeleteVersionResponseType) request.getReply();
         String bucketName = request.getBucket();
         String objectKey = request.getKey();
@@ -3561,7 +3562,7 @@ public class WalrusFSManager extends WalrusManager {
             ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
             if (request.getVersionid() == null) {
                 db.rollback();
-                throw new EucalyptusCloudException("versionId is null");
+                throw new InternalErrorException("versionId is null");
             }
             searchObjectInfo.setVersionId(request.getVersionid());
             List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
@@ -3610,21 +3611,21 @@ public class WalrusFSManager extends WalrusManager {
         return reply;
     }
 
-    public static InetAddress getBucketIp(String bucket) throws EucalyptusCloudException {
+    public static InetAddress getBucketIp(String bucket) throws WalrusException {
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
         try {
             BucketInfo searchBucket = new BucketInfo(bucket);
             db.getUniqueEscape(searchBucket);
             return WalrusProperties.getWalrusAddress();
         } catch (EucalyptusCloudException ex) {
-            throw ex;
+            throw new InternalErrorException(ex);
         } finally {
             db.rollback();
         }
     }
 
     @Override
-    public void fastDeleteObject(DeleteObjectType request) throws EucalyptusCloudException {
+    public void fastDeleteObject(DeleteObjectType request) throws WalrusException {
         String bucketName = request.getBucket();
         String objectKey = request.getKey();
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
@@ -3662,7 +3663,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     @Override
-    public void fastDeleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+    public void fastDeleteBucket(DeleteBucketType request) throws WalrusException {
         String bucketName = request.getBucket();
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
         BucketInfo searchBucket = new BucketInfo(bucketName);
@@ -3695,7 +3696,7 @@ public class WalrusFSManager extends WalrusManager {
         db.commit();
     }
 
-    public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
+    public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws WalrusException {
         InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
 
         Context ctx = Contexts.lookup();
@@ -3745,7 +3746,7 @@ public class WalrusFSManager extends WalrusManager {
         return reply;
     }
 
-    public UploadPartResponseType uploadPart(UploadPartType request) throws EucalyptusCloudException {
+    public UploadPartResponseType uploadPart(UploadPartType request) throws WalrusException {
 
         UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
 
@@ -3776,7 +3777,7 @@ public class WalrusFSManager extends WalrusManager {
             } catch (NumberFormatException e) {
                 LOG.error("Invalid content length " + request.getContentLength());
                 //TODO: FIXME This should be a MissingContentLengthException
-                throw new EucalyptusCloudException("Missing Content-Length");
+                throw new InternalErrorException("Missing Content-Length");
             }
 
             String objectName = null;
@@ -3795,11 +3796,11 @@ public class WalrusFSManager extends WalrusManager {
                 List<PartInfo> found = partCriteria.list();
                 if (found.size() == 0) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
+                    throw new InternalErrorException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
                 }
                 if (found.size() > 1) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    throw new InternalErrorException("Multiple manifests found for same uploadId");
                 }
 
                 PartInfo foundManifest = found.get(0);
@@ -3812,7 +3813,7 @@ public class WalrusFSManager extends WalrusManager {
 
                 dbPart.commit();
             } catch (Exception ex) {
-                throw new EucalyptusCloudException(ex);
+                throw new InternalErrorException(ex);
             }
 
             // writes are unconditional
@@ -3861,7 +3862,7 @@ public class WalrusFSManager extends WalrusManager {
                             fileIO = storageManager.prepareForWrite(bucketName, tempObjectName);
                         } catch (Exception ex) {
                             messenger.removeQueue(key, randomKey);
-                            throw new EucalyptusCloudException(ex);
+                            throw new InternalErrorException(ex);
                         }
                     } else if (WalrusDataMessage.isEOF(dataMessage)) {
                         if (digest != null) {
@@ -3899,7 +3900,7 @@ public class WalrusFSManager extends WalrusManager {
                         } catch (IOException ex) {
                             LOG.error(ex);
                             messenger.removeQueue(key, randomKey);
-                            throw new EucalyptusCloudException(objectKey);
+                            throw new InternalErrorException(objectKey);
                         }
                         lastModified = new Date();
                         PartInfo searchPart = new PartInfo(bucketName, objectKey);
@@ -3913,7 +3914,7 @@ public class WalrusFSManager extends WalrusManager {
                             foundPart = dbPart.getUniqueEscape(searchPart);
                         } catch (EucalyptusCloudException ex) {
                             dbPart.rollback();
-                            throw new EucalyptusCloudException("Unable to update part: " + bucketName + "/" + objectKey + " uploadId: " + uploadId + " partNumber: " + partNumber);
+                            throw new InternalErrorException("Unable to update part: " + bucketName + "/" + objectKey + " uploadId: " + uploadId + " partNumber: " + partNumber);
                         }
                         foundPart.setEtag(md5);
                         foundPart.setSize(size);
@@ -3962,7 +3963,7 @@ public class WalrusFSManager extends WalrusManager {
                 LOG.error(ex, ex);
                 db.rollback();
                 messenger.removeQueue(key, randomKey);
-                throw new EucalyptusCloudException("Transfer interrupted: " + key + "." + randomKey);
+                throw new InternalErrorException("Transfer interrupted: " + key + "." + randomKey);
             }
 
         } else {
@@ -3972,11 +3973,11 @@ public class WalrusFSManager extends WalrusManager {
         }
 
         reply.setEtag(md5);
-        reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+        reply.setLastModified(lastModified);
         return reply;
     }
 
-    public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+    public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws WalrusException {
         CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();
 
         Context ctx = Contexts.lookup();
@@ -4006,11 +4007,11 @@ public class WalrusFSManager extends WalrusManager {
                 List<PartInfo> found = partCriteria.list();
                 if (found.size() == 0) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
+                    throw new NoSuchUploadException(request.getUploadId());
                 }
                 if (found.size() > 1) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    throw new InternalErrorException("Multiple manifests found for same uploadId: " + request.getUploadId());
                 }
 
                 PartInfo foundManifest = found.get(0);
@@ -4050,6 +4051,8 @@ public class WalrusFSManager extends WalrusManager {
                             throw ex;
                         } catch (EucalyptusCloudException ex) {
                             // No existing object found
+                            //empty catch? We need to throw or catch a more specific exception here. EucalyptusCloudException is not
+                            //specific enough and could be raised in a variety of cases.
                         }
                     }
 
@@ -4067,7 +4070,7 @@ public class WalrusFSManager extends WalrusManager {
                     long size = 0;
                     if(foundParts != null && foundParts.size() > 0) {
                         if(requestParts != null && requestParts.size() > foundParts.size()) {
-                            throw new EucalyptusCloudException("One or more parts has not been uploaded yet. Either upload the part or fix the manifest");
+                            throw new InternalErrorException("One or more parts has not been uploaded yet. Either upload the part or fix the manifest. Upload Id: " + request.getUploadId());
                         } else {
                             // Create a hashmap
                             Map<Integer, PartInfo> partsMap = new HashMap<Integer, PartInfo>(foundParts.size());
@@ -4083,8 +4086,7 @@ public class WalrusFSManager extends WalrusManager {
                                     size += lookupPart.getSize();
                                     partsMap.remove(lookupPart.getPartNumber());
                                 } else {
-                                    //TODO: This needs to be an InvalidPart exception
-                                    throw new EucalyptusCloudException("Part not found");
+                                    throw new InvalidPartException("Part Number: " + requestPart.getPartNumber() + " upload id: " + request.getUploadId());
                                 }
                             }
                             MessageDigest digest = Digest.MD5.get();
@@ -4103,6 +4105,7 @@ public class WalrusFSManager extends WalrusManager {
                             }
 
                             ObjectInfo objectInfo = new ObjectInfo(bucketName, objectKey);
+                            objectInfo.setOwnerId(account.getAccountNumber());
                             objectInfo.setCleanup(false);
                             objectInfo.setEtag(eTag);
                             objectInfo.setUploadId(foundManifest.getUploadId());
@@ -4116,6 +4119,7 @@ public class WalrusFSManager extends WalrusManager {
                             objectInfo.setLast(true);
                             objectInfo.setDeleted(false);
                             objectInfo.updateGrants(foundManifest);
+                            objectInfo.setLastModified(new Date());
                             EntityWrapper<ObjectInfo> dbOject = db.recast(ObjectInfo.class);
                             dbOject.add(objectInfo);
 
@@ -4130,19 +4134,20 @@ public class WalrusFSManager extends WalrusManager {
                             reply.setLocation("WalrusBackend" + foundManifest.getBucketName() + "/" + foundManifest.getObjectKey());
                             reply.setBucket(foundManifest.getBucketName());
                             reply.setKey(foundManifest.getObjectKey());
+                            reply.setLastModified(objectInfo.getLastModified());
                             //fire cleanup
                             firePartsCleanupTask(foundManifest.getBucketName(), request.getKey(), request.getUploadId());
                         }
                     } else {
-                        throw new EucalyptusCloudException("No parts found in the database");
+                        throw new InvalidPartException("No parts found for: " + request.getUploadId());
                     }
 
                 } else {
-                    throw new EucalyptusCloudException("Multipart upload ID is invalid.");
+                    throw new NoSuchUploadException(request.getUploadId());
                 }
             } catch (Exception ex) {
                 db.rollback();
-                throw new EucalyptusCloudException(ex);
+                throw new InternalErrorException(ex);
             }
         } else {
             db.rollback();
@@ -4154,7 +4159,7 @@ public class WalrusFSManager extends WalrusManager {
         return reply;
     }
 
-    public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
+    public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws WalrusException {
         AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -4183,11 +4188,11 @@ public class WalrusFSManager extends WalrusManager {
                 List<PartInfo> found = partCriteria.list();
                 if (found.size() == 0) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
+                    throw new InternalErrorException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
                 }
                 if (found.size() > 1) {
                     db.rollback();
-                    throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    throw new InternalErrorException("Multiple manifests found for same uploadId");
                 }
 
                 PartInfo foundManifest = found.get(0);
@@ -4204,18 +4209,18 @@ public class WalrusFSManager extends WalrusManager {
                             part.markForCleanup();
                         }
                     } else {
-                        throw new EucalyptusCloudException("No parts found for upload: " + request.getUploadId());
+                        throw new InternalErrorException("No parts found for upload: " + request.getUploadId());
                     }
                     db.commit();
 
                     //fire cleanup
                     firePartsCleanupTask(foundManifest.getBucketName(), foundManifest.getObjectKey(), request.getUploadId());
                 } else {
-                    throw new EucalyptusCloudException("Multipart upload ID is invalid.");
+                    throw new InternalErrorException("Multipart upload ID is invalid.");
                 }
             } catch (Exception ex) {
                 db.rollback();
-                throw new EucalyptusCloudException(ex);
+                throw new InternalErrorException(ex);
             }
         } else {
             db.rollback();
