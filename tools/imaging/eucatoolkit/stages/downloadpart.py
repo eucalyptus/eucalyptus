@@ -178,12 +178,14 @@ class DownloadPart(object):
                     err_msg = etag_msg + ", etag does not equal written digest"
                     # If the etag was 32 hex chars assume this is the md5 sum
                     # and raise the error, if not just log a warning
-                    try:
-                        int(etag, 32)
-                    except ValueError:
-                        self.log.warn(err_msg)
-                    else:
-                        raise ValueError(err_msg)
+                    if len(etag) == 32:
+                        try:
+                            int(etag, 16)
+                        except ValueError:
+                            pass
+                        else:
+                            raise ValueError(err_msg)
+                    self.log.warn(err_msg)
                 else:
                     # Digest was verified log for debugging purposes
                     self.log.debug(etag_msg + ", etag == digest")
