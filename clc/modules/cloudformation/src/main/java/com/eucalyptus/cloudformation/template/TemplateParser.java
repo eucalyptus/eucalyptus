@@ -819,7 +819,7 @@ public class TemplateParser {
     // Check "Fn::GetAtt" (make sure not resource or attribute)
     IntrinsicFunction.MatchResult fnAttMatcher = IntrinsicFunctions.GET_ATT.evaluateMatch(currentNode);
     if (fnAttMatcher.isMatch()) {
-      IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(refMatcher);
+      IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
       String refName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
       String attName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
@@ -1040,7 +1040,7 @@ public class TemplateParser {
     // Check "Fn::GetAtt" (make sure not resource or attribute)
     IntrinsicFunction.MatchResult fnAttMatcher = IntrinsicFunctions.GET_ATT.evaluateMatch(jsonNode);
     if (fnAttMatcher.isMatch()) {
-      IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(refMatcher);
+      IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
       String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
       String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();

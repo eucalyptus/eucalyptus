@@ -65,6 +65,7 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+    LOG.debug("Creating resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
     ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? new ArrayList<String>()
@@ -78,6 +79,7 @@ public class StackActivityImpl implements StackActivity{
     String stackName = stackEntity.getStackName();
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     if (!resourceInfo.getAllowedByCondition()) {
+      LOG.debug("Resource " + resourceId + " not allowed by condition, skipping");
       return JsonHelper.getStringFromJsonNode(returnNode);
     };
     // Finally evaluate all properties
@@ -98,7 +100,6 @@ public class StackActivityImpl implements StackActivity{
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
     StackEvent stackEvent = new StackEvent();
     stackEvent.setStackId(stackId);
     stackEvent.setStackName(stackName);
@@ -117,6 +118,7 @@ public class StackActivityImpl implements StackActivity{
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     try {
+      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
       resourceAction.create();
       resourceInfo.setReady(Boolean.TRUE);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
@@ -129,8 +131,10 @@ public class StackActivityImpl implements StackActivity{
       stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
       stackEvent.setTimestamp(new Date());
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      LOG.debug("Finished creating resource " + resourceId);
       return JsonHelper.getStringFromJsonNode(returnNode);
     } catch (Exception ex) {
+      LOG.debug("Error creating resource " + resourceId);
       LOG.error(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
@@ -153,6 +157,7 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+    LOG.debug("Deleting resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
@@ -166,7 +171,6 @@ public class StackActivityImpl implements StackActivity{
         ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
         resourceAction.setStackEntity(stackEntity);
         resourceAction.setResourceInfo(resourceInfo);
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
         if (resourceInfo.getDeletionPolicy() == "Retain") {
           StackEvent stackEvent = new StackEvent();
           stackEvent.setStackId(stackId);
@@ -202,7 +206,10 @@ public class StackActivityImpl implements StackActivity{
           stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);
           stackResourceEntity.setResourceStatusReason(null);
           StackResourceEntityManager.updateStackResource(stackResourceEntity);
-          resourceAction.delete();
+          if (resourceInfo.getPhysicalResourceId() != null) {
+            ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+            resourceAction.delete();
+          }
           stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
           stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_COMPLETE);
           stackResourceEntity.setResourceStatusReason(null);
@@ -215,11 +222,14 @@ public class StackActivityImpl implements StackActivity{
           StackEventEntityManager.addStackEvent(stackEvent, accountId);
           returnNode.put("status", "success");
         }
+        LOG.debug("Finished deleting resource " + resourceId);
       } catch (Exception ex) {
+        LOG.debug("Error deleting resource " + resourceId);
         LOG.error(ex, ex);
         returnNode.put("status", "failure");
       }
     } else {
+      LOG.debug("No need to delete resource " + resourceId + ", either not created or already deleted");
       returnNode.put("status", "success"); // already deleted
     }
     return JsonHelper.getStringFromJsonNode(returnNode);
