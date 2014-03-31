@@ -18,16 +18,17 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 409 )
 public class InvalidConfigurationRequestException extends LoadBalancingException {
 	private static final long serialVersionUID = 1L;
 	public InvalidConfigurationRequestException(){
-		super("Requested configuration change is invalid");
+		super("InvalidConfigurationRequest", Role.Sender, "Requested configuration change is invalid");
 	}
 	
 	public InvalidConfigurationRequestException(final String reason){
-		super(String.format("Requested configuration change is invalid: %s", reason));
+		super("InvalidConfigurationRequest", Role.Sender, String.format("Requested configuration change is invalid: %s", reason));
 	}
 }
