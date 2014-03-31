@@ -60,82 +60,31 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.walrus.exceptions;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.util.WalrusProperties;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "drbd_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
-public class DRBDInfo extends AbstractPersistent {
-	@Column(name = "walrus_name", unique=true)
-	private String name;
-	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
-	@Column( name = "block_device" )
-	private String blockDevice;
-	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
-	@Column( name = "resource_name" )
-	private String resource;
+@SuppressWarnings("serial")
+public class NoSuchUploadException extends WalrusException {
 
-	public DRBDInfo() {}
+  public NoSuchUploadException()
+  {
+    super( "NoSuchUpload" );
+  }
 
-	public DRBDInfo(final String name,
-			final String blockDevice) {
-		this.name = name;
-		this.blockDevice = blockDevice;
-	}
+  public NoSuchUploadException(String resource)
+  {
+      super("NoSuchUpload", "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.", "upload id: ", resource, HttpResponseStatus.NOT_FOUND);
+  }
 
-	public String getName() {
-		return name;
-	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
+  public NoSuchUploadException(Throwable ex)
+  {
+    super("NoSuchUpload", ex);
+  }
 
-	public String getBlockDevice() {
-		return blockDevice;
-	}
-
-	public void setBlockDevice(String blockDevice) {
-		this.blockDevice = blockDevice;
-	}
-
-	public String getResource() {
-		return resource;
-	}
-
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
-
-	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
-		DRBDInfo drbdInfo;
-		try {
-			drbdInfo = db.getUnique(new DRBDInfo());
-		} catch(EucalyptusCloudException ex) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
-					"/dev/unknown");
-			db.add(drbdInfo);     
-		} finally {
-			db.commit();
-		}
-		return drbdInfo;
-	}
+  public NoSuchUploadException(String message, Throwable ex)
+  {
+    super(message, ex);
+  }
 }

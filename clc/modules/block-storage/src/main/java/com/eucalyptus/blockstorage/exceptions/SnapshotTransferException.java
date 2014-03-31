@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,82 +60,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.blockstorage.exceptions;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.util.WalrusProperties;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "drbd_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
-public class DRBDInfo extends AbstractPersistent {
-	@Column(name = "walrus_name", unique=true)
-	private String name;
-	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
-	@Column( name = "block_device" )
-	private String blockDevice;
-	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
-	@Column( name = "resource_name" )
-	private String resource;
+@SuppressWarnings("serial")
+public class SnapshotTransferException extends EucalyptusCloudException {
 
-	public DRBDInfo() {}
-
-	public DRBDInfo(final String name,
-			final String blockDevice) {
-		this.name = name;
-		this.blockDevice = blockDevice;
+	public SnapshotTransferException(String message, Throwable ex) {
+		super(message, ex);
 	}
 
-	public String getName() {
-		return name;
+	public SnapshotTransferException(String message) {
+		super(message);
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getBlockDevice() {
-		return blockDevice;
-	}
-
-	public void setBlockDevice(String blockDevice) {
-		this.blockDevice = blockDevice;
-	}
-
-	public String getResource() {
-		return resource;
-	}
-
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
-
-	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
-		DRBDInfo drbdInfo;
-		try {
-			drbdInfo = db.getUnique(new DRBDInfo());
-		} catch(EucalyptusCloudException ex) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
-					"/dev/unknown");
-			db.add(drbdInfo);     
-		} finally {
-			db.commit();
-		}
-		return drbdInfo;
-	}
 }

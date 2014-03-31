@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,19 +60,31 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.exceptions;
+package com.eucalyptus.walrus.exceptions;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @SuppressWarnings("serial")
-public class SnapshotUploadException extends EucalyptusCloudException {
+public class InvalidPartException extends WalrusException {
 
-	public SnapshotUploadException(String message, Throwable ex) {
-		super(message, ex);
-	}
+  public InvalidPartException()
+  {
+    super( "InvalidPart" );
+  }
 
-	public SnapshotUploadException(String message) {
-		super(message);
-	}
+  public InvalidPartException(String resource)
+  {
+      super("InvalidPart", "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.", "Resource: ", resource, HttpResponseStatus.BAD_REQUEST);
+  }
 
+
+  public InvalidPartException(Throwable ex)
+  {
+    super("InvalidPart", ex);
+  }
+
+  public InvalidPartException(String message, Throwable ex)
+  {
+    super(message, ex);
+  }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,82 +60,82 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.storage.common;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.util.WalrusProperties;
+import java.util.Date;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "drbd_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
-public class DRBDInfo extends AbstractPersistent {
-	@Column(name = "walrus_name", unique=true)
-	private String name;
-	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
-	@Column( name = "block_device" )
-	private String blockDevice;
-	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
-	@Column( name = "resource_name" )
-	private String resource;
+import org.apache.tools.ant.util.DateUtils;
 
-	public DRBDInfo() {}
-
-	public DRBDInfo(final String name,
-			final String blockDevice) {
-		this.name = name;
-		this.blockDevice = blockDevice;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getBlockDevice() {
-		return blockDevice;
-	}
-
-	public void setBlockDevice(String blockDevice) {
-		this.blockDevice = blockDevice;
-	}
-
-	public String getResource() {
-		return resource;
-	}
-
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
-
-	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
-		DRBDInfo drbdInfo;
-		try {
-			drbdInfo = db.getUnique(new DRBDInfo());
-		} catch(EucalyptusCloudException ex) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
-					"/dev/unknown");
-			db.add(drbdInfo);     
-		} finally {
-			db.commit();
+public class DateFormatter {
+	/**
+	 * Helper to do the ISO8601 formatting as found in object/bucket lists
+	 * 
+	 * @param d
+	 * @return
+	 */
+	public static String dateToListingFormattedString(Date d) {
+		if (d == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.format(d.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN);
+			} catch (Exception e) {
+				return null;
+			}
 		}
-		return drbdInfo;
+	}
+
+	/**
+	 * Helper to parse the ISO8601 date, as found in listings
+	 * 
+	 * @param header
+	 * @return
+	 */
+	public static Date dateFromListingFormattedString(String header) {
+		if (header == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.parseIso8601DateTimeOrDate(header);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
+
+	/**
+	 * Parses an RFC-822 formated date, as found in headers
+	 * 
+	 * @param dateStr
+	 * @return
+	 */
+	public static Date dateFromHeaderFormattedString(String dateStr) {
+		if (dateStr == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.parseRfc822DateTime(dateStr);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+	}
+
+	/**
+	 * Helper to do the RFC822 formatting for placement in HTTP headers
+	 * 
+	 * @param d
+	 * @return
+	 */
+	public static String dateToHeaderFormattedString(Date d) {
+		if (d == null) {
+			return null;
+		} else {
+			try {
+				return DateUtils.format(d.getTime(), DateUtils.RFC822_DATETIME_PATTERN);
+			} catch (Exception e) {
+				return null;
+			}
+		}
 	}
 }

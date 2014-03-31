@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,82 +60,28 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.blockstorage;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.util.WalrusProperties;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "drbd_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
-public class DRBDInfo extends AbstractPersistent {
-	@Column(name = "walrus_name", unique=true)
-	private String name;
-	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
-	@Column( name = "block_device" )
-	private String blockDevice;
-	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
-	@Column( name = "resource_name" )
-	private String resource;
+/**
+ * Interface for snapshot transfer between SC and any storage system
+ * 
+ * @author Swathi Gangisetty
+ */
+public interface SnapshotTransfer {
 
-	public DRBDInfo() {}
+	public String prepareForUpload() throws SnapshotTransferException;
 
-	public DRBDInfo(final String name,
-			final String blockDevice) {
-		this.name = name;
-		this.blockDevice = blockDevice;
-	}
+	public void upload(String sourceFileName) throws SnapshotTransferException;
 
-	public String getName() {
-		return name;
-	}
+	public void resumeUpload(String sourceFileName) throws SnapshotTransferException;
 
-	public void setName(String name) {
-		this.name = name;
-	}
+	public void cancelUpload() throws SnapshotTransferException;
 
-	public String getBlockDevice() {
-		return blockDevice;
-	}
+	public void download(String destinationFileName) throws SnapshotTransferException;
 
-	public void setBlockDevice(String blockDevice) {
-		this.blockDevice = blockDevice;
-	}
+	public void delete() throws SnapshotTransferException;
 
-	public String getResource() {
-		return resource;
-	}
-
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
-
-	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
-		DRBDInfo drbdInfo;
-		try {
-			drbdInfo = db.getUnique(new DRBDInfo());
-		} catch(EucalyptusCloudException ex) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
-					"/dev/unknown");
-			db.add(drbdInfo);     
-		} finally {
-			db.commit();
-		}
-		return drbdInfo;
-	}
+	public Long getSizeInBytes() throws SnapshotTransferException;
 }

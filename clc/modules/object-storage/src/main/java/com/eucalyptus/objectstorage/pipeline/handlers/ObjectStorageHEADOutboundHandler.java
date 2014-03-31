@@ -66,6 +66,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
@@ -87,7 +88,7 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
         if (event.getMessage() instanceof MappingHttpResponse) {
             MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
             BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-            httpResponse.setHeader("Date", OSGUtil.dateToHeaderFormattedString(new Date()));
+            httpResponse.setHeader("Date", DateFormatter.dateToHeaderFormattedString(new Date()));
             httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
             if (msg instanceof ObjectStorageDataResponseType) {
                 httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType) msg).getEtag() + "\""); //etag in quotes, per s3-spec.

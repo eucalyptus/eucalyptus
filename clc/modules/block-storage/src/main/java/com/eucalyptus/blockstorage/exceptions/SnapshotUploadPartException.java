@@ -63,7 +63,7 @@
 package com.eucalyptus.blockstorage.exceptions;
 
 @SuppressWarnings("serial")
-public class SnapshotUploadPartException extends SnapshotUploadException {
+public class SnapshotUploadPartException extends SnapshotTransferException {
 
 	public SnapshotUploadPartException(String message) {
 		super(message);
