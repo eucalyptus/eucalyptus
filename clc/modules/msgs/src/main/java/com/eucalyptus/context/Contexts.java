@@ -251,7 +251,7 @@ public class Contexts {
       Channels.write( channel, message );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) );
+      LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) + " for " + responseMessage.getClass( ).getSimpleName( ) );
       Logs.extreme( ).debug( responseMessage, e );
     } catch ( Exception e ) {
       LOG.warn( "Error occurred while handling reply: " + responseMessage );
