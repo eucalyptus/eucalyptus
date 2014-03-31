@@ -33,7 +33,7 @@
           serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="requestId" field="correlationId" usage="optional" />
+    <value name="requestId" get-method="getCorrelationId" field="correlationId" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.ComputeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
     abstract="true">
