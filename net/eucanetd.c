@@ -888,6 +888,10 @@ int update_sec_groups(void)
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_IN");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_OUT");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
+    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_IN");
+    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
+
+    // reset and create ipsets for allprivate and noneuca subnet sets
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
     ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
