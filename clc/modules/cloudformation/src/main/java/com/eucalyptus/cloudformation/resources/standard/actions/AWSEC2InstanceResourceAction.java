@@ -20,21 +20,30 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InstanceResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPoint;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AttachVolumeResponseType;
+import com.eucalyptus.compute.common.AttachVolumeType;
+import com.eucalyptus.compute.common.AttachedVolume;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.DescribeVolumesResponseType;
+import com.eucalyptus.compute.common.DescribeVolumesType;
+import com.eucalyptus.compute.common.DetachVolumeResponseType;
+import com.eucalyptus.compute.common.DetachVolumeType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.RunInstancesResponseType;
@@ -42,8 +51,10 @@ import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
@@ -183,13 +194,36 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     if (properties.getUserData() != null && !properties.getUserData().isEmpty()) {
       runInstancesType.setUserData(properties.getUserData());
     }
-    // Skipping mapping resourceProperties.getVolumes() for now
+
+    // make sure all volumes exist and are available
+    if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
+      DescribeVolumesType describeVolumesType = new DescribeVolumesType();
+      ArrayList<String> volumeIds = Lists.newArrayList();
+      for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
+        volumeIds.add(ec2MountPoint.getVolumeId());
+      }
+      describeVolumesType.setVolumeSet(volumeIds);
+      describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
+      DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+      Map<String, String> volumeStatusMap = Maps.newHashMap();
+      for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+        volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
+      }
+      for (String volumeId: volumeIds) {
+        if (!volumeStatusMap.containsKey(volumeId)) {
+          throw new ValidationErrorException("No such volume " + volumeId);
+        } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
+          throw new ValidationErrorException("Volume " + volumeId + " not available");
+        }
+      }
+    }
 
     runInstancesType.setMinCount(1);
     runInstancesType.setMaxCount(1);
     runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
+    boolean running = false;
     for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType = new DescribeInstancesType();
@@ -205,10 +239,58 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
         info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
         info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        return;
+        running = true;
+        break;
       }
     }
-    throw new Exception("Timeout");
+    if (!running) {
+      throw new Exception("Timeout");
+    }
+
+    // attach all volumes
+    if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
+      ArrayList<String> volumeIds = Lists.newArrayList();
+      Map<String, String> deviceMap = Maps.newHashMap();
+      for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
+        volumeIds.add(ec2MountPoint.getVolumeId());
+        deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
+        AttachVolumeType attachVolumeType = new AttachVolumeType();
+        attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
+        attachVolumeType.setInstanceId(info.getPhysicalResourceId());
+        attachVolumeType.setVolumeId(ec2MountPoint.getVolumeId());
+        attachVolumeType.setDevice(ec2MountPoint.getDevice());
+        AsyncRequests.<AttachVolumeType, AttachVolumeResponseType> sendSync(configuration, attachVolumeType);
+      }
+
+      boolean allAttached = false;
+      for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+        Thread.sleep(5000L);
+        DescribeVolumesType describeVolumesType2 = new DescribeVolumesType();
+        describeVolumesType2.setVolumeSet(Lists.newArrayList(volumeIds));
+        describeVolumesType2.setEffectiveUserId(info.getEffectiveUserId());
+        DescribeVolumesResponseType describeVolumesResponseType2 = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType2);
+        Map<String, String> volumeStatusMap = Maps.newHashMap();
+        for (Volume volume: describeVolumesResponseType2.getVolumeSet()) {
+          for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
+            if (attachedVolume.getInstanceId().equals(info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
+              volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
+            }
+          }
+        }
+        boolean anyNonAttached = false;
+        for (String volumeId: volumeIds) {
+          if (!"attached".equals(volumeStatusMap.get(volumeId))) {
+            anyNonAttached = true;
+            break;
+          }
+        }
+        if (!anyNonAttached) {
+          allAttached = true;
+          break;
+        }
+      }
+      if (!allAttached) throw new Exception("Timeout");
+    }
   }
 
 
@@ -225,6 +307,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     if ("terminated".equals(
       describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) return;
 
+    // Volumes automatically detach
     TerminateInstancesType terminateInstancesType = new TerminateInstancesType();
     terminateInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
     terminateInstancesType.setEffectiveUserId(info.getEffectiveUserId());

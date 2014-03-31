@@ -228,10 +228,32 @@ public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProp
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeProperties implements ResourceProperties {
+  @Required
+  @Property
+  String availabilityZone;
+  @Property
+  Integer iops;
+  @Property
+  String size;
+  @Property
+  String snapshotId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
+  @Property
+  String volumeType;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeAttachmentProperties implements ResourceProperties {
+  @Required
+  @Property
+  String device;
+  @Required
+  @Property
+  String instanceId;
+  @Required
+  @Property
+  String volumeId;
 }
 
 @ToString(includeNames=true)
