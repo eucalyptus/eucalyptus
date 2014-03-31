@@ -87,6 +87,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.keys.NoSuchKeyMetadataException;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -242,6 +243,8 @@ public class VmControl {
       if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
       final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
       if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
+      final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
+      if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();
