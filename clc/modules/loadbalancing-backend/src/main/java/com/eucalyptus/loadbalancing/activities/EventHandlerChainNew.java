@@ -367,12 +367,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				throw new EventHandlerException("could not find the role name for loadbalancer vm");
 			}
 			
-			GetRolePolicyResult policy  = null;
-			/// GetRolePolicy: check if there's an existing policy doc
+      GetRolePolicyResult policy  = null;
 			try{
-				policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			  final List<String> policies = EucalyptusActivityTasks.getInstance().listRolePolicies(roleName);
+			  if(policies.contains(SERVO_ROLE_POLICY_NAME)){
+		       policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			  } 
 			}catch(final Exception ex){
-				;
+			  ;
 			}
 			
 			boolean putPolicy = false;
