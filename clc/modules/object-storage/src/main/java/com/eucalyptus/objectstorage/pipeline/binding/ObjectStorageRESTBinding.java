@@ -73,12 +73,11 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
@@ -145,18 +144,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
+public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected static Logger LOG = Logger.getLogger( ObjectStorageRESTBinding.class );
     protected static final String SERVICE = "service";
     protected static final String BUCKET = "bucket";
     protected static final String OBJECT = "object";
-    protected static final Map<String, String> operationMap = populateOperationMap();
-    private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
+    protected Map<String, String> operationMap;
+    protected Map<String, String> unsupportedOperationMap;
     protected String key;
-    protected String randomKey;
 
     public ObjectStorageRESTBinding( ) {
         super( "http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION );
+        operationMap = populateOperationMap();
+        unsupportedOperationMap = populateUnsupportedOperationMap();
     }
 
     @Override
@@ -172,7 +172,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 return;
             }
         }
-        channelHandlerContext.sendUpstream( channelEvent );
+        channelHandlerContext.sendUpstream(channelEvent);
     }
 
     @Override
@@ -193,16 +193,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 if(expect != null) {
                     if(expect.toLowerCase().equals("100-continue")) {
                         ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
-                        request.setExpectHeader(true);
-                        /*HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
-                        DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
-                        final Channel channel = ctx.getChannel();
-                        if ( channel.isConnected( ) ) {
-                            ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
-                            Channels.write(ctx, writeFuture, response);
-                        }
-                        ctx.sendDownstream( newEvent );*/
-                    }
+                        request.setExpectHeader(true);                     }
                 }
 
                 //handle the content.
@@ -234,8 +225,8 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
                 httpResponse.setHeader( HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
-                httpResponse.setHeader( "x-amz-request-id", msg.getCorrelationId());
-                httpResponse.setContent( buffer );
+                httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
+                httpResponse.setContent(buffer);
             }
         }
     }
@@ -245,97 +236,8 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         dataRequest.setData(stream);
     }
 
-    protected static Map<String, String> populateOperationMap() {
-        Map<String, String> newMap = new HashMap<String, String>();
-        //Service operations
-        newMap.put(SERVICE + ObjectStorageProperties.HTTPVerb.GET.toString(), "ListAllMyBuckets");
-
-        //Bucket operations
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.HEAD.toString(), "HeadBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.prefix.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.maxkeys.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.marker.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.delimiter.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString(), "CreateBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString(), "DeleteBucket");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.location.toString(), "GetBucketLocation");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-        // Multipart uploads
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
-
-
-        //Object operations
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.POST.toString(), "PostObject");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString(), "PutObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.COPY_SOURCE.toString(), "CopyObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString(), "GetObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.torrent.toString(), "GetObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString(), "DeleteObject");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.HEAD.toString(), "HeadObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
-
-        // Multipart Uploads
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "ListParts");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload");
-
-        return newMap;
-    }
-
-    private static Map<String, String> populateUnsupportedOperationMap() {
-        Map<String, String> opsMap = new HashMap<String, String>();
-
-        // Bucket operations
-        // Cross-Origin Resource Sharing (cors)
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GET Bucket cors");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
-        // Policy
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "GET Bucket policy");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
-        // Notification
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "GET Bucket notification");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
-        // Tagging
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GET Bucket tagging");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "PUT Bucket tagging");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DELETE Bucket tagging");
-        // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment");
-        // Website
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "GET Bucket website");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-
-        // Object operations
-        return opsMap;
-    }
+    protected abstract Map<String, String> populateOperationMap();
+    protected abstract Map<String, String> populateUnsupportedOperationMap();
 
     @Override
     public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
@@ -434,7 +336,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         msg.setProperty("timeStamp", new Date());
     }
 
-    protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException, NotImplementedException {
+    protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
         String[] target = null;
         String path = getOperationPath(httpRequest);
         boolean objectstorageInternalOperation = false;
@@ -469,12 +371,14 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 operationParams.put("Bucket", target[0]);
                 operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
                 if(verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-                    //TODO: handle POST.
+                    //Handle POST form upload.
+                    /*
+                    For multipart-form uploads we get the metadata from the from fields
+                    and the first data chunk from the "file" form field
+                     */
                     Map formFields = httpRequest.getFormFields();
-
                     String objectKey = null;
                     String file = (String) formFields.get(ObjectStorageProperties.FormField.file.toString());
-                    String authenticationHeader = "";
                     if(formFields.containsKey(ObjectStorageProperties.FormField.key.toString())) {
                         objectKey = (String) formFields.get(ObjectStorageProperties.FormField.key.toString());
                         objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
@@ -494,28 +398,46 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     }
                     if(formFields.containsKey(ObjectStorageProperties.FormField.success_action_status.toString())) {
                         Integer successActionStatus = Integer.parseInt((String)formFields.get(ObjectStorageProperties.FormField.success_action_status.toString()));
-                        if(successActionStatus == 200 || successActionStatus == 201)
+                        if(successActionStatus == 200 || successActionStatus == 201) {
                             operationParams.put("SuccessActionStatus", successActionStatus);
-                        else
+                        } else {
+                            //Default is 204, as per S3 spec
                             operationParams.put("SuccessActionStatus", 204);
+                        }
                     } else {
                         operationParams.put("SuccessActionStatus", 204);
                     }
-                    if(formFields.containsKey(ObjectStorageProperties.CONTENT_TYPE)) {
-                        operationParams.put("ContentType", formFields.get(ObjectStorageProperties.CONTENT_TYPE));
+
+                    //Get the content-type of the upload content, not the form itself
+                    if(formFields.containsKey(HttpHeaders.Names.CONTENT_TYPE)) {
+                        operationParams.put("ContentType", formFields.get(HttpHeaders.Names.CONTENT_TYPE));
+                    }
+
+
+                    if(formFields.get(ObjectStorageProperties.UPLOAD_LENGTH_FIELD) != null) {
+                        operationParams.put("ContentLength", (long)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FileContentLength"));
+                    } else {
+                        throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
+                        //if(contentLengthString != null) {
+                        //    operationParams.put("ContentLength", (new Long(contentLength).toString()));
+                        //}
                     }
                     key = target[0] + "." + objectKey;
-                    randomKey = key + "." + Hashes.getRandom(10);
-                    if(contentLengthString != null)
-                        operationParams.put("ContentLength", (new Long(contentLength).toString()));
-                    operationParams.put(ObjectStorageProperties.Headers.RandomKey.toString(), randomKey);
-
-                    //TODO: This is PostObject.
-                    //handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 
                     //Set the message content to the first-data chunk if found. This is used later for processing the message like a PUT request
-                    httpRequest.setContent((ChannelBuffer)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FirstDataChunk"));
-
+                    ChannelBuffer buffer = (ChannelBuffer)formFields.get(ObjectStorageProperties.FIRST_CHUNK_FIELD);
+                    if(buffer == null) {
+                        //No content found.
+                        LOG.trace("No data content found for POST upload");
+                        throw new MalformedPOSTRequestException("No upload content found");
+                    }
+                    /*
+                    POST is handled by the POST binding subclass, can ignore here
+                    else {
+                        //This will cause failure because an HttpRequest cannot
+                        // have isChunked == true && content.length > 0
+                        httpRequest.setContent(buffer);
+                    }*/
                 } else if(ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {
                     if(params.containsKey(ObjectStorageProperties.BucketParameter.logging.toString())) {
                         //read logging params
@@ -604,30 +526,17 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     } else {
                         //handle PUTs
                         key = target[0] + "." + objectKey;
-                        randomKey = key + "." + Hashes.getRandom(10);
-                        String contentType = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
+                        String contentType = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
                         if(contentType != null)
                             operationParams.put("ContentType", contentType);
                         String contentDisposition = httpRequest.getHeader("Content-Disposition");
                         if(contentDisposition != null)
                             operationParams.put("ContentDisposition", contentDisposition);
-                        String contentMD5 = httpRequest.getHeader(ObjectStorageProperties.CONTENT_MD5);
+                        String contentMD5 = httpRequest.getHeader(HttpHeaders.Names.CONTENT_MD5);
                         if(contentMD5 != null)
                             operationParams.put("ContentMD5", contentMD5);
                         if(contentLengthString != null)
                             operationParams.put("ContentLength", (new Long(contentLength).toString()));
-
-                        //Not used in this pipeline
-                        //operationParams.put(ObjectStorageProperties.Headers.RandomKey.toString(), randomKey);
-                        //putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                        //handleFirstChunk(httpRequest, contentLength);
-
-                        //Not needed for binding anymore
-						/*try {
-							operationParams.put("Data", getFirstChunk(httpRequest, contentLength));
-						} catch (Exception ex) {
-							throw new BindingException("Unable to get data from PUT request for: " + key, ex);
-						}*/
                     }
                 } else if(verb.equals(ObjectStorageProperties.HTTPVerb.GET.toString())) {
                     if(!objectstorageInternalOperation) {

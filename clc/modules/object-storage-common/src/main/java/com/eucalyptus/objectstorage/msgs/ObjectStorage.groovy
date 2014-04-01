@@ -152,7 +152,6 @@ public class ObjectStorageRequestType extends BaseMessage {
 }
 
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
-    String randomKey;
     Boolean isCompressed;
     ChannelBufferStreamingInputStream data;
     boolean isChunked;

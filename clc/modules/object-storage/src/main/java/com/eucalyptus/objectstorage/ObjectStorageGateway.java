@@ -318,8 +318,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
 	@Override
 	public PutObjectResponseType putObject(final PutObjectType request) throws S3Exception {
-		logRequest(request);
+        logRequest(request);
+        return doPutOperation(request);
+    }
 
+    protected PutObjectResponseType doPutOperation(final PutObjectType request) throws S3Exception {
         try {
             User requestUser = getRequestUser(request);
             Bucket bucket;
@@ -721,6 +724,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public PostObjectResponseType postObject (PostObjectType request) throws S3Exception {
+        logRequest(request);
+
         String bucketName = request.getBucket();
         String key = request.getKey();
 
@@ -737,8 +742,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         putObject.setIsCompressed(request.getIsCompressed());
         putObject.setMetaData(request.getMetaData());
         putObject.setStorageClass(request.getStorageClass());
-
-        PutObjectResponseType putObjectResponse = putObject(putObject);
+        putObject.setData(request.getData());
+        PutObjectResponseType putObjectResponse = doPutOperation(putObject);
 
         String etag = putObjectResponse.getEtag();
         PostObjectResponseType reply = request.getReply();
@@ -1145,6 +1150,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
             request.setVersionId(null);
             HeadObjectResponseType backendReply = ospClient.headObject(request);
             reply.setMetaData(backendReply.getMetaData());
+            reply.setContentType(backendReply.getContentType());
+            reply.setContentDisposition(backendReply.getContentDisposition());
         } catch(S3Exception e) {
         	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
             //We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.
@@ -1155,7 +1162,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         reply.setSize(objectEntity.getSize());
         reply.setVersionId(objectEntity.getVersionId());
         reply.setEtag(objectEntity.geteTag());
-        reply.setVersionId(objectEntity.getVersionId());
 
         return reply;
 	}

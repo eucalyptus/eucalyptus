@@ -93,6 +93,17 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
             if (msg instanceof ObjectStorageDataResponseType) {
                 httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType) msg).getEtag() + "\""); //etag in quotes, per s3-spec.
 
+                //Fix for euca-9081
+                String contentType = ((ObjectStorageDataResponseType) msg).getContentType();
+                if(!Strings.isNullOrEmpty(contentType)) {
+                    httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+                }
+
+                String contentLength = String.valueOf(((ObjectStorageDataResponseType) msg).getSize());
+                if(!Strings.isNullOrEmpty(contentLength)) {
+                    httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
+                }
+
                 if (!Strings.isNullOrEmpty(((ObjectStorageDataResponseType) msg).getVersionId()) &&
                         !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
                     httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
