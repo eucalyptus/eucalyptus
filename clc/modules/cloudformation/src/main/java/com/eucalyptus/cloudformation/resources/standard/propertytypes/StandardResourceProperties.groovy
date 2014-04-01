@@ -57,6 +57,43 @@ public class AWSCloudFrontDistributionProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSCloudWatchAlarmProperties implements ResourceProperties {
+  @Property
+  Boolean actionsEnabled;
+  @Property
+  List<String> alarmActions = Lists.newArrayList();
+  @Property
+  String alarmDescription;
+  @Property
+  String alarmName;
+  @Required
+  @Property
+  String comparisonOperator;
+  @Property
+  List<CloudWatchMetricDimension> dimensions = Lists.newArrayList();
+  @Required
+  @Property
+  Integer evaluationPeriods;
+  @Property
+  List<String> insufficientDataActions = Lists.newArrayList();
+  @Required
+  @Property
+  String metricName;
+  @Required
+  @Property
+  String namespace;
+  @Property(name="OKActions")
+  List<String> okActions = Lists.newArrayList();
+  @Required
+  @Property
+  Integer period;
+  @Required
+  @Property
+  String statistic;
+  @Required
+  @Property
+  Double threshold;
+  @Property
+  String unit;
 }
 
 @ToString(includeNames=true)

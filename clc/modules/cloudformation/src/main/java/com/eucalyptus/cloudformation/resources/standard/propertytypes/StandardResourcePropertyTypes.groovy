@@ -59,6 +59,15 @@ public class AutoScalingTag {
   @Required
   Boolean propagateAtLaunch;
 }
+@ToString(includeNames=true)
+public class CloudWatchMetricDimension {
+  @Property
+  @Required
+  String name;
+  @Property
+  @Required
+  String value;
+}
 
 @ToString(includeNames=true)
 public class EC2BlockDeviceMapping {

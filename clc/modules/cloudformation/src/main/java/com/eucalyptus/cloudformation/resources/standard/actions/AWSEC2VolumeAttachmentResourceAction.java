@@ -115,7 +115,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
     }
     if (!attached) throw new Exception("Timeout");
     String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-      Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
+      Crypto.generateAlphanumericId(12, ""); // seems to be what AWS does
     info.setPhysicalResourceId(physicalResourceId);
     info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
   }
