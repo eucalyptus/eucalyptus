@@ -170,7 +170,7 @@ public class ImagingService {
     final Context context = Contexts.lookup();
     
     try{
-      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+      if ( ! ( context.getUser().isSystemAdmin() || Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
           EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
           "",
@@ -270,7 +270,7 @@ public class ImagingService {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
     try{
-      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+      if ( ! ( context.getUser().isSystemAdmin() || Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
           EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
           "",
