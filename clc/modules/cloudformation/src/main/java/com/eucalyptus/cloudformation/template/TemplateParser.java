@@ -282,7 +282,7 @@ public class TemplateParser {
         requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
       }
     }
-    List<String> missingRequiredCapabilities = Lists.newArrayList();
+    Set<String> missingRequiredCapabilities = Sets.newLinkedHashSet();
     if (!requiredCapabilities.isEmpty()) {
       for (String requiredCapability:requiredCapabilities) {
         if (capabilities == null || !capabilities.contains(requiredCapability)) {

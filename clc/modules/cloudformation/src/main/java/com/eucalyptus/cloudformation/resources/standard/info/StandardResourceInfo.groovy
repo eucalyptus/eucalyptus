@@ -448,6 +448,8 @@ public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInf
 
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String secretAccessKey;
   public AWSIAMAccessKeyResourceInfo() {
     setType("AWS::IAM::AccessKey");
   }

@@ -363,6 +363,14 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
 
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
+  @Property
+  Integer serial;
+  @Required
+  @Property
+  String status;
+  @Required
+  @Property
+  String userName;
 }
 
 @ToString(includeNames=true)
