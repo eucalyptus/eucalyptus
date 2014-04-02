@@ -105,6 +105,7 @@ public class PolicySpec {
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
   public static final String VENDOR_CLOUDFORMATION = "cloudformation";
   public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
+  public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
   
   public static final String ALL_ACTION = "*";
   
@@ -499,6 +500,10 @@ public class PolicySpec {
   // Non-AWS, Euca-specific ELB operations
   public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
   public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
+  
+  // Euca-specific Imaging Service operations
+  public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";
+  public static final String IMAGINGSERVICE_GETINSTANCEIMPORTTASK = "getinstanceimporttask";
 
   // Map vendors to resource vendors
   public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()

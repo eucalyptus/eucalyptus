@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.worker.ImagingServiceProperties;
@@ -56,7 +57,10 @@ public class DiskImagingTask extends ImagingTask {
   @Transient
   private DiskImageConversionTask task;
   
-  protected DiskImagingTask(){}
+  protected DiskImagingTask(){
+    super(null, null);
+  }
+  
   private DiskImagingTask( final OwnerFullName ownerFullName, final DiskImageConversionTask task, 
       final ImportTaskState state){
     super(ownerFullName, task.getConversionTaskId());
@@ -64,12 +68,9 @@ public class DiskImagingTask extends ImagingTask {
     this.task = task;
   }
   
-  private DiskImagingTask(final OwnerFullName ownerFullName) {
-    super(ownerFullName, null);
-  }
-  
-  public static DiskImagingTask named(final OwnerFullName ownerFullName) {
-    final DiskImagingTask task = new DiskImagingTask(ownerFullName);
+  public static DiskImagingTask named(final AccountFullName owningAccount) {
+    final DiskImagingTask task = new DiskImagingTask();
+    task.setOwnerAccountNumber(owningAccount.getAccountNumber());
     return task;
   }
   

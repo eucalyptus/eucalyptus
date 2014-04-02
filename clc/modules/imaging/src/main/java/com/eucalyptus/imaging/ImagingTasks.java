@@ -599,7 +599,7 @@ public class ImagingTasks {
   }
   
   /************************* Methods for disk imaging tasks ************************/
-  public static List<DiskImagingTask> getDiskImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
+  public static List<DiskImagingTask> getDiskImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
     synchronized(lock){
       final List<DiskImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
