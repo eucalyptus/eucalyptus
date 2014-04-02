@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -104,8 +105,15 @@ public class ImagingService {
   public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
     final CancelConversionTaskResponseType reply = request.getReply( );
     try{
-      ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
+      final ImagingTask task = ImagingTasks.lookup(request.getConversionTaskId());
+      final ImportTaskState state = task.getState();
+      if(state.equals(ImportTaskState.NEW) || 
+          state.equals(ImportTaskState.PENDING) ||
+          state.equals(ImportTaskState.CONVERTING) ||
+          state.equals(ImportTaskState.INSTANTIATING) ) {
+        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
           ImportTaskState.CANCELLING, null);
+      }
       reply.set_return(true);
     }catch(final NoSuchElementException ex){
       throw new ImagingServiceException("No task with id="+request.getConversionTaskId()+" is found");
