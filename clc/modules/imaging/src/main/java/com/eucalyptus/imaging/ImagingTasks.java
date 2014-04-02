@@ -604,7 +604,7 @@ public class ImagingTasks {
       final List<DiskImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
           Entities.transactionFor( DiskImagingTask.class ) ) {
-        final DiskImagingTask sample = DiskImagingTask.named(owner);
+        final DiskImagingTask sample = DiskImagingTask.named(owningAccount);
         final List<DiskImagingTask> tasks = Entities.query(sample, true);
         if(taskIdList!=null && taskIdList.size()>0){
           for(final DiskImagingTask candidate : tasks){

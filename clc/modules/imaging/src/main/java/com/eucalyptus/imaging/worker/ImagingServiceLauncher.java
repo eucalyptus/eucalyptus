@@ -198,7 +198,7 @@ public class ImagingServiceLauncher {
     
     public Builder withRolePermissions() {
       final ImagingServiceActions.IamRoleAuthorization roleAuthz = 
-          new ImagingServiceActions.IamRoleAuthorization(lookupAction. this.launcherId);
+          new ImagingServiceActions.IamRoleAuthorization(this.lookupAction, this.launcherId);
       actions.add(roleAuthz);
       return this;
     }
