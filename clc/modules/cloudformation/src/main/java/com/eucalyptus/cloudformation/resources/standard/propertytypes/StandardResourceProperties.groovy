@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.collect.Lists
 import groovy.transform.ToString
 
+import javax.persistence.Embedded
+
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupProperties implements ResourceProperties {
 }
@@ -375,6 +377,10 @@ public class AWSIAMAccessKeyProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSIAMGroupProperties implements ResourceProperties {
+  @Property
+  String path;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)

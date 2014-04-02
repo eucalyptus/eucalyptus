@@ -464,6 +464,8 @@ public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMGroupResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMGroupResourceInfo() {
     setType("AWS::IAM::Group");
   }

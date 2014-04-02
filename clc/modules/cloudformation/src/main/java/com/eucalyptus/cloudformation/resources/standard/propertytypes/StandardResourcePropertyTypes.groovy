@@ -166,3 +166,12 @@ public class EC2Tag {
   @Property
   String value;
 }
+@ToString(includeNames=true)
+public class EmbeddedIAMPolicy {
+  @Required
+  @Property
+  String policyName;
+  @Required
+  @Property
+  JsonNode policyDocument;
+}
