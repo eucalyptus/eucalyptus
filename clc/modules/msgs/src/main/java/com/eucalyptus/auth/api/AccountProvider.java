@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@ public interface AccountProvider {
   Account lookupAccountByCanonicalId(String canonicalId) throws AuthException;
 
   Account addAccount( String accountName ) throws AuthException;
+  Account addSystemAccount( String accountName ) throws AuthException;
   void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
   int countAccounts( ) throws AuthException;
   int countUsers( ) throws AuthException;

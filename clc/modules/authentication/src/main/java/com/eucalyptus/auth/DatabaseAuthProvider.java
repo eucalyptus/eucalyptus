@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -397,10 +397,6 @@ public class DatabaseAuthProvider implements AccountProvider {
 
   /**
    * Add account admin user separately.
-   * 
-   * @param accountName
-   * @return
-   * @throws AuthException
    */
   @Override
   public Account addAccount( String accountName ) throws AuthException {
@@ -413,6 +409,50 @@ public class DatabaseAuthProvider implements AccountProvider {
     if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
       throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );
     }
+    return doAddAccount( accountName );
+  }
+
+  /**
+   *
+   */
+  @Override
+  public Account addSystemAccount( String accountName ) throws AuthException {
+    if ( !accountName.startsWith( Account.SYSTEM_ACCOUNT_PREFIX ) ) {
+      throw new AuthException( AuthException.INVALID_NAME );
+    }
+    try {
+      ACCOUNT_NAME_CHECKER.check( accountName.substring( Account.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid account name " + accountName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+
+    Account account = null;
+    try {
+      account = lookupAccountByName( accountName );
+    } catch ( AuthException e ) {
+      // create it
+    }
+
+    if ( account == null ) {
+      final AccountEntity accountEntity = new AccountEntity( accountName );
+      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+        Entities.persist( accountEntity );
+        db.commit( );
+        account = new DatabaseAccountProxy( accountEntity );
+      } catch ( Exception e ) {
+        Debugging.logError( LOG, e, "Failed to add account " + accountName );
+        throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
+      }
+    }
+
+    return account;
+  }
+
+  /**
+   *
+   */
+  private Account doAddAccount( String accountName ) throws AuthException {
     AccountEntity account = new AccountEntity( accountName );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       Entities.persist( account );
@@ -423,14 +463,14 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
     }
   }
-  
+
   @Override
   @SuppressWarnings( "unchecked" )
   public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
-    if ( !forceDeleteSystem && DatabaseAuthUtils.isSystemAccount( accountName ) ) {
+    if ( !forceDeleteSystem && Accounts.isSystemAccount( accountName ) ) {
       throw new AuthException( AuthException.DELETE_SYSTEM_ACCOUNT );
     }
     if ( !(recursive || DatabaseAuthUtils.isAccountEmpty( accountName ) ) ) {

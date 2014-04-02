@@ -87,7 +87,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
@@ -289,42 +288,11 @@ public class BlockStorageController {
 
 		// Lookup blockstorage account. Create a new one if necessary. If that fails, lookup the account again before bailing out
 		try {
-			blockStorageAccount = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+			blockStorageAccount = Accounts.addSystemAccountWithAdmin(StorageProperties.BLOCKSTORAGE_ACCOUNT);
 		} catch (Exception e) {
-			LOG.debug("Account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " may not exist. Creating a new account");
-			try {
-				blockStorageAccount = Accounts.addAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-			} catch (Exception e1) {
-				LOG.debug("Failed to create a new account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + ". Checking if the account exists");
-				try {
-					blockStorageAccount = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-				} catch (Exception e2) {
-					LOG.warn("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " and failed to create a new one", e2);
-					throw new EucalyptusCloudException("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-							+ " and failed to create a new one");
-				}
-			}
-		}
-
-		// Lookup admin user in the account. Add the admin user if necessary. If that fails, lookup the admin user again before bailing out
-		try {
-			blockStorageAccount.lookupAdmin();
-		} catch (Exception e) {
-			LOG.debug("Cannot to find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-					+ " account. The user may not exist, trying to add user to the account");
-			try {
-				blockStorageAccount.addUser(User.ACCOUNT_ADMIN, "/", true, true, null);
-			} catch (Exception e1) {
-				LOG.debug("Failed to add " + User.ACCOUNT_ADMIN + " user. Checking if the user exists in the account");
-				try {
-					blockStorageAccount.lookupUserByName(User.ACCOUNT_ADMIN);
-				} catch (Exception e2) {
-					LOG.warn("Could not find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-							+ " account and failed to add the user to the account", e2);
-					throw new EucalyptusCloudException("Could not find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-							+ " account and failed to add the user to the account");
-				}
-			}
+			LOG.warn("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " or failed to create a new one", e);
+			throw new EucalyptusCloudException("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+					+ " or failed to create a new one");
 		}
 
 		// Lookup role of the account. Add the role if necessary. If that fails, lookup the role again before bailing out

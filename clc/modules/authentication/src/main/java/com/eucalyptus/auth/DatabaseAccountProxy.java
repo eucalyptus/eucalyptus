@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,6 +92,7 @@ import com.eucalyptus.auth.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -107,8 +108,8 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -134,7 +135,22 @@ public class DatabaseAccountProxy implements Account {
   public String getName( ) {
     return this.delegate.getName( );
   }
-  
+
+  /**
+   * Get the resource display name, this is the name with path.
+   *
+   * @return The display name.
+   */
+  @Override
+  public String getDisplayName() {
+    return Accounts.getAccountFullName( this );
+  }
+
+  @Override
+  public OwnerFullName getOwner( ) {
+    return AccountFullName.getInstance( this );
+  }
+
   @Override
   public String toString( ) {
     return this.delegate.toString( );
