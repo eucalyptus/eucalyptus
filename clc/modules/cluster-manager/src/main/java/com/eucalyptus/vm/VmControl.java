@@ -237,7 +237,6 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
       allocInfo.abort( );
       final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
       if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
@@ -245,6 +244,7 @@ public class VmControl {
       if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
       final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
       if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
+      LOG.error( ex, ex );
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();
