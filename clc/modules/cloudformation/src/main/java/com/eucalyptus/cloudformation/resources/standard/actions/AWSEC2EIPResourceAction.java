@@ -40,6 +40,7 @@ import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -74,28 +75,51 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
+  public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    AllocateAddressType allocateAddressType = new AllocateAddressType();
-    allocateAddressType.setEffectiveUserId(info.getEffectiveUserId());
-    AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
-    String publicIp = allocateAddressResponseType.getPublicIp();
-    if (properties.getInstanceId() != null) {
-      DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-      describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
-      describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-      if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
-        throw new ValidationErrorException("No such instance " + properties.getInstanceId());
-      }
-      AssociateAddressType associateAddressType = new AssociateAddressType();
-      associateAddressType.setInstanceId(properties.getInstanceId());
-      associateAddressType.setPublicIp(publicIp);
-      associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
-      AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+    switch (stepNum) {
+      case 0: // create address
+        AllocateAddressType allocateAddressType = new AllocateAddressType();
+        allocateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+        AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
+        String publicIp = allocateAddressResponseType.getPublicIp();
+        info.setPhysicalResourceId(publicIp);
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // attach to instance
+        if (properties.getInstanceId() != null) {
+          DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+          describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
+          describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+            throw new ValidationErrorException("No such instance " + properties.getInstanceId());
+          }
+          AssociateAddressType associateAddressType = new AssociateAddressType();
+          associateAddressType.setInstanceId(properties.getInstanceId());
+          associateAddressType.setPublicIp(info.getPhysicalResourceId());
+          associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+          AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    info.setPhysicalResourceId(publicIp);
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+  }
+
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -115,7 +139,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

@@ -72,35 +72,50 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    AssociateAddressType associateAddressType = new AssociateAddressType();
-    associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
-    if (properties.getInstanceId() != null) {
-      DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-      describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
-      describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-      if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
-        throw new ValidationErrorException("No such instance " + properties.getInstanceId());
-      }
-      associateAddressType.setInstanceId(properties.getInstanceId());
+  public void create(int stepNum) throws Exception {
+    switch (stepNum) {
+      case 0:
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        AssociateAddressType associateAddressType = new AssociateAddressType();
+        associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+        if (properties.getInstanceId() != null) {
+          DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+          describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
+          describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+            throw new ValidationErrorException("No such instance " + properties.getInstanceId());
+          }
+          associateAddressType.setInstanceId(properties.getInstanceId());
+        }
+        if (properties.getEip() != null) {
+          DescribeAddressesType describeAddressesType = new DescribeAddressesType();
+          describeAddressesType.setPublicIpsSet(Lists.newArrayList(properties.getEip()));
+          describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+          if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
+            throw new ValidationErrorException("No such EIP " + properties.getEip());
+          }
+          associateAddressType.setPublicIp(properties.getEip());
+        }
+        AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
+          Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
+        info.setPhysicalResourceId(physicalResourceId);
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    if (properties.getEip() != null) {
-      DescribeAddressesType describeAddressesType = new DescribeAddressesType();
-      describeAddressesType.setPublicIpsSet(Lists.newArrayList(properties.getEip()));
-      describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
-      if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
-        throw new ValidationErrorException("No such EIP " + properties.getEip());
-      }
-      associateAddressType.setPublicIp(properties.getEip());
-    }
-    AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
-    String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-      Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
-    info.setPhysicalResourceId(physicalResourceId);
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -122,7 +137,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

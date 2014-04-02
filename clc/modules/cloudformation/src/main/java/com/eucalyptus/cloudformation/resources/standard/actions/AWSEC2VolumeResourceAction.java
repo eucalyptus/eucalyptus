@@ -33,13 +33,8 @@ import com.eucalyptus.compute.common.CreateVolumeResponseType;
 import com.eucalyptus.compute.common.CreateVolumeType;
 import com.eucalyptus.compute.common.DeleteVolumeResponseType;
 import com.eucalyptus.compute.common.DeleteVolumeType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
-import com.eucalyptus.compute.common.RunInstancesResponseType;
-import com.eucalyptus.compute.common.RunInstancesType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -72,41 +67,67 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    CreateVolumeType createVolumeType = new CreateVolumeType();
-    createVolumeType.setAvailabilityZone(properties.getAvailabilityZone());
-    if (properties.getIops() != null) {
-      createVolumeType.setIops(properties.getIops());
-    }
-    if (properties.getSize() != null) {
-      createVolumeType.setSize(properties.getSize());
-    }
-    if (properties.getSnapshotId() != null) {
-      createVolumeType.setSnapshotId(properties.getSnapshotId());
-    }
-    if (properties.getVolumeType() != null) {
-      createVolumeType.setVolumeType(properties.getVolumeType());
-    } else {
-      createVolumeType.setVolumeType("standard");
-    }
+  public int getNumCreateSteps() {
+    return 2;
+  }
 
-    createVolumeType.setEffectiveUserId(info.getEffectiveUserId());
-    CreateVolumeResponseType createVolumeResponseType = AsyncRequests.<CreateVolumeType,CreateVolumeResponseType> sendSync(configuration, createVolumeType);
-    info.setPhysicalResourceId(createVolumeResponseType.getVolume().getVolumeId());
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      DescribeVolumesType describeVolumesType = new DescribeVolumesType();
-      describeVolumesType.setVolumeSet(Lists.newArrayList(info.getPhysicalResourceId()));
-      describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
-      if (describeVolumesResponseType.getVolumeSet().size()==0) continue;
-      if ("available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
-        return;
-      }
+  @Override
+  public void create(int stepNum) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    switch (stepNum) {
+      case 0: // create volume
+        CreateVolumeType createVolumeType = new CreateVolumeType();
+        createVolumeType.setAvailabilityZone(properties.getAvailabilityZone());
+        if (properties.getIops() != null) {
+          createVolumeType.setIops(properties.getIops());
+        }
+        if (properties.getSize() != null) {
+          createVolumeType.setSize(properties.getSize());
+        }
+        if (properties.getSnapshotId() != null) {
+          createVolumeType.setSnapshotId(properties.getSnapshotId());
+        }
+        if (properties.getVolumeType() != null) {
+          createVolumeType.setVolumeType(properties.getVolumeType());
+        } else {
+          createVolumeType.setVolumeType("standard");
+        }
+
+        createVolumeType.setEffectiveUserId(info.getEffectiveUserId());
+        CreateVolumeResponseType createVolumeResponseType = AsyncRequests.<CreateVolumeType,CreateVolumeResponseType> sendSync(configuration, createVolumeType);
+        info.setPhysicalResourceId(createVolumeResponseType.getVolume().getVolumeId());
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // wait until available
+        boolean available = false;
+        for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+          Thread.sleep(5000L);
+          DescribeVolumesType describeVolumesType = new DescribeVolumesType();
+          describeVolumesType.setVolumeSet(Lists.newArrayList(info.getPhysicalResourceId()));
+          describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+          if (describeVolumesResponseType.getVolumeSet().size()==0) continue;
+          if ("available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
+            available = true;
+            break;
+          }
+        }
+        if (!available) {
+          throw new Exception("Timeout");
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    throw new Exception("Timeout");
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -146,7 +167,7 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

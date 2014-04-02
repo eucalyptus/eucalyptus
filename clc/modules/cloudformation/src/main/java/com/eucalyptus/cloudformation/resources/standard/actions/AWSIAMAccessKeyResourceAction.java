@@ -22,7 +22,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
 import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
-import com.eucalyptus.auth.euare.CreateAccessKeyResultType;
 import com.eucalyptus.auth.euare.CreateAccessKeyType;
 import com.eucalyptus.auth.euare.DeleteAccessKeyResponseType;
 import com.eucalyptus.auth.euare.DeleteAccessKeyType;
@@ -43,8 +42,16 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.AllocateAddressType;
+import com.eucalyptus.compute.common.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.AssociateAddressType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -74,25 +81,47 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
+  public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    if (!"Active".equals(properties.getStatus()) && !"Inactive".equals(properties.getStatus())) {
-      throw new ValidationErrorException("Invalid status " + properties.getStatus());
+    switch (stepNum) {
+      case 0: // create key
+        if (!"Active".equals(properties.getStatus()) && !"Inactive".equals(properties.getStatus())) {
+          throw new ValidationErrorException("Invalid status " + properties.getStatus());
+        }
+        CreateAccessKeyType createAccessKeyType = new CreateAccessKeyType();
+        createAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
+        createAccessKeyType.setUserName(properties.getUserName());
+        CreateAccessKeyResponseType createAccessKeyResponseType = AsyncRequests.<CreateAccessKeyType,CreateAccessKeyResponseType> sendSync(configuration, createAccessKeyType);
+        // access key id = physical resource id
+        info.setPhysicalResourceId(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getAccessKeyId());
+        info.setSecretAccessKey(JsonHelper.getStringFromJsonNode(new TextNode(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getSecretAccessKey())));
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // set status
+        UpdateAccessKeyType updateAccessKeyType = new UpdateAccessKeyType();
+        updateAccessKeyType.setUserName(properties.getUserName());
+        updateAccessKeyType.setAccessKeyId(info.getPhysicalResourceId());
+        updateAccessKeyType.setStatus(properties.getStatus());
+        updateAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
+        AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    CreateAccessKeyType createAccessKeyType = new CreateAccessKeyType();
-    createAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
-    createAccessKeyType.setUserName(properties.getUserName());
-    CreateAccessKeyResponseType createAccessKeyResponseType = AsyncRequests.<CreateAccessKeyType,CreateAccessKeyResponseType> sendSync(configuration, createAccessKeyType);
-    // access key id = physical resource id
-    info.setPhysicalResourceId(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getAccessKeyId());
-    info.setSecretAccessKey(JsonHelper.getStringFromJsonNode(new TextNode(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getSecretAccessKey())));
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-    UpdateAccessKeyType updateAccessKeyType = new UpdateAccessKeyType();
-    updateAccessKeyType.setUserName(properties.getUserName());
-    updateAccessKeyType.setAccessKeyId(info.getPhysicalResourceId());
-    updateAccessKeyType.setStatus(properties.getStatus());
-    updateAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -141,7 +170,7 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

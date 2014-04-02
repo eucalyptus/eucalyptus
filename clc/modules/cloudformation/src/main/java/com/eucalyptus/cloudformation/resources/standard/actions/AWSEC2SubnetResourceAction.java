@@ -54,8 +54,17 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public void create(int stepNum) throws Exception {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -64,8 +73,8 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
-    // can't create so rollback should be a NOOP
+  public void rollbackCreate() throws Exception {
+    // can't create so rollbackCreate should be a NOOP
   }
 
 }

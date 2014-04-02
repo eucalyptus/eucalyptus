@@ -137,7 +137,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                   )
                 );
                 waitFor(deleteOrRollbackEvent) {
-                  // Determine correct order for rollback/delete
+                  // Determine correct order for rollbackCreate/delete
                   Map<String, Settable<String>> deletedResourcePromiseMap = Maps.newConcurrentMap();
                   Map<String, ResourceStatus> deletedResourceStatusMap = Maps.newConcurrentMap();
                   for (String resourceName: resourceStatusMap.keySet()) {
@@ -174,7 +174,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                         }
                       } // the assumption here is that the global resourceInfo map is up to date...
                       deletedResourceStatusMap.put(thisResourceId, ResourceStatus.IN_PROCESS);
-                      waitFor(promiseFor(activities.deleteResource(thisResourceId, stackId, accountId,
+                      waitFor(promiseFor(activities.rollbackCreateResource(thisResourceId, stackId, accountId,
                         effectiveUserId))) { String result->
                         JsonNode jsonNodeResult = JsonHelper.getJsonNodeFromString(result);
                         String returnResourceId = jsonNodeResult.get("resourceId").textValue();

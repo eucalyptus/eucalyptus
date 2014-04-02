@@ -42,8 +42,6 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
-import com.eucalyptus.compute.common.DetachVolumeResponseType;
-import com.eucalyptus.compute.common.DetachVolumeType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.RunInstancesResponseType;
@@ -54,7 +52,6 @@ import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
@@ -140,159 +137,180 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public int getNumCreateSteps() {
+    return 3;
+  }
+
+  @Override
+  public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    RunInstancesType runInstancesType = new RunInstancesType();
-    runInstancesType.setImageId(properties.getImageId());
-    if (properties.getAvailabilityZone() != null && !properties.getAvailabilityZone().isEmpty()) {
-      runInstancesType.setAvailabilityZone(properties.getAvailabilityZone());
-    }
-    if (properties.getBlockDeviceMappings() != null && !properties.getBlockDeviceMappings().isEmpty()) {
-      runInstancesType.setBlockDeviceMapping(convertBlockDeviceMappings(properties.getBlockDeviceMappings()));
-    }
-    if (properties.getBlockDeviceMappings() != null) {
-      runInstancesType.setDisableTerminate(properties.getDisableApiTermination());
-    }
-    if (properties.getEbsOptimized() != null) {
-      runInstancesType.setEbsOptimized(properties.getEbsOptimized());
-    }
-    if (properties.getIamInstanceProfile() != null && !properties.getIamInstanceProfile().isEmpty()) {
-      runInstancesType.setIamInstanceProfileName(properties.getIamInstanceProfile()); // TODO: DOCS claim this is for profile name, is ARN supported?
-    }
-    if (properties.getInstanceType() != null && !properties.getInstanceType().isEmpty()) {
-      runInstancesType.setInstanceType(properties.getInstanceType());
-    }
-    if (properties.getKernelId() != null && !properties.getKernelId().isEmpty()) {
-      runInstancesType.setKernelId(properties.getKernelId());
-    }
-    if (properties.getKeyName() != null && !properties.getKeyName().isEmpty()) {
-      runInstancesType.setKeyName(properties.getKeyName());
-    }
-    if (properties.getMonitoring() != null) {
-      runInstancesType.setMonitoring(properties.getMonitoring());
-    }
-    // Skipping mapping resourceProperties.getNetworkInterfaces() for now
-    if (properties.getPlacementGroupName() != null && !properties.getPlacementGroupName().isEmpty()) {
-      runInstancesType.setPlacementGroup(properties.getPlacementGroupName());
-    }
-    if (properties.getPrivateIpAddress() != null && !properties.getPrivateIpAddress().isEmpty()) {
-      runInstancesType.setPrivateIpAddress(properties.getPrivateIpAddress());
-    }
-    if (properties.getRamdiskId() != null && !properties.getRamdiskId().isEmpty()) {
-      runInstancesType.setRamdiskId(properties.getRamdiskId());
-    }
-    // Skipping mapping resourceProperties.getSecurityGroupIds() for now
-    if (properties.getSecurityGroups() != null && !properties.getSecurityGroups().isEmpty()) {
-      runInstancesType.setSecurityGroups(convertSecurityGroups(properties.getSecurityGroups(), configuration));
-    }
-    // Skipping mapping resourceProperties.getSourceDestCheck() for now
-    if (properties.getSubnetId() != null && !properties.getSubnetId().isEmpty()) {
-      runInstancesType.setSubnetId(properties.getSubnetId());
-    }
-    // Skipping mapping resourceProperties.getTags() for now
-    // Skipping mapping resourceProperties.getTenancy() for now
-    if (properties.getUserData() != null && !properties.getUserData().isEmpty()) {
-      runInstancesType.setUserData(properties.getUserData());
-    }
-
-    // make sure all volumes exist and are available
-    if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
-      DescribeVolumesType describeVolumesType = new DescribeVolumesType();
-      ArrayList<String> volumeIds = Lists.newArrayList();
-      for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
-        volumeIds.add(ec2MountPoint.getVolumeId());
-      }
-      describeVolumesType.setVolumeSet(volumeIds);
-      describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
-      Map<String, String> volumeStatusMap = Maps.newHashMap();
-      for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
-        volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
-      }
-      for (String volumeId: volumeIds) {
-        if (!volumeStatusMap.containsKey(volumeId)) {
-          throw new ValidationErrorException("No such volume " + volumeId);
-        } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
-          throw new ValidationErrorException("Volume " + volumeId + " not available");
+    switch (stepNum) {
+      case 0: // run instance
+        RunInstancesType runInstancesType = new RunInstancesType();
+        runInstancesType.setImageId(properties.getImageId());
+        if (properties.getAvailabilityZone() != null && !properties.getAvailabilityZone().isEmpty()) {
+          runInstancesType.setAvailabilityZone(properties.getAvailabilityZone());
         }
-      }
-    }
+        if (properties.getBlockDeviceMappings() != null && !properties.getBlockDeviceMappings().isEmpty()) {
+          runInstancesType.setBlockDeviceMapping(convertBlockDeviceMappings(properties.getBlockDeviceMappings()));
+        }
+        if (properties.getBlockDeviceMappings() != null) {
+          runInstancesType.setDisableTerminate(properties.getDisableApiTermination());
+        }
+        if (properties.getEbsOptimized() != null) {
+          runInstancesType.setEbsOptimized(properties.getEbsOptimized());
+        }
+        if (properties.getIamInstanceProfile() != null && !properties.getIamInstanceProfile().isEmpty()) {
+          runInstancesType.setIamInstanceProfileName(properties.getIamInstanceProfile()); // TODO: DOCS claim this is for profile name, is ARN supported?
+        }
+        if (properties.getInstanceType() != null && !properties.getInstanceType().isEmpty()) {
+          runInstancesType.setInstanceType(properties.getInstanceType());
+        }
+        if (properties.getKernelId() != null && !properties.getKernelId().isEmpty()) {
+          runInstancesType.setKernelId(properties.getKernelId());
+        }
+        if (properties.getKeyName() != null && !properties.getKeyName().isEmpty()) {
+          runInstancesType.setKeyName(properties.getKeyName());
+        }
+        if (properties.getMonitoring() != null) {
+          runInstancesType.setMonitoring(properties.getMonitoring());
+        }
+        // Skipping mapping resourceProperties.getNetworkInterfaces() for now
+        if (properties.getPlacementGroupName() != null && !properties.getPlacementGroupName().isEmpty()) {
+          runInstancesType.setPlacementGroup(properties.getPlacementGroupName());
+        }
+        if (properties.getPrivateIpAddress() != null && !properties.getPrivateIpAddress().isEmpty()) {
+          runInstancesType.setPrivateIpAddress(properties.getPrivateIpAddress());
+        }
+        if (properties.getRamdiskId() != null && !properties.getRamdiskId().isEmpty()) {
+          runInstancesType.setRamdiskId(properties.getRamdiskId());
+        }
+        // Skipping mapping resourceProperties.getSecurityGroupIds() for now
+        if (properties.getSecurityGroups() != null && !properties.getSecurityGroups().isEmpty()) {
+          runInstancesType.setSecurityGroups(convertSecurityGroups(properties.getSecurityGroups(), configuration));
+        }
+        // Skipping mapping resourceProperties.getSourceDestCheck() for now
+        if (properties.getSubnetId() != null && !properties.getSubnetId().isEmpty()) {
+          runInstancesType.setSubnetId(properties.getSubnetId());
+        }
+        // Skipping mapping resourceProperties.getTags() for now
+        // Skipping mapping resourceProperties.getTenancy() for now
+        if (properties.getUserData() != null && !properties.getUserData().isEmpty()) {
+          runInstancesType.setUserData(properties.getUserData());
+        }
 
-    runInstancesType.setMinCount(1);
-    runInstancesType.setMaxCount(1);
-    runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-    RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
-    info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
-    boolean running = false;
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-      describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-      if (describeInstancesResponseType.getReservationSet().size()==0) continue;
-      RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
-      if ("running".equals(runningInstancesItemType.getStateName())) {
-        info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
-        info.setPublicIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getIpAddress())));
-        info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPlacement())));
-        info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
-        info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        running = true;
-        break;
-      }
-    }
-    if (!running) {
-      throw new Exception("Timeout");
-    }
-
-    // attach all volumes
-    if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
-      ArrayList<String> volumeIds = Lists.newArrayList();
-      Map<String, String> deviceMap = Maps.newHashMap();
-      for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
-        volumeIds.add(ec2MountPoint.getVolumeId());
-        deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
-        AttachVolumeType attachVolumeType = new AttachVolumeType();
-        attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
-        attachVolumeType.setInstanceId(info.getPhysicalResourceId());
-        attachVolumeType.setVolumeId(ec2MountPoint.getVolumeId());
-        attachVolumeType.setDevice(ec2MountPoint.getDevice());
-        AsyncRequests.<AttachVolumeType, AttachVolumeResponseType> sendSync(configuration, attachVolumeType);
-      }
-
-      boolean allAttached = false;
-      for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-        Thread.sleep(5000L);
-        DescribeVolumesType describeVolumesType2 = new DescribeVolumesType();
-        describeVolumesType2.setVolumeSet(Lists.newArrayList(volumeIds));
-        describeVolumesType2.setEffectiveUserId(info.getEffectiveUserId());
-        DescribeVolumesResponseType describeVolumesResponseType2 = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType2);
-        Map<String, String> volumeStatusMap = Maps.newHashMap();
-        for (Volume volume: describeVolumesResponseType2.getVolumeSet()) {
-          for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
-            if (attachedVolume.getInstanceId().equals(info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
-              volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
+        // make sure all volumes exist and are available
+        if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
+          DescribeVolumesType describeVolumesType = new DescribeVolumesType();
+          ArrayList<String> volumeIds = Lists.newArrayList();
+          for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
+            volumeIds.add(ec2MountPoint.getVolumeId());
+          }
+          describeVolumesType.setVolumeSet(volumeIds);
+          describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+          Map<String, String> volumeStatusMap = Maps.newHashMap();
+          for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+            volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
+          }
+          for (String volumeId: volumeIds) {
+            if (!volumeStatusMap.containsKey(volumeId)) {
+              throw new ValidationErrorException("No such volume " + volumeId);
+            } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
+              throw new ValidationErrorException("Volume " + volumeId + " not available");
             }
           }
         }
-        boolean anyNonAttached = false;
-        for (String volumeId: volumeIds) {
-          if (!"attached".equals(volumeStatusMap.get(volumeId))) {
-            anyNonAttached = true;
+
+        runInstancesType.setMinCount(1);
+        runInstancesType.setMaxCount(1);
+        runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+        RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
+        info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
+        break;
+      case 1: // wait until running
+        boolean running = false;
+        for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+          Thread.sleep(5000L);
+          DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+          describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+          describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet().size()==0) continue;
+          RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
+          if ("running".equals(runningInstancesItemType.getStateName())) {
+            info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
+            info.setPublicIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getIpAddress())));
+            info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPlacement())));
+            info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
+            info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
+            info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+            running = true;
             break;
           }
         }
-        if (!anyNonAttached) {
-          allAttached = true;
-          break;
+        if (!running) {
+          throw new Exception("Timeout");
         }
-      }
-      if (!allAttached) throw new Exception("Timeout");
+        break;
+      case 2: // attach volumes
+        if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
+          ArrayList<String> volumeIds = Lists.newArrayList();
+          Map<String, String> deviceMap = Maps.newHashMap();
+          for (EC2MountPoint ec2MountPoint: properties.getVolumes()) {
+            volumeIds.add(ec2MountPoint.getVolumeId());
+            deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
+            AttachVolumeType attachVolumeType = new AttachVolumeType();
+            attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
+            attachVolumeType.setInstanceId(info.getPhysicalResourceId());
+            attachVolumeType.setVolumeId(ec2MountPoint.getVolumeId());
+            attachVolumeType.setDevice(ec2MountPoint.getDevice());
+            AsyncRequests.<AttachVolumeType, AttachVolumeResponseType> sendSync(configuration, attachVolumeType);
+          }
+
+          boolean allAttached = false;
+          for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+            Thread.sleep(5000L);
+            DescribeVolumesType describeVolumesType2 = new DescribeVolumesType();
+            describeVolumesType2.setVolumeSet(Lists.newArrayList(volumeIds));
+            describeVolumesType2.setEffectiveUserId(info.getEffectiveUserId());
+            DescribeVolumesResponseType describeVolumesResponseType2 = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType2);
+            Map<String, String> volumeStatusMap = Maps.newHashMap();
+            for (Volume volume: describeVolumesResponseType2.getVolumeSet()) {
+              for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
+                if (attachedVolume.getInstanceId().equals(info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
+                  volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
+                }
+              }
+            }
+            boolean anyNonAttached = false;
+            for (String volumeId: volumeIds) {
+              if (!"attached".equals(volumeStatusMap.get(volumeId))) {
+                anyNonAttached = true;
+                break;
+              }
+            }
+            if (!anyNonAttached) {
+              allAttached = true;
+              break;
+            }
+          }
+          if (!allAttached) throw new Exception("Timeout");
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
   }
 
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
+  }
 
   @Override
   public void delete() throws Exception {
@@ -332,7 +350,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

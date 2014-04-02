@@ -119,7 +119,22 @@ public class StackActivityImpl implements StackActivity{
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     try {
       ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      resourceAction.create();
+      // create each step
+      for (int step = 0; step < resourceAction.getNumCreateSteps(); step++) {
+        resourceAction.create(step);
+        if (step < resourceAction.getNumCreateSteps() - 1) { // don't bother on the last one
+          Thread.sleep(1L); // just so event is not exactly the same time
+          stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
+          stackResourceEntity.setResourceStatusReason(null);
+          stackResourceEntity.setDescription(""); // deal later
+          stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+          StackResourceEntityManager.updateStackResource(stackResourceEntity);
+          stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+          stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+          stackEvent.setTimestamp(new Date());
+          StackEventEntityManager.addStackEvent(stackEvent, accountId);
+        }
+      }
       resourceInfo.setReady(Boolean.TRUE);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
@@ -155,6 +170,10 @@ public class StackActivityImpl implements StackActivity{
     return "";
   }
 
+  @Override
+  public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+    deleteResource(resourceId, stackId, accountId, effectiveUserId); // for now until we need a more nuanced rollback
+  }
   @Override
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
     LOG.debug("Deleting resource " + resourceId);
@@ -206,8 +225,13 @@ public class StackActivityImpl implements StackActivity{
           stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);
           stackResourceEntity.setResourceStatusReason(null);
           StackResourceEntityManager.updateStackResource(stackResourceEntity);
-          if (resourceInfo.getPhysicalResourceId() != null) {
+          boolean errorWithProperties = false;
+          try {
             ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+          } catch (Exception ex) {
+            errorWithProperties = true;
+          }
+          if (!errorWithProperties) { // if we have errors with properties we had them on create too, so we didn't start (really)
             resourceAction.delete();
           }
           stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);

@@ -29,6 +29,10 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Volu
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.AllocateAddressType;
+import com.eucalyptus.compute.common.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.AttachVolumeResponseType;
 import com.eucalyptus.compute.common.AttachVolumeType;
 import com.eucalyptus.compute.common.AttachedVolume;
@@ -72,52 +76,67 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    AttachVolumeType attachVolumeType = new AttachVolumeType();
-    attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-    describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
-    describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-    if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
-      throw new ValidationErrorException("No such instance " + properties.getInstanceId());
-    }
-    attachVolumeType.setInstanceId(properties.getInstanceId());
-    DescribeVolumesType describeVolumesType = new DescribeVolumesType();
-    describeVolumesType.setVolumeSet(Lists.newArrayList(properties.getVolumeId()));
-    describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
-    if (describeVolumesResponseType.getVolumeSet().size()==0) throw new ValidationErrorException("No such volume " + properties.getVolumeId());
-    if (!"available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
-      throw new ValidationErrorException("Volume " + properties.getVolumeId() + " not available");
-    }
-    attachVolumeType.setVolumeId(properties.getVolumeId());
-    attachVolumeType.setDevice(properties.getDevice());
-    AsyncRequests.<AttachVolumeType, AttachVolumeResponseType> sendSync(configuration, attachVolumeType);
-    boolean attached = false;
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      DescribeVolumesType describeVolumesType2 = new DescribeVolumesType();
-      // TODO: issue below, should not be info.getPhysicalResourceId() but the volume id... DUH!  (then run test again)
-      describeVolumesType2.setVolumeSet(Lists.newArrayList(properties.getVolumeId()));
-      describeVolumesType2.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeVolumesResponseType describeVolumesResponseType2 = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType2);
-      if (describeVolumesResponseType2.getVolumeSet().size() == 0) continue;
-      if (describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet() == null || describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet().isEmpty()) continue;
-      for (AttachedVolume attachedVolume: describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet()) {
-        if (attachedVolume.getInstanceId().equals(properties.getInstanceId()) && attachedVolume.getDevice().equals(properties.getDevice()) && attachedVolume.getStatus().equals("attached")) {
-          attached = true;
-          break;
+  public void create(int stepNum) throws Exception {
+    switch (stepNum) {
+      case 0: // create address
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        AttachVolumeType attachVolumeType = new AttachVolumeType();
+        attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
+        DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+        describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
+        describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+        DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+        if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+          throw new ValidationErrorException("No such instance " + properties.getInstanceId());
         }
-      }
-      if (attached == true) break;
+        attachVolumeType.setInstanceId(properties.getInstanceId());
+        DescribeVolumesType describeVolumesType = new DescribeVolumesType();
+        describeVolumesType.setVolumeSet(Lists.newArrayList(properties.getVolumeId()));
+        describeVolumesType.setEffectiveUserId(info.getEffectiveUserId());
+        DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+        if (describeVolumesResponseType.getVolumeSet().size()==0) throw new ValidationErrorException("No such volume " + properties.getVolumeId());
+        if (!"available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
+          throw new ValidationErrorException("Volume " + properties.getVolumeId() + " not available");
+        }
+        attachVolumeType.setVolumeId(properties.getVolumeId());
+        attachVolumeType.setDevice(properties.getDevice());
+        AsyncRequests.<AttachVolumeType, AttachVolumeResponseType> sendSync(configuration, attachVolumeType);
+        boolean attached = false;
+        for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+          Thread.sleep(5000L);
+          DescribeVolumesType describeVolumesType2 = new DescribeVolumesType();
+          // TODO: issue below, should not be info.getPhysicalResourceId() but the volume id... DUH!  (then run test again)
+          describeVolumesType2.setVolumeSet(Lists.newArrayList(properties.getVolumeId()));
+          describeVolumesType2.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeVolumesResponseType describeVolumesResponseType2 = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType2);
+          if (describeVolumesResponseType2.getVolumeSet().size() == 0) continue;
+          if (describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet() == null || describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet().isEmpty()) continue;
+          for (AttachedVolume attachedVolume: describeVolumesResponseType2.getVolumeSet().get(0).getAttachmentSet()) {
+            if (attachedVolume.getInstanceId().equals(properties.getInstanceId()) && attachedVolume.getDevice().equals(properties.getDevice()) && attachedVolume.getStatus().equals("attached")) {
+              attached = true;
+              break;
+            }
+          }
+          if (attached == true) break;
+        }
+        if (!attached) throw new Exception("Timeout");
+        String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
+          Crypto.generateAlphanumericId(12, ""); // seems to be what AWS does
+        info.setPhysicalResourceId(physicalResourceId);
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    if (!attached) throw new Exception("Timeout");
-    String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-      Crypto.generateAlphanumericId(12, ""); // seems to be what AWS does
-    info.setPhysicalResourceId(physicalResourceId);
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -163,7 +182,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

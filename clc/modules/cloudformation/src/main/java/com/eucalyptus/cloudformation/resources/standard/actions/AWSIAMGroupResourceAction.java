@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.CreateAccessKeyType;
 import com.eucalyptus.auth.euare.CreateGroupResponseType;
 import com.eucalyptus.auth.euare.CreateGroupType;
 import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
@@ -29,11 +31,11 @@ import com.eucalyptus.auth.euare.DeleteGroupType;
 import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
-import com.eucalyptus.auth.euare.ListUsersResponseType;
-import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.PutGroupPolicyType;
-import com.eucalyptus.auth.euare.UserType;
+import com.eucalyptus.auth.euare.UpdateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.UpdateAccessKeyType;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -76,29 +78,51 @@ public class AWSIAMGroupResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
+  public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    String groupName = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-      Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
-    CreateGroupType createGroupType = new CreateGroupType();
-    createGroupType.setEffectiveUserId(info.getEffectiveUserId());
-    createGroupType.setGroupName(groupName);
-    createGroupType.setPath(properties.getPath());
-    CreateGroupResponseType createGroupResponseType = AsyncRequests.<CreateGroupType,CreateGroupResponseType> sendSync(configuration, createGroupType);
-    String arn = createGroupResponseType.getCreateGroupResult().getGroup().getArn();
-    if (properties.getPolicies() != null) {
-      for (EmbeddedIAMPolicy policy: properties.getPolicies()) {
-        PutGroupPolicyType putGroupPolicyType = new PutGroupPolicyType();
-        putGroupPolicyType.setGroupName(groupName);
-        putGroupPolicyType.setPolicyName(policy.getPolicyName());
-        putGroupPolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
-        putGroupPolicyType.setEffectiveUserId(info.getEffectiveUserId());
-        AsyncRequests.<PutGroupPolicyType,PutGroupPolicyResponseType> sendSync(configuration, putGroupPolicyType);
-      }
+    switch (stepNum) {
+      case 0: // create group
+        String groupName = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
+          Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
+        CreateGroupType createGroupType = new CreateGroupType();
+        createGroupType.setEffectiveUserId(info.getEffectiveUserId());
+        createGroupType.setGroupName(groupName);
+        createGroupType.setPath(properties.getPath());
+        CreateGroupResponseType createGroupResponseType = AsyncRequests.<CreateGroupType,CreateGroupResponseType> sendSync(configuration, createGroupType);
+        String arn = createGroupResponseType.getCreateGroupResult().getGroup().getArn();
+        info.setPhysicalResourceId(groupName);
+        info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // add policies
+        if (properties.getPolicies() != null) {
+          for (EmbeddedIAMPolicy policy: properties.getPolicies()) {
+            PutGroupPolicyType putGroupPolicyType = new PutGroupPolicyType();
+            putGroupPolicyType.setGroupName(info.getPhysicalResourceId());
+            putGroupPolicyType.setPolicyName(policy.getPolicyName());
+            putGroupPolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
+            putGroupPolicyType.setEffectiveUserId(info.getEffectiveUserId());
+            AsyncRequests.<PutGroupPolicyType,PutGroupPolicyResponseType> sendSync(configuration, putGroupPolicyType);
+          }
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    info.setPhysicalResourceId(groupName);
-    info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+  }
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -138,7 +162,7 @@ public class AWSIAMGroupResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 
