@@ -264,9 +264,11 @@ do_start() {
         fi
 
         # Add loop devices if necessary (and possible)
-        [ -z "$CREATE_SC_LOOP_DEVICES" ] && CREATE_SC_LOOP_DEVICES=256
-        if [ "$CREATE_SC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
-            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
+        if [ -x "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" ]; then
+                [ -z "$CREATE_SC_LOOP_DEVICES" ] && CREATE_SC_LOOP_DEVICES=256
+                if [ "$CREATE_SC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+                    "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
+                fi
         fi
 
         # check if NTPD is running and throw a fault if it is not
