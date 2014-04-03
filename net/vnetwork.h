@@ -242,7 +242,6 @@ int vnetDeleteChain(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetSaveTablesToMemory(vnetConfig * vnetconfig);
 int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule);
 int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule);
 int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
                   char *protocol, int minPort, int maxPort);
@@ -267,8 +266,6 @@ int vnetAddCCS(vnetConfig * vnetconfig, u32 cc);
 int vnetDelCCS(vnetConfig * vnetconfig, u32 cc);
 int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen);
 
-int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
-int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
 int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 
 int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
@@ -279,7 +276,6 @@ int vnetSetupTunnels(vnetConfig * vnetconfig);
 int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig);
 
 int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
-int vnetApplyArpTableRules(vnetConfig * vnetconfig);
 int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
 
 int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);

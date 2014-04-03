@@ -181,7 +181,9 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipth->ipt_file);
         return (1);
     }
-    chmod(ipth->ipt_file, 0600);
+    if (chmod(ipth->ipt_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipth->ipt_file);
+    }
     close(fd);
 
     if (cmdprefix) {
@@ -1069,7 +1071,9 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
         return (1);
     }
-    chmod(ipsh->ips_file, 0600);
+    if (chmod(ipsh->ips_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipsh->ips_file);
+    }
     close(fd);
 
     if (cmdprefix) {
@@ -1698,7 +1702,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
         return (1);
     }
-    chmod(ebth->ebt_filter_file, 0600);
+    if (chmod(ebth->ebt_filter_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_filter_file);
+    }
     close(fd);
 
     snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
@@ -1707,7 +1713,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
         return (1);
     }
-    chmod(ebth->ebt_nat_file, 0600);
+    if (chmod(ebth->ebt_nat_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_nat_file);
+    }
     close(fd);
 
     snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
@@ -1718,7 +1726,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         unlink(ebth->ebt_nat_file);
         return (1);
     }
-    chmod(ebth->ebt_asc_file, 0600);
+    if (chmod(ebth->ebt_asc_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_asc_file);
+    }
     close(fd);
 
     if (cmdprefix) {
