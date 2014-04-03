@@ -34,6 +34,7 @@
   <mapping name="AllocateAddressResponse" class="com.eucalyptus.compute.common.AllocateAddressResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="publicIp" field="publicIp" />
+    <value name="domain" constant="standard" />
   </mapping>
     <!--2008-02-01-->
   <mapping name="ReleaseAddress" class="com.eucalyptus.compute.common.ReleaseAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -94,6 +95,7 @@
     <!--2008-02-01-->
   <mapping class="com.eucalyptus.compute.common.AddressInfoType" abstract="true">
     <value name="publicIp" field="publicIp" />
+    <value name="domain" constant="standard" />
     <value name="instanceId" field="instanceId" usage="optional" />
   </mapping>
 

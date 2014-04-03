@@ -67,7 +67,6 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
@@ -75,6 +74,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.storage.common.DateFormatter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -105,7 +105,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
         if(BucketState.extant.equals(entity.getBucket().getState())) {
             //Initialize the object metadata.
             try {
-                entity = objectManager.initiateCreation(entity);
+                if (!ObjectState.extant.equals(entity.getState())) {
+                    entity = objectManager.initiateCreation(entity);
+                }
             } catch(Exception e) {
                 LOG.warn("Error initiating an object in the db:", e);
                 throw new InternalErrorException(entity.getResourceFullName());
@@ -184,7 +186,11 @@ public class ObjectFactoryImpl implements ObjectFactory {
         try {
             //fireRepairTask(bucket, savedEntity.getObjectKey());
             //Update metadata to "extant". Retry as necessary
-            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
+            if (!ObjectState.extant.equals(entity.getState())) {
+                return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
+            } else {
+                return entity;
+            }
         } catch(Exception e) {
             LOG.warn("Failed to update object metadata for finalization. Failing PUT operation", e);
             throw new InternalErrorException(entity.getResourceFullName());

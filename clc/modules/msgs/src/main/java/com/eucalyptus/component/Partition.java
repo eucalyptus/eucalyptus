@@ -117,7 +117,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Column( name = "config_partition_node_kp" )
   private String        pemNodePrivateKey;
   
-  public static final String     DEFAULT_NAME = "default";
+  public static final String     DEFAULT_NAME = "";
   public static final Partition  DEFAULT = new Partition(DEFAULT_NAME);
   
   public Partition( ) {}

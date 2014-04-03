@@ -346,9 +346,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
         return true;
       } else {
         imageNotConfiguredFaultRunnable.run( );
-        LOG.debug("Load balancer EMI property is unset.  \"\n" +
-            "              + \"Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> \"\n" +
-            "              + \"where the emi should point to the image provided in the eucalyptus-load-balancer-image package.\" ");
         return false;
       }
     }

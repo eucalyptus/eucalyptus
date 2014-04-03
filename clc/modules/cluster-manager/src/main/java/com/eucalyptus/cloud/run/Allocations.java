@@ -329,7 +329,8 @@ public class Allocations {
 
     public void abort() {
       for (final ResourceToken token : this.allocationTokens) {
-        LOG.error("Aborting resource token: " + token, new RuntimeException());
+        LOG.warn("Aborting resource token: " + token);
+        Logs.exhaust().error( "Aborting resource token", new RuntimeException( ) );
         final EntityTransaction db = Entities.get(VmInstance.class);
         try {
           token.abort();

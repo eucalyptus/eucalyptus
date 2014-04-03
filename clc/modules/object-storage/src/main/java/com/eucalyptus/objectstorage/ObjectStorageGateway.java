@@ -1232,8 +1232,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
 
                 try {
-                    destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
+                    if (destObject == null) {
+                        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
                             srcObject.getSize().longValue(), requestUser);
+                    }
                 } catch (Exception e) {
                     LOG.error("Error intializing entity for persiting object metadata for " + destBucket.getBucketName()
                             + "/" + request.getDestinationObject());

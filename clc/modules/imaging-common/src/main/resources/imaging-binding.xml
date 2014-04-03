@@ -124,6 +124,7 @@
 
   <mapping class="com.eucalyptus.imaging.VolumeTask"  abstract="true">
     <value name="volumeId" field="volumeId"/>
+    <value name="ec2Cert" field="ec2Cert"/>
     <collection name="imageManifestSet" field="imageManifestSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" type="com.eucalyptus.imaging.ImageManifest" />
     </collection>

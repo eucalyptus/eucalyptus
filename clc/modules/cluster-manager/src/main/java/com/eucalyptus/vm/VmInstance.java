@@ -1862,7 +1862,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
         if ( VmState.RUNNING.apply( VmInstance.this ) ) {
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-          VmInstance.this.updateMigrationTaskState( runVm.getMigrationStateName( ), runVm.getMigrationSource( ), runVm.getMigrationDestination( )  );
+          VmInstance.this.updateMigrationTaskState(
+              runVm.getMigrationStateName( ),
+              Strings.nullToEmpty( runVm.getMigrationSource() ),
+              Strings.nullToEmpty( runVm.getMigrationDestination() ) );
         }
         if ( VmInstances.Timeout.UNTOUCHED.apply( VmInstance.this ) ) {
           VmInstance.this.updateTimeStamps();

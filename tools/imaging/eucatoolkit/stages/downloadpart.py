@@ -56,7 +56,7 @@ class DownloadPart(object):
                  dest_fileobj,
                  chunk_size=None,
                  connection_timeout=30,
-                 max_attempts=2,
+                 max_attempts=3,
                  max_buffer_size=None):
         '''
         Attempts to download/get() self.get_url and write to 'dest_fileobj'
@@ -77,7 +77,6 @@ class DownloadPart(object):
         max_buffer_size = max_buffer_size or self.max_buffer_size
         self.log.debug('Downloading part:{0}'.format(self.debug_url))
         chunk_size = chunk_size or self.chunk_size
-        digest = _get_digest_algorithm_from_string(self.digest_algorithm)
         #Attempt get request to get_url...
         while attempt < max_attempts:
             attempt += 1
@@ -85,6 +84,7 @@ class DownloadPart(object):
             content_length = None
             bytes = 0
             self.written_digest = None
+            digest = _get_digest_algorithm_from_string(self.digest_algorithm)
             response = self._get_respsonse(
                 url=self.get_url,
                 max_attempts=max_attempts,
@@ -124,14 +124,14 @@ class DownloadPart(object):
                     dest_fileobj.write(part_buffer)
                     dest_fileobj.flush()
             except ValueError as VE:
-                if attempt <= max_attempts:
+                if attempt >= max_attempts:
                     raise
                 else:
                     self.log.warn(
                         'Attempt:{0}/{1}, {2}'
                         .format(attempt, max_attempts, str(VE)))
                 # Back off and retry
-                time.sleep(10)
+                time.sleep(5)
             else:
                 return bytes
 
