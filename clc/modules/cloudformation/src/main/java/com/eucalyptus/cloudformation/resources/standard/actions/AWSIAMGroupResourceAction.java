@@ -31,10 +31,13 @@ import com.eucalyptus.auth.euare.DeleteGroupType;
 import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
+import com.eucalyptus.auth.euare.ListUsersResponseType;
+import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.PutGroupPolicyType;
 import com.eucalyptus.auth.euare.UpdateAccessKeyResponseType;
 import com.eucalyptus.auth.euare.UpdateAccessKeyType;
+import com.eucalyptus.auth.euare.UserType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -87,8 +90,7 @@ public class AWSIAMGroupResourceAction extends ResourceAction {
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
     switch (stepNum) {
       case 0: // create group
-        String groupName = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-          Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
+        String groupName = getDefaultPhysicalResourceId();
         CreateGroupType createGroupType = new CreateGroupType();
         createGroupType.setEffectiveUserId(info.getEffectiveUserId());
         createGroupType.setGroupName(groupName);
@@ -130,18 +132,30 @@ public class AWSIAMGroupResourceAction extends ResourceAction {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
     // if no group, bye...
+    boolean seenAllGroups = false;
     boolean foundGroup = false;
-    ListGroupsType listGroupsType = new ListGroupsType();
-    listGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
-    if (listGroupsResponseType != null && listGroupsResponseType.getListGroupsResult() != null
-      && listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
-      for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
-        if (groupType.getGroupName().equals(info.getPhysicalResourceId())) {
-          foundGroup = true;
-          break;
+    String groupMarker = null;
+    while (!seenAllGroups && !foundGroup) {
+      ListGroupsType listGroupsType = new ListGroupsType();
+      listGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+      if (groupMarker != null) {
+        listGroupsType.setMarker(groupMarker);
+      }
+      ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
+      if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
+        groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
+      } else {
+        seenAllGroups = true;
+      }
+      if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
+        for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
+          if (groupType.getGroupName().equals(info.getPhysicalResourceId())) {
+            foundGroup = true;
+            break;
+          }
         }
       }
+
     }
     if (!foundGroup) return;
     // remove all policies added by us.  (Note: this could cause issues if an admin added some, but we delete what we create)

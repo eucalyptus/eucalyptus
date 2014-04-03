@@ -78,7 +78,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
   @Override
   public void create(int stepNum) throws Exception {
     switch (stepNum) {
-      case 0: // create address
+      case 0:
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         AttachVolumeType attachVolumeType = new AttachVolumeType();
         attachVolumeType.setEffectiveUserId(info.getEffectiveUserId());
@@ -120,9 +120,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
           if (attached == true) break;
         }
         if (!attached) throw new Exception("Timeout");
-        String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-          Crypto.generateAlphanumericId(12, ""); // seems to be what AWS does
-        info.setPhysicalResourceId(physicalResourceId);
+        info.setPhysicalResourceId(getDefaultPhysicalResourceId());
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
       default:

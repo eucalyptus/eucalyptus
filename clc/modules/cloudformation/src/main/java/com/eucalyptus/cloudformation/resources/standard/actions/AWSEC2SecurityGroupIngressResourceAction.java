@@ -155,7 +155,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         }
         authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
         AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
-        info.setPhysicalResourceId(groupName);
+        info.setPhysicalResourceId(info.getLogicalResourceId()); // Strange, but this is what AWS does in this particular case...
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
       default:

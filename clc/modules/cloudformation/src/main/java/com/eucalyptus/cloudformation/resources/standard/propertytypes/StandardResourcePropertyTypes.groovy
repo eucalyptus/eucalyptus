@@ -175,3 +175,9 @@ public class EmbeddedIAMPolicy {
   @Property
   JsonNode policyDocument;
 }
+
+@ToString(includeNames=true)
+public class LoginProfile {
+  @Property
+  String password;
+}

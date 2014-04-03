@@ -99,9 +99,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           associateAddressType.setPublicIp(properties.getEip());
         }
         AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
-        String physicalResourceId = getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-          Crypto.generateAlphanumericId(13, ""); // seems to be what AWS does
-        info.setPhysicalResourceId(physicalResourceId);
+        info.setPhysicalResourceId(getDefaultPhysicalResourceId());
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
       default:

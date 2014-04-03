@@ -385,22 +385,60 @@ public class AWSIAMGroupProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSIAMInstanceProfileProperties implements ResourceProperties {
+  @Required
+  @Property
+  String path;
+  @Required
+  @Property
+  List<String> roles = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMPolicyProperties implements ResourceProperties {
+  @Property
+  List<String> groups = Lists.newArrayList();
+  @Required
+  @Property
+  JsonNode policyDocument;
+  @Required
+  @Property
+  String policyName;
+  List<String> roles = Lists.newArrayList();
+  @Property
+  List<String> users = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMRoleProperties implements ResourceProperties {
+  @Required
+  @Property
+  JsonNode assumeRolePolicyDocument;
+  @Property
+  String path;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMUserProperties implements ResourceProperties {
+  @Property
+  String path;
+  @Property
+  List<String> groups = Lists.newArrayList();
+  @Property
+  LoginProfile loginProfile;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMUserToGroupAdditionProperties implements ResourceProperties {
+  @Required
+  @Property
+  String groupName;
+  @Required
+  @Property
+  List<String> users = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)

@@ -80,9 +80,7 @@ public class AWSCloudWatchAlarmResourceAction extends ResourceAction {
     switch (stepNum) {
       case 0:
         if (properties.getAlarmName() == null) {
-          properties.setAlarmName(getStackEntity().getStackName() + "-" + info.getLogicalResourceId() + "-" +
-            Crypto.generateAlphanumericId(12, "") // seems to be what AWS does
-          );
+          properties.setAlarmName(getDefaultPhysicalResourceId());
         }
         // check alarm exists (TODO: check aws does this...)
         ServiceConfiguration configuration = Topology.lookup(CloudWatch.class);

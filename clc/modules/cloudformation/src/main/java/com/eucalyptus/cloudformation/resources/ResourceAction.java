@@ -1,6 +1,7 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.crypto.Crypto;
 
 /**
  * Created by ethomas on 2/14/14.
@@ -31,6 +32,19 @@ public abstract class ResourceAction {
 
   public int getNumUpdateSteps() {
     return 1;
+  }
+
+  public final String getDefaultPhysicalResourceIdWithSuffixLength(int suffixLength) {
+    String prefix = (getStackEntity() != null && getStackEntity().getStackName() != null) ?
+      getStackEntity().getStackName() : "UNKNOWN";
+    String middle = (getResourceInfo() != null && getResourceInfo().getLogicalResourceId() != null) ?
+      getResourceInfo().getLogicalResourceId() : "UNKNOWN";
+    String suffix = Crypto.generateAlphanumericId(suffixLength, "");
+    return prefix + "-" + middle + "-" + suffix;
+  }
+
+  public final String getDefaultPhysicalResourceId() {
+    return getDefaultPhysicalResourceIdWithSuffixLength(13);
   }
 
 }

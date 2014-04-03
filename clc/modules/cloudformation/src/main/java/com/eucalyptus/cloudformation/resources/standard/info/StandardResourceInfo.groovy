@@ -480,6 +480,8 @@ public class AWSIAMGroupResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMInstanceProfileResourceInfo() {
     setType("AWS::IAM::InstanceProfile");
   }
@@ -508,6 +510,8 @@ public class AWSIAMPolicyResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMRoleResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMRoleResourceInfo() {
     setType("AWS::IAM::Role");
   }
@@ -522,6 +526,8 @@ public class AWSIAMRoleResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMUserResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMUserResourceInfo() {
     setType("AWS::IAM::User");
   }

@@ -130,34 +130,54 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
 
     // if no user, return
-    // TODO: max users(?) [pagination?]
-    ListUsersType listUsersType = new ListUsersType();
-    listUsersType.setEffectiveUserId(info.getEffectiveUserId());
-    ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+    boolean seenAllUsers = false;
     boolean foundUser = false;
-    if (listUsersResponseType != null && listUsersResponseType.getListUsersResult() != null
-      && listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
+    String userMarker = null;
+    while (!seenAllUsers && !foundUser) {
+      ListUsersType listUsersType = new ListUsersType();
+      listUsersType.setEffectiveUserId(info.getEffectiveUserId());
+      if (userMarker != null) {
+        listUsersType.setMarker(userMarker);
+      }
+      ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = listUsersResponseType.getListUsersResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
       for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
         if (userType.getUserName().equals(properties.getUserName())) {
           foundUser = true;
           break;
         }
       }
+      }
     }
     if (!foundUser) return;
-    ListAccessKeysType listAccessKeysType = new ListAccessKeysType();
-    listAccessKeysType.setUserName(properties.getUserName());
-    listAccessKeysType.setEffectiveUserId(info.getEffectiveUserId());
-    ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
-    // if no key, return
+
+    boolean seenAllAccessKeys = false;
     boolean foundAccessKey = false;
-    if (listAccessKeysResponseType != null && listAccessKeysResponseType.getListAccessKeysResult() != null
-      && listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata() != null &&
-      listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList() != null) {
-      for (AccessKeyMetadataType accessKeyMetadataType: listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList()) {
-        if (accessKeyMetadataType.getAccessKeyId().equals(info.getPhysicalResourceId())) {
-          foundAccessKey = true;
-          break;
+    String accessKeyMarker = null;
+    while (!seenAllAccessKeys && !foundAccessKey) {
+      ListAccessKeysType listAccessKeysType = new ListAccessKeysType();
+      listAccessKeysType.setUserName(properties.getUserName());
+      listAccessKeysType.setEffectiveUserId(info.getEffectiveUserId());
+      if (accessKeyMarker != null) {
+        listAccessKeysType.setMarker(accessKeyMarker);
+      }
+      ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
+      if (listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated() == Boolean.TRUE) {
+        accessKeyMarker = listAccessKeysResponseType.getListAccessKeysResult().getMarker();
+      } else {
+        seenAllAccessKeys = true;
+      }
+      if (listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata() != null && listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList() != null) {
+        for (AccessKeyMetadataType accessKeyMetadataType: listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList()) {
+          if (accessKeyMetadataType.getAccessKeyId().equals(info.getPhysicalResourceId())) {
+            foundAccessKey = true;
+            break;
+          }
         }
       }
     }

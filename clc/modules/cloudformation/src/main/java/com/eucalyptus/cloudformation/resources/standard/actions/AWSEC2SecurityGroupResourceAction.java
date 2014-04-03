@@ -100,8 +100,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         if (properties.getGroupDescription() != null && !properties.getGroupDescription().isEmpty()) {
           createSecurityGroupType.setGroupDescription(properties.getGroupDescription());
         }
-        String groupName = getStackEntity().getStackName() + "-" + getResourceInfo().getLogicalResourceId() + "-" +
-          Crypto.generateAlphanumericId(13,""); // seems to be what AWS does
+        String groupName = getDefaultPhysicalResourceId();
         createSecurityGroupType.setGroupName(groupName);
         createSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
         CreateSecurityGroupResponseType createSecurityGroupResponseType = AsyncRequests.<CreateSecurityGroupType,CreateSecurityGroupResponseType> sendSync(configuration, createSecurityGroupType);
