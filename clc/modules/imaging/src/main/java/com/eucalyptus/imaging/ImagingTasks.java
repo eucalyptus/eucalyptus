@@ -550,11 +550,7 @@ public class ImagingTasks {
       try{
         final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
         final ConversionTask task = entity.getTask();
-        if(task.getImportVolume()!=null){
-          return  (ImportTaskState.COMPLETED.equals(entity.getState()) 
-              || ImportTaskState.CANCELLED.equals(entity.getState())
-              || ImportTaskState.FAILED.equals(entity.getState()));
-        }else if (task.getImportInstance()!=null){
+        if (task.getImportInstance()!=null){
           final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
           for(final ImportInstanceVolumeDetail volumeDetail : volumes){
             if("active".equals(volumeDetail.getStatus()))

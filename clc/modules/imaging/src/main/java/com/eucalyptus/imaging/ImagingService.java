@@ -234,15 +234,14 @@ public class ImagingService {
               LOG.error("Failed to update volume's state", ex);
               break;
             }
+            
             try{
-              if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
-                if(imagingTask instanceof ImportInstanceImagingTask){
+              if(imagingTask instanceof ImportVolumeImagingTask){
+                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                    ImportTaskState.COMPLETED, null);
+              }else if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
                   ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                       ImportTaskState.INSTANTIATING, null);
-                }else{
-                  ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                      ImportTaskState.COMPLETED, null);
-                }
               }
             }catch(final Exception ex){
               LOG.error("Failed to update imaging task's state to completed", ex);
