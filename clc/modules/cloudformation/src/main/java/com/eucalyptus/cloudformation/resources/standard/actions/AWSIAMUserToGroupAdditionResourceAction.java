@@ -42,7 +42,6 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -187,7 +186,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends ResourceAction {
       }
       if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
         for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
-          if (groupType.getGroupName().equals(info.getPhysicalResourceId())) {
+          if (groupType.getGroupName().equals(properties.getGroupName())) {
             foundGroup = true;
             break;
           }
@@ -225,6 +224,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends ResourceAction {
       RemoveUserFromGroupType removeUserFromGroupType = new RemoveUserFromGroupType();
       removeUserFromGroupType.setGroupName(properties.getGroupName());
       removeUserFromGroupType.setUserName(user);
+      removeUserFromGroupType.setEffectiveUserId(info.getEffectiveUserId());
       AsyncRequests.<RemoveUserFromGroupType,RemoveUserFromGroupResponseType> sendSync(configuration, removeUserFromGroupType);
     }
   }

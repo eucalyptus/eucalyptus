@@ -367,7 +367,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
   @Property
   Integer serial;
-  @Required
+  // @Required -- docs say required but many examples in docs do not have it...examples win
   @Property
   String status;
   @Required
@@ -403,6 +403,7 @@ public class AWSIAMPolicyProperties implements ResourceProperties {
   @Required
   @Property
   String policyName;
+  @Property
   List<String> roles = Lists.newArrayList();
   @Property
   List<String> users = Lists.newArrayList();

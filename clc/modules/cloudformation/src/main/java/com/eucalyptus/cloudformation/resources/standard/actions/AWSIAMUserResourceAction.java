@@ -210,6 +210,7 @@ public class AWSIAMUserResourceAction extends ResourceAction {
           RemoveUserFromGroupType removeUserFromGroupType = new RemoveUserFromGroupType();
           removeUserFromGroupType.setGroupName(groupName);
           removeUserFromGroupType.setUserName(info.getPhysicalResourceId());
+          removeUserFromGroupType.setEffectiveUserId(info.getEffectiveUserId());
           AsyncRequests.<RemoveUserFromGroupType,RemoveUserFromGroupResponseType> sendSync(configuration, removeUserFromGroupType);
         }
       }

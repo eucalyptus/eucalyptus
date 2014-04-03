@@ -88,6 +88,7 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
   @Override
   public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
+    if (properties.getStatus() == null) properties.setStatus("Active");
     switch (stepNum) {
       case 0: // create key
         if (!"Active".equals(properties.getStatus()) && !"Inactive".equals(properties.getStatus())) {
@@ -128,7 +129,7 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Euare.class);
-
+    if (properties.getStatus() == null) properties.setStatus("Active");
     // if no user, return
     boolean seenAllUsers = false;
     boolean foundUser = false;

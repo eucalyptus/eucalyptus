@@ -108,6 +108,7 @@ public class AWSIAMPolicyResourceAction extends ResourceAction {
             putGroupPolicyType.setGroupName(groupName);
             putGroupPolicyType.setPolicyName(properties.getPolicyName());
             putGroupPolicyType.setPolicyDocument(properties.getPolicyDocument().toString());
+            putGroupPolicyType.setEffectiveUserId(info.getEffectiveUserId());
             AsyncRequests.<PutGroupPolicyType,PutGroupPolicyResponseType> sendSync(configuration, putGroupPolicyType);
           }
         }
@@ -119,6 +120,7 @@ public class AWSIAMPolicyResourceAction extends ResourceAction {
             putUserPolicyType.setUserName(userName);
             putUserPolicyType.setPolicyName(properties.getPolicyName());
             putUserPolicyType.setPolicyDocument(properties.getPolicyDocument().toString());
+            putUserPolicyType.setEffectiveUserId(info.getEffectiveUserId());
             AsyncRequests.<PutUserPolicyType,PutUserPolicyResponseType> sendSync(configuration, putUserPolicyType);
           }
         }
@@ -130,6 +132,7 @@ public class AWSIAMPolicyResourceAction extends ResourceAction {
             putRolePolicyType.setRoleName(roleName);
             putRolePolicyType.setPolicyName(properties.getPolicyName());
             putRolePolicyType.setPolicyDocument(properties.getPolicyDocument().toString());
+            putRolePolicyType.setEffectiveUserId(info.getEffectiveUserId());
             AsyncRequests.<PutRolePolicyType,PutRolePolicyResponseType> sendSync(configuration, putRolePolicyType);
           }
         }
