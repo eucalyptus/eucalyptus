@@ -599,12 +599,12 @@ public class ImagingTasks {
   }
   
   /************************* Methods for disk imaging tasks ************************/
-  public static List<DiskImagingTask> getDiskImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
+  public static List<DiskImagingTask> getDiskImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
     synchronized(lock){
       final List<DiskImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
           Entities.transactionFor( DiskImagingTask.class ) ) {
-        final DiskImagingTask sample = DiskImagingTask.named(owner);
+        final DiskImagingTask sample = DiskImagingTask.named(owningAccount);
         final List<DiskImagingTask> tasks = Entities.query(sample, true);
         if(taskIdList!=null && taskIdList.size()>0){
           for(final DiskImagingTask candidate : tasks){
