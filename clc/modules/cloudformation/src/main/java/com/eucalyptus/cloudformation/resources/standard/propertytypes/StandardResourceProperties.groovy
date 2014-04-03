@@ -15,6 +15,36 @@ public class AWSAutoScalingAutoScalingGroupProperties implements ResourcePropert
 
 @ToString(includeNames=true)
 public class AWSAutoScalingLaunchConfigurationProperties implements ResourceProperties {
+  @Property
+  Boolean associatePublicIpAddress;
+  @Property
+  List<AutoScalingBlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
+  @Property
+  Boolean ebsOptimized;
+  @Property
+  String iamInstanceProfile;
+  @Required
+  @Property
+  String imageId;
+  @Property
+  String instanceId;
+  @Property
+  Boolean instanceMonitoring;
+  @Required
+  @Property
+  String instanceType;
+  @Property
+  String kernelId;
+  @Property
+  String keyName;
+  @Property
+  String ramDiskId;
+  @Property
+  List<String> securityGroups = Lists.newArrayList();
+  @Property
+  String spotPrice;
+  @Property
+  String userData;
 }
 
 @ToString(includeNames=true)
