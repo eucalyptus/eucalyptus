@@ -630,8 +630,7 @@
       <structure name="member" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     </collection>
   </mapping>
-  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificateType">
     <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="required" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
     <value name="CertificateChain" field="certificateChain" usage="optional"/>
