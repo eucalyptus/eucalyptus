@@ -26,11 +26,13 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
@@ -661,6 +663,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			
 			if ( Bootstrap.isFinished() &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
+			          Topology.isEnabled( AutoScaling.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) ) {
 				
 				// lookup all LoadBalancerAutoScalingGroup records
