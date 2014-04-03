@@ -264,7 +264,7 @@ class WF_DownBundle_UpVMDK(WF_base):
 
             imager_ps = imager.upload_vmdk(args, fd_r)
             fd_r.close()
-            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path, destispipe=True)
             download.main()
             fd_w.close()
             imager_ps.wait()
