@@ -1196,15 +1196,4 @@
     <value name="ServerPk" field="serverPk" usage="required" />
     <value name="Signature" field="signature" usage="optional" />
   </mapping>
-  <mapping name="DownloadCloudCertificate" class="com.eucalyptus.auth.euare.DownloadCloudCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-  </mapping>
-  <mapping name="DownloadCloudCertificateResponse" class="com.eucalyptus.auth.euare.DownloadCloudCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="downloadCloudCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.DownloadCloudCertificateResultType"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
-  </mapping>
-  <mapping name="DownloadCloudCertificateResult" class="com.eucalyptus.auth.euare.DownloadCloudCertificateResultType">
-    <value name="CloudCertificate" field="cloudCertificate" usage="required" />
-  </mapping>
 </binding>
