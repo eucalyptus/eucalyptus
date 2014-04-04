@@ -55,6 +55,7 @@ import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -63,7 +64,7 @@ import java.util.Map;
  * Created by ethomas on 2/3/14.
  */
 public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
-
+  private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
   @Override
@@ -165,28 +166,39 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    Exception finalException = null;
+    // Need to retry this as we may have instances terminating from an autoscaling group...
+    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
+      Thread.sleep(5000L);
+      String groupName = info.getPhysicalResourceId();
+      String groupId = info.getGroupId();
+      // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
+      // Is there a better way?
+      DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+        AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
+      ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+      Map<String, String> nameToIdMap = Maps.newHashMap();
+      if (securityGroupItemTypeArrayList != null) {
+        for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
+          nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+        }
+      }
+      if (!nameToIdMap.containsKey(groupName) || !nameToIdMap.get(groupName).equals(groupId)) return; // different (or nonexistant) group
 
-    String groupName = info.getPhysicalResourceId();
-    String groupId = info.getGroupId();
-    // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
-    // Is there a better way?
-    DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-    describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-      AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-    ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-    Map<String, String> nameToIdMap = Maps.newHashMap();
-    if (securityGroupItemTypeArrayList != null) {
-      for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
-        nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+      DeleteSecurityGroupType deleteSecurityGroupType = new DeleteSecurityGroupType();
+      deleteSecurityGroupType.setGroupName(groupName);
+      deleteSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
+      try {
+        DeleteSecurityGroupResponseType deleteSecurityGroupResponseType = AsyncRequests.<DeleteSecurityGroupType,DeleteSecurityGroupResponseType> sendSync(configuration, deleteSecurityGroupType);
+        return;
+      } catch (Exception ex) {
+        LOG.debug("Error deleting security group.  Will retry");
+        finalException = ex;
       }
     }
-    if (!nameToIdMap.containsKey(groupName) || !nameToIdMap.get(groupName).equals(groupId)) return; // different (or nonexistant) group
-
-    DeleteSecurityGroupType deleteSecurityGroupType = new DeleteSecurityGroupType();
-    deleteSecurityGroupType.setGroupName(groupName);
-    deleteSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-    DeleteSecurityGroupResponseType deleteSecurityGroupResponseType = AsyncRequests.<DeleteSecurityGroupType,DeleteSecurityGroupResponseType> sendSync(configuration, deleteSecurityGroupType);
+    throw finalException;
   }
 
   @Override

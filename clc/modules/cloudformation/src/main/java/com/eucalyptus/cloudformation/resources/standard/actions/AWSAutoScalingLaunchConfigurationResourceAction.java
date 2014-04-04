@@ -30,6 +30,7 @@ import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.Ebs;
 import com.eucalyptus.autoscaling.common.msgs.InstanceMonitoring;
 import com.eucalyptus.autoscaling.common.msgs.SecurityGroups;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -80,6 +81,9 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
     switch (stepNum) {
       case 0:
         CreateLaunchConfigurationType createLaunchConfigurationType = new CreateLaunchConfigurationType();
+        if (properties.getInstanceId() != null) {
+          throw new ValidationErrorException("InstanceId not supported");
+        }
         if (properties.getBlockDeviceMappings() != null) {
           createLaunchConfigurationType.setBlockDeviceMappings(convertBlockDeviceMappings(properties.getBlockDeviceMappings()));
         }
@@ -87,7 +91,6 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
         createLaunchConfigurationType.setEbsOptimized(properties.getEbsOptimized() != null ? properties.getEbsOptimized() : Boolean.FALSE);
         createLaunchConfigurationType.setIamInstanceProfile(properties.getIamInstanceProfile());
         createLaunchConfigurationType.setImageId(properties.getImageId());
-        // Ignore InstanceId (current AutoScaling implementation does not support it)
         InstanceMonitoring instanceMonitoring = new InstanceMonitoring();
         instanceMonitoring.setEnabled(properties.getInstanceMonitoring() != null ? properties.getInstanceMonitoring() : Boolean.TRUE);
         createLaunchConfigurationType.setInstanceMonitoring(instanceMonitoring);
@@ -96,11 +99,7 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
         createLaunchConfigurationType.setKeyName(properties.getKeyName());
         createLaunchConfigurationType.setRamdiskId(properties.getRamDiskId());
         if (properties.getSecurityGroups() != null) {
-          SecurityGroups securityGroups = new SecurityGroups();
-          ArrayList<String> member = Lists.newArrayList();
-          member.addAll(properties.getSecurityGroups());
-          securityGroups.setMember(member);
-          createLaunchConfigurationType.setSecurityGroups(securityGroups);
+          createLaunchConfigurationType.setSecurityGroups(new SecurityGroups(properties.getSecurityGroups()));
         }
         createLaunchConfigurationType.setSpotPrice(properties.getSpotPrice());
         createLaunchConfigurationType.setUserData(properties.getUserData());
@@ -117,28 +116,16 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
   }
 
   private BlockDeviceMappings convertBlockDeviceMappings(List<AutoScalingBlockDeviceMapping> autoScalingBlockDeviceMappings) {
-    BlockDeviceMappings blockDeviceMappings = new BlockDeviceMappings();
-    ArrayList<BlockDeviceMappingType> member = Lists.newArrayList();
+    ArrayList<BlockDeviceMappingType> blockDeviceMappingsList = Lists.newArrayList();
     for (AutoScalingBlockDeviceMapping autoScalingBlockDeviceMapping: autoScalingBlockDeviceMappings) {
-      BlockDeviceMappingType blockDeviceMappingType = new BlockDeviceMappingType();
-      blockDeviceMappingType.setDeviceName(autoScalingBlockDeviceMapping.getDeviceName());
-      blockDeviceMappingType.setVirtualName(autoScalingBlockDeviceMapping.getVirtualName());
-      // We don't support NO DEVICE in autoscaling right now
-      blockDeviceMappingType.setEbs(convertEbs(autoScalingBlockDeviceMapping.getEbs()));
-      member.add(blockDeviceMappingType);
+      blockDeviceMappingsList.add(new BlockDeviceMappingType(autoScalingBlockDeviceMapping.getDeviceName(),
+        autoScalingBlockDeviceMapping.getVirtualName(),
+        autoScalingBlockDeviceMapping.getEbs() != null ? autoScalingBlockDeviceMapping.getEbs().getSnapshotId() : null,
+        autoScalingBlockDeviceMapping.getEbs() != null ? autoScalingBlockDeviceMapping.getEbs().getVolumeSize() : null)
+      );
     }
-    blockDeviceMappings.setMember(member);
-    return blockDeviceMappings;
+    return new BlockDeviceMappings(blockDeviceMappingsList);
   }
-
-  private Ebs convertEbs(AutoScalingEBSBlockDevice autoScalingEBSBlockDevice) {
-    if (autoScalingEBSBlockDevice == null) return null;
-    Ebs ebs = new Ebs();
-    ebs.setSnapshotId(autoScalingEBSBlockDevice.getSnapshotId());
-    ebs.setVolumeSize(autoScalingEBSBlockDevice.getVolumeSize() != null ? Integer.valueOf(autoScalingEBSBlockDevice.getVolumeSize()) : null);
-    return ebs;
-  }
-
 
   @Override
   public void update(int stepNum) throws Exception {

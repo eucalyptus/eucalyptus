@@ -7,10 +7,40 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.collect.Lists
 import groovy.transform.ToString
 
-import javax.persistence.Embedded
 
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupProperties implements ResourceProperties {
+  @Required
+  @Property
+  List<String> availabilityZones = Lists.newArrayList();
+  @Property
+  Integer cooldown;
+  @Property
+  Integer desiredCapacity;
+  @Property
+  Integer healthCheckGracePeriod;
+  @Property
+  String healthCheckType;
+  @Property
+  String instanceId;
+  @Property
+  String launchConfigurationName;
+  @Property
+  List<String> loadBalancerNames = Lists.newArrayList();
+  @Required
+  @Property
+  Integer maxSize;
+  @Required
+  @Property
+  Integer minSize;
+  @Property
+  AutoScalingNotificationConfiguration notificationConfiguration;
+  @Property
+  List<AutoScalingTag> tags = Lists.newArrayList();
+  @Property
+  List<String> terminationPolicies = Lists.newArrayList();
+  @Property(name="VPCZoneIdentifier")
+  List<String> vpcZoneIdentifier = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -49,6 +79,17 @@ public class AWSAutoScalingLaunchConfigurationProperties implements ResourceProp
 
 @ToString(includeNames=true)
 public class AWSAutoScalingScalingPolicyProperties implements ResourceProperties {
+  @Required
+  @Property
+  String adjustmentType;
+  @Required
+  @Property
+  String autoScalingGroupName;
+  @Property
+  Integer cooldown;
+  @Required
+  @Property
+  Integer scalingAdjustment;
 }
 
 @ToString(includeNames=true)

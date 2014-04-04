@@ -32,7 +32,7 @@ public class AutoScalingEBSBlockDevice {
   @Property
   String snapshotId;
   @Property
-  String volumeSize;
+  Integer volumeSize;
   @Property
   String volumeType;
 }
