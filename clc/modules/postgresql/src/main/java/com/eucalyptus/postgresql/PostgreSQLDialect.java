@@ -19,8 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.postgresql;
 
+import java.sql.SQLException;
+import javax.transaction.xa.XAException;
+
 /**
- * Customized HA-JDBC PostgreSQL dialect that avoids use of truncate table.
+ * Customized HA-JDBC PostgreSQL dialect that:
+ *
+ * 1) avoids use of truncate table.
+ * 2) pretends everything is OK so we can handle db failure at the cluster level.
  */
 @SuppressWarnings("nls")
 public class PostgreSQLDialect extends net.sf.hajdbc.dialect.postgresql.PostgreSQLDialect
@@ -28,5 +34,25 @@ public class PostgreSQLDialect extends net.sf.hajdbc.dialect.postgresql.PostgreS
   @Override
   protected String truncateTableFormat( ) {
     return "DELETE FROM {0}";
+  }
+
+  @Override
+  protected boolean indicatesFailure( final int code ) {
+    return false;
+  }
+
+  @Override
+  public boolean indicatesFailure( final SQLException e ) {
+    return false;
+  }
+
+  @Override
+  public boolean indicatesFailure( final XAException e ) {
+    return false;
+  }
+
+  @Override
+  protected boolean indicatesFailure( final String sqlState ) {
+    return false;
   }
 }
