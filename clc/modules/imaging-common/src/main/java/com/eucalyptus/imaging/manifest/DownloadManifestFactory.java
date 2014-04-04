@@ -97,11 +97,21 @@ public class DownloadManifestFactory {
 			final String manifestName, int expirationHours) throws DownloadManifestException {
 		try {
 			//prepare to do pre-signed urls
-            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+      EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
 
-			java.util.Date expiration = new java.util.Date();
-			long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
-			expiration.setTime(msec);
+      java.util.Date expiration = new java.util.Date();
+      long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
+      expiration.setTime(msec);
+      
+      // check if download-manifest already exists
+      if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
+        LOG.info("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created. Skipping creation");
+        URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+            DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
+        return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
+      } else {
+        LOG.info("Creating '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' manifest");
+      }
 			
 			final String manifest = baseManifest.getManifest();
 			if (manifest == null) {
@@ -256,32 +266,40 @@ public class DownloadManifestFactory {
 	}
 	
 	private static void putManifestData(@Nonnull EucaS3Client s3Client, String bucketName, String objectName, String data ) throws EucalyptusCloudException {
-        int retries = 3;
-        long backoffTime = 500L; // 1 second to start.
-        for(int i = 0 ; i < retries; i++) {
-            try {
-                String etag = s3Client.putObjectContent(bucketName, objectName, data, null);
-                LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
-                return;
-            } catch (AmazonClientException e) {
-                LOG.warn("Upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
-            } catch(Exception e) {
-                LOG.warn("Non-upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
-            }
+    int retries = 3;
+    long backoffTime = 500L; // 1 second to start.
+    for(int i = 0 ; i < retries; i++) {
+      try {
+          String etag = s3Client.putObjectContent(bucketName, objectName, data, null);
+          LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
+          return;
+      } catch (AmazonClientException e) {
+          LOG.warn("Upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+      } catch(Exception e) {
+          LOG.warn("Non-upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+      }
 
-            try {
-                Thread.sleep(backoffTime);
-            } catch(InterruptedException e) {
-                LOG.warn("Interrupted during backoff sleep for upload.", e);
-                throw new EucalyptusCloudException(e);
-            }
+      try {
+          Thread.sleep(backoffTime);
+      } catch(InterruptedException e) {
+          LOG.warn("Interrupted during backoff sleep for upload.", e);
+          throw new EucalyptusCloudException(e);
+      }
 
-            s3Client.refreshEndpoint(); //try another OSG if more than one.
-            backoffTime *= 2;
-        }
-        throw new EucalyptusCloudException( "Failed to put manifest file: " + bucketName + "/" + objectName + ". Exceeded retry limit");
+      s3Client.refreshEndpoint(); //try another OSG if more than one.
+      backoffTime *= 2;
+    }
+    throw new EucalyptusCloudException( "Failed to put manifest file: " + bucketName + "/" + objectName + ". Exceeded retry limit");
 	}
 	
+	private static boolean objectExist(@Nonnull EucaS3Client s3Client, String bucketName, String objectName) throws EucalyptusCloudException {
+	  try {
+	    return s3Client.getS3Client().getObjectMetadata(bucketName, objectName) == null ? false : true;
+	  } catch (Exception ex) {
+	    return false;
+	  }
+	}
+
 	/**
 	 * Creates system owned bucket to store download manifest files
 	 * @throws EucalyptusCloudException

@@ -442,8 +442,8 @@ public class Allocations {
       this.networkGroups = networkRuleGroups;
     }
 
-    public VmTypeInfo getVmTypeInfo(final Partition partition, final String instanceId) throws MetadataException {
-      return this.bootSet.populateVirtualBootRecord(this.vmType, partition, instanceId);
+    public VmTypeInfo getVmTypeInfo(final Partition partition, final String reservationId) throws MetadataException {
+      return this.bootSet.populateVirtualBootRecord(this.vmType, partition, reservationId);
     }
 
     @Nullable
