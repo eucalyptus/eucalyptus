@@ -675,10 +675,18 @@ public class PolicyAttributes extends EucalyptusData {
 }
 public class ErrorResponse extends LoadBalancingMessage { // EucalyptusData {
   String requestId;
-  public ErrorResponse() {  }
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="error")
-  ArrayList<Error> error = new ArrayList<Error>();
+  ArrayList<Error> error = new ArrayList<Error>( );
+
+  ErrorResponse( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class ApplySecurityGroupsToLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;

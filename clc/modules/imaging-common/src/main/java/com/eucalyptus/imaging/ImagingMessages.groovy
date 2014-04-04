@@ -288,9 +288,16 @@ public class Error extends EucalyptusData {
 
 public class ErrorResponse extends ImagingMessage {
   String requestId
-  public ErrorResponse() {
+  ArrayList<Error> error = new ArrayList<Error>( )
+
+  ErrorResponse( ) {
+    set_return( false )
   }
-  ArrayList<Error> error = new ArrayList<Error>()
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }

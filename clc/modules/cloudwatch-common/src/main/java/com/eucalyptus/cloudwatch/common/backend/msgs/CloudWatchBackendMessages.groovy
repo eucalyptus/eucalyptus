@@ -313,11 +313,6 @@ public class DisableAlarmActionsType extends CloudWatchBackendMessage {
   AlarmNames alarmNames;
   public DisableAlarmActionsType() {  }
 }
-public class CloudWatchErrorResponse extends CloudWatchBackendMessage {
-  String requestId;
-  public CloudWatchErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>();
-}
 public class Metrics extends EucalyptusData {
   public Metrics() {  }
   ArrayList<Metric> member = new ArrayList<Metric>();

@@ -64,8 +64,16 @@ public class ResourceList extends EucalyptusData {
 }
 public class CloudFormationErrorResponse extends CloudFormationMessage {
   String requestId;
-  public CloudFormationErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>();
+  ArrayList<Error> error = new ArrayList<Error>( );
+
+  CloudFormationErrorResponse( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class Outputs extends EucalyptusData {
   @HttpEmbedded(multiple=true)

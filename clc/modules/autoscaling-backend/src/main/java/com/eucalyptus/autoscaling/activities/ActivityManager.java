@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -102,6 +103,7 @@ import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResponseTy
 import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthType;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersType;
+import com.eucalyptus.loadbalancing.common.msgs.ErrorResponse;
 import com.eucalyptus.loadbalancing.common.msgs.Instance;
 import com.eucalyptus.loadbalancing.common.msgs.InstanceState;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
@@ -112,12 +114,15 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DispatchingClient;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -620,6 +625,7 @@ public class ActivityManager {
   private ScalingProcessTask<?,?> perhapsTerminateInstances( final AutoScalingGroupScalingView group,
                                                              final int terminateCount ) {
     final List<String> instancesToTerminate = Lists.newArrayList();
+    boolean anyRegisteredInstances = false;
     int currentCapacity = 0;
     try {
       final List<AutoScalingInstanceCoreView> currentInstances =
@@ -629,6 +635,7 @@ public class ActivityManager {
         Iterables.addAll(
             instancesToTerminate,
             Iterables.transform( currentInstances, RestrictedTypes.toDisplayName() ) );
+        anyRegisteredInstances = Iterables.any( currentInstances, ConfigurationState.Registered.forView( ) );
       } else {
         // First terminate instances in zones that are no longer in use
         final Set<String> groupZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
@@ -646,6 +653,7 @@ public class ActivityManager {
                 Iterables.filter( currentInstances, withAvailabilityZone( unwantedZones ) );
             Iterables.addAll( instancesToTerminate, Iterables.transform( unwantedInstances, RestrictedTypes.toDisplayName() ) );
             Iterables.removeAll( remainingInstances, Lists.newArrayList( unwantedInstances ) );
+            anyRegisteredInstances = Iterables.any( unwantedInstances, ConfigurationState.Registered.forView( ) );
             targetZones = groupZones;
           } else {
             targetZones = unwantedZones;
@@ -665,6 +673,7 @@ public class ActivityManager {
           remainingInstances.remove( instanceForTermination );
           entry.setValue( entry.getValue() - 1 );
           instancesToTerminate.add( instanceForTermination.getInstanceId() );
+          anyRegisteredInstances |= ConfigurationState.Registered.forView( ).apply( instanceForTermination );
         }
       }
     } catch ( final Exception e ) {
@@ -679,11 +688,12 @@ public class ActivityManager {
       causes.add( new ActivityCause( String.format( "instance %1$s was selected for termination", instanceId ) ) );
     }
 
-    return removeFromLoadBalancerOrTerminate( group, currentCapacity, instancesToTerminate, causes, false );
+    return removeFromLoadBalancerOrTerminate( group, currentCapacity, anyRegisteredInstances, instancesToTerminate, causes, false );
   }
 
   private ScalingProcessTask<?,?> perhapsReplaceInstances( final AutoScalingGroupScalingView group ) {
     final List<String> instancesToTerminate = Lists.newArrayList();
+    boolean anyRegisteredInstances = false;
     if ( scalingProcessEnabled( ScalingProcessType.ReplaceUnhealthy, group ) ) try {
       final List<AutoScalingInstanceCoreView> currentInstances =
           autoScalingInstances.listUnhealthyByGroup( group, TypeMappers.lookup( AutoScalingInstance.class, AutoScalingInstanceCoreView.class ) );
@@ -692,13 +702,14 @@ public class ActivityManager {
             Iterables.limit(
               Iterables.transform( currentInstances, RestrictedTypes.toDisplayName() ),
               Math.min( AutoScalingConfiguration.getMaxLaunchIncrement(), currentInstances.size() ) ) );
+      anyRegisteredInstances = Iterables.any( currentInstances, ConfigurationState.Registered.forView( ) );
       if ( !instancesToTerminate.isEmpty() ) {
         logger.info( "Terminating unhealthy instances: " + instancesToTerminate );
       }
     } catch ( final Exception e ) {
       logger.error( e, e );
     }
-    return removeFromLoadBalancerOrTerminate( group, group.getCapacity(), instancesToTerminate, Collections.singletonList( new ActivityCause( "an instance was taken out of service in response to a health-check" ) ), true );
+    return removeFromLoadBalancerOrTerminate( group, group.getCapacity(), anyRegisteredInstances, instancesToTerminate, Collections.singletonList( new ActivityCause( "an instance was taken out of service in response to a health-check" ) ), true );
   }
 
   private ScalingProcessTask<?,?> perhapsScale( final AutoScalingGroupScalingView group ) {
@@ -806,16 +817,20 @@ public class ActivityManager {
     return new Function<Iterable<AutoScalingInstanceGroupView>,ScalingProcessTask<?,?>>(){
       @Override
       public ScalingProcessTask<?,?> apply( final Iterable<AutoScalingInstanceGroupView> groupInstances ) {
-        return removeFromLoadBalancerOrTerminate( Iterables.get( groupInstances, 0 ).getAutoScalingGroup(),
-            Lists.newArrayList( Iterables.transform( groupInstances, RestrictedTypes.toDisplayName() ) ) );
+        final boolean anyRegisteredInstances = Iterables.any( groupInstances, ConfigurationState.Registered.forView( ) );
+        return removeFromLoadBalancerOrTerminate(
+            Iterables.get( groupInstances, 0 ).getAutoScalingGroup( ),
+            anyRegisteredInstances,
+            Lists.newArrayList( Iterables.transform( groupInstances, RestrictedTypes.toDisplayName( ) ) ) );
       }
     };
   }
 
   private ScalingProcessTask<?,?> removeFromLoadBalancerOrTerminate( final AutoScalingGroupCoreView group,
+                                                                     final boolean anyRegisteredInstances,
                                                                      final List<String> registeredInstances ) {
     final ScalingProcessTask<?,?> task;
-    if ( group.getLoadBalancerNames().isEmpty() ) {
+    if ( group.getLoadBalancerNames().isEmpty() || !anyRegisteredInstances ) {
       // deregistration not required, mark instances
       transitionToDeregistered( group, registeredInstances );
       task = new TerminateInstancesScalingProcessTask( group, group.getCapacity(), registeredInstances, Collections.<ActivityCause>emptyList(), true, true );
@@ -828,11 +843,12 @@ public class ActivityManager {
 
   private ScalingProcessTask<?,?> removeFromLoadBalancerOrTerminate( final AutoScalingGroupScalingView group,
                                                                      final int currentCapacity,
+                                                                     final boolean anyRegisteredInstances,
                                                                      final List<String> registeredInstances,
                                                                      final List<ActivityCause> causes,
                                                                      final boolean replace ) {
     final ScalingProcessTask<?,?> task;
-    if ( group.getLoadBalancerNames().isEmpty() ) {
+    if ( group.getLoadBalancerNames().isEmpty() || !anyRegisteredInstances ) {
       // deregistration not required, mark instances
       transitionToDeregistered( group, registeredInstances );
       task = new TerminateInstancesScalingProcessTask( group, currentCapacity, registeredInstances, causes, replace, true, true );
@@ -1143,10 +1159,11 @@ public class ActivityManager {
         dispatchInternal( context, new Callback.Checked<RES>(){
           @Override
           public void fireException( final Throwable throwable ) {
+            boolean result = false;
             try {
-              dispatchFailure( context, throwable );
+              result = dispatchFailure( context, throwable );
             } finally {
-              future.set( false );
+              future.set( result );
             }
           }
 
@@ -1169,12 +1186,33 @@ public class ActivityManager {
 
     abstract void dispatchInternal( ActivityContext context, Callback.Checked<RES> callback );
 
-    void dispatchFailure( ActivityContext context, Throwable throwable ) {
+    boolean dispatchFailure( ActivityContext context, Throwable throwable ) {
       Logs.extreme().error( "Activity error", throwable );
       if ( logger.isDebugEnabled() ) {
         logger.debug( "Activity error", throwable );
       }
-      setActivityFinalStatus( ActivityStatusCode.Failed, throwable.getMessage(), null );
+
+      final String message;
+      final FailedRequestException failedRequestException = Exceptions.findCause( throwable, FailedRequestException.class );
+      final EucalyptusRemoteFault remoteFault = Exceptions.findCause( throwable, EucalyptusRemoteFault.class );
+      final EucalyptusCloudException cloudException = Exceptions.findCause( throwable, EucalyptusCloudException.class );
+      final ComponentException componentException = Exceptions.findCause( throwable, ComponentException.class );
+      if ( failedRequestException != null ) {
+        message = failedRequestException.getRequest( ).toSimpleString( ); // request here means response ...
+      } else if ( remoteFault != null ) {
+        final String code = remoteFault.getFaultCode( );
+        final String detail = remoteFault.getFaultDetail( );
+        message = "Service error (" + code + "): " + detail;
+      } else if ( cloudException != null ) {
+        message = cloudException.getMessage( );
+      } else if ( componentException != null && componentException.getCause( ) != null ) {
+        message = componentException.getCause( ).getMessage( );
+      } else {
+        message = throwable.getMessage( );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Failed, message, null );
+      return false;
     }
 
     abstract void dispatchSuccess( ActivityContext context, RES response );
@@ -1696,6 +1734,34 @@ public class ActivityManager {
       setActivityFinalStatus( deregistered ? ActivityStatusCode.Successful : ActivityStatusCode.Failed );
     }
 
+    @Override
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      final FailedRequestException failedRequestException = Exceptions.findCause( throwable, FailedRequestException.class );
+      final BaseMessage response = failedRequestException == null ? null : failedRequestException.getRequest( );
+      if ( response instanceof ErrorResponse && (
+              isErrorCode( "AccessPointNotFound", (ErrorResponse) response ) ||
+              isErrorCode( "InvalidEndPoint", (ErrorResponse) response )
+      ) ) {
+        deregistered = true;
+        setActivityFinalStatus( ActivityStatusCode.Successful );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
+    }
+
+    private boolean isErrorCode( final String code,
+                                 final ErrorResponse response ) {
+      boolean foundCode = false;
+      for ( com.eucalyptus.loadbalancing.common.msgs.Error error : response.getError( ) ) {
+        if ( code.equals( error.getCode() ) ) {
+          foundCode = true;
+          break;
+        }
+      }
+      return foundCode;
+    }
+
     boolean instancesDeregistered() {
       return deregistered;
     }
@@ -1830,12 +1896,14 @@ public class ActivityManager {
     }
 
     @Override
-    void dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
       final EucalyptusWebServiceException e = Exceptions.findCause( throwable, EucalyptusWebServiceException.class );
       if ( "InvalidInstanceID.NotFound".equals( e.getCode( ) ) ) {
+        //TODO handle FailedRequestException here when switching to Compute component
         handleInstanceTerminated( );
+        return true;
       } else {
-        super.dispatchFailure( context, throwable );
+        return super.dispatchFailure( context, throwable );
       }
     }
 
@@ -2492,9 +2560,10 @@ public class ActivityManager {
     }
 
     @Override
-    void dispatchFailure( final ActivityContext context, final Throwable throwable ) {
-      super.dispatchFailure( context, throwable );
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      final boolean result = super.dispatchFailure( context, throwable );
       handleValidationFailure( throwable );
+      return result;
     }
 
     void handleValidationFailure( final Throwable throwable ) {
