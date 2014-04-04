@@ -1817,6 +1817,7 @@ char *mac2interface(char *mac)
         while (!match && !rc && result) {
             if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..")) {
                 snprintf(mac_file, EUCA_MAX_PATH, "/sys/class/net/%s/address", result->d_name);
+                LOGDEBUG("attempting to read mac from file '%s'\n", mac_file);
                 FH = fopen(mac_file, "r");
                 if (FH) {
                     macstr[0] = '\0';
@@ -1827,19 +1828,20 @@ char *mac2interface(char *mac)
                         if (strptra && strptrb) {
                             if (!strcasecmp(strptra, strptrb)) {
                                 ret = strdup(result->d_name);
+                                LOGDEBUG("found: matching mac/interface mapping: interface=%s foundmac=%s inputmac=%s\n", ret, strptra, strptrb);
                                 match++;
                             }
                         } else {
-                            LOGERROR("BUG: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
+                            LOGDEBUG("skipping: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
                             ret = NULL;
                         }
                     } else {
-                        LOGERROR("BUG: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
+                        LOGDEBUG("skipping: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
                         ret = NULL;
                     }
                     fclose(FH);
                 } else {
-                    LOGERROR("could not open sys interface file for read '%s': check permissions\n", SP(mac_file));
+                    LOGDEBUG("skipping: could not open sys interface file for read '%s': check permissions\n", SP(mac_file));
                     ret = NULL;
                 }
             }
