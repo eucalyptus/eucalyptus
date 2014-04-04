@@ -42,8 +42,10 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -62,6 +64,7 @@ import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProf
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -574,9 +577,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				this.add("eucalyptus_host", host);
 				this.add("eucalyptus_port", port);
 				this.add("eucalyptus_path", path);
-				
-				this.add("elb_host", host);
-				this.add("elb_port", port);	/// elb service path
+				this.add("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
+				this.add("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+				final ServiceConfiguration dns = Topology.lookup(Dns.class);
+	      this.add("dns_server", dns.getInetAddress().getHostAddress());
+	      
 				if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
 					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
 				}
