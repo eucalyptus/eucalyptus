@@ -170,13 +170,13 @@ public class ImagingService {
     final Context context = Contexts.lookup();
     
     try{
-      if ( ! ( context.getUser().isSystemAdmin() || Permissions.isAuthorized(
+      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
           EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
           "",
           null,
           IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS,
-          context.getAuthContext() ) ) ) {
+          context.getAuthContext() ) ) ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
       }
     }catch(final ImagingServiceException ex){
@@ -184,6 +184,12 @@ public class ImagingService {
     }catch(final Exception ex){
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
     }    
+    try{
+      ImagingWorkers.verifyWorker(request.getInstanceId());
+    }catch(final Exception ex){
+      LOG.warn("Failed to verify worker", ex);
+      throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
+    }
     reply.setCancelled(false);
     try{
       final String taskId = request.getImportTaskId();
@@ -269,13 +275,13 @@ public class ImagingService {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
     try{
-      if ( ! ( context.getUser().isSystemAdmin() || Permissions.isAuthorized(
+      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
           EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
           "",
           null,
           IMAGINGSERVICE_GETINSTANCEIMPORTTASK,
-          context.getAuthContext() ) ) ) {
+          context.getAuthContext() ) ) ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to get import task." );
       }
     }catch(final ImagingServiceException ex){
@@ -283,6 +289,14 @@ public class ImagingService {
     }catch(final Exception ex){
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to get import task." );
     }   
+    
+    try{
+      ImagingWorkers.verifyWorker(request.getInstanceId());
+    }catch(final Exception ex){
+      LOG.warn("Failed to verify worker", ex);
+      throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to get instance import task." );
+    }
+    
     try{
       if(request.getInstanceId()!=null){
         if(ImagingWorkers.hasWorker(request.getInstanceId())) {
