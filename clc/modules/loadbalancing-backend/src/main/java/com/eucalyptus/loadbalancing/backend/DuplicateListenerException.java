@@ -19,12 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 400 )
 public class DuplicateListenerException extends LoadBalancingException {
 	private static final long serialVersionUID = 1L;
 	public DuplicateListenerException(){
-		super("A Listener already exists");
+		super("DuplicateListener", Role.Sender, "A Listener already exists");
 	}
 }

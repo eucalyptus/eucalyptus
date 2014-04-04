@@ -110,7 +110,6 @@ import javax.annotation.Nonnull
 import javax.annotation.Nullable
 import com.eucalyptus.auth.Permissions
 import com.eucalyptus.auth.policy.PolicyEngineImpl
-import com.eucalyptus.auth.principal.Policy
 
 /**
  *
@@ -476,27 +475,7 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      int countAccounts() {
-        1
-      }
-
-      @Override
-      int countUsers() {
-        1
-      }
-
-      @Override
-      int countGroups() {
-        0
-      }
-
-      @Override
       List<Account> listAllAccounts() {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<Account> listAccountsByStatus(final User.RegistrationStatus status) {
         throw new UnsupportedOperationException()
       }
 
@@ -537,36 +516,6 @@ class AutoScalingServiceTest {
 
       @Override
       Group lookupGroupById(final String groupId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<User> listUsersForAccounts(final Collection<String> accountIds, final boolean eager) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<Group> listGroupsForAccounts(final Collection<String> accountIds) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Map<String, List<Policy>> listPoliciesForUsers(final Collection<String> userIds) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Map<String, List<Policy>> listPoliciesForGroups(final Collection<String> groupIds) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Map<String, List<Certificate>> listSigningCertificatesForUsers(final Collection<String> userIds) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Map<String, List<AccessKey>> listAccessKeysForUsers(final Collection<String> userIds) {
         throw new UnsupportedOperationException()
       }
 

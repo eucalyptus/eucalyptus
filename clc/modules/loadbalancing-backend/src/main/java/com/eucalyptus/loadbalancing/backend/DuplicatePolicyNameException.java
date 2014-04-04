@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -29,6 +30,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class DuplicatePolicyNameException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
   public DuplicatePolicyNameException(){
-    super("Policy with the same name exists for this load balancer. Please choose another name.");
+    super("DuplicatePolicyName", Role.Sender, "Policy with the same name exists for this load balancer. Please choose another name.");
   }
 }

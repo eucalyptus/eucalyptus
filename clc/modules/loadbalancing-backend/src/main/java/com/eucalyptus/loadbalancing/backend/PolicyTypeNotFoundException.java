@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -29,6 +30,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class PolicyTypeNotFoundException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
   public PolicyTypeNotFoundException(){
-    super("One or more of the specified policy types do not exist.");
+    super("PolicyTypeNotFound", Role.Sender, "One or more of the specified policy types do not exist.");
   }
 }
