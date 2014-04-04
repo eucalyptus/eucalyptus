@@ -24,6 +24,7 @@ import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_PUTINSTANCEIM
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.NoSuchElementException;
@@ -185,7 +186,9 @@ public class ImagingService {
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
     }    
     try{
-      ImagingWorkers.verifyWorker(request.getInstanceId());
+      final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) context.getChannel( ).getRemoteAddress( ) );
+      final String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
     }catch(final Exception ex){
       LOG.warn("Failed to verify worker", ex);
       throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
@@ -291,7 +294,9 @@ public class ImagingService {
     }   
     
     try{
-      ImagingWorkers.verifyWorker(request.getInstanceId());
+      final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) context.getChannel( ).getRemoteAddress( ) );
+      final String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
     }catch(final Exception ex){
       LOG.warn("Failed to verify worker", ex);
       throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to get instance import task." );

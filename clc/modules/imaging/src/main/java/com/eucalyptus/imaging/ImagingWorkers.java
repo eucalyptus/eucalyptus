@@ -162,7 +162,7 @@ public class ImagingWorkers {
     }
   }
   
-  public static void verifyWorker(final String instanceId) throws Exception{
+  public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception{
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
@@ -177,6 +177,8 @@ public class ImagingWorkers {
         }
         if(!tagFound)
           throw new Exception("Instance does not have a proper tag");
+        if(! (remoteHost.equals(workerInstance.getIpAddress()) || remoteHost.equals(workerInstance.getPrivateIpAddress())))
+          throw new Exception("Request came from invalid host address");        
         verifiedWorkers.add(instanceId);
       }catch(final Exception ex){
         throw new Exception("Failed to verify imaging worker", ex);
