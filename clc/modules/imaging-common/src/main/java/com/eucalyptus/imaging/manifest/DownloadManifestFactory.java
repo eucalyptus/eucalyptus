@@ -105,12 +105,10 @@ public class DownloadManifestFactory {
       
       // check if download-manifest already exists
       if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
-        LOG.info("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created. Skipping creation");
+        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created. Skipping creation");
         URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
             DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
         return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
-      } else {
-        LOG.info("Creating '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' manifest");
       }
 			
 			final String manifest = baseManifest.getManifest();
