@@ -79,7 +79,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public User addUser( final String userName, final String path, final boolean skipRegistration, final boolean enabled, final Map<String, String> info ) throws AuthException {
+  public User addUser( final String userName, final String path, final boolean enabled, final Map<String, String> info ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
