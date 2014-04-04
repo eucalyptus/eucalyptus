@@ -316,23 +316,22 @@ public class Emis {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
-	          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
-	if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
-	    // generate download manifest and replace machine URL
-	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+      
+        if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          // generate download manifest and replace machine URL
+          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodeCertificate().getPublicKey(), instanceId);
 	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
 	      }
       } catch (DownloadManifestException ex) {
-	  throw new MetadataException(ex);
+        throw new MetadataException(ex);
       }
-
       return vmTypeInfo;
     }
-    
   }
   
   static class NoRamdiskBootableSet extends BootableSet {

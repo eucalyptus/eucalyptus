@@ -2173,23 +2173,6 @@ public class EuareService {
     return reply;
   }
   
-  /* Euca-only API for imaging service */
-  public DownloadCloudCertificateResponseType downloadCloudCertificate(final DownloadCloudCertificateType request)
-    throws EuareException
-  {
-    final DownloadCloudCertificateResponseType reply = request.getReply();
-    try{
-      final DownloadCloudCertificateResultType result = new DownloadCloudCertificateResultType();
-      final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
-      result.setCloudCertificate(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
-      reply.setDownloadCloudCertificateResult(result);
-    }catch(final Exception ex){
-      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
-    }
-    reply.set_return(true);
-    return reply;
-  }
-  
   private void fillUserResult( UserType u, User userFound, Account account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );

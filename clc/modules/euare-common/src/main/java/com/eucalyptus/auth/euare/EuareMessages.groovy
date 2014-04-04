@@ -288,7 +288,7 @@ public class ListGroupsResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListGroupsResponseType() {  }
 }
-public class ServerCertificateType extends EuareMessage {
+public class ServerCertificateType extends EucalyptusData {
   @HttpEmbedded
   ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   String certificateBody;
@@ -1079,22 +1079,6 @@ public class DownloadServerCertificateResultType extends EucalyptusData {
   String serverPk; // encrypted server PK using delegation certificate (Loadbalancer VMs)
   String signature; // Signature {ARN+timestamp} signed by Euare's PK
 }
-
-@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DOWNLOADCLOUDCERTIFICATE )
-public class DownloadCloudCertificateType extends EuareMessage {
-  public DownloadCloudCertificateType(){ }
-}
-
-public class DownloadCloudCertificateResponseType extends EuareMessage {
-  DownloadCloudCertificateResultType downloadCloudCertificateResult = new DownloadCloudCertificateResultType();
-  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
-  public DownloadCloudCertificateResponseType() { }
-}
-
-public class DownloadCloudCertificateResultType extends EucalyptusData {
-  String cloudCertificate;
-}
-
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLE )
 public class GetRoleType extends EuareMessage {

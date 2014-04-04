@@ -233,7 +233,9 @@ static int populateOutboundMeta(ncMetadata * pMeta);
 //!
 void doInitCC(void)
 {
-    initialize(NULL, FALSE);
+    if (initialize(NULL, FALSE)) {
+        LOGWARN("could not initialize\n");
+    }
 }
 
 //!
@@ -1601,8 +1603,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         return (1);
     }
 
-    sem_mywait(GLOBALNETWORKINFO);
-
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
@@ -1657,6 +1657,9 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
         EUCA_FREE(xmlbuf);
     }
+
+    sem_mywait(GLOBALNETWORKINFO);
+
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
     config->kick_broadcast_network_info = 1;
@@ -4016,11 +4019,17 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             //if (strstr(platform, "windows")) {
                             char cdir[EUCA_MAX_PATH];
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
-                            if (check_directory(cdir))
-                                mkdir(cdir, 0700);
+                            if (check_directory(cdir)) {
+                                if(mkdir(cdir, 0700)) {
+                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
+                                }
+                            }
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
-                            if (check_directory(cdir))
-                                mkdir(cdir, 0700);
+                            if (check_directory(cdir)) {
+                                if (mkdir(cdir, 0700)) {
+                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
+                                }
+                            }
                             if (check_directory(cdir)) {
                                 LOGERROR("could not create console/floppy cache directory '%s'\n", cdir);
                             } else {
@@ -4371,7 +4380,10 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
                         snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        rmdir(cdir);
+                        
+                        if (rmdir(cdir)) {
+                            LOGWARN("rmdir failed: unable to remove directory '%s', check permissions\n", cdir);
+                        }
                     }
                 }
 
@@ -7087,11 +7099,6 @@ int maintainNetworkState(void)
             }
         }
 
-        //    rc = vnetApplyArpTableRules(vnetconfig);
-        //    if (rc) {
-        //      LOGWARN("failed to maintain arp tables\n");
-        //    }
-
         sem_mypost(VNET);
     }
 
@@ -7262,7 +7269,9 @@ int reconfigureNetworkFromCLC(void)
         EUCA_FREE(cloudIp);
         return (1);
     }
-    chmod(clcnetfile, 0644);
+    if (chmod(clcnetfile, 0644)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", clcnetfile);
+    }
     close(fd);
 
     fd = safe_mkstemp(chainmapfile);
@@ -7272,21 +7281,10 @@ int reconfigureNetworkFromCLC(void)
         unlink(clcnetfile);
         return (1);
     }
-    chmod(chainmapfile, 0644);
+    if (chmod(chainmapfile, 0644)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", chainmapfile);
+    }
     close(fd);
-
-    /*
-       fd = safe_mkstemp(config_ccfile);
-       if (fd < 0) {
-       LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
-       EUCA_FREE(cloudIp);
-       unlink(clcnetfile);
-       unlink(chainmapfile);
-       return (1);
-       }
-       chmod(config_ccfile, 0644);
-       close(fd);
-     */
 
     // clcnet populate
     snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);

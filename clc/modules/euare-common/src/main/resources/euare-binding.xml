@@ -630,8 +630,7 @@
       <structure name="member" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     </collection>
   </mapping>
-  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificateType">
     <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="required" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
     <value name="CertificateChain" field="certificateChain" usage="optional"/>
@@ -1196,16 +1195,5 @@
     <value name="ServerCertificate" field="serverCertificate" usage="required" />
     <value name="ServerPk" field="serverPk" usage="required" />
     <value name="Signature" field="signature" usage="optional" />
-  </mapping>
-  <mapping name="DownloadCloudCertificate" class="com.eucalyptus.auth.euare.DownloadCloudCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-  </mapping>
-  <mapping name="DownloadCloudCertificateResponse" class="com.eucalyptus.auth.euare.DownloadCloudCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="downloadCloudCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.DownloadCloudCertificateResultType"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
-  </mapping>
-  <mapping name="DownloadCloudCertificateResult" class="com.eucalyptus.auth.euare.DownloadCloudCertificateResultType">
-    <value name="CloudCertificate" field="cloudCertificate" usage="required" />
   </mapping>
 </binding>
