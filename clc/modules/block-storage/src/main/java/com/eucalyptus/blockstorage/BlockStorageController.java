@@ -313,7 +313,7 @@ public class BlockStorageController {
 			LOG.debug("Cannot to find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
 					+ " account. The user may not exist, trying to add user to the account");
 			try {
-				blockStorageAccount.addUser(User.ACCOUNT_ADMIN, "/", true, true, null);
+				blockStorageAccount.addUser(User.ACCOUNT_ADMIN, "/", true, null);
 			} catch (Exception e1) {
 				LOG.debug("Failed to add " + User.ACCOUNT_ADMIN + " user. Checking if the user exists in the account");
 				try {

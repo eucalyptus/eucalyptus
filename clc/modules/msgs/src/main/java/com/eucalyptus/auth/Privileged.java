@@ -88,26 +88,19 @@ import com.google.common.collect.Maps;
 
 public class Privileged {
 
-  public static Account signupAccount( String accountName, String password, String email ) throws AuthException {
-    return doCreateAccount( accountName, password, email, false );
-  }
-
   public static Account createAccount( AuthContext requestUser, String accountName, String password, String email ) throws AuthException {
     if ( !requestUser.isSystemUser( ) ||
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, "", null, IAM_CREATEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    return doCreateAccount( accountName, password, email, true );
-  }
 
-  private static Account doCreateAccount( String accountName, String password, String email, boolean skipRegistration ) throws AuthException {
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
       info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
     }
-    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", skipRegistration, true/*enabled*/, info );
+    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*enabled*/, info );
     admin.resetToken( );
     admin.createConfirmationCode( );
     if ( password != null ) {
@@ -234,7 +227,7 @@ public class Privileged {
     if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_USER, "", IAM_CREATEUSER, requestUser, 1L ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
-    return account.addUser( userName, path, true, true, null );
+    return account.addUser( userName, path, true, null );
   }
   
   public static boolean allowReadUser( AuthContext requestUser, Account account, User user ) throws AuthException {

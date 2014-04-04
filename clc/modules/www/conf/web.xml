@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,86 +60,42 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
-<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
-    xmlns:g="urn:import:com.google.gwt.user.client.ui"
-    xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
-    
-    <ui:style>
-        .headerBar {
-        	height:52px;
-        	-webkit-box-shadow:0px 1px 4px #D1D1D1;
-            -moz-box-shadow:0px 1px 4px #D1D1D1;
-            box-shadow:0px 1px 4px #D1D1D1;
-            background:#FDFDFD;
-            background:literal("-moz-linear-gradient(top, #FDFDFD 0%, #FBFBFB 50%, #F4F4F4 51%, #EFEFEF 100%)");
-            background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#FDFDFD), color-stop(50%,#FBFBFB), color-stop(51%,#F4F4F4), color-stop(100%,#EFEFEF))");
-            filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#FDFDFD', endColorstr='#EFEFEF',GradientType=0 )");
-            background:literal("-o-linear-gradient(top, #FDFDFD 0%,#FBFBFB 50%,#F4F4F4 51%,#EFEFEF 100%)");
-        }
-        .horizontalLeft {
-        	float:left;
-        }
-        .horizontalRight {
-        	float:right;
-        }
-        .titleBox {
-        	margin-left:0.7em;
-        	height:100%;
-        	display:table;
-        	text-align:center;
-        }
-        .titleBig {
-        	vertical-align:bottom;
-        	text-align:center;
-        	font-size:120%;
-        	font-weight:bold;
-        	text-shadow:#FFFFFF 1px 1px 5px;
-        }
-        .titleSmall {
-            vertical-align:top;
-            text-align:center;
-        	font-size:70%;
-        	/*font-style:italic;*/
-        	text-shadow:#FFFFFF 1px 1px 3px;
-        }
-        .vcenter {
-        	display:table-cell;
-        	vertical-align:middle;
-        }
-        .logoDiv {
-        	display:table;
-        	margin-left:1em;
-        	height:100%;
-        }
-        .userDiv {
-        	display:table;
-            margin-left:4em;
-            height:100%;
-        }
-        .searchDiv {
-        	display:table;
-        	height:100%;
-        	margin-right:2em;
-        }
-        
-    </ui:style>
-    
-    <g:HTMLPanel styleName="{style.headerBar}">
-        <div class="{style.horizontalLeft} {style.logoDiv}">
-            <div class="{style.vcenter}">
-                <img alt="Eucalyptus" src="themes/active/logo.png"/></div>
-            </div>
-        <div class="{style.horizontalLeft} {style.userDiv}">
-            <div class="{style.vcenter}">
-                <euca:UserLink ui:field="userLink"/>
-            </div>
-        </div>
-        <div class="{style.horizontalRight} {style.searchDiv}">
-            <div class="{style.vcenter}">
-                <euca:SearchBox ui:field="searchBox"/>
-            </div>
-        </div>
-    </g:HTMLPanel>
-    
-</ui:UiBinder>
+<web-app>
+
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>Secured area</web-resource-name>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <user-data-constraint>
+      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+  </security-constraint>
+
+  <servlet>
+    <description></description>
+    <display-name>X509Downloader</display-name>
+    <servlet-name>X509Download</servlet-name>
+    <servlet-class>com.eucalyptus.www.X509Download</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet>
+    <description></description>
+    <display-name>CloudRegistration</display-name>
+    <servlet-name>CloudRegistration</servlet-name>
+    <servlet-class>com.eucalyptus.www.Registration</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>X509Download</servlet-name>
+    <url-pattern>/getX509</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>CloudRegistration</servlet-name>
+    <url-pattern>/register</url-pattern>
+  </servlet-mapping>
+
+</web-app>

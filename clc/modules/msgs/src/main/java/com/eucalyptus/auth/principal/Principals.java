@@ -719,7 +719,7 @@ public class Principals {
     }
 
     @Override
-    public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+    public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 

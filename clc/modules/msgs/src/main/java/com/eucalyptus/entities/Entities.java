@@ -606,16 +606,6 @@ public class Entities {
   }
 
   /**
-   * TODO: not use this please.
-   *
-   * @deprecated
-   */
-  @Deprecated
-  public static org.hibernate.Query createQuery( final Object obj, final String string ) {
-    return getTransaction( obj ).getTxState( ).getSession( ).createQuery( string );
-  }
-
-  /**
    * Invokes underlying persist implementation per jsr-220
    * 
    * @throws ConstraintViolationException
