@@ -1138,7 +1138,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
      */
     protected String getOperationPath(MappingHttpRequest httpRequest) {
         if(httpRequest.getServicePath().startsWith(walrusServicePath)) {
-            String opPath = httpRequest.getServicePath().replaceAll(walrusServicePath, "");
+            String opPath = httpRequest.getServicePath().replaceFirst(walrusServicePath, "");
             if(!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
                 //The service path was not demarked with a /, e.g. /services/WalrusBackendblahblah -> blahblah
                 //So, don't remove the service path because that changes the semantics.

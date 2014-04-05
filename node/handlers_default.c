@@ -961,7 +961,7 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
     LOGDEBUG("decoding/writing buffer to (%s)\n", xmlpath);
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
-        rc = str2file(xmlbuf, xmlpath, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE);
+        rc = str2file(xmlbuf, xmlpath, O_CREAT | O_TRUNC | O_WRONLY, 0600, FALSE);
         if (rc) {
             LOGERROR("could not write XML data to file (%s)\n", xmlpath);
             ret = EUCA_ERROR;
@@ -1301,6 +1301,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+            if (xml) {
+                EUCA_FREE(xml);
+            }
             return EUCA_HYPERVISOR_ERROR;
         }
         // find domain on hypervisor
@@ -1891,7 +1894,6 @@ static void *bundling_thread(void *arg)
         }
         return NULL;
     }
-
     // check if bundling was cancelled while we waited
     if (pInstance->bundleCanceled) {
         LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", pInstance->instanceId);
@@ -1915,10 +1917,10 @@ static void *bundling_thread(void *arg)
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
-                         "--work-dir", "/tmp", // @TODO: should not be needed any more\
-                         "--arch", "x86_64", // @TODO: obtain arch from instance\
-                         "--account", "123456789012", // @TODO: obtain account for real\
-                         "--access-key", pParams->userPublicKey, // @TODO: "PublicKey" is a misnomer\
+                         "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
+                         "--arch", "x86_64", /* @TODO: obtain arch from instance*/ \
+                         "--account", "123456789012", /* @TODO: obtain account for real*/ \
+                         "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
                          "--policy", pParams->S3Policy,\
                          "--policy-signature", pParams->S3PolicySig,\

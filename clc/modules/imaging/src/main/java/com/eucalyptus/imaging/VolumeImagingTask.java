@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -95,6 +96,12 @@ public class VolumeImagingTask extends ImagingTask {
   
   static VolumeImagingTask named(final OwnerFullName owner, final String taskId){
     return new VolumeImagingTask(owner,  taskId);
+  }
+  
+  static VolumeImagingTask namedByAccount(final String accountNumber){
+    final VolumeImagingTask task = new VolumeImagingTask();
+    task.setOwnerAccountNumber(accountNumber);
+    return task;
   }
   
   static VolumeImagingTask named(final OwnerFullName owner){

@@ -81,13 +81,13 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.VerificationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
@@ -116,6 +116,7 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import net.sf.json.JSONException;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
@@ -279,21 +280,21 @@ public class VerifyMetadata {
         if ( !Strings.isNullOrEmpty( instanceProfileArn ) ) try {
           final Ern name = Ern.parse( instanceProfileArn );
           if ( !( name instanceof EuareResourceName) ) {
-            throw new MetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
+            throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
           }
           profile = Accounts.lookupAccountById( name.getNamespace( ) )
               .lookupInstanceProfileByName( ((EuareResourceName) name).getName() );
           if ( !Strings.isNullOrEmpty( instanceProfileName ) &&
               !instanceProfileName.equals( profile.getName() ) ) {
-            throw new MetadataException( String.format(
+            throw new InvalidInstanceProfileMetadataException( String.format(
                 "Invalid IAM instance profile name '%s' for ARN: %s", name, instanceProfileArn) );
           }
-        } catch ( AuthException e ) {
-          throw new NoSuchMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
+        } catch ( AuthException|JSONException e ) {
+          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
         } else if ( !Strings.isNullOrEmpty( instanceProfileName ) ) try {
           profile = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) ).lookupInstanceProfileByName( instanceProfileName );
         } catch ( AuthException e ) {
-          throw new NoSuchMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
+          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
         } else {
           profile = null;
         }
@@ -334,7 +335,7 @@ public class VerifyMetadata {
             allocInfo.setIamInstanceProfileId( profile.getInstanceProfileId( ) );
             allocInfo.setIamRoleArn( roleArn );
           } else {
-            throw new MetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
+            throw new InvalidInstanceProfileMetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
           }
         } catch ( AuthException e ) {
           throw new MetadataException( "IAM instance profile error", e );

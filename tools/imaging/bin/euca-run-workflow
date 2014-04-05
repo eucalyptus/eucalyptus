@@ -219,6 +219,24 @@ class WF_DownBundle_WriteRaw(WF_base):
         download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
         download.main()
 
+class WF_DownParts_WriteRaw(WF_base):
+    """Downloads a parts, writes its contents to a file/device"""
+
+    def add_arguments(self, id, subparsers):
+        self.id = id
+        parser = subparsers.add_parser(id, help='a help')
+        parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
+        parser.add_argument('--import-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the import")
+        parser.add_argument('--cloud-cert-path', required=True, metavar='URL', help="Path to the cloud certificate")
+
+    def check_deps(self, args):
+        self.problems = _check_euca2ools(self.problems)
+
+    def execute(self, args):
+        WF_base.execute(self, args)
+        download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
+        download.main()
+
 class WF_DownBundle_UpVMDK(WF_base):
     """Downloading a bundle, uploads its contents to datastore as VMDK"""
 
@@ -246,7 +264,7 @@ class WF_DownBundle_UpVMDK(WF_base):
 
             imager_ps = imager.upload_vmdk(args, fd_r)
             fd_r.close()
-            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path, destispipe=True)
             download.main()
             fd_w.close()
             imager_ps.wait()
@@ -404,7 +422,7 @@ WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'down-bundle/up-vmdk': WF_DownBundle_UpVMDK(),
              'read-raw/up-bundle': WF_ReadRaw_UpBundle(),
              'down-vmdk/up-bundle': WF_DownVMDK_UpBundle(),
-             'down-parts/write-raw': WF_DownBundle_WriteRaw()} # this workflow is same as down-bundle/write-raw (TODO: delete?)
+             'down-parts/write-raw': WF_DownParts_WriteRaw()}
 
 PATHS = {'euca-imager': os.path.join(get_euca_home(), "usr/libexec/eucalyptus", "euca-imager"),
          'euca-version': "euca-version",

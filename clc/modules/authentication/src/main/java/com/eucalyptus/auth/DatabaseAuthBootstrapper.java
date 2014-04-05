@@ -178,7 +178,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       // Order matters.
       try {
         Account system = Accounts.addSystemAccount( );
-        User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+        User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, null );
         admin.createKey( );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );

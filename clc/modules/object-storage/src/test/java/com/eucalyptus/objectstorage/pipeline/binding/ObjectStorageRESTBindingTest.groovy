@@ -62,6 +62,10 @@ public class ObjectStorageRESTBindingTest {
         path = binding.getOperationPath(request);
         assert("".equals(path));
 
+        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/services/objectstorage/bucket");
+        path = binding.getOperationPath(request);
+        assert("/services/objectstorage/bucket".equals(path));
+
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstoragebucket/object");
         path = binding.getOperationPath(request);
         assert("/services/objectstoragebucket/object".equals(path));

@@ -137,24 +137,6 @@ class DownloadManifest(object):
                                       sig_key_filename=sig_key_filename)
 
     @classmethod
-    def _calc_digest_for_fileobj(cls, file_obj, algorithm, chunk_size=None):
-        '''
-        Calculated and return the digest for the fileobj provided using the
-        hashlib 'alogrithm' provided.
-        :param file_obj: file like obj to read compute digest for
-        :param algorithm: string representing hashlib type(sha1, md5, etc)
-        :param chunksize: # of bytes to read/write per read()/write()
-        '''
-        chunk_size = chunk_size or stages._chunk_size
-        digest = cls._get_digest_algorithm_from_string(algorithm)
-        while True:
-            chunk = file_obj.read(chunk_size)
-            if not chunk:
-                break
-            digest.update(chunk)
-        return digest.hexdigest()
-
-    @classmethod
     def _read_from_fileobj(cls,
                            manifest_fileobj,
                            xsd=None,
@@ -199,7 +181,7 @@ class DownloadManifest(object):
                               signature=manifest.signature,
                               data=data_to_sign,
                               algorithm=manifest.signature_algorithm)
-        #IF this manifest contains a bundle get and decrypt keys,iv...
+        #If this manifest contains a bundle get and decrypt keys,iv...
         if manifest.file_format == 'BUNDLE':
             bundle = xml.bundle
             manifest.unbundled_image_size = long(bundle.find('unbundled-size'))

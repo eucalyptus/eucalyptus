@@ -672,13 +672,6 @@ public class PolicyAttributes extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<PolicyAttribute> member = new ArrayList<PolicyAttribute>();
 }
-public class ErrorResponse extends LoadBalancingBackendMessage { // EucalyptusData {
-  String requestId;
-  public ErrorResponse() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="error")
-  ArrayList<Error> error = new ArrayList<Error>();
-}
 public class ApplySecurityGroupsToLoadBalancerType extends LoadBalancingBackendMessage {
   String loadBalancerName;
   @HttpEmbedded

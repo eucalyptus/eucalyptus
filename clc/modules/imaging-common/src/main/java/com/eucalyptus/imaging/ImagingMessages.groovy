@@ -52,6 +52,8 @@ public class ImagingMessage extends BaseMessage implements Cloneable, Serializab
 /** *******************************************************************************/
 public class ImportImageType extends ImagingMessage {
   String description;
+  
+  @HttpEmbedded
   ImportDiskImage image;
   public ImportImage() {}
 }
@@ -65,6 +67,8 @@ public class ImportDiskImage extends EucalyptusData {
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ImportDiskImageDetail")
   ArrayList<ImportDiskImageDetail> diskImageSet = new ArrayList<ImportDiskImageDetail>();
+
+  @HttpEmbedded
   ConvertedImageDetail convertedImage;
   String description;
   String accessKey;
@@ -239,7 +243,8 @@ public class GetInstanceImportTaskResponseType extends ImagingMessage {
 
 public class VolumeTask extends EucalyptusData {
   String volumeId
-  
+  String ec2Cert
+
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ImageManifest")
   ArrayList<ImageManifest> imageManifestSet = new ArrayList<ImageManifest>();
@@ -283,9 +288,16 @@ public class Error extends EucalyptusData {
 
 public class ErrorResponse extends ImagingMessage {
   String requestId
-  public ErrorResponse() {
+  ArrayList<Error> error = new ArrayList<Error>( )
+
+  ErrorResponse( ) {
+    set_return( false )
   }
-  ArrayList<Error> error = new ArrayList<Error>()
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }

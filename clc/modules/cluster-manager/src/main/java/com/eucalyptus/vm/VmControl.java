@@ -75,6 +75,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
@@ -87,6 +88,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.keys.NoSuchKeyMetadataException;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -236,12 +238,16 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
       allocInfo.abort( );
       final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
       if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
       final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
       if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
+      final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
+      if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
+      final InvalidInstanceProfileMetadataException e4 = Exceptions.findCause( ex, InvalidInstanceProfileMetadataException.class );
+      if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
+      LOG.error( ex, ex );
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();

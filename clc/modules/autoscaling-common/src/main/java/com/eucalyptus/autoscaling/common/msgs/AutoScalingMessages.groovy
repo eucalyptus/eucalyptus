@@ -157,8 +157,16 @@ public class TerminateInstanceInAutoScalingGroupType extends AutoScalingMessage 
 }
 public class ErrorResponse extends AutoScalingMessage {
   String requestId
-  public ErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>()
+  ArrayList<Error> error = new ArrayList<Error>( )
+
+  ErrorResponse( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class BlockDeviceMappings extends EucalyptusData {
   public BlockDeviceMappings() {  }

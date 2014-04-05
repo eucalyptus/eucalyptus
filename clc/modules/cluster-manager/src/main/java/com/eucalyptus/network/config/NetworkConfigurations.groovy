@@ -74,6 +74,8 @@ class NetworkConfigurations {
           5,
           TimeUnit.MINUTES
       )
+  private static final boolean validateConfiguration =
+      Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.config.validateNetworkConfiguration', 'true' ) )
 
   @SuppressWarnings("UnnecessaryQualifiedReference")
   static Optional<NetworkConfiguration> getNetworkConfiguration( ) {
@@ -197,7 +199,7 @@ class NetworkConfigurations {
     }
     final BeanPropertyBindingResult errors = new BeanPropertyBindingResult( networkConfiguration, "NetworkConfiguration");
     ValidationUtils.invokeValidator( new NetworkConfigurationValidator(errors), networkConfiguration, errors )
-    if ( errors.hasErrors( ) ) {
+    if ( validateConfiguration && errors.hasErrors( ) ) {
       MessageSource source = new StaticMessageSource( ) // default messages will be used
       throw new NetworkConfigurationException( source.getMessage( errors.getAllErrors( ).get( 0 ), Locale.getDefault( ) ) )
     }

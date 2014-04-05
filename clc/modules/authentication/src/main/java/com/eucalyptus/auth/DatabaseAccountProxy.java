@@ -108,7 +108,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -261,7 +260,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+  public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
       USER_GROUP_NAME_CHECKER.check( userName );
     } catch ( InvalidValueException e ) {
@@ -281,11 +280,7 @@ public class DatabaseAccountProxy implements Account {
     newUser.setPath( path );
     newUser.setEnabled( enabled );
     newUser.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
-    if ( skipRegistration ) {
-      newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
-    } else {
-      newUser.setRegistrationStatus( User.RegistrationStatus.REGISTERED );
-    }
+    newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
     }

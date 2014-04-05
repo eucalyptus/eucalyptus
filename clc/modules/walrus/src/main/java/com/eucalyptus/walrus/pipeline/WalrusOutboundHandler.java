@@ -62,6 +62,7 @@
 
 package com.eucalyptus.walrus.pipeline;
 
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import org.apache.log4j.Logger;
@@ -110,14 +111,14 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 			if(msg instanceof PutObjectResponseType) {
 				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
 				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
-				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, putObjectResponse.getLastModified());
+				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
 				if(putObjectResponse.getVersionId() != null) {
 					httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
 				}
 			} else if(msg instanceof WalrusDataResponseType) {
                 WalrusDataResponseType response = (WalrusDataResponseType) msg;
                 httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
-                httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, response.getLastModified());
+                httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(response.getLastModified()));
                 if(response.getVersionId() != null) {
                     httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, response.getVersionId());
                 }

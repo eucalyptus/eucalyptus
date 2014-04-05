@@ -79,4 +79,15 @@ public class Eucalyptus extends ComponentId {
   public boolean isImpersonationSupported( ) {
     return true;
   }
+
+  /**
+   * The "eucalyptus" component name should resolve to the Compute service for
+   * backwards compatibility.
+   *
+   * This is necessary until we remove or rename this component.
+   */
+  @Override
+  public boolean isDnsSupported() {
+    return false;
+  }
 }

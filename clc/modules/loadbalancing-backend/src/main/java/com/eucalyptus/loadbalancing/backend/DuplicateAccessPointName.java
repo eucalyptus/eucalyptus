@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -29,6 +30,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class DuplicateAccessPointName extends LoadBalancingException {
 	private static final long serialVersionUID = 1L;
 	public DuplicateAccessPointName(){
-		super("LoadBalancer name already exists for this account. Please choose another name.");
+		super("DuplicateAccessPointName", Role.Sender, "LoadBalancer name already exists for this account. Please choose another name.");
 	}
 }

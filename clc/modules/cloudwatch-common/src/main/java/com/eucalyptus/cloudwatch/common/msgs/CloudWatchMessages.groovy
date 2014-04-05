@@ -315,8 +315,16 @@ public class DisableAlarmActionsType extends CloudWatchMessage {
 }
 public class CloudWatchErrorResponse extends CloudWatchMessage {
   String requestId;
-  public CloudWatchErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>();
+  ArrayList<Error> error = new ArrayList<Error>( );
+
+  CloudWatchErrorResponse( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class Metrics extends EucalyptusData {
   public Metrics() {  }

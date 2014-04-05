@@ -62,8 +62,7 @@
 
 package com.eucalyptus.network;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -122,10 +121,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.net.InetAddresses;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
@@ -804,12 +803,14 @@ public class NetworkGroups {
         for ( String range : ipPerm.getCidrIpRanges() ) {
           String[] rangeParts = range.split( "/" );
           try {
-            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
-            if ( rangeParts.length != 2 ) continue;
-            if ( InetAddress.getByName( rangeParts[0] ) != null ) {
+            if ( rangeParts.length != 2 ) throw new IllegalArgumentException( );
+            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) throw new IllegalArgumentException( );
+            if ( InetAddresses.forString( rangeParts[0] ) instanceof Inet4Address ) {
               ipRanges.add( range );
             }
-          } catch ( NumberFormatException e ) {} catch ( UnknownHostException e ) {}
+          } catch ( IllegalArgumentException e ) {
+            throw new IllegalArgumentException( "Invalid IP range: '"+range+"'" );
+          }
         }
         NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );

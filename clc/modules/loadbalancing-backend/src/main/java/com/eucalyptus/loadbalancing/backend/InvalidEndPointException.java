@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -29,6 +30,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class InvalidEndPointException extends LoadBalancingException {
 	private static final long serialVersionUID = 1L;
 	  public InvalidEndPointException( ){
-	    super( "The specified EndPoint (instance) is not valid");
+	    super( "InvalidEndPoint", Role.Sender, "The specified EndPoint (instance) is not valid");
 	  }
 }

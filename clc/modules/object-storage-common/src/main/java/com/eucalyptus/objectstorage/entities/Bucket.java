@@ -24,6 +24,7 @@ import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import org.hibernate.annotations.Cache;
@@ -344,7 +345,7 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
     }
 
     public BucketListEntry toBucketListEntry() {
-        return new BucketListEntry(this.getBucketName(), OSGUtil.dateToListingFormattedString(this.getCreationTimestamp()));
+        return new BucketListEntry(this.getBucketName(), DateFormatter.dateToListingFormattedString(this.getCreationTimestamp()));
     }
 
     @Override

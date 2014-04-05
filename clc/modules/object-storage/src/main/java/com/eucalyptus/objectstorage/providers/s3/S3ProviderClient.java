@@ -135,6 +135,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStora
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -382,7 +383,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			//Map s3 client result to euca response message
 			List<Bucket> result = s3Client.listBuckets(listRequest);
 			for(Bucket b : result) {
-				myBucketList.getBuckets().add(new BucketListEntry(b.getName(), OSGUtil.dateToHeaderFormattedString(b.getCreationDate())));
+				myBucketList.getBuckets().add(new BucketListEntry(b.getName(), DateFormatter.dateToHeaderFormattedString(b.getCreationDate())));
 			}
 
 			reply.setBucketList(myBucketList);
@@ -576,7 +577,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 //Add entry, note that the canonical user is set based on requesting user, not returned user
                 reply.getContents().add(new ListEntry(
                         obj.getKey(),
-                        OSGUtil.dateToHeaderFormattedString(obj.getLastModified()),
+                        DateFormatter.dateToHeaderFormattedString(obj.getLastModified()),
                         obj.getETag(),
                         obj.getSize(),
                         getCanonicalUser(requestUser),
@@ -771,7 +772,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
             CopyObjectResult result = s3Client.copyObject(copyRequest);
             reply.setEtag(result.getETag());
-            reply.setLastModified(OSGUtil.dateToHeaderFormattedString(result.getLastModifiedDate()));
+            reply.setLastModified(DateFormatter.dateToListingFormattedString(result.getLastModifiedDate()));
             String destinationVersionId = result.getVersionId();
             if (destinationVersionId != null) {
                 reply.setCopySourceVersionId(sourceVersionId);
@@ -930,7 +931,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                     v = new VersionEntry();
                     v.setKey(summary.getKey());
                     v.setVersionId(summary.getVersionId());
-                    v.setLastModified(OSGUtil.dateToHeaderFormattedString(summary.getLastModified()));
+                    v.setLastModified(DateFormatter.dateToHeaderFormattedString(summary.getLastModified()));
                     v.setEtag(summary.getETag());
                     v.setIsLatest(summary.isLatest());
                     v.setOwner(owner);
@@ -940,7 +941,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                     d = new DeleteMarkerEntry();
                     d.setIsLatest(summary.isLatest());
                     d.setKey(summary.getKey());
-                    d.setLastModified(OSGUtil.dateToHeaderFormattedString(summary.getLastModified()));
+                    d.setLastModified(DateFormatter.dateToHeaderFormattedString(summary.getLastModified()));
                     d.setOwner(owner);
                     d.setVersionId(summary.getVersionId());
                     versions.add(d);
@@ -1081,6 +1082,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setBucket(bucketName);
             reply.setKey(key);
             reply.setLocation(result.getLocation());
+            reply.setLastModified(new Date());
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);

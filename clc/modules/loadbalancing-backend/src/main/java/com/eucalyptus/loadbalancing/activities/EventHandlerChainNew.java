@@ -26,11 +26,13 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
@@ -367,12 +369,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				throw new EventHandlerException("could not find the role name for loadbalancer vm");
 			}
 			
-			GetRolePolicyResult policy  = null;
-			/// GetRolePolicy: check if there's an existing policy doc
+      GetRolePolicyResult policy  = null;
 			try{
-				policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			  final List<String> policies = EucalyptusActivityTasks.getInstance().listRolePolicies(roleName);
+			  if(policies.contains(SERVO_ROLE_POLICY_NAME)){
+		       policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+			  } 
 			}catch(final Exception ex){
-				;
+			  ;
 			}
 			
 			boolean putPolicy = false;
@@ -659,6 +663,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			
 			if ( Bootstrap.isFinished() &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
+			          Topology.isEnabled( AutoScaling.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) ) {
 				
 				// lookup all LoadBalancerAutoScalingGroup records
