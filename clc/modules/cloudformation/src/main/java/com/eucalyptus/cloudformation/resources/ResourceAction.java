@@ -34,17 +34,51 @@ public abstract class ResourceAction {
     return 1;
   }
 
-  public final String getDefaultPhysicalResourceIdWithSuffixLength(int suffixLength) {
+  public final String getDefaultPhysicalResourceId(int maxLength) {
+    // in case we need to truncate this we need to truncate prefix and middle
     String prefix = (getStackEntity() != null && getStackEntity().getStackName() != null) ?
       getStackEntity().getStackName() : "UNKNOWN";
     String middle = (getResourceInfo() != null && getResourceInfo().getLogicalResourceId() != null) ?
       getResourceInfo().getLogicalResourceId() : "UNKNOWN";
-    String suffix = Crypto.generateAlphanumericId(suffixLength, "");
-    return prefix + "-" + middle + "-" + suffix;
+    String suffix = Crypto.generateAlphanumericId(13, "");
+    String finalString = prefix + "-" + middle + "-" + suffix;
+    if (finalString.length() > maxLength) {
+      int prefixMiddleAndDashesLength = maxLength - suffix.length();
+      int prefixAndDashLength = prefixMiddleAndDashesLength / 2;
+      int middleAndDashLength = prefixMiddleAndDashesLength - prefixAndDashLength;
+      int prefixLength = prefixAndDashLength - 1;
+      int middleLength = middleAndDashLength - 1;
+      if (prefix.length() < prefixLength) {
+        int difference = prefixLength - prefix.length();
+        prefixLength -= difference;
+        prefixAndDashLength -= difference;
+        middleLength += difference;
+        middleAndDashLength += difference;
+      } else if (middle.length() < middleLength) {
+        int difference = middleLength - middle.length();
+        middleLength -= difference;
+        middleAndDashLength -= difference;
+        prefixLength += difference;
+        prefixAndDashLength += difference;
+      }
+      if (prefix.charAt(prefixLength - 1) == '-' && middleLength < middle.length()) {
+        prefixLength -= 1;
+        prefixAndDashLength -= 1;
+        middleLength += 1;
+        middleAndDashLength += 1;
+      } else if (middle.charAt(prefixLength - 1) == '-' && prefixLength < prefix.length()) {
+        middleLength -= 1;
+        middleAndDashLength -= 1;
+        prefixLength += 1;
+        prefixAndDashLength += 1;
+      }
+      return prefix.substring(0, prefixLength) + "-" + middle.substring(0, middleLength) + "-" + suffix;
+    }
+    return finalString;
   }
 
   public final String getDefaultPhysicalResourceId() {
-    return getDefaultPhysicalResourceIdWithSuffixLength(13);
+    return getDefaultPhysicalResourceId(Integer.MAX_VALUE);
   }
 
 }

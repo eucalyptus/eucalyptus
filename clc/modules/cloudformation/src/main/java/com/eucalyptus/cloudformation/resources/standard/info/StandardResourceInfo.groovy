@@ -440,6 +440,16 @@ public class AWSElasticBeanstalkEnvironmentResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String canonicalHostedZoneName;
+  @AttributeJson
+  String canonicalHostedZoneNameID;
+  @AttributeJson(name="DNSName")
+  String dnsName;
+  @AttributeJson(name="SourceSecurityGroup.GroupName")
+  String sourceSecurityGroupGroupName;
+  @AttributeJson(name="SourceSecurityGroup.OwnerAlias")
+  String sourceSecurityGroupOwnerAlias;
   public AWSElasticLoadBalancingLoadBalancerResourceInfo() {
     setType("AWS::ElasticLoadBalancing::LoadBalancer");
   }

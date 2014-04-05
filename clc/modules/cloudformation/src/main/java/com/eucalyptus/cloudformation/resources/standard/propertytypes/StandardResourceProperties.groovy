@@ -432,8 +432,36 @@ public class AWSElasticBeanstalkEnvironmentProperties implements ResourcePropert
 
 @ToString(includeNames=true)
 public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourceProperties {
+  @Property
+  ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy;
+  @Property
+  ElasticLoadBalancingAppCookieStickinessPolicy appCookieStickinessPolicy;
+  @Property
+  List<String> availabilityZones = Lists.newArrayList();
+  @Property
+  ElasticLoadBalancingConnectionDrainingPolicy connectionDrainingPolicy;
+  @Property
+  Boolean crossZone;
+  @Property
+  ElasticLoadBalancingHealthCheckType healthCheck;
+  @Property
+  List<String> instances = Lists.newArrayList();
+  @Property(name="LBCookieStickinessPolicy")
+  ElasticLoadBalancingLBCookieStickinessPolicyType lbCookieStickinessPolicy;
+  @Property
+  String loadBalancerName;
+  @Required
+  @Property
+  List<ElasticLoadBalancingListener> listeners = Lists.newArrayList();
+  @Property
+  List<ElasticLoadBalancingPolicyType> policies = Lists.newArrayList();
+  @Property
+  String scheme;
+  @Property
+  List<String> securityGroups = Lists.newArrayList();
+  @Property
+  List<String> subnets = Lists.newArrayList();
 }
-
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
   @Property

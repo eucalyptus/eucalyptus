@@ -181,3 +181,108 @@ public class LoginProfile {
   @Property
   String password;
 }
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingAccessLoggingPolicy {
+  @Property
+  Integer emitInterval;
+  @Required
+  @Property
+  Boolean enabled;
+  @Property(name="S3BucketName")
+  String s3BucketName;
+  @Property(name="S3BucketPrefix")
+  String s3BucketPrefix;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingAppCookieStickinessPolicy {
+  @Required
+  @Property
+  String cookieName;
+  @Required
+  @Property
+  String policyName;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingConnectionDrainingPolicy {
+  @Required
+  @Property
+  Boolean enabled;
+  @Property
+  Integer timeout;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingHealthCheckType {
+  @Property
+  Integer healthyThreshold;
+  @Property
+  Integer interval;
+  @Property
+  String target;
+  @Property
+  Integer timeout;
+  @Property
+  Integer unhealthyThreshold;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingLBCookieStickinessPolicyType {
+  @Property
+  Long cookieExpirationPeriod;
+  @Required
+  @Property
+  String policyName;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingListener {
+  @Required
+  @Property
+  Integer instancePort;
+  @Property
+  String instanceProtocol;
+  @Required
+  @Property
+  Integer loadBalancerPort;
+  @Property
+  List<String> policyNames;
+  @Required
+  @Property
+  String protocol;
+  @Property(name="SSLCertificateId")
+  String sslCertificateId;
+}
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingPolicyType {
+  List<ElasticLoadBalancingPolicyTypeAttribute> attributes = Lists.newArrayList();
+  @Property
+  List<String> instancePorts = Lists.newArrayList();
+  @Property
+  List<String> loadBalancerPorts = Lists.newArrayList();
+  @Required
+  @Property
+  String policyName;
+  @Required
+  @Property
+  String policyType;
+}
+
+
+@ToString(includeNames=true)
+public class ElasticLoadBalancingPolicyTypeAttribute {
+  @Required
+  @Property
+  String name;
+  @Required
+  @Property
+  String value;
+}
+
+
+
+
+
