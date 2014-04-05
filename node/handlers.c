@@ -2020,6 +2020,7 @@ static int init(void)
     configInitValues(configKeysRestartNC, configKeysNoRestartNC);   // initialize config subsystem
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
+    LOGINFO("running as user '%s'\n", get_username());
 
     // set default in the paths. the driver will override
     nc_state.config_network_path[0] = '\0';
