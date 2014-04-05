@@ -251,8 +251,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       try{
         final MachineImageInfo machineImage = (MachineImageInfo) image;
         final String runManifestPath = machineImage.getRunManifestLocation();
+        final String manifestPath = machineImage.getManifestLocation();
         
         if(runManifestPath==null || runManifestPath.length()<=0)
+          continue;
+        if(runManifestPath.equals(manifestPath)) // should not delete if runManifest is not system-generated one
           continue;
         
         final String[] tokens = runManifestPath.split("/");

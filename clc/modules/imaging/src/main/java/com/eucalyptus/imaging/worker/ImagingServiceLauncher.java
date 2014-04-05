@@ -195,6 +195,13 @@ public class ImagingServiceLauncher {
       actions.add(instanceProfileSetup);
       return this;
     }
+    
+    public Builder withRolePermissions() {
+      final ImagingServiceActions.IamRoleAuthorization roleAuthz = 
+          new ImagingServiceActions.IamRoleAuthorization(this.lookupAction, this.launcherId);
+      actions.add(roleAuthz);
+      return this;
+    }
 
     public Builder withServerCertificate(final String certName) {
       final ImagingServiceActions.UploadServerCertificate uploadCert = 

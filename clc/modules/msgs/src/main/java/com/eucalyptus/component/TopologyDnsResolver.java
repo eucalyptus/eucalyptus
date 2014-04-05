@@ -130,6 +130,7 @@ public class TopologyDnsResolver implements DnsResolver {
           if ( exists && compId.isPartitioned( ) ) {
             exists &= Partitions.exists( input.getLabelString( 1 ) );
           }
+          exists &= compId.isDnsSupported( );
         } catch ( NoSuchElementException ex ) {
           exists = false;
         }

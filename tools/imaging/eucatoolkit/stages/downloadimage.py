@@ -77,6 +77,10 @@ class DownloadImage(object):
         parser.add_argument('--reportprogress', dest='reportprogress',
                             default=False, action='store_true',
                             help='''Output progress information to stderr''')
+        parser.add_argument('--destispipe', dest='destispipe',
+                            default=False, action='store_true',
+                            help='''Indicate that destination is a pipe''')
+
         #Set any kwargs from init to default values for parsed args
         #Handle the cli arguments...
         if not kwargs:
@@ -410,8 +414,8 @@ class DownloadImage(object):
                        + str(manifest.download_image_size))
             self.log.debug('manifest unbundled size:'
                        + str(manifest.unbundled_image_size))
-            #If destination was not stdout, check dest file size.
-            if dest_file != "-":
+            #If destination was not stdout or pipe, check dest file size.
+            if dest_file != "-" and not self.args.destispipe:
                 self._validate_written_image_size(expected_size=expected_size,
                                               filepath=dest_file)
                 self.log.info('Download Image wrote "{0}" bytes to: {1}'

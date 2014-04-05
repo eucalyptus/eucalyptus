@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,20 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.backend;
-
-import com.eucalyptus.ws.Role;
-import com.eucalyptus.ws.protocol.QueryBindingInfo;
+package com.eucalyptus.cloud.util;
 
 /**
- * @author Sang-Min Park
  *
  */
-@QueryBindingInfo( statusCode = 400 )
-public class PolicyTypeNotFoundException extends LoadBalancingException {
+public class InvalidInstanceProfileMetadataException extends MetadataException {
   private static final long serialVersionUID = 1L;
-  public PolicyTypeNotFoundException(){
-    super("PolicyTypeNotFound", Role.Sender, "One or more of the specified policy types do not exist.");
+
+  public InvalidInstanceProfileMetadataException( final String message ) {
+    super( message );
+  }
+
+  public InvalidInstanceProfileMetadataException( final String message,
+                                                  final Throwable cause ) {
+    super( message, cause );
   }
 }

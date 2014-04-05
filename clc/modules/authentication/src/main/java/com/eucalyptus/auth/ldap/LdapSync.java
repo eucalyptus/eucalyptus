@@ -357,7 +357,7 @@ public class LdapSync {
     LOG.debug( "Adding new account " + accountName );
     try {
       Account account = Accounts.addAccount( accountName );
-      account.addUser( User.ACCOUNT_ADMIN, "/", true/* skipRegistration */, true, null );
+      account.addUser( User.ACCOUNT_ADMIN, "/", true, null );
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
           LOG.debug( "Adding new user " + user );
@@ -365,7 +365,7 @@ public class LdapSync {
           if ( info == null ) {
             LOG.warn( "Empty user info for user " + user );
           }
-          account.addUser( user, "/", true/* skipRegistration */, true/* enabled */, info );
+          account.addUser( user, "/", true/* enabled */, info );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           LOG.warn( "Failed add new user " + user, e );
@@ -546,7 +546,7 @@ public class LdapSync {
     if ( info == null ) {
       LOG.warn( "Empty user info for user " + user );
     }
-    account.addUser( user, "/", true/* skipRegistration */, true/* enabled */, info );
+    account.addUser( user, "/", true/* enabled */, info );
   }
 
   private static void updateUser( Account account, String user, Map<String, String> map ) throws AuthException {

@@ -1301,6 +1301,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+            if (xml) {
+                EUCA_FREE(xml);
+            }
             return EUCA_HYPERVISOR_ERROR;
         }
         // find domain on hypervisor

@@ -33,7 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
  */
 @PublicService
 @FaultLogPrefix( "cloud" )
-@PolicyVendor("euimager")
+@PolicyVendor("eucaimaging")
 public class Imaging extends ComponentId {
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.

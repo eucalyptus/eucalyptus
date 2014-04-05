@@ -60,75 +60,42 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<project name="eucalyptus-www" basedir=".">
-	<import file="../module-inc.xml" />
-	<property environment="localenv"/>
-	<property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
-	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
-		<contains string="${DESTDIR.0}" substring="localenv"/>
-	</condition>
-    <property name="builder.suffix" value="war" />
+<web-app>
 
-	<target name="indent-module">
-	</target>
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>Secured area</web-resource-name>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <user-data-constraint>
+      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+  </security-constraint>
 
-	<target name="build-war">
-		<antcall target="compile-src" />
-		<antcall target="jar" />
-		<antcall target="compile-war" />
-	</target>
+  <servlet>
+    <description></description>
+    <display-name>X509Downloader</display-name>
+    <servlet-name>X509Download</servlet-name>
+    <servlet-class>com.eucalyptus.www.X509Download</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
 
-	<property environment="env" />
-	<path id="warclasspath">
-		<fileset dir="${lib.dir}">
-			<include name="**/*.jar" />
-		</fileset>
-		<pathelement path="conf" />
-		<dirset dir="${modules.dir}">
-			<include name="**/build"/>
-		</dirset>
-	</path>
-	<property name="war.build.dir" value="build-war" />
-	<property name="war.dir" value="webapps" />
-	<property name="war.path" value="${war.dir}/root.war" />
+  <servlet>
+    <description></description>
+    <display-name>CloudRegistration</display-name>
+    <servlet-name>CloudRegistration</servlet-name>
+    <servlet-class>com.eucalyptus.www.Registration</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
 
-	<target name="check-war">
-		<uptodate property="war.notRequired" targetfile="${war.path}">
-			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${conf.dir}" includes="**/*" />
-		</uptodate>
-	</target>
+  <servlet-mapping>
+    <servlet-name>X509Download</servlet-name>
+    <url-pattern>/getX509</url-pattern>
+  </servlet-mapping>
 
-	<target name="compile-src">
-		<mkdir dir="${build.dir}"/>
-		<mkdir dir="${test.dir}"/>
-		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="warclasspath" failonerror="true" debug="true" source="1.7" target="1.7" includeantruntime="false"/>
-	</target>
+  <servlet-mapping>
+    <servlet-name>CloudRegistration</servlet-name>
+    <url-pattern>/register</url-pattern>
+  </servlet-mapping>
 
-	<target name="clean">
-		<delete dir="${build.dir}" />
-		<delete dir="${war.dir}" />
-		<delete dir="${war.build.dir}" />
-		<delete file="${jar.file}" />
-	</target>
-
-	<target name="compile-war" depends="check-war" unless="war.notRequired">
-		<delete dir="${war.build.dir}" />
-		<mkdir dir="${war.build.dir}" />
-		<mkdir dir="${war.dir}" />
-		<war destfile="${war.path}" webxml="${conf.dir}/web.xml" basedir="${war.build.dir}" />
-	</target>
-
-	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
-	<target name="install">
-		<copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
-			<fileset dir="conf">
-				<include name="**/*" />
-			</fileset>
-		</copy>
-		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
-			<fileset file="${jar.file}" />
-		</copy>
-		<copy overwrite="true" file="${war.path}" todir="${DESTDIR}${servlet.dir}" />
-	</target>
-</project>
+</web-app>

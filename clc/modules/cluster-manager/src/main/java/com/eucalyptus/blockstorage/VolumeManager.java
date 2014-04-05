@@ -378,7 +378,7 @@ public class VolumeManager {
     final String instanceId = normalizeInstanceIdentifier( request.getInstanceId() );
     final Context ctx = Contexts.lookup( );
     
-    if (  deviceName == null || deviceName.endsWith( "sda" ) ||  deviceName.endsWith( "sdb" ) || !validateDeviceName( deviceName ) ) {
+    if (  deviceName == null || deviceName.endsWith( "sda" ) || !validateDeviceName( deviceName ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
     }
     VmInstance vm = null;
@@ -496,9 +496,7 @@ public class VolumeManager {
     	throw new EucalyptusCloudException("Volume is not currently attached to any instance");
       }
     }
-    if ( !validateDeviceName(volume.getDevice( ) ) ) {
-        throw new ClientComputeException( "InvalidParameterValue", "Value (" + volume.getDevice() + ") for parameter device is invalid." );
-    }
+    // Dropping the validation check for device string retrieved from database - EUCA-8330
     if ( vm != null && MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
                                      + vm.getInstanceId( )
