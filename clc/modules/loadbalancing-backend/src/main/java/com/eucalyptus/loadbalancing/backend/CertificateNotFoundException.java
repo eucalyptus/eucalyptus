@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -28,6 +29,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 @QueryBindingInfo( statusCode = 400 )
 public class CertificateNotFoundException extends LoadBalancingException {
   public CertificateNotFoundException() {
-    super("The specified SSL ID does not refer to a valid SSL certificate in the AWS Identity and Access Management Service.");
+    super("CertificateNotFoundException", Role.Sender, "The specified SSL ID does not refer to a valid SSL certificate in the AWS Identity and Access Management Service.");
   }
 }

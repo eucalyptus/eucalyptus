@@ -79,7 +79,7 @@ setup(name="eucatoolkit",
                       'Topic :: Internet',
                       ],
       install_requires=[
-          "argparse",
+          "argparse", "lxml", "requests",
       ],
       data_files=[],
       cmdclass={'build_scripts': build_scripts_with_path_headers},

@@ -251,8 +251,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       try{
         final MachineImageInfo machineImage = (MachineImageInfo) image;
         final String runManifestPath = machineImage.getRunManifestLocation();
+        final String manifestPath = machineImage.getManifestLocation();
         
         if(runManifestPath==null || runManifestPath.length()<=0)
+          continue;
+        if(runManifestPath.equals(manifestPath)) // should not delete if runManifest is not system-generated one
           continue;
         
         final String[] tokens = runManifestPath.split("/");
@@ -694,7 +697,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         final String expiration = sdf.format(c.getTime());
         // based on http://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-BundleInstance.html
         final String policy = String.format("{\"expiration\":\"%s\",\"conditions\":[{\"bucket\": \"%s\"},"
-            + "[\"starts-with\", \"$key\", \"%s\"],{\"acl\":\"private\"}]}",
+            + "[\"starts-with\", \"$key\", \"%s\"],{\"acl\":\"ec2-bundle-read\"}]}",
             expiration, bucket, prefix);
         this.importDisk.setUploadPolicy(B64.standard.encString(policy));
 

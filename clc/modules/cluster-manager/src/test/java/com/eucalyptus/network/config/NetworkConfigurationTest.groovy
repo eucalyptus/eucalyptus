@@ -211,4 +211,189 @@ class NetworkConfigurationTest {
 
     assertEquals( 'Result does not match template', expected, result )
   }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateClusterMacPrefix( ) {
+    String config = """
+    {
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "MacPrefix": "d0:0d:",
+                "Subnet": {
+                    "Subnet": "1.0.0.0",
+                    "Netmask": "255.255.0.0",
+                    "Gateway": "1.0.0.1"
+                },
+                "PrivateIps": [
+                    "1.0.0.33",
+                    "1.0.0.34"
+                ]
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateTopLevelMacPrefix() {
+    String config = """
+    {
+        "MacPrefix": "d0:0d:",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Name": "1.0.0.0",
+                "Subnet": "1.0.0.0",
+                "Netmask": "255.255.0.0",
+                "Gateway": "1.0.0.1"
+            }
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "Subnet": {
+                    "Name": "1.0.0.0"
+                }
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateInstanceDnsDomain( ) {
+    String config = """
+    {
+        "InstanceDnsDomain": ".eucalyptus.internal",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "MacPrefix": "d0:0d",
+                "Subnet": {
+                    "Subnet": "1.0.0.0",
+                    "Netmask": "255.255.0.0",
+                    "Gateway": "1.0.0.1"
+                },
+                "PrivateIps": [
+                    "1.0.0.33",
+                    "1.0.0.34"
+                ]
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateTopLevelSubnetSubnet() {
+    String config = """
+    {
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Name": "subnet0",
+                "Subnet": "1.0.0.1",
+                "Netmask": "255.255.0.0",
+                "Gateway": "1.0.0.1"
+            }
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "Subnet": {
+                    "Name": "subnet0"
+                }
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateTopLevelSubnetNetmask() {
+    String config = """
+    {
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Subnet": "1.0.0.0",
+                "Netmask": "255.255.0.1",
+                "Gateway": "1.0.0.1"
+            }
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "Subnet": {
+                    "Name": "1.0.0.0"
+                }
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateTopLevelSubnetGateway() {
+    String config = """
+    {
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Subnet": "1.0.0.0",
+                "Netmask": "255.255.0.0",
+                "Gateway": "1.1.0.1"
+            }
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "Subnet": {
+                    "Name": "1.0.0.0"
+                }
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
 }

@@ -362,7 +362,7 @@ public class WalrusDataRequestType extends WalrusRequestType {
 
 public class WalrusDataResponseType extends WalrusStreamingResponseType {
 	String etag;
-	String lastModified;
+	Date lastModified;
 	Long size;
 	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;

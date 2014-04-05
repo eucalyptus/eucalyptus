@@ -73,7 +73,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -636,9 +635,15 @@ public class Images {
     		  ImageMetadata.State.failed.equals( img.getState())) {
         Entities.delete( img );
       } else {
-        if( img instanceof MachineImageInfo)
-          img.setState(ImageMetadata.State.deregistered_cleanup);
-        else
+        if( img instanceof MachineImageInfo){
+          final String runManifestLocation = ((MachineImageInfo)img).getRunManifestLocation();
+          final String manifestLocation = ((MachineImageInfo)img).getManifestLocation();
+          // cleanup system generated buckets if exist
+          if(!manifestLocation.equals(runManifestLocation))
+            img.setState(ImageMetadata.State.deregistered_cleanup);
+          else
+            img.setState( ImageMetadata.State.deregistered );
+        } else
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
@@ -1259,7 +1264,7 @@ public class Images {
           .withPersistenceFilter( "platform", "platform", Enums.valueOfFunction( ImageMetadata.Platform.class ) )
           .withPersistenceFilter( "ramdisk-id", "ramdiskId" )
           .withPersistenceFilter( "state", "state", Enums.valueOfFunction( ImageMetadata.State.class ) )
-          .withPersistenceFilter( "virtualization-type", "virtType", Enums.valueOfFunction( ImageMetadata.VirtualizationType.class ) )
+          .withPersistenceFilter( "virtualization-type", "virtType", ImageMetadata.VirtualizationType.fromString( ) )
       );
     }
   }

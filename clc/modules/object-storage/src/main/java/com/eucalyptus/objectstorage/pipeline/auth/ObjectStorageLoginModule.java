@@ -65,68 +65,70 @@ package com.eucalyptus.objectstorage.pipeline.auth;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 
 public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrappedCredentials> {
-	private static Logger LOG = Logger.getLogger( ObjectStorageLoginModule.class );
-	public ObjectStorageLoginModule() {}
+	private static Logger LOG = Logger.getLogger(ObjectStorageLoginModule.class);
 
-	@Override
-	public boolean accepts( ) {
-		return super.getCallbackHandler( ) instanceof ObjectStorageWrappedCredentials;
+	public ObjectStorageLoginModule() {
 	}
 
 	@Override
-	public boolean authenticate( ObjectStorageWrappedCredentials credentials ) throws Exception {
+	public boolean accepts() {
+		return super.getCallbackHandler() instanceof ObjectStorageWrappedCredentials;
+	}
+
+	@Override
+	public boolean authenticate(ObjectStorageWrappedCredentials credentials) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-        final AccessKey key;
-        try {
-            key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
-        } catch(AuthException e) {
-            //S3 exception type for "Access Key Not Found" error.
-            throw new InvalidAccessKeyIdException(credentials.getQueryId());
-        }
+		final AccessKey key;
+		try {
+			key = AccessKeys.lookupAccessKey(credentials.getQueryId(), credentials.getSecurityToken());
+		} catch (AuthException e) {
+			// S3 exception type for "Access Key Not Found" error.
+			throw new InvalidAccessKeyIdException(credentials.getQueryId());
+		}
+		if (!key.isActive()) {
+			throw new InvalidAccessKeyIdException(credentials.getQueryId());
+		}
 		final User user = key.getUser();
 		final String queryKey = key.getSecretKey();
-		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
-    if (authSig.equals(signature)) {
-      super.setCredential(credentials.getQueryId());
-      super.setPrincipal(user);
-      super.setSecurityToken(credentials.getSecurityToken());
-      //super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
-      return true;
-    }
+		final String authSig = checkSignature(queryKey, credentials.getLoginData());
+		if (authSig.equals(signature)) {
+			super.setCredential(credentials.getQueryId());
+			super.setPrincipal(user);
+			super.setSecurityToken(credentials.getSecurityToken());
+			// super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
+			return true;
+		}
 
 		return false;
 	}
 
 	@Override
-	public void reset( ) {}
+	public void reset() {
+	}
 
-	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
-	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
-		try
-		{
-			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
-			mac.init( signingKey );
-			byte[] rawHmac = mac.doFinal( subject.getBytes() );
-			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );
-		}
-		catch ( Exception e )
-		{
-			LOG.error( e, e );
-			throw new AuthenticationException( "Failed to compute signature" );
+	protected String checkSignature(final String queryKey, final String subject) throws AuthenticationException {
+		SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes(), Hmac.HmacSHA1.toString());
+		try {
+			Mac mac = Mac.getInstance(Hmac.HmacSHA1.toString());
+			mac.init(signingKey);
+			byte[] rawHmac = mac.doFinal(subject.getBytes());
+			return new String(Base64.encode(rawHmac)).replaceAll("=", "");
+		} catch (Exception e) {
+			LOG.error(e, e);
+			throw new AuthenticationException("Failed to compute signature");
 		}
 	}
 }

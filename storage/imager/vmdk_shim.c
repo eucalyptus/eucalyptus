@@ -94,6 +94,7 @@ struct vmdk_shmem {
     boolean flag;
     long long start_sector;
     long long end_sector;
+    long buf_size_bytes;
     int ret_int;
     s64 ret_long_long;
 };
@@ -421,7 +422,7 @@ s64 vmdk_get_size(const img_spec * spec)
 //!
 //! @post
 //!
-int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long long start_sector, long long end_sector)
+int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long long start_sector, long long end_sector, long buf_size_bytes)
 {
     int ret = EUCA_ERROR;
     struct vmdk_shmem *shm = NULL;
@@ -433,6 +434,7 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     memcpy(&(shm->spec), spec, sizeof(img_spec));
     shm->start_sector = start_sector;
     shm->end_sector = end_sector;
+    shm->buf_size_bytes = buf_size_bytes;
     if (do_call(VMDK_CONVERT_TO_REMOTE_CALL, shm) == EUCA_OK)
         ret = shm->ret_int;
 
@@ -452,7 +454,7 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
 //!
 //! @post
 //!
-int vmdk_convert_from_remote(const img_spec * spec, const char *disk_path, long long start_sector, long long end_sector)
+int vmdk_convert_from_remote(const img_spec * spec, const char *disk_path, long long start_sector, long long end_sector, long buf_size_bytes)
 {
     int ret = EUCA_ERROR;
     struct vmdk_shmem *shm = NULL;
@@ -464,6 +466,7 @@ int vmdk_convert_from_remote(const img_spec * spec, const char *disk_path, long 
     memcpy(&(shm->spec), spec, sizeof(img_spec));
     shm->start_sector = start_sector;
     shm->end_sector = end_sector;
+    shm->buf_size_bytes = buf_size_bytes;
     if (do_call(VMDK_CONVERT_FROM_REMOTE_CALL, shm) == EUCA_OK)
         ret = shm->ret_int;
 
@@ -593,8 +596,8 @@ int main(int argc, char *argv[])
     // make real invocations with fake parameters and expect them all to fail
     assert(gen_vmdk("/foo/bar", "/foo/baz"));
     assert(vmdk_get_size(&spec) == -1L);
-    assert(vmdk_convert_to_remote("/foo/bar", &spec, 0LL, 0LL));
-    assert(vmdk_convert_from_remote(&spec, "/foo/bar", 0LL, 0LL));
+    assert(vmdk_convert_to_remote("/foo/bar", &spec, 0LL, 0LL, 1024L));
+    assert(vmdk_convert_from_remote(&spec, "/foo/bar", 0LL, 0LL, 1024L));
     assert(vmdk_clone("/foo/bar", &spec));
     assert(vmdk_convert_local("/foo/bar", "/foo/baz", 0));
 
@@ -692,9 +695,9 @@ int main(int argc, char *argv[])
     } else if (strcmp(shm->fname, VMDK_GET_SIZE_CALL) == 0) {
         shm->ret_long_long = vmdk_get_size(&shm->spec);
     } else if (strcmp(shm->fname, VMDK_CONVERT_TO_REMOTE_CALL) == 0) {
-        shm->ret_int = vmdk_convert_to_remote(shm->path1, &shm->spec, shm->start_sector, shm->end_sector);
+        shm->ret_int = vmdk_convert_to_remote(shm->path1, &shm->spec, shm->start_sector, shm->end_sector, shm->buf_size_bytes);
     } else if (strcmp(shm->fname, VMDK_CONVERT_FROM_REMOTE_CALL) == 0) {
-        shm->ret_int = vmdk_convert_from_remote(&shm->spec, shm->path1, shm->start_sector, shm->end_sector);
+        shm->ret_int = vmdk_convert_from_remote(&shm->spec, shm->path1, shm->start_sector, shm->end_sector, shm->buf_size_bytes);
     } else if (strcmp(shm->fname, VMDK_CLONE_CALL) == 0) {
         shm->ret_int = vmdk_clone(shm->path1, &shm->spec);
     } else if (strcmp(shm->fname, VMDK_CONVERT_LOCAL_CALL) == 0) {

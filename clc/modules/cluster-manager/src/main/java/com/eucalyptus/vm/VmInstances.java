@@ -649,9 +649,13 @@ public class VmInstances {
       Logs.extreme( ).error( ex, ex );
     }
 
-    if ( !rollbackNetworkingOnFailure && VmStateSet.DONE.apply( vm ) ) {
+    if ( !rollbackNetworkingOnFailure && VmStateSet.TORNDOWN.apply( vm ) ) {
       try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-        Entities.merge( vm ).clearReferences();
+        if ( VmStateSet.DONE.apply( vm ) ) {
+          Entities.merge( vm ).clearReferences( );
+        } else {
+          Entities.merge( vm ).clearRunReferences( );
+        }
         db.commit();
       } catch ( Exception ex ) {
         LOG.error( ex );
@@ -1282,7 +1286,7 @@ public class VmInstances {
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
-          .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), Enums.valueOfFunction( ImageMetadata.VirtualizationType.class ) )
+          .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), ImageMetadata.VirtualizationType.fromString( ) )
       );
     }
   }

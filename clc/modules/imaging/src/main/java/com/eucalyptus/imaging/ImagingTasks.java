@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -321,16 +322,16 @@ public class ImagingTasks {
   public static void setState(final ImagingTask task, final ImportTaskState state, final String stateReason)
       throws NoSuchElementException
   {
-    setState(task.getOwner(), task.getDisplayName(), state, stateReason);
+    setState(AccountFullName.getInstance(task.getOwnerAccountNumber()), task.getDisplayName(), state, stateReason);
   }
   
-  public static void setState(final OwnerFullName owner, final String taskId, 
+  public static void setState(final AccountFullName owningAccount, final String taskId, 
       final ImportTaskState state, final String stateReason) throws NoSuchElementException{
     synchronized(lock){
       try ( final TransactionResource db =
           Entities.transactionFor( ImagingTask.class ) ) {
         try{
-          final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owner, taskId));
+          final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owningAccount, taskId));
           task.setState(state);
           if(stateReason!=null)
             task.setStateReason(stateReason);
@@ -437,12 +438,12 @@ public class ImagingTasks {
   }
   
   /************************* Methods for volume imaging tasks ************************/
-  public static List<VolumeImagingTask> getVolumeImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
+  public static List<VolumeImagingTask> getVolumeImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
     synchronized(lock){
       final List<VolumeImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
           Entities.transactionFor( VolumeImagingTask.class ) ) {
-        final VolumeImagingTask sample = VolumeImagingTask.named(owner);
+        final VolumeImagingTask sample = VolumeImagingTask.namedByAccount(owningAccount.getAccountNumber());
         final List<VolumeImagingTask> tasks = Entities.query(sample, true);
         if(taskIdList!=null && taskIdList.size()>0){
           for(final VolumeImagingTask candidate : tasks){
@@ -549,11 +550,7 @@ public class ImagingTasks {
       try{
         final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
         final ConversionTask task = entity.getTask();
-        if(task.getImportVolume()!=null){
-          return  (ImportTaskState.COMPLETED.equals(entity.getState()) 
-              || ImportTaskState.CANCELLED.equals(entity.getState())
-              || ImportTaskState.FAILED.equals(entity.getState()));
-        }else if (task.getImportInstance()!=null){
+        if (task.getImportInstance()!=null){
           final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
           for(final ImportInstanceVolumeDetail volumeDetail : volumes){
             if("active".equals(volumeDetail.getStatus()))
@@ -598,12 +595,12 @@ public class ImagingTasks {
   }
   
   /************************* Methods for disk imaging tasks ************************/
-  public static List<DiskImagingTask> getDiskImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
+  public static List<DiskImagingTask> getDiskImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
     synchronized(lock){
       final List<DiskImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
           Entities.transactionFor( DiskImagingTask.class ) ) {
-        final DiskImagingTask sample = DiskImagingTask.named(owner);
+        final DiskImagingTask sample = DiskImagingTask.named(owningAccount);
         final List<DiskImagingTask> tasks = Entities.query(sample, true);
         if(taskIdList!=null && taskIdList.size()>0){
           for(final DiskImagingTask candidate : tasks){

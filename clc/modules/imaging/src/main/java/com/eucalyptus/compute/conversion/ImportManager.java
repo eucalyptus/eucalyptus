@@ -62,16 +62,28 @@
 
 package com.eucalyptus.compute.conversion;
 
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_IMPORTINSTANCE;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_IMPORTVOLUME;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_CANCELCONVERSIONTASK;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_DESCRIBECONVERSIONTASKS;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_VOLUME;
+import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
+
 import java.util.Collection;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceException;
+import com.eucalyptus.imaging.ImagingTask;
 import com.eucalyptus.imaging.VolumeImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
 import com.eucalyptus.imaging.ImportTaskState;
@@ -96,7 +108,6 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 
 public class ImportManager {
   private static Logger    LOG                           = Logger.getLogger( ImportManager.class );  
-
   /**
    * <ol>
    * <li>Persist import instance request state
@@ -104,6 +115,7 @@ public class ImportManager {
    */
   public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
     final ImportInstanceResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup( );
     try{
       if (!Bootstrap.isFinished() ||
            !Topology.isEnabled( Imaging.class )){
@@ -114,13 +126,29 @@ public class ImportManager {
     }
     
     try{
+      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+          VENDOR_EC2,
+          EC2_RESOURCE_INSTANCE,
+          "",
+          null,
+          EC2_IMPORTINSTANCE,
+          context.getAuthContext() ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import instance." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import instance." );
+    }
+    
+    try{
       if(ImagingServiceLaunchers.getInstance().shouldEnable())
         ImagingServiceLaunchers.getInstance().enable();
     }catch(Exception ex){
       LOG.error("Failed to enable imaging service workers");
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
     }
-    
+        
     ImportInstanceImagingTask task = null;
     try{
       task = ImagingTasks.createImportInstanceTask(request);
@@ -142,6 +170,7 @@ public class ImportManager {
    */
   public static ImportVolumeResponseType ImportVolume( ImportVolumeType request ) throws Exception {
     final ImportVolumeResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup( );
     try{
       if (!Bootstrap.isFinished() ||
            !Topology.isEnabled( Imaging.class )){
@@ -149,6 +178,22 @@ public class ImportManager {
       }
     }catch(final Exception ex){
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+          VENDOR_EC2,
+          EC2_RESOURCE_VOLUME,
+          "",
+          null,
+          EC2_IMPORTVOLUME,
+          context.getAuthContext() ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import volume." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import volume." );
     }
     
     try{
@@ -181,14 +226,36 @@ public class ImportManager {
    */
   public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
     final CancelConversionTaskResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup( );
     try{
-      if(request.getConversionTaskId().startsWith("import-emi"))
-        throw new ImagingServiceException("Cannot cancel emi conversion tasks");
-      ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
-          ImportTaskState.CANCELLING, null);
-      reply.set_return(true);
+      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+          VENDOR_EC2,
+          EC2_RESOURCE_VOLUME,
+          "",
+          null,
+          EC2_CANCELCONVERSIONTASK,
+          context.getAuthContext() ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion task." );
+      }
     }catch(final ImagingServiceException ex){
       throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion task." );
+    }
+    
+    try{
+      final ImagingTask task = ImagingTasks.lookup(request.getConversionTaskId());
+      final ImportTaskState state = task.getState();
+      if(state.equals(ImportTaskState.NEW) || 
+          state.equals(ImportTaskState.PENDING) ||
+          state.equals(ImportTaskState.CONVERTING) ||
+          state.equals(ImportTaskState.INSTANTIATING) ) {
+        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
+            ImportTaskState.CANCELLING, null);
+      }
+      reply.set_return(true);
+    }catch(final NoSuchElementException ex){
+      throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Conversion task not found");
     }catch(final Exception ex){
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to cancel conversion task", ex);
     }
@@ -201,21 +268,37 @@ public class ImportManager {
    * </ol>
    */
   public DescribeConversionTasksResponseType DescribeConversionTasks( DescribeConversionTasksType request ) throws Exception {
-    LOG.debug( request );
     DescribeConversionTasksResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
     Collection<String> ownerInfo = ( ctx.isAdministrator( ) && verbose )
-      ? Collections.<String> emptyList( )
-      : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
+        ? Collections.<String> emptyList( )
+            : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
+    try{
+      if ( ! ( ctx.isAdministrator( ) || Permissions.isAuthorized(
+          VENDOR_EC2,
+          EC2_RESOURCE_VOLUME,
+          "",
+          null,
+          EC2_DESCRIBECONVERSIONTASKS,
+          ctx.getAuthContext() ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
+    }
+
     //TODO: extends for volumes
     final Predicate<? super VolumeImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( VolumeImagingTask.class )
-                                                                                 .byId( request.getConversionTaskIdSet( ) )
-                                                                                 .byOwningAccount( ownerInfo )
-                                                                                 .byPrivileges( )
-                                                                                 .buildPredicate( );
-    
-    Iterable<VolumeImagingTask> tasksToList = ImagingTasks.getVolumeImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
+        .byId( request.getConversionTaskIdSet( ) )
+        .byOwningAccount( ownerInfo )
+        .byPrivileges()
+        .buildPredicate( );
+    Iterable<VolumeImagingTask> tasksToList = 
+        ImagingTasks.getVolumeImagingTasks(AccountFullName.getInstance(ctx.getAccount()), 
+        request.getConversionTaskIdSet());
     for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
       ConversionTask t = task.getTask( );
       reply.getConversionTasks().add( t );

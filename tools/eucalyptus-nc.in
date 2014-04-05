@@ -131,11 +131,11 @@ create_httpd_config() {
             -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
-            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+            > $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 
 	# load authz if we have it (ubuntu needs it)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 	fi
 
 	# let's configure the NC
@@ -143,7 +143,7 @@ create_httpd_config() {
             -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
             -e "s|\(Allow from\).*|\1 $IPS|" \
             -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
-            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 

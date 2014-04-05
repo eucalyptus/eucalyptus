@@ -46,6 +46,7 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h>                  // BLKGETSIZE64
 #include <vixDiskLib.h>
+#include <assert.h>
 
 #include <eucalyptus.h>
 #include <diskutil.h>
@@ -65,6 +66,7 @@
 #define STDIN                                       0 // @TODO what's the standard constant?
 #define STDOUT                                      1 // @TODO what's the standard constant?
 #define MIN_VDDK_SIZE_BYTES                   1049600 // 1MB is minimum, apparently
+#define PROGRESS_UPDATE_SEC                         2 // how often we report on upload/download progress
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -552,18 +554,25 @@ out:
 //!
 //! @post
 //!
-int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long long start_sector, long long end_sector)
+int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long long start_sector, long long end_sector, long buf_size_bytes)
 {
     int ret = EUCA_ERROR;
     s64 vddk_blocks = 0;
     s64 vddk_bytes = 0;
     s64 true_bytes = 0;
     s64 zero_sectors = 0;
-    s64 bytes_written = 0;
+    long long bytes_written = 0LL;
+    long sector = 0L;
     int fp = -1;
     VixError vixError = VIX_OK;
     vix_session s = { 0 };
     VixDiskLibInfo *info = NULL;
+
+    // round-off buffer size to the multiple of sectors
+    buf_size_bytes = (buf_size_bytes % VIXDISKLIB_SECTOR_SIZE) ?
+        ((buf_size_bytes / VIXDISKLIB_SECTOR_SIZE) * VIXDISKLIB_SECTOR_SIZE) :
+        buf_size_bytes;
+    assert(buf_size_bytes > 0);
 
     LOGINFO("intput file %s:\n", disk_path);
     if (strcmp(disk_path, "-") == 0) {
@@ -622,83 +631,129 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     vixError = VixDiskLib_GetInfo(s.diskHandle, &info);
     CHECK_ERROR();
 
-  if (vddk_blocks > 0) { // i.e., we know the size of input
-    if (vddk_blocks > info->capacity) {
-	LOGDEBUG("capacity of the disk on vsphere (%ld) is smaller than input (%ld)\n", (s64)info->capacity, vddk_blocks);
+    if (vddk_blocks > 0) { // i.e., we know the size of input
+        if (vddk_blocks > info->capacity) {
+            LOGDEBUG("capacity of the disk on vsphere (%ld) is smaller than input (%ld)\n", (s64)info->capacity, vddk_blocks);
+        }
+        if (start_sector < 0 || start_sector > (vddk_blocks-1)) {
+            LOGERROR("start sector '%lld' is out of range of disk '%s', giving up", start_sector, disk_path);
+            goto out;
+        }
+        if (end_sector < 0 || end_sector > (vddk_blocks-1)) {
+            LOGERROR("end sector '%lld' is out of range of disk '%s', giving up", end_sector, disk_path);
+            goto out;
+        }
+        if (start_sector > end_sector) {
+            LOGERROR("start sector '%lld' is greater than end sector '%lld', giving up", start_sector, end_sector);
+            goto out;
+        }
+        if (end_sector == 0) { // 0 is special value meaning the whole disk
+            end_sector = vddk_blocks - 1;
+        }
     }
-    if (start_sector < 0 || start_sector > (vddk_blocks-1)) {
-        LOGERROR("start sector '%lld' is out of range of disk '%s', giving up", start_sector, disk_path);
-        goto out;
-    }
-    if (end_sector < 0 || end_sector > (vddk_blocks-1)) {
-        LOGERROR("end sector '%lld' is out of range of disk '%s', giving up", end_sector, disk_path);
-        goto out;
-    }
-    if (start_sector > end_sector) {
-        LOGERROR("start sector '%lld' is greater than end sector '%lld', giving up", start_sector, end_sector);
-        goto out;
-    }
-    if (end_sector == 0) { // 0 is special value meaning the whole disk
-        end_sector = vddk_blocks - 1;
-    }
-  }
-    int bytes_read = 1;
+
     time_t before = time(NULL);
-    for (long seen_partial = FALSE, zero_sectors = 0, sector = start_sector; 
-	bytes_read > 0 // have not hit an error or end of file
-	&& (end_sector == 0 || sector <= end_sector); // are within limits requested
-        sector++) {
-        u8 buf[VIXDISKLIB_SECTOR_SIZE] = { 0 };
-        if ((bytes_read = read(fp, buf, VIXDISKLIB_SECTOR_SIZE)) != VIXDISKLIB_SECTOR_SIZE) {
-            if (bytes_read > 0) {      // partially written sector
-                if (seen_partial) {
-                    LOGERROR("second partially written sector, giving up\n");
+    {
+        unsigned char * buf = malloc(buf_size_bytes);
+        if (buf == NULL) {
+            LOGERROR("failed to allocate transfer buffer of size %ld\n", buf_size_bytes);
+            goto out;
+        }
+        long sectors_written = 0L;
+        boolean error = FALSE;
+
+        long long t_spent_reading = 0LL;
+        long long t_spent_writing = 0LL;
+        time_t last_update = before;
+
+        for (sector = start_sector;
+             (end_sector == 0 || sector <= end_sector); // are within limits requested
+             sector += sectors_written) {
+
+            boolean eof = FALSE;
+            long buf_offset = 0;
+            do { // until we fill the buffer or reach EOF or get an error
+                long long t_before_read = time_usec();
+                ssize_t bytes_read = read(fp, buf + buf_offset, buf_size_bytes - buf_offset);
+                long long t_after_read = time_usec();
+                t_spent_reading += (t_after_read - t_before_read);
+
+                if (bytes_read > 0) {
+                    buf_offset += bytes_read;
+                } else if (bytes_read == 0) {
+                    LOGINFO("encountered EOF on input file %s\n", disk_path);
+                    eof = TRUE;
                 } else {
-                    LOGWARN("partially written sector in input file\n");
-                    seen_partial = TRUE;
+                    LOGERROR("failed while reading input file %s: %s\n", disk_path, strerror(errno));
+                    error = TRUE;
                 }
+            } while (!error && !eof && (buf_offset < buf_size_bytes));
 
-                // fill with zeros
-                for (int i = bytes_read; i < VIXDISKLIB_SECTOR_SIZE; i++) {
-                    buf[i] = 0;
-                }
-            } else if (bytes_read == 0) {
-                if (vddk_bytes == 0) { // input size is unknown
-                    LOGINFO("encountered EOF on input\n");
-                }
+            if (error)
                 break;
+
+            // if read less than a sector, fill the rest with zeros
+            if (buf_offset % VIXDISKLIB_SECTOR_SIZE) {
+                long rounded_offset = (buf_offset / VIXDISKLIB_SECTOR_SIZE + 1) * VIXDISKLIB_SECTOR_SIZE;
+                assert(rounded_offset <= buf_size_bytes);
+                for (int i = buf_offset; i < rounded_offset; i++) {
+                    buf[i] = 0; // fill with zeros
+                }
+                buf_offset = rounded_offset;
+            }
+
+            // scan for all zeros
+            boolean all_zeros = TRUE;
+            for (int i = 0; i < buf_offset; i++) {
+                if (buf[i] != 0) {
+                    all_zeros = FALSE;
+                    break;
+                }
+            }
+
+            // write as many sectors as are allowed by the [start, end] window
+            sectors_written = buf_offset / VIXDISKLIB_SECTOR_SIZE;
+            long sectors_left = end_sector - sector + 1;
+            if (end_sector > 0 // a window with start and end was requested
+                && sectors_left > sectors_written) {
+                sectors_written = sectors_left;
+            }
+            if (!all_zeros) {
+                long long t_before_write = time_usec();
+                vixError = VixDiskLib_Write(s.diskHandle, sector, sectors_written, buf);
+                long long t_after_write = time_usec();
+                CHECK_ERROR();
+                t_spent_writing += (t_after_write - t_before_write);
             } else {
-                LOGERROR("failed to read input file\n");
-                break;
+                zero_sectors += sectors_written;
             }
-        }
-        // scan for all zeros
-        boolean all_zeros = TRUE;
-        for (int i = 0; i < VIXDISKLIB_SECTOR_SIZE; i++) {
-            if (buf[i] != 0) {
-                all_zeros = FALSE;
-                break;
-            }
-        }
+            bytes_written += VIXDISKLIB_SECTOR_SIZE * sectors_written;
 
-	if ((bytes_written / VIXDISKLIB_SECTOR_SIZE) % 1000 == 0) {
-        LOGDEBUG("writing sector %ld, zero_sectors=%ld, start=%lld, end=%lld, bytes_written=%ld\n",
-                 sector, zero_sectors, start_sector, end_sector, bytes_written);
+            // periodic message
+            time_t now = time(NULL);
+            if ((last_update + PROGRESS_UPDATE_SEC) <= now) {
+                LOGDEBUG("wrote sect %ld, zeros=%ld, [%lld-%lld], bytes_written=%lld\n",
+                         sector, zero_sectors, start_sector, end_sector, bytes_written);
+                LOGDEBUG("reads took %lld usec, writes took %lld usec\n", t_spent_reading, t_spent_writing);
+                t_spent_reading = 0LL;
+                t_spent_writing = 0LL;
+                last_update = now;
+            }
+
+            if (eof)
+                break;
         }
-        if (!all_zeros) {
-            vixError = VixDiskLib_Write(s.diskHandle, sector, 1, buf);
-            CHECK_ERROR();
-        } else {
-            zero_sectors++;
-        }
-        bytes_written += VIXDISKLIB_SECTOR_SIZE;
+        free(buf);
     }
 
     time_t after = time(NULL);
-    LOGINFO("copy of %ldMB-disk took %d seconds (zero sectors=%ld/%ld)\n", bytes_written / 1000000, (int)(after - before), zero_sectors, bytes_written / VIXDISKLIB_SECTOR_SIZE);
+    LOGINFO("copy of %lldMB-disk took %d seconds (zero sectors=%ld/%lld)\n",
+            bytes_written / 1000000,
+            (int)(after - before),
+            zero_sectors,
+            bytes_written / VIXDISKLIB_SECTOR_SIZE);
 
     ret = EUCA_OK;
-
 
 out:
     close(fp);
@@ -718,7 +773,7 @@ out:
 //!
 //! @post
 //!
-int vmdk_convert_from_remote(const img_spec * spec, const char *disk_path, long long start_sector, long long end_sector)
+int vmdk_convert_from_remote(const img_spec * spec, const char *disk_path, long long start_sector, long long end_sector, long buf_size_bytes)
 {
     u8 buf[VIXDISKLIB_SECTOR_SIZE] = { 0 };
     int i = 0;

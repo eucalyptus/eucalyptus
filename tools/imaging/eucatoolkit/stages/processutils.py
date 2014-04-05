@@ -69,7 +69,7 @@ def monitor_subprocess_io(infile,
                           sub_stderr=None,
                           chunk_size=None,
                           log_method=None,
-                          inactivity_timeout=30):
+                          inactivity_timeout=120):
         '''
         Monitors the io availability of 'infile'. Reads from infile and
         writes to outfile. If there is no activity on infile for a period of
@@ -98,7 +98,8 @@ def monitor_subprocess_io(infile,
             last_read = time.time()
             done = False
             while not done:
-                reads, writes, errors = select(readfds, [], [], 30)
+                reads, writes, errors = select(readfds, [], [],
+                                               inactivity_timeout)
                 if len(reads) > 0:
                     for fd in reads:
                         #check for each fds in read ready list

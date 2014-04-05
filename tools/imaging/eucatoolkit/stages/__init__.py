@@ -29,6 +29,7 @@ import os
 import sys
 
 _chunk_size = 8192
+_max_part_buffer_size = 11534336
 _logger_name = 'DownloadImage'
 
 

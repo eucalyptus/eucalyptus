@@ -136,8 +136,7 @@ public class ImagingServiceProperties {
       description = "enabling imaging worker healthcheck",
       initial = "false",
       readonly = false,
-      type = ConfigurableFieldType.BOOLEAN,
-      changeListener = EnabledChangeListener.class)
+      type = ConfigurableFieldType.BOOLEAN)
   public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
   
   
@@ -168,10 +167,6 @@ public class ImagingServiceProperties {
         return true;
       } else {
         imageNotConfiguredFaultRunnable.run( );
-        //TODO: the name of the service is TBD, change message later
-        LOG.debug("Imaging service EMI property is unset.  \"\n" +
-            "              + \"Use euca-modify-property -p imaging.imaging_emi=<imaging service emi> \"\n" +
-            "              + \"where the emi should point to the image provided in the eucalyptus-TBD package.\" ");
         return false;
       }
     }

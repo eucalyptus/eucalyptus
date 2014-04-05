@@ -142,7 +142,7 @@ public class UnitTestSupport {
                 props = new HashMap<>();
                 userName = "unittestuser" + j;
                 props.put("email", userName + "@unit-test.com");
-                User usr = accnt.addUser(userName, "/", true, true, props);
+                User usr = accnt.addUser(userName, "/", true, props);
                 userMap.get(accountName).add(usr.getUserId());
             }
         }

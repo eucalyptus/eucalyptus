@@ -42,6 +42,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -94,6 +95,12 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
     return task;
   }
 
+  static ImagingTask named(AccountFullName acctOwner, final String taskId){
+    final ImagingTask task = new ImagingTask(null, taskId);
+    task.setOwnerAccountNumber(acctOwner.getAccountNumber());
+    return task;
+  }
+  
   static ImagingTask named(OwnerFullName owner, final String taskId){
     return new ImagingTask(owner, taskId);
   }

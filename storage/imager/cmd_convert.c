@@ -57,10 +57,13 @@
 #define _LOGIN                                   "login"
 #define _OUT                                     "out"
 #define _OTYPE                                   "out-type"
+#define _BUFSIZE                                 "buf-size"
 #define _PASS                                    "password"
 #define _VDC                                     "vsphere-datacenter"
 #define _VMX                                     "vsphere-vmx"
 #define _VMDK                                    "vsphere-vmdk"
+
+#define DEFAULT_BUFFER_SIZE_BYTES                262144L
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -90,6 +93,7 @@ typedef struct _convert_params {
     } in_type;
     long long start_sector;
     long long end_sector;
+    long long buf_size_bytes;
     char *login;
     char *out;
     char *password;
@@ -132,6 +136,7 @@ static const char *params[] = {
     _VDC, "vSphere datacenter name",
     _VMDK, "vSphere path to the disk, including the datastore",
     _VMX, "vSphere path to the VMX, including the datastore",
+    _BUFSIZE, "internal buffer size, in bytes (default: 256K)",
     NULL,
 };
 
@@ -255,6 +260,12 @@ int convert_validate(imager_request * req)
             state->vmdk = p->val;
         } else if (strcmp(p->key, _VMX) == 0) {
             state->vmx = p->val;
+        } else if (strcmp(p->key, _BUFSIZE) == 0) {
+            char * endptr;
+            errno = 0;
+            state->buf_size_bytes = strtoll(p->val, &endptr, 10);
+            if (errno != 0 && *endptr != '\0')
+                err("failed to parse buffer size parameter " _BUFSIZE);
         } else {
             err("invalid parameter '%s' for command 'convert'", p->key);
         }
@@ -347,6 +358,10 @@ int convert_validate(imager_request * req)
         }
 
         state->remote = spec;
+    }
+
+    if (state->buf_size_bytes == 0) {
+        state->buf_size_bytes = DEFAULT_BUFFER_SIZE_BYTES;
     }
 
     req->internal = ((void *)state);   // save pointer to find it later
@@ -485,10 +500,10 @@ static int convert_creator(artifact * a)
     if (state->remote) {
         switch(state->in_type) {
         case DISK:
-            ret = vmdk_convert_to_remote(in_path, state->remote, state->start_sector, state->end_sector);
+            ret = vmdk_convert_to_remote(in_path, state->remote, state->start_sector, state->end_sector, state->buf_size_bytes);
             break;
         case VMDK:
-            ret = vmdk_convert_from_remote(state->remote, out_path, state->start_sector, state->end_sector);
+            ret = vmdk_convert_from_remote(state->remote, out_path, state->start_sector, state->end_sector, state->buf_size_bytes);
             break;
         default:
             LOGERROR("unexpected input type (%d)\n", state->in_type);

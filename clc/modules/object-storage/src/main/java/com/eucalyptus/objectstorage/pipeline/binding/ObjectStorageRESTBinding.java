@@ -88,6 +88,7 @@ import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
@@ -232,7 +233,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
-                httpResponse.setHeader( HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
+                httpResponse.setHeader( HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
                 httpResponse.setHeader( "x-amz-request-id", msg.getCorrelationId());
                 httpResponse.setContent( buffer );
             }
@@ -1051,7 +1052,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected String getOperationPath(MappingHttpRequest httpRequest) {
         for(String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
             if(httpRequest.getServicePath().startsWith(pathCandidate)) {
-                String opPath = httpRequest.getServicePath().replaceAll(pathCandidate, "");
+                String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
                 if(!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
                     //The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
                     //So, don't remove the service path because that changes the semantics.

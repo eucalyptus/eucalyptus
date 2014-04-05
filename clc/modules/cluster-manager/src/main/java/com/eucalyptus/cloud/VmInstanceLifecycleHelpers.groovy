@@ -565,10 +565,14 @@ class VmInstanceLifecycleHelpers {
         final StatefulMessageSet<State> messages
     ) {
       final NetworkGroup net = allocation.getPrimaryNetwork( )
-      if ( net != null && net.hasExtantNetwork( ) ) {
-        final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) )
-        messages.addRequest( State.CREATE_NETWORK, callback )
-        EventRecord.here( ClusterAllocator, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( )
+      if ( net ) {
+        Entities.transaction( NetworkGroup ) { EntityTransaction db ->
+          if ( Entities.merge( net ).hasExtantNetwork( ) ) {
+            final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) )
+            messages.addRequest( State.CREATE_NETWORK, callback )
+            EventRecord.here( ClusterAllocator, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( )
+          }
+        }
       }
     }
   }

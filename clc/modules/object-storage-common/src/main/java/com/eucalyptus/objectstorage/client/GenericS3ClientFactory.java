@@ -71,6 +71,7 @@ public class GenericS3ClientFactory {
     static {
         System.setProperty(SDKGlobalConfiguration.DISABLE_REMOTE_REGIONS_FILE_SYSTEM_PROPERTY, "disable"); //anything non-null disables it
         System.setProperty(SDKGlobalConfiguration.DEFAULT_S3_STREAM_BUFFER_SIZE, String.valueOf(DEFAULT_BUFFER_SIZE));  //512KB upload buffer, to handle most small objects
+        System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", "disable"); //disable etag validation on GETs
     }
 
     /**
