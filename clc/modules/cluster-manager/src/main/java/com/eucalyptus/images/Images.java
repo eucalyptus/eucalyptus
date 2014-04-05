@@ -635,9 +635,15 @@ public class Images {
     		  ImageMetadata.State.failed.equals( img.getState())) {
         Entities.delete( img );
       } else {
-        if( img instanceof MachineImageInfo)
-          img.setState(ImageMetadata.State.deregistered_cleanup);
-        else
+        if( img instanceof MachineImageInfo){
+          final String runManifestLocation = ((MachineImageInfo)img).getRunManifestLocation();
+          final String manifestLocation = ((MachineImageInfo)img).getManifestLocation();
+          // cleanup system generated buckets if exist
+          if(!manifestLocation.equals(runManifestLocation))
+            img.setState(ImageMetadata.State.deregistered_cleanup);
+          else
+            img.setState( ImageMetadata.State.deregistered );
+        } else
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
