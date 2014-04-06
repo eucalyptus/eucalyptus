@@ -114,6 +114,7 @@
 #include "xml.h"
 #include "hooks.h"
 #include <ebs_utils.h>
+#include "diskutil.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1901,6 +1902,14 @@ static void *bundling_thread(void *arg)
         return NULL;
     }
 
+    char backing_dev[PATH_MAX] = "";
+    if (realpath(pInstance->params.root->backingPath, backing_dev)==NULL
+        || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
+        LOGERROR("[%s] failed to resolve backing path (%s) or to chown it\n", pInstance->instanceId, backing_dev);
+        cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
+        return NULL;
+    }
+
     LOGINFO("[%s] starting to bundle\n", pInstance->instanceId);
     char node_pk_path[EUCA_MAX_PATH];
     snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
@@ -1912,7 +1921,7 @@ static void *bundling_thread(void *arg)
 #define _COMMON_BUNDLING_PARAMS \
                          run_workflow_path,\
                          "read-raw/up-bundle",\
-                         "--input-path", pInstance->params.root->backingPath,\
+                         "--input-path", backing_dev,\
                          "--encryption-cert-path", cloud_cert_path,\
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\
@@ -1922,8 +1931,8 @@ static void *bundling_thread(void *arg)
                          "--account", "123456789012", /* @TODO: obtain account for real*/ \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
-                         "--policy", pParams->S3Policy,\
-                         "--policy-signature", pParams->S3PolicySig,\
+                         "--upload-policy", pParams->S3Policy,\
+                         "--upload-policy-signature", pParams->S3PolicySig,\
                          "--emi", pInstance->imageId,
 
     if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
