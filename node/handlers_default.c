@@ -1943,10 +1943,10 @@ static void *bundling_thread(void *arg)
     } else if (rc == EUCA_THREAD_ERROR) {
         // bundler child was cancelled (killed), but should report it as failed
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
-        LOGINFO("[%s] cancelled while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
+        LOGWARN("[%s] cancelled while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
     } else {
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
-        LOGINFO("[%s] failed while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
+        LOGERROR("[%s] failed while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
     }
 
     return NULL;
