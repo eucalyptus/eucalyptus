@@ -270,11 +270,13 @@ int main(int argc, char **argv)
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
+                   "-d", "-F");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
+                   "-d", "-F");
             exit(1);
             break;
         }
@@ -302,13 +304,13 @@ int main(int argc, char **argv)
     }
 
     /* for testing XML validation
-    {
-        globalNetworkInfo *mygni;
-        mygni = gni_init();
-        gni_populate(mygni, "/tmp/euca-global-net-cwNFRB");
-        exit(0);
-    }
-    */
+       {
+       globalNetworkInfo *mygni;
+       mygni = gni_init();
+       gni_populate(mygni, "/tmp/euca-global-net-cwNFRB");
+       exit(0);
+       }
+     */
 
     LOGINFO("eucanetd started\n");
 
@@ -317,7 +319,7 @@ int main(int argc, char **argv)
     while (rc) {
         rc = read_config();
         if (rc) {
-            LOGWARN("cannot complete pre-flight checks, retrying\n");
+            LOGWARN("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
             sleep(1);
         }
     }
@@ -334,13 +336,11 @@ int main(int argc, char **argv)
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsucessful\n");
         }
-
         // first time we run, force an update
         if (firstrun) {
             update_globalnet = 1;
             firstrun = 0;
         }
-
         // if the last update operations failed, regardless of new info, force an update
         if (update_globalnet_failed) {
             LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
@@ -355,7 +355,6 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-
         // now, preform any updates that are required
         if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
@@ -368,7 +367,6 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
             }
         }
-
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM security groups): updating system\n");
@@ -381,7 +379,6 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (VM security groups): updated successfully\n");
             }
         }
-
         // if information about local VM network config has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
@@ -589,13 +586,18 @@ int update_isolation_rules(void)
     rc = ebt_table_add_chain(config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
     rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
     rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
+
     rc = ebt_table_add_chain(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "ACCEPT", "");
     rc = ebt_chain_add_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
     rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
 
+    rc = ebt_table_add_chain(config->ebt, "nat", "EUCA_EBT_NAT_POST", "ACCEPT", "");
+    rc = ebt_chain_add_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
+    rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
+
     // add these for DHCP to pass
-    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
 
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (!rc) {
@@ -607,7 +609,7 @@ int update_isolation_rules(void)
             strptra = strptrb = NULL;
             strptra = hex2dot(instances[i].privateIp);
             hex2mac(instances[i].macAddress, &strptrb);
-            
+
             // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
             vnetinterface = mac2interface(strptrb);
 
@@ -616,16 +618,105 @@ int update_isolation_rules(void)
 
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
                 if (!config->disable_l2_isolation) {
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                }
-                if (config->fake_router) {
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                    //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
+
+                    // PRE Routing
+
+                    // basic MAC check
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -s ! %s -j DROP", vnetinterface, strptrb);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // IPv4
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -s %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetinterface, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // ARP
+                    if (config->fake_router) {
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                    }
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-src ! %s -j DROP", vnetinterface, strptra);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Request -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Reply -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // RARP
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // pass KVM migration weird packet
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x835 -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // DROP everything else
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                    // POST routing
+
+                    // IPv4
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -d ! %s --ip-proto udp --ip-dport 67:68 -j DROP", vnetinterface, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    // ARP
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply --arp-mac-dst ! %s -j DROP", vnetinterface, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-ip-dst ! %s -j DROP", vnetinterface, strptra);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply -j ACCEPT", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    // RARP
+                    snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    // DROP everything else
+                    snprintf(cmd, EUCA_MAX_PATH, "-o %s -j DROP", vnetinterface);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+                    
+
+                } else {
+                    if (config->fake_router) {
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                    }
                 }
             } else {
                 LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
@@ -797,6 +888,10 @@ int update_sec_groups(void)
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_IN");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_OUT");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
+    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_IN");
+    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
+
+    // reset and create ipsets for allprivate and noneuca subnet sets
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
     ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
@@ -1121,23 +1216,26 @@ int update_private_ips(void)
 
 int kick_dhcpd_server()
 {
-    int ret = 0, rc = 0;
-    char pidfile[EUCA_MAX_PATH];
-    char configfile[EUCA_MAX_PATH];
-    char leasefile[EUCA_MAX_PATH];
-    char tracefile[EUCA_MAX_PATH];
-    char rootwrap[EUCA_MAX_PATH];
-    char cmd[EUCA_MAX_PATH];
-    struct stat mystat;
-    char *pidstr = NULL;
+    int ret = 0;
+    int rc = 0;
     int pid = 0;
+    char *pidstr = NULL;
+    char pidfile[EUCA_MAX_PATH] = "";
+    char configfile[EUCA_MAX_PATH] = "";
+    char leasefile[EUCA_MAX_PATH] = "";
+    char tracefile[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
+    struct stat mystat = { 0 };
 
     rc = generate_dhcpd_config();
     if (rc) {
         LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
         ret = 1;
+    } else if (stat(config->dhcpDaemon, &mystat) != 0) {
+        LOGERROR("unable to find DHCP daemon binaries: '%s'\n", config->dhcpDaemon);
+        ret = 1;
     } else {
-
         snprintf(pidfile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
         snprintf(leasefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
         snprintf(tracefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
@@ -1410,8 +1508,6 @@ int read_config(void)
     cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_FAKE_ROUTER] = configFileValue("FAKE_ROUTER");
-
-    //    temporary();
 
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
@@ -1721,6 +1817,7 @@ char *mac2interface(char *mac)
         while (!match && !rc && result) {
             if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..")) {
                 snprintf(mac_file, EUCA_MAX_PATH, "/sys/class/net/%s/address", result->d_name);
+                LOGDEBUG("attempting to read mac from file '%s'\n", mac_file);
                 FH = fopen(mac_file, "r");
                 if (FH) {
                     macstr[0] = '\0';
@@ -1731,19 +1828,20 @@ char *mac2interface(char *mac)
                         if (strptra && strptrb) {
                             if (!strcasecmp(strptra, strptrb)) {
                                 ret = strdup(result->d_name);
+                                LOGDEBUG("found: matching mac/interface mapping: interface=%s foundmac=%s inputmac=%s\n", ret, strptra, strptrb);
                                 match++;
                             }
                         } else {
-                            LOGERROR("BUG: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
+                            LOGDEBUG("skipping: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
                             ret = NULL;
                         }
                     } else {
-                        LOGERROR("BUG: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
+                        LOGDEBUG("skipping: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
                         ret = NULL;
                     }
                     fclose(FH);
                 } else {
-                    LOGERROR("could not open sys interface file for read '%s': check permissions\n", SP(mac_file));
+                    LOGDEBUG("skipping: could not open sys interface file for read '%s': check permissions\n", SP(mac_file));
                     ret = NULL;
                 }
             }
@@ -1785,145 +1883,6 @@ char *interface2mac(char *dev)
     ret = file2str(devpath);
 
     return (ret);
-}
-
-int temporary()
-{
-    atomic_file nc_localnet_file, cc_config_file, cc_networktopo_file;
-    char destfile[EUCA_MAX_PATH], sourceuri[EUCA_MAX_PATH], ccIp[32], clcIp[32], buf[1024];
-    int to_update = 0, rc = 0;
-    FILE *FH = NULL;
-
-    snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_nc_local_net", config->eucahome);
-    snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
-    atomic_file_init(&nc_localnet_file, sourceuri, destfile, 0);
-    rc = atomic_file_get(&nc_localnet_file, &to_update);
-    if (rc) {
-        LOGWARN("cannot get latest nc local-net file (%s)\n", nc_localnet_file.dest);
-        return (1);
-    }
-
-    FH = fopen(nc_localnet_file.dest, "r");
-    if (FH) {
-        while (fgets(buf, 1024, FH)) {
-            LOGTRACE("line: %s\n", SP(buf));
-            if (strstr(buf, "CCIP=")) {
-                sscanf(buf, "CCIP=%[0-9.]", ccIp);
-                LOGDEBUG("parsed line from file(%s): ccIp=%s\n", SP(nc_localnet_file.dest), ccIp);
-                if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
-                } else {
-                    LOGWARN("malformed ccIp entry in file, skipping: %s\n", SP(buf));
-                }
-            } else if (strstr(buf, "CLCIP=")) {
-                sscanf(buf, "CLCIP=%[0-9.]", clcIp);
-                LOGDEBUG("parsed line from file(%s): clcIp=%s\n", SP(nc_localnet_file.dest), clcIp);
-                if (strlen(clcIp) && strcmp(clcIp, "0.0.0.0")) {
-                } else {
-                    LOGWARN("malformed clcIp entry in file, skipping: %s\n", SP(buf));
-                }
-            }
-        }
-    }
-    fclose(FH);
-
-    snprintf(destfile, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", config->eucahome);
-    snprintf(sourceuri, EUCA_MAX_PATH, "http://%s:8776/config-cc", SP(ccIp));
-    atomic_file_init(&cc_config_file, sourceuri, destfile, 1);
-
-    rc = atomic_file_get(&cc_config_file, &to_update);
-    if (rc) {
-        LOGWARN("cannot fetch config file from CC (%s)\n", ccIp);
-        return (1);
-    }
-
-    snprintf(destfile, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", config->eucahome);
-    snprintf(sourceuri, EUCA_MAX_PATH, "http://%s:8776/network-topology", SP(ccIp));
-    atomic_file_init(&cc_networktopo_file, sourceuri, destfile, 1);
-
-    rc = atomic_file_get(&cc_networktopo_file, &to_update);
-    if (rc) {
-        LOGWARN("cannot fetch networktopo file from CC (%s)\n", ccIp);
-        return (1);
-    }
-
-    LOGTRACE("converting old-style network view files into XML\n");
-
-    printf("<network-data>\n<configuration>\n");
-
-    printf("<property name=\"enabledCLCIp\">\n<value>%s</value>\n</property>\n", clcIp);
-    printf("<property name=\"instanceDNSDomain\">\n<value>%s</value>\n</property>\n", "eucalyptus.internal");
-    printf("<property name=\"instanceDNSServers\">\n<value>%s</value>\n</property>\n", "10.1.1.254");
-
-    FH = fopen(cc_config_file.dest, "r");
-    if (FH) {
-        printf("<property name=\"publicIps\">\n");
-        while (fgets(buf, 1024, FH)) {
-            char tmp[1024];
-            //            LOGTRACE("line: %s\n", SP(buf));
-            if (strstr(buf, "IPMAP=")) {
-                sscanf(buf, "IPMAP=%[0-9.]", tmp);
-                //                LOGDEBUG("parsed line from file(%s): IPMAP==%s\n", SP(cc_config_file.dest), tmp);
-                if (strlen(tmp) && strcmp(tmp, "0.0.0.0")) {
-                    printf("<value>%s</value>\n", tmp);
-                } else {
-                    LOGWARN("malformed IPMAP entry in file, skipping: %s\n", SP(buf));
-                }
-            }
-        }
-        printf("</property>\n");
-    }
-    fclose(FH);
-
-    printf("<property name=\"subnets\">\n");
-    FH = fopen(cc_config_file.dest, "r");
-    if (FH) {
-
-        while (fgets(buf, 1024, FH)) {
-            char tmp[1024];
-            if (strstr(buf, "VNET_SUBNET=")) {
-                sscanf(buf, "VNET_SUBNET=%[0-9.]", tmp);
-                if (strlen(tmp) && strcmp(tmp, "0.0.0.0")) {
-                    printf("<subnet name=\"%s\">\n", tmp);
-                }
-            }
-        }
-
-    }
-    fclose(FH);
-
-    FH = fopen(cc_config_file.dest, "r");
-    if (FH) {
-
-        while (fgets(buf, 1024, FH)) {
-            char tmp[1024];
-            if (strstr(buf, "VNET_SUBNET=")) {
-                sscanf(buf, "VNET_SUBNET=%[0-9.]", tmp);
-                if (strlen(tmp) && strcmp(tmp, "0.0.0.0")) {
-                    printf("<property name=\"subnet\">\n<value>%s</value>\n</property>\n", tmp);
-                }
-            } else if (strstr(buf, "VNET_NETMASK=")) {
-                sscanf(buf, "VNET_NETMASK=%[0-9.]", tmp);
-                if (strlen(tmp) && strcmp(tmp, "0.0.0.0")) {
-                    printf("<property name=\"netmask\">\n<value>%s</value>\n</property>\n", tmp);
-                }
-            } else if (strstr(buf, "VNET_ROUTER=")) {
-                sscanf(buf, "VNET_ROUTER=%[0-9.]", tmp);
-                if (strlen(tmp) && strcmp(tmp, "0.0.0.0")) {
-                    printf("<property name=\"gateway\">\n<value>%s</value>\n</property>\n", tmp);
-                }
-            }
-        }
-
-    }
-    fclose(FH);
-
-    printf("</subnet>\n");
-    printf("</property>\n");
-    printf("</configuration>\n");
-    printf("</network-data>\n");
-
-    exit(0);
-    return (0);
 }
 
 int flush_all(void)

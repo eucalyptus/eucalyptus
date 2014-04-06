@@ -60,11 +60,15 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus;
+package com.eucalyptus.walrus
+
+import com.eucalyptus.entities.Entities
+import com.eucalyptus.upgrade.Upgrades
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade
 
 import javax.persistence.Entity
+import javax.persistence.EntityTransaction
 import javax.persistence.PersistenceContext
-import javax.persistence.Table
 import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
@@ -73,15 +77,35 @@ import com.eucalyptus.config.ComponentConfiguration
 
 @Entity
 @PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(Walrus.class)
+@ComponentPart(WalrusBackend.class)
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
-  private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
-  public WalrusConfiguration( ) {
-  }
-  public WalrusConfiguration( String name, String hostName, Integer port ) {
-    super( "walrus", name, hostName, port, DEFAULT_SERVICE_PATH );
-  }
+    @Transient
+    private static String DEFAULT_SERVICE_PATH = "/services/WalrusBackend";
+
+    public WalrusConfiguration( ) {
+    }
+
+    public WalrusConfiguration( String name, String hostName, Integer port ) {
+        super( "walrus", name, hostName, port, DEFAULT_SERVICE_PATH );
+    }
+
+    //TODO: need to verify the proper component to run, may be system or db, not Walrus
+    @EntityUpgrade(value=WalrusBackend.class, entities=[WalrusConfiguration.class], since=Upgrades.Version.v4_0_0)
+    public static void upgradeWalrusConfiguration() {
+        ///Set the service path from /services/Walrus to /services/WalrusBackend
+        EntityTransaction db = Entities.get(WalrusConfiguration.class);
+        try {
+            for(WalrusConfiguration wsConfig : Entities.query(new WalrusConfiguration())) {
+                if("/services/WalrusBackend".equals(wsConfig.getServicePath())) {
+                    wsConfig.setServicePath(DEFAULT_SERVICE_PATH);
+                }
+            }
+            db.commit();
+        } finally {
+            if(db != null && db.isActive()) {
+                db.rollback();
+            }
+        }
+    }
 }

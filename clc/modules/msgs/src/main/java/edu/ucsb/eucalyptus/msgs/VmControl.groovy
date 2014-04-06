@@ -242,7 +242,7 @@ public class RunInstancesType extends VmControlMessage {
   String kernelId; //** added 2008-02-01  **/
   String ramdiskId; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.AvailabilityZone")
-  String availabilityZone = "default"; //** added 2008-02-01  **/
+  String availabilityZone = ""; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpParameterMapping (parameter = "Placement.Tenancy")
@@ -346,18 +346,18 @@ public class ReservationInfoType extends EucalyptusData {
   ArrayList<GroupItemType> groupSet = Lists.newArrayList()
   ArrayList<RunningInstancesItemType> instancesSet = Lists.newArrayList()
 
-  def ReservationInfoType( String reservationId, String ownerId, Map<String,String> groupIdsToNames ) {
-      this.reservationId = reservationId;
+  def ReservationInfoType( String reservationId, String ownerId, Collection<GroupItemType> groupIdsToNames ) {
+      this.reservationId = reservationId
       this.ownerId = ownerId
-      this.groupSet.addAll( groupIdsToNames.entrySet().collect{
-        Map.Entry<String,String> entry -> new GroupItemType( entry.key, entry.value ) } );
+      this.groupSet.addAll( groupIdsToNames )
+      Collections.sort( this.groupSet )
   }
   
   def ReservationInfoType() {
   }
 }
 
-public class GroupItemType extends EucalyptusData {
+public class GroupItemType extends EucalyptusData implements Comparable<GroupItemType> {
   String groupId;
   String groupName;
 
@@ -366,6 +366,11 @@ public class GroupItemType extends EucalyptusData {
   def GroupItemType( String groupId, String groupName ) {
     this.groupId = groupId;
     this.groupName = groupName;
+  }
+
+  @Override
+  int compareTo(final GroupItemType o) {
+    return (groupId?:'').compareTo( o.groupId?:'' )
   }
 }
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {

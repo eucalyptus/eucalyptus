@@ -440,6 +440,64 @@ public class ImagingServiceActions {
       }
     }
     
+    public static class IamRoleAuthorization extends AbstractAction {
+      public static final String IMAGING_SERVICE_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-service-api";
+      public static final String IMAGING_ROLE_POLICY_DOCUMENT=
+      "{\"Statement\":[{\"Action\": [\"eucaimaging:GetInstanceImportTask\", \"eucaimaging:PutInstanceImportTaskStatus\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+      private String createdPolicyName = null;
+      private String roleName = null;
+      public IamRoleAuthorization(
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup,
+          String groupId) {
+        super(lookup, groupId);
+      }
+
+      @Override
+      public boolean apply() throws ImagingServiceActionException {
+        try{
+          roleName = this.getResult(IamRoleSetup.class);
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("failed to find the created role name", ex);
+        }
+      
+        final String policyName = String.format("%s-%s", IMAGING_SERVICE_ROLE_POLICY_NAME_PREFIX, this.getGroupId());
+        final String rolePolicyDoc = IMAGING_ROLE_POLICY_DOCUMENT;
+        try{
+          final GetRolePolicyResult rolePolicy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, policyName);
+          if(rolePolicy!=null && policyName.equals(rolePolicy.getPolicyName()))
+            this.createdPolicyName = policyName;
+        }catch(final Exception ex){
+          ;
+        }
+       
+        if(this.createdPolicyName==null){
+          try{
+            EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+            createdPolicyName = policyName;
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to authorize imaging service api", ex);
+          }
+        }
+        return true;      
+      }
+
+      @Override
+      public void rollback() throws ImagingServiceActionException{
+        if(this.createdPolicyName!=null){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to delete role policy for imaging service api", ex);
+          }
+        }
+      }
+
+      @Override
+      public String getResult() {
+        return this.createdPolicyName;
+      }
+    }
+    
     public static class UserDataSetup extends AbstractAction {
       public UserDataSetup(
           Function<Class<? extends AbstractAction>, AbstractAction> lookup,
@@ -483,8 +541,6 @@ public class ImagingServiceActions {
       service = Topology.lookup( Imaging.class );
       kvMap.put("imaging_path", service.getServicePath());
 
-      X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
-      kvMap.put("cloud_certificate", B64.url.encString( PEMFiles.getBytes( cloudCert ) ));
       final StringBuilder sb = new StringBuilder();
       for (String key : kvMap.keySet()){
         String value = kvMap.get(key);

@@ -21,19 +21,29 @@ package com.eucalyptus.imaging;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park
@@ -41,20 +51,22 @@ import com.google.common.collect.Lists;
  */
 public class ImagingWorkers {
   private static Logger LOG = Logger.getLogger( ImagingWorkers.class );
-  public static final int WORKER_TIMEOUT_MIN = 5;
-  
+  public static final int WORKER_TIMEOUT_MIN = 10;
+  private static Set<String> verifiedWorkers = new HashSet<String>();
   public static class ImagingWorkerStateManager implements EventListener<ClockTick> {
     public static void register( ) {
-          Listeners.register( ClockTick.class, new ImagingTaskStateManager() );
+      Listeners.register( ClockTick.class, new ImagingWorkerStateManager() );
     }
-    
+
     @Override
     public void fireEvent(ClockTick event) {
+      if (!( Bootstrap.isFinished() &&
+           Topology.isEnabled( Eucalyptus.class ) ) )
+         return;
+      if(!ImagingServiceProperties.IMAGING_WORKER_HEALTHCHECK)
+        return;
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},
       /// reschedule the task assigned to the worker and terminate the instance
-      
-      return;
-      /*
       try{
         final List<ImagingWorker> workers = listWorkers();
         final List<ImagingWorker> timedout = Lists.newArrayList();
@@ -73,7 +85,7 @@ public class ImagingWorkers {
             ImagingTasks.killAndRerunTask(task.getDisplayName());
             LOG.debug(String.format("Imaging worker task %s is moved back into queue", task.getDisplayName()));
           }
-          retireWorker(task.getDisplayName());
+          retireWorker(worker.getDisplayName());
         }
         
         for(final ImagingWorker worker : toRemove){
@@ -83,7 +95,6 @@ public class ImagingWorkers {
       }catch(final Exception ex){
         LOG.error("Failed to check imaging worker's state", ex);
       }
-    }*/
     }
   }
   
@@ -151,6 +162,30 @@ public class ImagingWorkers {
     }
   }
   
+  public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception{
+    if(!verifiedWorkers.contains(instanceId)){
+      try{
+        final List<RunningInstancesItemType> instances=
+            EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instanceId));
+        final RunningInstancesItemType workerInstance = instances.get(0);
+        boolean tagFound = false;
+        for(final ResourceTag tag : workerInstance.getTagSet()){
+          if(ImagingServiceLaunchers.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+            tagFound = true;
+            break;
+          } 
+        }
+        if(!tagFound)
+          throw new Exception("Instance does not have a proper tag");
+        if(! (remoteHost.equals(workerInstance.getIpAddress()) || remoteHost.equals(workerInstance.getPrivateIpAddress())))
+          throw new Exception("Request came from invalid host address");        
+        verifiedWorkers.add(instanceId);
+      }catch(final Exception ex){
+        throw new Exception("Failed to verify imaging worker", ex);
+      }
+    }
+  }
+  
   public static void createWorker(final String workerId){
     try ( final TransactionResource db =
         Entities.transactionFor(ImagingWorker.class ) ) {
@@ -213,11 +248,22 @@ public class ImagingWorkers {
   private static void retireWorker(final String workerId){
     // terminate instance
     // set worker state DECOMMISSIONED
-   try{
-     EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
-   }catch(final Exception ex){
-    throw Exceptions.toUndeclared(ex); 
-   }
-   setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
+    String instanceId = null;
+    try{
+      final List<RunningInstancesItemType> instances = 
+          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+      if(instances!=null && instances.size()==1)
+        instanceId = instances.get(0).getInstanceId();
+    }catch(final Exception ex){
+      ;
+    }
+    if(instanceId!=null){
+      try{
+        EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex); 
+      }
+    }
+    setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
   }
 }

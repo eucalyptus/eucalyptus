@@ -86,7 +86,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                   }
                 } // the assumption here is that the global resourceInfo map is up to date...
                 deletedResourceStatusMap.put(thisResourceId, ResourceStatus.IN_PROCESS);
-                waitFor(promiseFor(activities.deleteResource(resourceId, stackId, accountId,
+                waitFor(promiseFor(activities.deleteResource(thisResourceId, stackId, accountId,
                   effectiveUserId))) { String result->
                   JsonNode jsonNodeResult = JsonHelper.getJsonNodeFromString(result);
                   String returnResourceId = jsonNodeResult.get("resourceId").textValue();
@@ -94,6 +94,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                   if (returnResourceStatus == "success") {
                     deletedResourceStatusMap.put(returnResourceId, ResourceStatus.COMPLETE);
                   }
+                  promiseFor(activities.logInfo("Chaining " + returnResourceId));
                   deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(DeleteStackWorkflowImpl.EMPTY_JSON_NODE));
                 }
               }
@@ -128,6 +129,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             }
           }.withCatch { Throwable t->
             String errorMessage = ((t != null) &&  (t.getMessage() != null) ? t.getMessage() : null);
+            promiseFor(activities.logException(t));
             promiseFor(activities.createGlobalStackEvent(
               stackId,
               accountId,

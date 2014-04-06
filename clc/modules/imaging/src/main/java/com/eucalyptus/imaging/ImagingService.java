@@ -19,12 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_GETINSTANCEIMPORTTASK;
+import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS;
+import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
+
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -39,8 +47,9 @@ import com.google.common.collect.Iterables;
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
 
-  public static ImportImageResponseType importImage(ImportImageType request) throws Exception {
+  public static ImportImageResponseType importImage(ImportImageType request) throws ImagingServiceException {
     final ImportImageResponseType reply = request.getReply();
+    final Context context = Contexts.lookup( );
     try{
       if (!Bootstrap.isFinished() ||
            !Topology.isEnabled( Imaging.class )){
@@ -48,6 +57,17 @@ public class ImagingService {
       }
     }catch(final Exception ex){
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      /// api is callable only by sysadmin
+      if ( ! (context.getUser().isSystemAdmin() && context.getUser().isAccountAdmin())) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
     }
     
     try{
@@ -73,10 +93,21 @@ public class ImagingService {
     return reply; 
   }
 
-  public static DescribeConversionTasksResponseType describeConversionTask(DescribeConversionTasksType request){
+  public static DescribeConversionTasksResponseType describeConversionTask(DescribeConversionTasksType request) throws ImagingServiceException {
     DescribeConversionTasksResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
+    try{
+      /// api is callable only by sysadmin
+      if ( ! (ctx.getUser().isSystemAdmin() && ctx.getUser().isAccountAdmin())) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
+    }
+
     Collection<String> ownerInfo = ( ctx.isAdministrator( ) && verbose )
         ? Collections.<String> emptyList( )
             : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
@@ -87,7 +118,8 @@ public class ImagingService {
             .byPrivileges( )
             .buildPredicate( );
 
-        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
+        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(AccountFullName.getInstance(ctx.getAccount()), 
+            request.getConversionTaskIdSet());
         for ( DiskImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
           DiskImageConversionTask t = (DiskImageConversionTask) task.getTask( );
           reply.getConversionTasks().add( t );
@@ -101,11 +133,29 @@ public class ImagingService {
    * <li>Submit cancellations for any outstanding import sub-tasks to imaging service
    * </ol>
    */
-  public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
+  public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws ImagingServiceException {
     final CancelConversionTaskResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
     try{
-      ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
+      /// api is callable only by sysadmin
+      if ( ! (ctx.getUser().isSystemAdmin() && ctx.getUser().isAccountAdmin())) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion tasks." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion tasks." );
+    }
+    try{
+      final ImagingTask task = ImagingTasks.lookup(request.getConversionTaskId());
+      final ImportTaskState state = task.getState();
+      if(state.equals(ImportTaskState.NEW) || 
+          state.equals(ImportTaskState.PENDING) ||
+          state.equals(ImportTaskState.CONVERTING) ||
+          state.equals(ImportTaskState.INSTANTIATING) ) {
+        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
           ImportTaskState.CANCELLING, null);
+      }
       reply.set_return(true);
     }catch(final NoSuchElementException ex){
       throw new ImagingServiceException("No task with id="+request.getConversionTaskId()+" is found");
@@ -118,8 +168,32 @@ public class ImagingService {
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup();
+    
+    try{
+      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
+          VENDOR_IMAGINGSERVICE,
+          EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
+          "",
+          null,
+          IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS,
+          context.getAuthContext() ) ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
+    }    
+    try{
+      final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) context.getChannel( ).getRemoteAddress( ) );
+      final String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
+    }catch(final Exception ex){
+      LOG.warn("Failed to verify worker", ex);
+      throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
+    }
     reply.setCancelled(false);
-
     try{
       final String taskId = request.getImportTaskId();
       final String volumeId = request.getVolumeId();
@@ -169,15 +243,14 @@ public class ImagingService {
               LOG.error("Failed to update volume's state", ex);
               break;
             }
+            
             try{
-              if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
-                if(imagingTask instanceof ImportInstanceImagingTask){
+              if(imagingTask instanceof ImportVolumeImagingTask){
+                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                    ImportTaskState.COMPLETED, null);
+              }else if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
                   ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                       ImportTaskState.INSTANTIATING, null);
-                }else{
-                  ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                      ImportTaskState.COMPLETED, null);
-                }
               }
             }catch(final Exception ex){
               LOG.error("Failed to update imaging task's state to completed", ex);
@@ -203,6 +276,32 @@ public class ImagingService {
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup();
+    try{
+      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
+          VENDOR_IMAGINGSERVICE,
+          EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
+          "",
+          null,
+          IMAGINGSERVICE_GETINSTANCEIMPORTTASK,
+          context.getAuthContext() ) ) ) ) {
+        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to get import task." );
+      }
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to get import task." );
+    }   
+    
+    try{
+      final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) context.getChannel( ).getRemoteAddress( ) );
+      final String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
+    }catch(final Exception ex){
+      LOG.warn("Failed to verify worker", ex);
+      throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to get instance import task." );
+    }
+    
     try{
       if(request.getInstanceId()!=null){
         if(ImagingWorkers.hasWorker(request.getInstanceId())) {

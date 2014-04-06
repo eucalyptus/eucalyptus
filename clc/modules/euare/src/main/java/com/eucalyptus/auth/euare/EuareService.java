@@ -2159,7 +2159,7 @@ public class EuareService {
       
       final String pk = EuareServerCertificateUtil.getEncryptedKey(certArn, certPem);
       result.setServerPk(pk);
-      final String msg = pk;
+      final String msg = String.format("%s&%s", serverCertPem, pk);
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);
@@ -2170,23 +2170,6 @@ public class EuareService {
       LOG.error("failed to prepare server certificate", ex);
       throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-    return reply;
-  }
-  
-  /* Euca-only API for imaging service */
-  public DownloadCloudCertificateResponseType downloadCloudCertificate(final DownloadCloudCertificateType request)
-    throws EuareException
-  {
-    final DownloadCloudCertificateResponseType reply = request.getReply();
-    try{
-      final DownloadCloudCertificateResultType result = new DownloadCloudCertificateResultType();
-      final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
-      result.setCloudCertificate(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
-      reply.setDownloadCloudCertificateResult(result);
-    }catch(final Exception ex){
-      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
-    }
-    reply.set_return(true);
     return reply;
   }
   

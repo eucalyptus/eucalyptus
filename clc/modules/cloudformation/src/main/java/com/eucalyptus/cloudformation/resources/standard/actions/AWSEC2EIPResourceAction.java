@@ -20,17 +20,38 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2EIPResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPProperties;
+import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.AllocateAddressType;
+import com.eucalyptus.compute.common.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.AssociateAddressType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeAddressesResponseType;
+import com.eucalyptus.compute.common.DescribeAddressesType;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.ReleaseAddressResponseType;
+import com.eucalyptus.compute.common.ReleaseAddressType;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
+
 
 /**
  * Created by ethomas on 2/3/14.
  */
 public class AWSEC2EIPResourceAction extends ResourceAction {
-
+  private static final Logger LOG = Logger.getLogger(AWSEC2EIPResourceAction.class);
   private AWSEC2EIPProperties properties = new AWSEC2EIPProperties();
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
   @Override
@@ -54,18 +75,72 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
+  public void create(int stepNum) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    switch (stepNum) {
+      case 0: // create address
+        AllocateAddressType allocateAddressType = new AllocateAddressType();
+        allocateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+        AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
+        String publicIp = allocateAddressResponseType.getPublicIp();
+        info.setPhysicalResourceId(publicIp);
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // attach to instance
+        if (properties.getInstanceId() != null) {
+          DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+          describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
+          describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+            throw new ValidationErrorException("No such instance " + properties.getInstanceId());
+          }
+          AssociateAddressType associateAddressType = new AssociateAddressType();
+          associateAddressType.setInstanceId(properties.getInstanceId());
+          associateAddressType.setPublicIp(info.getPhysicalResourceId());
+          associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+          AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
+    }
+  }
+
+
+  @Override
+  public void update(int stepNum) throws Exception {
     throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
   public void delete() throws Exception {
-    // can't create so delete should be a NOOP
+    if (info.getPhysicalResourceId() == null) return;
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    DescribeAddressesType describeAddressesType = new DescribeAddressesType();
+    describeAddressesType.setPublicIpsSet(Lists.newArrayList(info.getPhysicalResourceId()));
+    describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
+    DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+    if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
+      ReleaseAddressType releaseAddressType = new ReleaseAddressType();
+      releaseAddressType.setPublicIp(info.getPhysicalResourceId());
+      releaseAddressType.setEffectiveUserId(info.getEffectiveUserId());
+      AsyncRequests.<ReleaseAddressType, ReleaseAddressResponseType> sendSync(configuration, releaseAddressType);
+    }
   }
 
   @Override
-  public void rollback() throws Exception {
-    // can't create so rollback should be a NOOP
+  public void rollbackCreate() throws Exception {
+    delete();
   }
 
 }

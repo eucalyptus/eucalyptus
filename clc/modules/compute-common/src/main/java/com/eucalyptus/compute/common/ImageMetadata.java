@@ -65,6 +65,7 @@ package com.eucalyptus.compute.common;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
@@ -73,6 +74,8 @@ public interface ImageMetadata extends CloudMetadata {
   
   public interface StaticDiskImage extends ImageMetadata {
     public abstract String getManifestLocation( );
+    
+    public abstract String getRunManifestLocation();
     
     public abstract String getSignature( );
   }
@@ -177,7 +180,32 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum VirtualizationType {
-    paravirtualized, hvm
+    paravirtualized {
+      @Override
+      public String toString() {
+        return "paravirtual";
+      }
+    },
+
+    hvm
+    ;
+
+    public static Function<String,VirtualizationType> fromString( ) {
+      return FromString.INSTANCE;
+    }
+
+    private enum FromString implements Function<String,VirtualizationType> {
+      INSTANCE;
+
+      @Nullable
+      @Override
+      public VirtualizationType apply( @Nullable final String value ) {
+        for ( final VirtualizationType type : VirtualizationType.values() ) {
+          if ( type.toString( ).equals( value ) || type.name( ).equals( value ) ) return type;
+        }
+        return null;
+      }
+    }
   }
   
   public enum Hypervisor {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +20,17 @@
 package com.eucalyptus.util;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -65,6 +68,21 @@ public class CollectionUtils {
   public static <T> void each( final Iterable<T> iterable,
                                final Predicate<? super T> predicate ) {
     each( iterable, Functions.forPredicate( predicate ) );
+  }
+
+  /**
+   * Create a fluent iterable for the given iterable.
+   *
+   * @param iterable The possibly null iterable
+   * @param <T> The iterable type
+   * @return the FluentIterable
+   */
+  @Nonnull
+  public static <T> FluentIterable<T> fluent( @Nullable final Iterable<T> iterable ) {
+    return FluentIterable.from(
+        iterable == null ?
+            Collections.<T>emptyList( ) :
+            iterable );
   }
 
   /**

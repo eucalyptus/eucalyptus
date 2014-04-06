@@ -75,7 +75,6 @@ import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
-import javax.persistence.Transient;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
@@ -84,7 +83,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
@@ -115,7 +113,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
 
 @Embeddable
 public class VmRuntimeState {
@@ -123,12 +124,9 @@ public class VmRuntimeState {
    * 
    */
   private static final String VM_NC_HOST_TAG      = "euca:node";
-  @Transient
-  private static String       SEND_USER_TERMINATE = "SIGTERM";
-  @Transient
-  private static String       SEND_USER_STOP      = "SIGSTOP";
-  @Transient
-  private static Logger       LOG                 = Logger.getLogger( VmRuntimeState.class );
+
+  private static final Logger LOG                 = Logger.getLogger( VmRuntimeState.class );
+
   @Parent
   private VmInstance          vmInstance;
   @Embedded
@@ -151,7 +149,7 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_pending" )
   private Boolean             pending;
   @Column( name = "metadata_vm_guest_state" )
-  private String 			  guestState;
+  private String              guestState;
   
   @Embedded
   private VmMigrationTask     migrationTask;
@@ -213,7 +211,7 @@ public class VmRuntimeState {
     if ( VmStateSet.RUN.contains( oldState )
          && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
-      action = VmState.SHUTTING_DOWN.equals( newState ) ?
+      action = VmStateSet.EXPECTING_TEARDOWN.contains( newState ) ?
                                                        this.tryCleanUpRunnable( ) : // try cleanup now, will try again when moving to final state
                                                        this.cleanUpRunnable( );
     } else if ( VmState.PENDING.equals( oldState )
@@ -370,6 +368,13 @@ public class VmRuntimeState {
       this.setNodeTag( serviceTag );
     }
   }
+
+  public void clearServiceTag( ) {
+    if ( this.serviceTag != null ) {
+      this.serviceTag = null;
+      clearNodeTag( );
+    }
+  }
   
   /**
    * Asynchronously assign the tag for this instance, do so only if it has changed.
@@ -377,25 +382,30 @@ public class VmRuntimeState {
   private void setNodeTag( String serviceTag2 ) {
     final String host = URI.create( serviceTag2 ).getHost( );
     final VmInstance vm = VmRuntimeState.this.getVmInstance( );
-    final CreateTagsType createTags = new CreateTagsType( ) {
-      {
-        this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
-        this.getResourcesSet( ).add( vm.getInstanceId( ) );
-        try {
-          this.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
-          this.markPrivileged( );
-        } catch ( AuthException ex ) {
-          LOG.error( ex );
-        }
-      }
-    };
+    final CreateTagsType createTags = new CreateTagsType( );
+    createTags.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
+    createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    dispatchTagMessage( createTags );
+  }
+
+  private void clearNodeTag( ) {
+    final VmInstance vm = VmRuntimeState.this.getVmInstance( );
+    final DeleteTagsType deleteTags = new DeleteTagsType( );
+    deleteTags.getTagSet( ).add( new DeleteResourceTag( VM_NC_HOST_TAG ) );
+    deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
+    dispatchTagMessage( deleteTags );
+  }
+
+  private void dispatchTagMessage( ResourceTagMessage message ) {
     try {
-      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), createTags );
+      message.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+      message.markPrivileged( );
+      AsyncRequests.dispatch( Topology.lookup( Eucalyptus.class ), message );
     } catch ( Exception ex ) {
       LOG.error( ex );
     }
   }
-  
+
   void setReason( final Reason reason ) {
     this.reason = reason;
   }

@@ -302,37 +302,36 @@ public class Emis {
     }
     
     public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
-    		final String instanceId) throws MetadataException {
+    		final String reservationId) throws MetadataException {
       final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ));
+                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId);
             vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
-	          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId);
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
-	if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
-	    // generate download manifest and replace machine URL
-	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((MachineImageInfo)this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodeCertificate().getPublicKey(), instanceId);
+      
+        if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          // generate download manifest and replace machine URL
+          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
+            partition.getNodeCertificate().getPublicKey(), reservationId);
 	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
 	      }
       } catch (DownloadManifestException ex) {
-	  throw new MetadataException(ex);
+        throw new MetadataException(ex);
       }
-
       return vmTypeInfo;
     }
-    
   }
   
   static class NoRamdiskBootableSet extends BootableSet {

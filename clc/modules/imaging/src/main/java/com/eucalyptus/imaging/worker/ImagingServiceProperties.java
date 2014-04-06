@@ -131,7 +131,15 @@ public class ImagingServiceProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = LogServerPortChangeListener.class)
   public static String IMAGING_WORKER_LOG_SERVER_PORT = "514";
-
+  
+  @ConfigurableField( displayName="enabled",
+      description = "enabling imaging worker healthcheck",
+      initial = "false",
+      readonly = false,
+      type = ConfigurableFieldType.BOOLEAN)
+  public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
+  
+  
   @Provides(Imaging.class)
   @RunDuring(Bootstrap.Stage.Final)
   @DependsLocal(Imaging.class)
@@ -159,10 +167,6 @@ public class ImagingServiceProperties {
         return true;
       } else {
         imageNotConfiguredFaultRunnable.run( );
-        //TODO: the name of the service is TBD, change message later
-        LOG.debug("Imaging service EMI property is unset.  \"\n" +
-            "              + \"Use euca-modify-property -p imaging.imaging_emi=<imaging service emi> \"\n" +
-            "              + \"where the emi should point to the image provided in the eucalyptus-TBD package.\" ");
         return false;
       }
     }

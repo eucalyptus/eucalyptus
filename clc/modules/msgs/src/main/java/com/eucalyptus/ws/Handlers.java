@@ -441,15 +441,11 @@ public class Handlers {
               message.getClass(),
               componentIdClass.getSimpleName() ) );
 
-          final MappingHttpMessage mappingHttpMessage = MappingHttpMessage.extractMessage( channelEvent );
           final BaseMessage baseMessage = BaseMessage.extractMessage( channelEvent );
           if ( baseMessage != null ) {
             Contexts.clear( Contexts.lookup( baseMessage.getCorrelationId()) );
           }
-          channelHandlerContext.getChannel( ).write( new MappingHttpResponse(
-              mappingHttpMessage==null ? HttpVersion.HTTP_1_1  : mappingHttpMessage.getProtocolVersion( ),
-              HttpResponseStatus.BAD_REQUEST ) );
-          return;
+          throw new WebServicesException( HttpResponseStatus.FORBIDDEN );
         }
       }
       channelHandlerContext.sendUpstream( channelEvent );
@@ -674,7 +670,7 @@ public class Handlers {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-          ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
+          throw new WebServicesException( HttpResponseStatus.FORBIDDEN );
         }
       } else {
         ctx.sendUpstream( e );

@@ -75,6 +75,9 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import com.amazonaws.services.s3.model.AccessControlList;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -86,22 +89,14 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
-import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
-import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.GetObjectType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.XMLParser;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -109,22 +104,20 @@ import com.google.common.collect.Lists;
 
 public class ImageManifests {
   private static Logger LOG = Logger.getLogger( ImageManifests.class );
-  
-  static boolean verifyBucketAcl( String bucketName ) {
-    Context ctx = Contexts.lookup( );
-    GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( );
-    getBukkitInfo.setBucket( bucketName );
-    try {
-      GetBucketAccessControlPolicyResponseType reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), getBukkitInfo );
-      String ownerName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
-      String ownerId = reply.getAccessControlPolicy( ).getOwner( ).getID( );
-      return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerId ) || ctx.getUserFullName( ).getUserId( ).equals( ownerId );
-    } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
-      LOG.debug( ex );
+
+    static boolean verifyBucketAcl( String bucketName ) {
+        Context ctx = Contexts.lookup( );
+        try {
+            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
+            AccessControlList acl = s3Client.getBucketAcl(bucketName);
+            String ownerId = acl.getOwner( ).getId();
+            return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerId ) || ctx.getUserFullName( ).getUserId( ).equals( ownerId );
+        } catch ( Exception ex ) {
+            LOG.trace( ex, ex );
+            LOG.debug("Failed verifying bucket acl for bucket " + bucketName, ex );
+        }
+        return false;
     }
-    return false;
-  }
   
   private static boolean verifyManifestSignature( final X509Certificate cert, final String signature, String pad ) {
     Signature sigVerifier;
@@ -153,15 +146,12 @@ public class ImageManifests {
   }
   
   static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
-    GetObjectResponseType reply = null;
-    try {
-      GetObjectType msg = new GetObjectType( bucketName, objectName, false /*metadata*/, true /*inlinedata*/);
-      msg.regarding( );
-      reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
-    } catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
-    }
-    return B64.url.decString( reply.getBase64Data( ).getBytes( ) );
+      try {
+          EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
+          return s3Client.getObjectContent(bucketName, objectName);
+      } catch ( Exception e ) {
+          throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
+      }
   }
   
   public static class ManifestDeviceMapping {

@@ -51,6 +51,8 @@ import com.eucalyptus.auth.euare.GetServerCertificateType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesType;
+import com.eucalyptus.auth.euare.ListRolePoliciesResponseType;
+import com.eucalyptus.auth.euare.ListRolePoliciesType;
 import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
@@ -901,6 +903,20 @@ public class EucalyptusActivityTasks {
 	    } 
 	}
 	
+	public List<String> listRolePolicies(final String roleName){
+	  final EuareListRolePoliciesTask task =
+	      new EuareListRolePoliciesTask(roleName);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+    try{
+      if(result.get()){
+        return task.getResult();
+      }else
+        throw new EucalyptusActivityException("failed to list role's policies");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
 	public GetRolePolicyResult getRolePolicy(String roleName, String policyName){
 		final EuareGetRolePolicyTask task =
 				new EuareGetRolePolicyTask(roleName, policyName);
@@ -1580,6 +1596,42 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	private class EuareListRolePoliciesTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+	  private String roleName = null;
+	  private List<String> policies = null;
+	  private EuareListRolePoliciesTask(final String roleName){
+	    this.roleName = roleName;
+	  }
+	  
+	  private ListRolePoliciesType listRolePolicies(){
+	    final ListRolePoliciesType req = new ListRolePoliciesType();
+	    req.setRoleName(this.roleName);
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+        Checked<EuareMessage> callback) {
+      final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+      client.dispatch(listRolePolicies(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+        EuareMessage response) {
+      try{
+        final ListRolePoliciesResponseType resp = (ListRolePoliciesResponseType) response;
+        this.policies = resp.getListRolePoliciesResult().getPolicyNames().getMemberList();
+      }catch(final Exception ex){
+        this.policies = Lists.newArrayList();
+      }
+    }
+    
+    public List<String> getResult(){
+      return this.policies;
+    }
+	}
+	
 	private class EuareGetRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
 		private String roleName = null;
 		private String policyName = null;
@@ -1607,8 +1659,12 @@ public class EucalyptusActivityTasks {
 		@Override
 		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
 				EuareMessage response) {
-			final GetRolePolicyResponseType resp = (GetRolePolicyResponseType) response;
-			this.result = resp.getGetRolePolicyResult();
+		  try{
+		    final GetRolePolicyResponseType resp = (GetRolePolicyResponseType) response;
+		    this.result = resp.getGetRolePolicyResult();
+		  }catch(final Exception ex){
+		    ;
+		  }
 		}
 		
 		GetRolePolicyResult getResult(){

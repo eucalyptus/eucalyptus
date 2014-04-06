@@ -42,7 +42,7 @@ import javax.persistence.Table;
 public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
-  @Column(name = "description")
+  @Column(name = "description", length =  4000)
   String description;
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;

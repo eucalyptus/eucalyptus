@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws.server;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -228,7 +229,11 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     }
     try {
       if ( ctx.getChannel() != null ) {
-        Logs.extreme( ).debug( EventRecord.here( this.messageType.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ) );
+        @Nullable final BaseMessage msg = this.messageType.get( ctx.getChannel( ) );
+        @Nullable final Long openTime = this.openTime.get( ctx.getChannel( ) );
+        if ( msg != null && openTime != null ) {
+          Logs.extreme( ).debug( EventRecord.here( msg.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - openTime ) ) );
+        }
       }
     } catch ( Exception ex ) {
       Logs.extreme( ).trace( ex, ex );

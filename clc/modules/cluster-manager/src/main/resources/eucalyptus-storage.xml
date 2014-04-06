@@ -81,33 +81,18 @@
                 <inbound-endpoint ref="ImageWS"/>
             </inbound>
             <component class="com.eucalyptus.images.ImageManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
         <service name="Volume">
             <inbound>
                 <inbound-endpoint ref="VolumeWS"/>
             </inbound>
             <component class="com.eucalyptus.blockstorage.VolumeManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
         <service name="Snapshot">
             <inbound>
                 <inbound-endpoint ref="SnapshotWS"/>
             </inbound>
             <component class="com.eucalyptus.blockstorage.SnapshotManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
 
     </model>

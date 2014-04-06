@@ -5,6 +5,7 @@ package com.eucalyptus.cloudformation.workflow;
  */
 public interface StackActivity {
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String stackId, String accountId);

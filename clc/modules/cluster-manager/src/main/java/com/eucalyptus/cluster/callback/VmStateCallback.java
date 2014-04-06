@@ -63,12 +63,14 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
@@ -122,7 +124,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       public Set<String> get( ) {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          Collection<VmInstance> clusterInstances =  Collections2.filter( VmInstances.list( ), filter );
+          Collection<VmInstance> clusterInstances =  VmInstances.list( null, Restrictions.conjunction( ), Collections.<String,String>emptyMap( ), filter );
           Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
           return Sets.newHashSet( instanceNames );
         } catch ( Exception ex ) {
@@ -192,7 +194,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   private static void handleUnreported( final String vmId ) {
     try {
-      VmInstance vm = VmInstances.cachedLookup( vmId );
+      VmInstance vm = VmInstances.lookupAny( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         return;
@@ -203,6 +205,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
         VmInstances.terminated( vm );
       } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
+        VmInstances.buried( vm );
+      } else if ( VmInstances.Timeout.BURIED.apply( vm ) ) {
         VmInstances.delete( vm );
       } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
         VmInstances.terminated( vm );
@@ -224,13 +228,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     try {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
-        VmInstance vm = VmInstances.cachedLookup( runVm.getInstanceId() );
-        if ( VmState.TERMINATED.apply( vm ) ) {
+        VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
+        if ( VmStateSet.DONE.apply( vm ) ) {
           db.rollback( );
           if ( VmInstance.Reason.EXPIRED.apply( vm ) ) {
-            if ( VmStateCallback.handleRestore( runVm ) ) {
-              VmInstances.restored( runVm.getInstanceId() );
-            }
+            VmStateCallback.handleRestore( runVm );
           } else {
             LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
           }
@@ -277,11 +279,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     if ( VmStateSet.RUN.contains( runVmState ) ) {
       try {
-        final VmInstance vm = VmInstances.cachedLookup( runVm.getInstanceId( ) );
+        final VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
         if ( vm != null &&
-            !( VmState.TERMINATED.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
+            !( VmStateSet.DONE.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
           return false;
         }
+      } catch ( NoSuchElementException ex ) {
+        LOG.debug( "Instance record not found for restore: " + runVm.getInstanceId( ) );
+        Logs.extreme( ).error( ex, ex );
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );

@@ -80,7 +80,7 @@ public class JsonHelper {
   }
 
   private static Double getDouble(JsonNode node) {
-    return (node == null) ? null : node.doubleValue();
+    return (node == null) ? null : Double.parseDouble(node.textValue());
   }
 
 

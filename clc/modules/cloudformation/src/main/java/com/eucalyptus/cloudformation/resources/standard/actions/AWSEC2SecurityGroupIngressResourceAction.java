@@ -29,20 +29,20 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Secu
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.UserIdGroupPairType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -77,92 +77,107 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create() throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
-    // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
-    // Is there a better way?
-    DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-    describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-      AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-    ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-    Map<String, String> nameToIdMap = Maps.newHashMap();
-    if (securityGroupItemTypeArrayList != null) {
-      for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
-        nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
-      }
-    }
-    AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
-    authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-
-    String groupName = null;
-    LOG.info("properties" + properties);
-    if (properties.getGroupName() != null && !properties.getGroupName().isEmpty()) {
-      groupName = properties.getGroupName();
-    }
-    String groupId = null;
-    if (properties.getGroupId() != null && !properties.getGroupId().isEmpty()) {
-      groupId = properties.getGroupId();
-    }
-    if (groupName != null && !nameToIdMap.containsKey(groupName)) {
-      throw new ValidationErrorException("No such group with name " + groupName);
-    }
-    if (groupId != null && !nameToIdMap.containsValue(groupId)) {
-      throw new ValidationErrorException("No such group with id " + groupId);
-    }
-    if (groupId == null && groupName == null) {    
-      throw new ValidationErrorException("GroupId or GroupName is required for AWS::EC2::SecurityGroupIngress");
-    }
-    if (groupName == null) {
-      for (String key: nameToIdMap.keySet()) {
-        if (nameToIdMap.get(key).equals(groupId)) {
-          groupName = key;
-          break;
+  public void create(int stepNum) throws Exception {
+    switch (stepNum) {
+      case 0:
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
+        // Is there a better way?
+        DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+        describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+          AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
+        ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+        Map<String, String> nameToIdMap = Maps.newHashMap();
+        if (securityGroupItemTypeArrayList != null) {
+          for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
+            nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+          }
         }
-      }
+        AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
+        authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
+
+        String groupName = null;
+        if (properties.getGroupName() != null && !properties.getGroupName().isEmpty()) {
+          groupName = properties.getGroupName();
+        }
+        String groupId = null;
+        if (properties.getGroupId() != null && !properties.getGroupId().isEmpty()) {
+          groupId = properties.getGroupId();
+        }
+        if (groupName != null && !nameToIdMap.containsKey(groupName)) {
+          throw new ValidationErrorException("No such group with name " + groupName);
+        }
+        if (groupId != null && !nameToIdMap.containsValue(groupId)) {
+          throw new ValidationErrorException("No such group with id " + groupId);
+        }
+        if (groupId == null && groupName == null) {
+          throw new ValidationErrorException("GroupId or GroupName is required for AWS::EC2::SecurityGroupIngress");
+        }
+        if (groupName == null) {
+          for (String key: nameToIdMap.keySet()) {
+            if (nameToIdMap.get(key).equals(groupId)) {
+              groupName = key;
+              break;
+            }
+          }
+        }
+        if (groupId == null) {
+          groupId = nameToIdMap.get(groupName);
+        }
+        if (!nameToIdMap.get(groupName).equals(groupId)) {
+          throw new ValidationErrorException("GroupId ("+groupId+") and " +
+            "GroupName ("+groupName+") do not match the same group in AWS::EC2::SecurityGroupIngress");
+        }
+        authorizeSecurityGroupIngressType.setGroupName(groupName);
+        authorizeSecurityGroupIngressType.setGroupId(groupId);
+        int fromPort = -1;
+        String ipProtocol = properties.getIpProtocol();
+        try {
+          fromPort = Integer.parseInt(properties.getFromPort());
+        } catch (Exception ignore) {}
+        int toPort = -1;
+        try {
+          toPort = Integer.parseInt(properties.getToPort());
+        } catch (Exception ignore) {}
+        String sourceSecurityGroupName = properties.getSourceSecurityGroupName();
+        String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
+        if (sourceSecurityGroupOwnerId == null && sourceSecurityGroupName != null) {
+          sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+        }
+        String cidrIp = properties.getCidrIp();
+        IpPermissionType ipPermissionType = new IpPermissionType(ipProtocol, fromPort, toPort);
+        if (sourceSecurityGroupName != null) {
+          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        }
+        if (cidrIp != null) {
+          ipPermissionType.setCidrIpRanges(Lists.newArrayList(cidrIp));
+        }
+        authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
+        AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
+        info.setPhysicalResourceId(info.getLogicalResourceId()); // Strange, but this is what AWS does in this particular case...
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
     }
-    if (groupId == null) {
-      groupId = nameToIdMap.get(groupName);
-    }
-    if (!nameToIdMap.get(groupName).equals(groupId)) {
-      throw new ValidationErrorException("GroupId ("+groupId+") and " +
-        "GroupName ("+groupName+") do not match the same group in AWS::EC2::SecurityGroupIngress");
-    }
-    authorizeSecurityGroupIngressType.setGroupName(groupName);
-    authorizeSecurityGroupIngressType.setGroupId(groupId);
-    int fromPort = -1;
-    String ipProtocol = properties.getIpProtocol();
-    try {
-      fromPort = Integer.parseInt(properties.getFromPort());
-    } catch (Exception ignore) {}
-    int toPort = -1;
-    try {
-      toPort = Integer.parseInt(properties.getToPort());
-    } catch (Exception ignore) {}
-    String sourceSecurityGroupName = properties.getSourceSecurityGroupName();
-    String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
-    if (sourceSecurityGroupOwnerId == null && sourceSecurityGroupName != null) {
-      sourceSecurityGroupOwnerId = stackEntity.getAccountId();
-    }
-    String cidrIp = properties.getCidrIp();
-    IpPermissionType ipPermissionType = new IpPermissionType(ipProtocol, fromPort, toPort);
-    if (sourceSecurityGroupName != null) {
-      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
-    }
-    if (cidrIp != null) {
-      ipPermissionType.setCidrIpRanges(Lists.newArrayList(cidrIp));
-    }
-    authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
-    AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
-    info.setPhysicalResourceId(groupName);
-    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-  }/**/
+  }
+
+
+  @Override
+  public void update(int stepNum) throws Exception {
+    throw new UnsupportedOperationException();
+  }
+
+  public void rollbackUpdate() throws Exception {
+    // can't update so rollbackUpdate should be a NOOP
+  }
 
   @Override
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
 
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
     // Is there a better way?
     DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
@@ -241,7 +256,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollback() throws Exception {
+  public void rollbackCreate() throws Exception {
     delete();
   }
 

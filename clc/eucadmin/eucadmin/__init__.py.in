@@ -30,8 +30,11 @@ import boto.utils
 import os.path
 import re
 import sys
+import urlparse
+
 
 __version__ = '@EUCA_VERSION@'
+
 
 class EucAdmin(AWSQueryService):
 
@@ -42,8 +45,13 @@ class EucAdmin(AWSQueryService):
     Path = '/services/Configuration'
     Port = 8773
     Provider = 'aws'
-    EnvURL = 'EC2_URL'
+    EnvURL = None
     InstallPath = '@prefix@'
+
+    def check_for_env_url(self):
+        if not self.args.get('url'):
+            self.args['url'] = urlparse.urljoin('http://127.0.0.1/', self.Path)
+        AWSQueryService.check_for_env_url(self)
 
     def handle_error(self, ex):
         s = ""

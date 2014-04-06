@@ -495,37 +495,6 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     LOGWARN("could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
                 }
             }
-
-            if (strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
-                /*
-                   // if we're not in MANAGED mode, set up ebtables
-                   snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -F FORWARD", vnetconfig->eucahome);
-                   rc = system(cmd);
-                   if (rc) {
-                   LOGWARN("could not flush ebtables FORWARD rules\n");
-                   }
-
-                   snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -P FORWARD DROP", vnetconfig->eucahome);
-                   rc = system(cmd);
-                   if (rc) {
-                   LOGWARN("could set default ebtables FORWARD policy to DROP\n");
-                   }
-
-                   // forward non-VM traffic
-                   snprintf(cmd, 256, "-A FORWARD -i %s -j ACCEPT", vnetconfig->pubInterface);
-                   rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
-                   if (rc) {
-                   LOGWARN("could set up default ebtables rule '%s'\n", cmd);
-                   }
-
-                   // allow VM DHCP traffic
-                   snprintf(cmd, 256, "-A FORWARD -p IPv4 -d Broadcast -i ! %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetconfig->pubInterface);
-                   rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
-                   if (rc) {
-                   LOGWARN("could set up default ebtables rule '%s'\n", cmd);
-                   }
-                 */
-            }
         }
 
         LOGINFO(" VNET Configuration: eucahome=%s,\n", SP(vnetconfig->eucahome));
@@ -725,7 +694,7 @@ int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig)
         EUCA_FREE(ipbuf);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     } else {
-        LOGWARN("cloudIp is not yet set, not removing redirect rule\n");
+        LOGDEBUG("cloudIp is not yet set, not removing redirect rule\n");
     }
 
     return (EUCA_OK);
@@ -1304,38 +1273,6 @@ int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName)
 //! @param[in] rule
 //!
 //! @return EUCA_OK on success or the following error code:
-//!         \li EUCA_ERROR: if we fail to apply the EB table rule
-//!         \li EUCA_INVALID_ERROR: if any parameters does not meet the preconditions
-//!
-//! @pre \p vnetconfig, \p table and \p rule must not be NULL.
-//!
-int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule)
-{
-    int rc = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-
-    if (!rule || !table || !vnetconfig) {
-        LOGERROR("bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
-        return (EUCA_INVALID_ERROR);
-    }
-
-    snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP " ebtables -t %s %s\n", vnetconfig->eucahome, table, rule);
-    LOGDEBUG("running cmd '%s'\n", cmd);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc)
-        return (EUCA_ERROR);
-    return (EUCA_OK);
-}
-
-//!
-//!
-//!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//! @param[in] table
-//! @param[in] rule
-//!
-//! @return EUCA_OK on success or the following error code:
 //!         \li EUCA_ERROR: if we fail to apply teh table and rule
 //!         \li EUCA_MEMORY_ERROR: if we fail to allocate memory
 //!         \li EUCA_PERMISSION_ERROR: if we fail to create a temp file
@@ -1369,7 +1306,9 @@ int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule)
         return (EUCA_PERMISSION_ERROR);
     }
 
-    chmod(file, 0644);
+    if (chmod(file, 0644)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", file);
+    }
     if ((FH = fdopen(fd, "w")) == NULL) {
         close(fd);
         unlink(file);
@@ -2316,98 +2255,6 @@ int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
 //!
 //!
 //!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//! @param[in] vlan the Virtual LAN index
-//! @param[in] publicIp
-//! @param[in] privateIp
-//! @param[in] macaddr
-//!
-//! @return EUCA_OK on success or EUCA_ERROR on failure.
-//!
-//! @note at this point this function only returns EUCA_OK and does not do anything.
-//!
-int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr)
-{
-    int rc = EUCA_OK;
-    int ret = EUCA_OK;
-    int i = 0;
-    int numrules = 3;
-    char rule[EUCA_MAX_PATH] = "";
-    char rules[4][EUCA_MAX_PATH] = { "" };
-    boolean done = FALSE;
-
-    return (EUCA_OK);
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
-
-    } else {
-        // do ebtables to provide MAC/IP spoofing protection
-        snprintf(rules[0], EUCA_MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
-        snprintf(rules[1], EUCA_MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s ! --ip-src %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
-        snprintf(rules[2], EUCA_MAX_PATH, "FORWARD ! -i %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
-
-        done = FALSE;
-        for (i = 0; ((i < numrules) && !done); i++) {
-            snprintf(rule, EUCA_MAX_PATH, "-A %s\n", rules[i]);
-            if ((rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule)) != 0) {
-                LOGERROR("could not apply ebtables rule '%s'\n", rule);
-                done = TRUE;
-                ret = EUCA_ERROR;
-            }
-        }
-
-        if (done) {
-            // one of the rules failed, tear them down
-            for (i = 0; i < numrules; i++) {
-                snprintf(rule, EUCA_MAX_PATH, "-D %s\n", rules[i]);
-                rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
-            }
-        }
-    }
-    return (ret);
-}
-
-//!
-//!
-//!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//! @param[in] vlan the Virtual LAN index
-//! @param[in] publicIp
-//! @param[in] privateIp
-//! @param[in] macaddr
-//!
-//! @return EUCA_OK on success or EUCA_ERROR on failure.
-//!
-//! @note at this point this function only returns EUCA_OK and does not do anything.
-//!
-int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr)
-{
-    int i = 0;
-    int rc = EUCA_OK;
-    int ret = EUCA_OK;
-    int numrules = 3;
-    char rule[EUCA_MAX_PATH] = "";
-    char rules[3][EUCA_MAX_PATH] = { "" };
-    boolean done = FALSE;
-
-    return (EUCA_OK);
-
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
-
-    } else {
-        snprintf(rules[0], EUCA_MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
-        snprintf(rules[1], EUCA_MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s ! --ip-src %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
-        snprintf(rules[2], EUCA_MAX_PATH, "FORWARD ! -i %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
-        for (i = 0, done = FALSE; i < numrules && !done; i++) {
-            snprintf(rule, EUCA_MAX_PATH, "-D %s\n", rules[i]);
-            rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
-        }
-    }
-    return (ret);
-}
-
-//!
-//!
-//!
 //! @param[in]  vnetconfig a pointer to the Virtual Network Configuration information structure
 //! @param[in]  vlan the Virtual LAN index
 //! @param[in]  uuid the unique user identifier (UNUSED)
@@ -2950,114 +2797,6 @@ int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
         }
     }
     return (EUCA_OK);
-}
-
-//!
-//!
-//!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if we fail to apply the ARP table rules on the system
-//!         \li EUCA_INVALID_ERROR: if any parameters does not meet the preconditions
-//!         \li EUCA_MEMORY_ERROR: if we fail to allocate memory for our temp file name
-//!         \li EUCA_PERMISSION_ERROR: if we fail to create our temporary file
-//!         \li EUCA_ACCESS_ERROR: if we fail to open out temporary file for writting
-//!
-//! @pre \p vnetconfig must not be NULL.
-//!
-int vnetApplyArpTableRules(vnetConfig * vnetconfig)
-{
-    int rc = 0;
-    int fd = 0;
-    int ret = EUCA_OK;
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    int done = 0;
-    int slashnet = 0;
-    char *file = NULL;
-    char cmd[256] = "";
-    char *net = NULL;
-    char *gw = NULL;
-    char *ip = NULL;
-    FILE *FH = NULL;
-
-    if (!vnetconfig) {
-        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
-        return (EUCA_INVALID_ERROR);
-    }
-
-    LOGDEBUG("applying arptable rules\n");
-    if ((file = strdup("/tmp/euca-arpt-XXXXXX")) == NULL) {
-        return (EUCA_MEMORY_ERROR);
-    }
-
-    if ((fd = safe_mkstemp(file)) < 0) {
-        EUCA_FREE(file);
-        return (EUCA_PERMISSION_ERROR);
-    }
-
-    chmod(file, 0644);
-    if ((FH = fdopen(fd, "w")) == NULL) {
-        close(fd);
-        unlink(file);
-        EUCA_FREE(file);
-        return (EUCA_ACCESS_ERROR);
-    }
-
-    for (i = 0; i < NUMBER_OF_VLANS; i++) {
-        if (vnetconfig->networks[i].active) {
-            net = hex2dot(vnetconfig->networks[i].nw);
-            gw = hex2dot(vnetconfig->networks[i].router);
-
-            for (j = 0; j < NUMBER_OF_HOSTS_PER_VLAN; j++) {
-                if (vnetconfig->networks[i].addrs[j].ip && vnetconfig->networks[i].addrs[j].active) {
-                    for (k = 0, done = 0; k < NUMBER_OF_PUBLIC_IPS && !done; k++) {
-                        if (vnetconfig->publicips[k].allocated && (vnetconfig->publicips[k].dstip == vnetconfig->networks[i].addrs[j].ip)) {
-                            if ((ip = hex2dot(vnetconfig->networks[i].addrs[j].ip)) != NULL) {
-                                if (gw) {
-                                    fprintf(FH, "IP=%s,%s\n", ip, gw);
-                                    done++;
-                                }
-                                EUCA_FREE(ip);
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (k = 0; k < NUMBER_OF_PUBLIC_IPS; k++) {
-                if (vnetconfig->publicips[k].allocated && vnetconfig->publicips[k].dstip) {
-                    if ((ip = hex2dot(vnetconfig->publicips[k].dstip)) != NULL) {
-                        if (gw) {
-                            fprintf(FH, "IP=%s,%s\n", ip, gw);
-                        }
-                        EUCA_FREE(ip);
-                    }
-                }
-            }
-
-            if (net && gw) {
-                slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
-                fprintf(FH, "NET=%s/%d,%s\n", net, slashnet, gw);
-            }
-            EUCA_FREE(gw);
-            EUCA_FREE(net);
-        }
-    }
-
-    fclose(FH);
-    close(fd);
-
-    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_arpt %s", vnetconfig->eucahome, vnetconfig->eucahome, file);
-    if ((rc = system(cmd)) != 0) {
-        ret = EUCA_ERROR;
-    }
-
-    unlink(file);
-    EUCA_FREE(file);
-    return (ret);
 }
 
 //!

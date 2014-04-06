@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -28,6 +29,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 @QueryBindingInfo( statusCode = 400 )
 public class ListenerNotFoundException extends LoadBalancingException {
   public ListenerNotFoundException(){
-    super("Load balancer does not have a listener configured at the given port.");
+    super("ListenerNotFound", Role.Sender, "Load balancer does not have a listener configured at the given port.");
   }
 }

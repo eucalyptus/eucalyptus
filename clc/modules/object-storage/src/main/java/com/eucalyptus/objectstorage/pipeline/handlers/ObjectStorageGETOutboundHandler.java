@@ -68,6 +68,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.ChunkedDataStream;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.server.Statistics;
@@ -198,7 +199,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
         if (etag != null) {
             httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + etag + "\""); //etag in quotes, per s3-spec.
         }
-        httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(reply.getLastModified()));
+        httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(reply.getLastModified()));
 
         if (contentDisposition != null) {
             httpResponse.addHeader("Content-Disposition", contentDisposition);
@@ -208,7 +209,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
         if (versionId != null && !ObjectStorageProperties.NULL_VERSION_ID.equals(versionId)) {
             httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
         }
-        httpResponse.setHeader(HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
+        httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 
         //Add user metadata
         for (MetaDataEntry m : reply.getMetaData()) {

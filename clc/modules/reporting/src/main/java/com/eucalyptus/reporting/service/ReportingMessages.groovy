@@ -64,7 +64,16 @@ class ReportingErrorDetailType extends EucalyptusData {
 class ReportingErrorResponseType extends ReportingMessage {
   String requestId
   HttpResponseStatus httpStatus;
-  ArrayList<ReportingErrorType> errors = new ArrayList<ReportingErrorType>()
+  ArrayList<ReportingErrorType> errors = new ArrayList<ReportingErrorType>( )
+
+  ReportingErrorResponseType( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${errors?.getAt(0)?.type} error (${errors?.getAt(0)?.code}): ${errors?.getAt(0)?.message}"
+  }
 }
 
 class ExportDataResultType extends EucalyptusData {

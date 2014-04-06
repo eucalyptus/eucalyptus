@@ -79,11 +79,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.msgs.LifecycleConfigurationType;
 import com.eucalyptus.walrus.msgs.LifecycleExpiration;
 import com.eucalyptus.walrus.msgs.LifecycleRule;
 import com.eucalyptus.walrus.msgs.LifecycleTransition;
 
+import com.google.common.base.Strings;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.axiom.om.OMElement;
@@ -107,25 +110,16 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.AccessKeys;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.walrus.WalrusBucketLogger;
@@ -150,7 +144,6 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.walrus.util.WalrusUtil;
 import com.eucalyptus.ws.MethodNotAllowedException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -173,9 +166,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private String key;
 	private String randomKey;
 	private WalrusDataQueue<WalrusDataMessage> putQueue;
+    private final String walrusServicePath;
 
 	public WalrusRESTBinding( ) {
-		super( "http://walrus.s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
+		super("http://walrus.s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION);
+        walrusServicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
 	}
 
 	@Override
@@ -458,10 +453,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		msg.setProperty("timeStamp", new Date());
 	}
 
-	private String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException, NotImplementedException {
+	protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException, NotImplementedException {
 		String[] target = null;
 		String path = getOperationPath(httpRequest);
-		boolean walrusInternalOperation = false;
 
 		String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 		if(targetHost.contains(".walrus")) {
@@ -481,30 +475,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		String contentLengthString = httpRequest.getHeader(WalrusProperties.CONTENT_LEN);
 		if(contentLengthString != null) {
 			contentLength = Long.parseLong(contentLengthString);
-		}
-		if(httpRequest.containsHeader(StorageProperties.EUCALYPTUS_OPERATION)) {
-			String value = httpRequest.getHeader(StorageProperties.EUCALYPTUS_OPERATION);
-			for(WalrusProperties.WalrusInternalOperations operation: WalrusProperties.WalrusInternalOperations.values()) {
-				if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
-					operationName = operation.toString();
-					walrusInternalOperation = true;
-					break;
-				}
-			}
-
-			if(!walrusInternalOperation) {
-				for(WalrusProperties.StorageOperations operation: WalrusProperties.StorageOperations.values()) {
-					if(value.toLowerCase().equals(operation.toString().toLowerCase())) {
-						operationName = operation.toString();
-						walrusInternalOperation = true;
-						if(httpRequest.containsHeader(StorageProperties.StorageParameters.EucaSnapSize.toString())) {
-							operationParams.put("SnapshotSize", httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaSnapSize.toString()));
-						}
-						break;
-					}
-				}
-			}
-
 		}
 
 		if(target == null) {
@@ -664,46 +634,41 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						handleFirstChunk(httpRequest, contentLength);
 					}
 				} else if(verb.equals(WalrusProperties.HTTPVerb.GET.toString())) {
-					if(!walrusInternalOperation) {
+                    if(params.containsKey("torrent")) {
+                        operationParams.put("GetTorrent", Boolean.TRUE);
+                    } else {
+                        operationParams.put("GetData", Boolean.TRUE);
+                        operationParams.put("InlineData", Boolean.FALSE);
+                        operationParams.put("GetMetaData", Boolean.TRUE);
+                    }
 
-						if(params.containsKey("torrent")) {
-							operationParams.put("GetTorrent", Boolean.TRUE);
-						} else {
-							operationParams.put("GetData", Boolean.TRUE);
-							operationParams.put("InlineData", Boolean.FALSE);
-							operationParams.put("GetMetaData", Boolean.TRUE);
-						}
+                    Set<String> headerNames = httpRequest.getHeaderNames();
+                    boolean isExtendedGet = false;
+                    for(String key : headerNames) {
+                        for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
+                            if(key.replaceAll("-", "").equals(header.toString())) {
+                                String value = httpRequest.getHeader(key);
+                                isExtendedGet = true;
+                                parseExtendedHeaders(operationParams, header.toString(), value);
+                            }
+                        }
 
-						Set<String> headerNames = httpRequest.getHeaderNames();
-						boolean isExtendedGet = false;
-						for(String key : headerNames) {
-							for(WalrusProperties.ExtendedGetHeaders header: WalrusProperties.ExtendedGetHeaders.values()) {
-								if(key.replaceAll("-", "").equals(header.toString())) {
-									String value = httpRequest.getHeader(key);
-									isExtendedGet = true;
-									parseExtendedHeaders(operationParams, header.toString(), value);
-								}
-							}
-
-						}
-						if(isExtendedGet) {
-							operationKey += "extended";
-							//only supported through SOAP
-							operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
-						}
-					} 
-					if(params.containsKey(WalrusProperties.GetOptionalParameters.IsCompressed.toString())) {
-						Boolean isCompressed = Boolean.parseBoolean(params.remove(WalrusProperties.GetOptionalParameters.IsCompressed.toString()));
-						operationParams.put("IsCompressed", isCompressed);
-					}
+                    }
+                    if(isExtendedGet) {
+                        operationKey += "extended";
+                        //only supported through SOAP
+                        operationParams.put("ReturnCompleteObjectOnConditionFailure", Boolean.FALSE);
+                    }
+                    if(params.containsKey(WalrusProperties.GetOptionalParameters.IsCompressed.toString())) {
+                        Boolean isCompressed = Boolean.parseBoolean(params.remove(WalrusProperties.GetOptionalParameters.IsCompressed.toString()));
+                        operationParams.put("IsCompressed", isCompressed);
+                    }
 
 				} else if(verb.equals(WalrusProperties.HTTPVerb.HEAD.toString())) {
-					if(!walrusInternalOperation) {
-						operationParams.put("GetData", Boolean.FALSE);
-						operationParams.put("InlineData", Boolean.FALSE);
-						operationParams.put("GetMetaData", Boolean.TRUE);
-					}
-				} else if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
+                    operationParams.put("GetData", Boolean.FALSE);
+                    operationParams.put("InlineData", Boolean.FALSE);
+                    operationParams.put("GetMetaData", Boolean.TRUE);
+                } else if(verb.equals(WalrusProperties.HTTPVerb.POST.toString())) {
 					LOG.debug("Not sure what to do here");
 					if(params.containsKey("uploadId")) {
 						operationParams.put("Parts", getPartsList(httpRequest));
@@ -807,9 +772,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
             params.remove(key);
         }
 
-		if(!walrusInternalOperation) {
-			operationName = operationMap.get(operationKey);
-		}
+        operationName = operationMap.get(operationKey);
 
 		if(operationName == null) {
 			String unsupportedOp = unsupportedOperationMap.get(operationKey);
@@ -1168,9 +1131,23 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return partList;
 	}
 
-	private String getOperationPath(MappingHttpRequest httpRequest) {
-		return httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
-	}
+    /**
+     * Removes the service path for processing the bucket/key split.
+     * @param httpRequest
+     * @return
+     */
+    protected String getOperationPath(MappingHttpRequest httpRequest) {
+        if(httpRequest.getServicePath().startsWith(walrusServicePath)) {
+            String opPath = httpRequest.getServicePath().replaceFirst(walrusServicePath, "");
+            if(!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
+                //The service path was not demarked with a /, e.g. /services/WalrusBackendblahblah -> blahblah
+                //So, don't remove the service path because that changes the semantics.
+            } else {
+                return opPath;
+            }
+        }
+        return httpRequest.getServicePath();
+    }
 
 	private String getLocationConstraint(MappingHttpRequest httpRequest) throws BindingException {
 		String locationConstraint = null;
@@ -1399,7 +1376,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	}
 
 	private String getMessageString(MappingHttpRequest httpRequest) {
-		ChannelBuffer buffer = httpRequest.getContent( );
+		ChannelBuffer buffer = httpRequest.getContent();
 		buffer.markReaderIndex( );
 		byte[] read = new byte[buffer.readableBytes( )];
 		buffer.readBytes( read );

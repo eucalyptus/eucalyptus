@@ -72,6 +72,8 @@ public class ResourcePropertyResolver {
         jsonNode.put(name, String.valueOf((Double) objectValue));
       } else if (objectValue instanceof Boolean) {
         jsonNode.put(name, String.valueOf((Boolean) objectValue));
+      } else if (objectValue instanceof JsonNode) {
+        jsonNode.put(name, (JsonNode) objectValue);
       } else if (objectValue instanceof Collection) {
         jsonNode.put(name, getJsonNodeFromCollection((Collection<?>) objectValue));
       } else {
@@ -96,6 +98,8 @@ public class ResourcePropertyResolver {
         jsonNode.add(String.valueOf((Double) object));
       } else if (object instanceof Boolean) {
         jsonNode.add(String.valueOf((Boolean) object));
+      } else if (object instanceof JsonNode) {
+        jsonNode.add((JsonNode) object);
       } else if (object instanceof Collection) {
         jsonNode.add(getJsonNodeFromCollection((Collection) object));
       } else {
@@ -131,7 +135,7 @@ public class ResourcePropertyResolver {
       }
       if (!jsonNode.has(name)) continue; // no value to populate...
       JsonNode valueNode = jsonNode.get(name);
-      LOG.info("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
+      LOG.debug("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
       if (field.getType().equals(String.class)) {
         if (!valueNode.isTextual()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type String");

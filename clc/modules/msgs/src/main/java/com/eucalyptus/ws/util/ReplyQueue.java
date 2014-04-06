@@ -80,9 +80,17 @@ import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class ReplyQueue {
   private static Logger LOG = Logger.getLogger( ReplyQueue.class );
-  
-  public void handle( BaseMessage responseMessage ) {
+
+  /**
+   * A string is returned to keep mules chaining router happy. If void then
+   * when debug logging is enabled routing fails as message access of mules
+   * VoidMuleEvent throws UnsupportedOperationException and this is not
+   * handled within mule (see eucalyptus-model.xml for use of
+   * "chaining-router")
+   */
+  public String handle( BaseMessage responseMessage ) {
     Contexts.response( responseMessage );
+    return "";
   }
   
   public void handle( ExceptionMessage exMsg ) {

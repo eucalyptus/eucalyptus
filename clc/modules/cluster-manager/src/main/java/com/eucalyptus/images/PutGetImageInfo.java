@@ -64,9 +64,11 @@ package com.eucalyptus.images;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 
@@ -149,6 +151,11 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
   
   public void setChecksumType( String checksumType ) {
     this.checksumType = checksumType;
+  }
+
+  @Override
+  public String getRunManifestLocation() {
+    return this.getManifestLocation();
   }
   
 }

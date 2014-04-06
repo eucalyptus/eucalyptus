@@ -203,10 +203,9 @@ public class SnapshotManager {
         if ( !State.EXTANT.equals( snap.getState( ) ) && !State.FAIL.equals( snap.getState( ) ) ) {
           return false;
         } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
-          throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
-                                         new EucalyptusCloudException( ) );
+          throw Exceptions.toUndeclared( new EucalyptusCloudException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) ) );
         } else if ( isReservedSnapshot( snapshotId ) ) {
-          throw Exceptions.toUndeclared( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted", new EucalyptusCloudException( ) );
+          throw Exceptions.toUndeclared( new EucalyptusCloudException( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted" ) );
         } else {
           fireUsageEvent(snap, SnapShotEvent.forSnapShotDelete());
           
@@ -237,7 +236,7 @@ public class SnapshotManager {
               };
               Threads.enqueue( Eucalyptus.class, Snapshots.class, deleteBroadcast );
             } else {
-              throw Exceptions.toUndeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
+              throw Exceptions.toUndeclared( new EucalyptusCloudException( "Unable to delete snapshot: " + snap ) );
             }
           } catch ( Exception ex1 ) {
             throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
