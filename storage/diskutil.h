@@ -123,7 +123,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int imaging_init(const char *euca_home);
+int imaging_init(const char *new_euca_home_path, const char *new_cloud_cert_path, const char *new_service_key_path);
 int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes);
 
 int diskutil_init(boolean require_grub);

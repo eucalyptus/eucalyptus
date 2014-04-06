@@ -176,6 +176,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen);
 int check_for_string_in_list(char *string, char **list, int count);
 int euca_execlp(int *pStatus, const char *file, ...);
+char *get_username(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

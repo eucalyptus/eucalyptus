@@ -190,7 +190,9 @@ static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = 0;
 static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
-static char euca_home[EUCA_MAX_PATH] = "";
+static char euca_home_path[EUCA_MAX_PATH] = "";
+static char cloud_cert_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/cloud-cert.pem";
+static char service_key_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/node-pk.pem";
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -243,10 +245,16 @@ static int try_stage_dir(const char *dir)
     return (EUCA_INVALID_ERROR);
 }
 
-int imaging_init(const char *euca_home_path)
+int imaging_init(const char *new_euca_home_path,
+                 const char *new_cloud_cert_path,
+                 const char *new_service_key_path)
 {
-    assert(euca_home_path);
-    euca_strncpy(euca_home, euca_home_path, sizeof(euca_home));
+    assert(new_euca_home_path);
+    assert(new_cloud_cert_path);
+    assert(new_service_key_path);
+    euca_strncpy(euca_home_path, new_euca_home_path, sizeof(euca_home_path));
+    euca_strncpy(cloud_cert_path, new_cloud_cert_path, sizeof(cloud_cert_path));
+    euca_strncpy(service_key_path, new_service_key_path, sizeof(service_key_path));
     return EUCA_OK;
 }
 
@@ -259,8 +267,13 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
              "%s/usr/libexec/eucalyptus/euca-run-workflow down-bundle/write-raw"
              " --image-manifest-url '%s'"
              " --output-path '%s'"
-             " --cloud-cert-path '%s/var/lib/eucalyptus/keys/cloud-cert.pem'"
-             " --decryption-key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1", euca_home, url, dest_path, euca_home, euca_home);
+             " --cloud-cert-path '%s'"
+             " --decryption-key-path '%s' >> /tmp/euca_nc_unbundle.log 2>&1",
+             euca_home_path,
+             url,
+             dest_path,
+             cloud_cert_path,
+             service_key_path);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);

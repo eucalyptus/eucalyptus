@@ -2020,6 +2020,7 @@ static int init(void)
     configInitValues(configKeysRestartNC, configKeysNoRestartNC);   // initialize config subsystem
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
+    LOGINFO("running as user '%s'\n", get_username());
 
     // set default in the paths. the driver will override
     nc_state.config_network_path[0] = '\0';
@@ -2203,7 +2204,11 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
     // check on the Imaging Toolkit readyness
-    if (imaging_init(nc_state.home)) {
+    char node_pk_path[EUCA_MAX_PATH];
+    snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", nc_state.home);
+    char cloud_cert_path[EUCA_MAX_PATH];
+    snprintf(cloud_cert_path, sizeof(cloud_cert_path), EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", nc_state.home);
+    if (imaging_init(nc_state.home, cloud_cert_path, node_pk_path)) {
         LOGFATAL("failed to find required dependencies for image work\n");
         return (EUCA_FATAL_ERROR);
     }
