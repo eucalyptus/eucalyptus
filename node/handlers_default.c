@@ -1907,6 +1907,10 @@ static void *bundling_thread(void *arg)
     char run_workflow_path[EUCA_MAX_PATH];
     snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", pParams->eucalyptusHomePath);
 
+    // TODOs:
+    // --arch should be obtained from the instance
+    // --account should be set for real
+    // "PublicKey" is a misnomer
 #define _COMMON_BUNDLING_PARAMS \
                          run_workflow_path,\
                          "read-raw/up-bundle",\
@@ -1915,10 +1919,10 @@ static void *bundling_thread(void *arg)
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
-                         "--work-dir", "/tmp", // @TODO: should not be needed any more\
-                         "--arch", "x86_64", // @TODO: obtain arch from instance\
-                         "--account", "123456789012", // @TODO: obtain account for real\
-                         "--access-key", pParams->userPublicKey, // @TODO: "PublicKey" is a misnomer\
+                         "--work-dir", "/tmp",\
+                         "--arch", "x86_64",\
+                         "--account", "123456789012",\
+                         "--access-key", pParams->userPublicKey,\
                          "--object-store-url", pParams->objectStorageURL,\
                          "--policy", pParams->S3Policy,\
                          "--policy-signature", pParams->S3PolicySig,\
