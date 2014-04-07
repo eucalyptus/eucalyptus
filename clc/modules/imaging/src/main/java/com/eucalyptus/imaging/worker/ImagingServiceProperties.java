@@ -161,10 +161,26 @@ public class ImagingServiceProperties {
         return singleton;
     }
     
+    private static int CheckCounter = 0;
+    private static boolean EmiCheckResult = true;
     @Override
     public boolean check() throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_WORKER_EMI ) ) {
-        return true;
+        if(CheckCounter == 3){
+          try{
+            final List<ImageDetails> emis =
+                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(IMAGING_WORKER_EMI), false);
+            if(IMAGING_WORKER_EMI.equals(emis.get(0).getImageId()))
+              EmiCheckResult = true;
+            else 
+              EmiCheckResult =  false;
+          }catch(final Exception ex){
+            EmiCheckResult=false;
+          }
+          CheckCounter = 0;
+        }else
+          CheckCounter++;
+        return EmiCheckResult;
       } else {
         imageNotConfiguredFaultRunnable.run( );
         return false;
