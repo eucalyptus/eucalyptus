@@ -972,6 +972,7 @@ public class Images {
 			  ret.setSnapshotId(snap.getDisplayName());
 			  ret.setDeleteOnTerminate(targetDeleteOnTermination);
 			  ret.setImageSizeBytes(imageSizeBytes);
+			  ret.setRootDeviceName(rootDeviceName);
 			  ret.setState( ImageMetadata.State.available );
 			  Entities.persist(ret);
 			  tx.commit( );
