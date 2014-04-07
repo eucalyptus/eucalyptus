@@ -7,16 +7,89 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.collect.Lists
 import groovy.transform.ToString
 
+
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupProperties implements ResourceProperties {
+  @Required
+  @Property
+  List<String> availabilityZones = Lists.newArrayList();
+  @Property
+  Integer cooldown;
+  @Property
+  Integer desiredCapacity;
+  @Property
+  Integer healthCheckGracePeriod;
+  @Property
+  String healthCheckType;
+  @Property
+  String instanceId;
+  @Property
+  String launchConfigurationName;
+  @Property
+  List<String> loadBalancerNames = Lists.newArrayList();
+  @Required
+  @Property
+  Integer maxSize;
+  @Required
+  @Property
+  Integer minSize;
+  @Property
+  AutoScalingNotificationConfiguration notificationConfiguration;
+  @Property
+  List<AutoScalingTag> tags = Lists.newArrayList();
+  @Property
+  List<String> terminationPolicies = Lists.newArrayList();
+  @Property(name="VPCZoneIdentifier")
+  List<String> vpcZoneIdentifier = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSAutoScalingLaunchConfigurationProperties implements ResourceProperties {
+  @Property
+  Boolean associatePublicIpAddress;
+  @Property
+  List<AutoScalingBlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
+  @Property
+  Boolean ebsOptimized;
+  @Property
+  String iamInstanceProfile;
+  @Required
+  @Property
+  String imageId;
+  @Property
+  String instanceId;
+  @Property
+  Boolean instanceMonitoring;
+  @Required
+  @Property
+  String instanceType;
+  @Property
+  String kernelId;
+  @Property
+  String keyName;
+  @Property
+  String ramDiskId;
+  @Property
+  List<String> securityGroups = Lists.newArrayList();
+  @Property
+  String spotPrice;
+  @Property
+  String userData;
 }
 
 @ToString(includeNames=true)
 public class AWSAutoScalingScalingPolicyProperties implements ResourceProperties {
+  @Required
+  @Property
+  String adjustmentType;
+  @Required
+  @Property
+  String autoScalingGroupName;
+  @Property
+  Integer cooldown;
+  @Required
+  @Property
+  Integer scalingAdjustment;
 }
 
 @ToString(includeNames=true)
@@ -57,6 +130,43 @@ public class AWSCloudFrontDistributionProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSCloudWatchAlarmProperties implements ResourceProperties {
+  @Property
+  Boolean actionsEnabled;
+  @Property
+  List<String> alarmActions = Lists.newArrayList();
+  @Property
+  String alarmDescription;
+  @Property
+  String alarmName;
+  @Required
+  @Property
+  String comparisonOperator;
+  @Property
+  List<CloudWatchMetricDimension> dimensions = Lists.newArrayList();
+  @Required
+  @Property
+  Integer evaluationPeriods;
+  @Property
+  List<String> insufficientDataActions = Lists.newArrayList();
+  @Required
+  @Property
+  String metricName;
+  @Required
+  @Property
+  String namespace;
+  @Property(name="OKActions")
+  List<String> okActions = Lists.newArrayList();
+  @Required
+  @Property
+  Integer period;
+  @Required
+  @Property
+  String statistic;
+  @Required
+  @Property
+  Double threshold;
+  @Property
+  String unit;
 }
 
 @ToString(includeNames=true)
@@ -73,10 +183,24 @@ public class AWSEC2DHCPOptionsProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2EIPProperties implements ResourceProperties {
+  @Property
+  String instanceId;
+  @Property
+  String domain;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2EIPAssociationProperties implements ResourceProperties {
+  @Property
+  String allocationId;
+  @Property(name="EIP")
+  String eip;
+  @Property
+  String instanceId;
+  @Property
+  String networkInterfaceId;
+  @Property
+  String privateIpAddress;
 }
 
 @ToString(includeNames=true)
@@ -214,10 +338,32 @@ public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProp
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeProperties implements ResourceProperties {
+  @Required
+  @Property
+  String availabilityZone;
+  @Property
+  Integer iops;
+  @Property
+  String size;
+  @Property
+  String snapshotId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
+  @Property
+  String volumeType;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeAttachmentProperties implements ResourceProperties {
+  @Required
+  @Property
+  String device;
+  @Required
+  @Property
+  String instanceId;
+  @Required
+  @Property
+  String volumeId;
 }
 
 @ToString(includeNames=true)
@@ -286,34 +432,113 @@ public class AWSElasticBeanstalkEnvironmentProperties implements ResourcePropert
 
 @ToString(includeNames=true)
 public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourceProperties {
+  @Property
+  ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy;
+  @Property
+  ElasticLoadBalancingAppCookieStickinessPolicy appCookieStickinessPolicy;
+  @Property
+  List<String> availabilityZones = Lists.newArrayList();
+  @Property
+  ElasticLoadBalancingConnectionDrainingPolicy connectionDrainingPolicy;
+  @Property
+  Boolean crossZone;
+  @Property
+  ElasticLoadBalancingHealthCheckType healthCheck;
+  @Property
+  List<String> instances = Lists.newArrayList();
+  @Property(name="LBCookieStickinessPolicy")
+  ElasticLoadBalancingLBCookieStickinessPolicyType lbCookieStickinessPolicy;
+  @Property
+  String loadBalancerName;
+  @Required
+  @Property
+  List<ElasticLoadBalancingListener> listeners = Lists.newArrayList();
+  @Property
+  List<ElasticLoadBalancingPolicyType> policies = Lists.newArrayList();
+  @Property
+  String scheme;
+  @Property
+  List<String> securityGroups = Lists.newArrayList();
+  @Property
+  List<String> subnets = Lists.newArrayList();
 }
-
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
+  @Property
+  Integer serial;
+  // @Required -- docs say required but many examples in docs do not have it...examples win
+  @Property
+  String status;
+  @Required
+  @Property
+  String userName;
 }
 
 @ToString(includeNames=true)
 public class AWSIAMGroupProperties implements ResourceProperties {
+  @Property
+  String path;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMInstanceProfileProperties implements ResourceProperties {
+  @Required
+  @Property
+  String path;
+  @Required
+  @Property
+  List<String> roles = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMPolicyProperties implements ResourceProperties {
+  @Property
+  List<String> groups = Lists.newArrayList();
+  @Required
+  @Property
+  JsonNode policyDocument;
+  @Required
+  @Property
+  String policyName;
+  @Property
+  List<String> roles = Lists.newArrayList();
+  @Property
+  List<String> users = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMRoleProperties implements ResourceProperties {
+  @Required
+  @Property
+  JsonNode assumeRolePolicyDocument;
+  @Property
+  String path;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMUserProperties implements ResourceProperties {
+  @Property
+  String path;
+  @Property
+  List<String> groups = Lists.newArrayList();
+  @Property
+  LoginProfile loginProfile;
+  @Property
+  List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSIAMUserToGroupAdditionProperties implements ResourceProperties {
+  @Required
+  @Property
+  String groupName;
+  @Required
+  @Property
+  List<String> users = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)

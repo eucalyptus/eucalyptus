@@ -1428,8 +1428,8 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'boot')
         sleep(1);                      // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
-        if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
-            LOGINFO("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN);
+        if (diskutil_ch(blockblob_get_dev(a->bb), get_username(), NULL, 0) != EUCA_OK) {
+            LOGINFO("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), get_username());
         }
         bootification_failed = 0;
 
@@ -1699,8 +1699,8 @@ blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (tune and maybe other commands above set it to 'root')
-        if (diskutil_ch(dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
-            LOGERROR("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+        if (diskutil_ch(dev, get_username(), NULL, 0) != EUCA_OK) {
+            LOGERROR("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, dev, get_username());
         }
         injection_failed = 0;
 

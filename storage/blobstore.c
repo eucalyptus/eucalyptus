@@ -3679,7 +3679,7 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
         }
 
         snprintf(dm_path, sizeof(dm_path), DM_PATH "%s", dev_names[i]);
-        if (diskutil_ch(dm_path, EUCALYPTUS_ADMIN, NULL, BLOBSTORE_FILE_PERM) != EUCA_OK) {
+        if (diskutil_ch(dm_path, get_username(), NULL, BLOBSTORE_FILE_PERM) != EUCA_OK) {
             ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to change permissions on the device mapper file\n");
             goto cleanup;
         }

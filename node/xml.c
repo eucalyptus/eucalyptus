@@ -203,7 +203,7 @@ extern struct nc_state_t nc_state;
 
 // macros for making XML construction a bit more readable
 #define _NODE(P,N) xmlNewChild((P), NULL, BAD_CAST (N), NULL)
-#define _ELEMENT(P,N,V) xmlNewChild((P), NULL, BAD_CAST (N), BAD_CAST (V))
+#define _ELEMENT(P,N,V) xmlNewTextChild((P), NULL, BAD_CAST (N), BAD_CAST (V))
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
 
@@ -1434,6 +1434,7 @@ static void create_dummy_instance(const char *file)
                   "kernel", "objectstorage", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/kernel", "https://objectstorage1/buk2/kernel1");
     add_dummy_vbr(vbrs, "objectstorage://buk3/image1", "sda", "3333333333", "ext3", "emi-33333", "machine",
                   "image", "objectstorage", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://objectstorage1/buk3/image1");
+    add_dummy_vbr(vbrs, "http://imaging@10.111.1.105:8773/services/objectstorage/5ec758-download-manifests/DM-i-02a50273?Expires=1395734335&AWSAccessKeyId=AKIJRY2A9JYUBAOPBVYC", "sdd", "3333333333", "ext3", "emi-33333", "machine", "image", "objectstorage", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://objectstorage1/buk3/image1");
 
     _ELEMENT(disks, "floppyPath", "/var/run/instances/i-213456/instance.floppy");
 

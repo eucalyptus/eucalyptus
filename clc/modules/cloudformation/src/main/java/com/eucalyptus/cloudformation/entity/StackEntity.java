@@ -83,7 +83,7 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String capabilitiesJson;
 
-  @Column(name = "description")
+  @Column(name = "description", length =  4000)
   String description;
 
   @Column(name = "disable_rollback", nullable = false )

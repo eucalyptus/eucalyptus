@@ -440,6 +440,16 @@ public class AWSElasticBeanstalkEnvironmentResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String canonicalHostedZoneName;
+  @AttributeJson
+  String canonicalHostedZoneNameID;
+  @AttributeJson(name="DNSName")
+  String dnsName;
+  @AttributeJson(name="SourceSecurityGroup.GroupName")
+  String sourceSecurityGroupGroupName;
+  @AttributeJson(name="SourceSecurityGroup.OwnerAlias")
+  String sourceSecurityGroupOwnerAlias;
   public AWSElasticLoadBalancingLoadBalancerResourceInfo() {
     setType("AWS::ElasticLoadBalancing::LoadBalancer");
   }
@@ -448,6 +458,8 @@ public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInf
 
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String secretAccessKey;
   public AWSIAMAccessKeyResourceInfo() {
     setType("AWS::IAM::AccessKey");
   }
@@ -462,6 +474,8 @@ public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMGroupResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMGroupResourceInfo() {
     setType("AWS::IAM::Group");
   }
@@ -476,6 +490,8 @@ public class AWSIAMGroupResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMInstanceProfileResourceInfo() {
     setType("AWS::IAM::InstanceProfile");
   }
@@ -504,6 +520,8 @@ public class AWSIAMPolicyResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMRoleResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMRoleResourceInfo() {
     setType("AWS::IAM::Role");
   }
@@ -518,6 +536,8 @@ public class AWSIAMRoleResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSIAMUserResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
   public AWSIAMUserResourceInfo() {
     setType("AWS::IAM::User");
   }
