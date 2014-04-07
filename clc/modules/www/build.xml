@@ -62,12 +62,13 @@
 
 <project name="eucalyptus-www" basedir=".">
 	<import file="../module-inc.xml" />
+	<property name="webapp.dir" value="${basedir}/src/main/webapp" />
 	<property environment="localenv"/>
 	<property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
 	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
 		<contains string="${DESTDIR.0}" substring="localenv"/>
 	</condition>
-    <property name="builder.suffix" value="war" />
+	<property name="builder.suffix" value="war" />
 
 	<target name="indent-module">
 	</target>
@@ -116,7 +117,7 @@
 		<delete dir="${war.build.dir}" />
 		<mkdir dir="${war.build.dir}" />
 		<mkdir dir="${war.dir}" />
-		<war destfile="${war.path}" webxml="${conf.dir}/web.xml" basedir="${war.build.dir}" />
+		<war destfile="${war.path}" webxml="${webapp.dir}/WEB-INF/web.xml" basedir="${war.build.dir}" />
 	</target>
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
