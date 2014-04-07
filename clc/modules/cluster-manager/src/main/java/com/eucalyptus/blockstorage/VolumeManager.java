@@ -71,6 +71,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
 import org.apache.log4j.Logger;
@@ -236,7 +237,11 @@ public class VolumeManager {
             vol = Entities.uniqueResult( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), input ) );
           } catch ( NoSuchElementException e ) {
             // Slow path: try searching globally
-            vol = Entities.uniqueResult( Volume.named( null, input ) );
+            try {
+              vol = Entities.uniqueResult( Volume.named( null, input ) );
+            } catch ( NoSuchElementException e2 ) {
+              throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVolume.NotFound", "The volume '"+input+"' does not exist" ) );
+            }
           }
           if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
@@ -278,6 +283,7 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex ) {
       return reply;
     } catch ( RuntimeException ex ) {
+      Exceptions.rethrow( ex, ComputeException.class );
       throw ex;
     }
   }
