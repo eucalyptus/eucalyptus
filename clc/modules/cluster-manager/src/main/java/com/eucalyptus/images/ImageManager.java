@@ -219,17 +219,26 @@ public class ImageManager {
     }
 
     if ( request.getImageLocation( ) != null ) {
-    	// Verify all the device mappings first.
+      // Verify all the device mappings first.
     	bdmInstanceStoreImageVerifier( ).apply( request );
-
+    	
     	//When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
-
     	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
+    	
       ImageMetadata.Platform imagePlatform = manifest.getPlatform( ); 
       if(ImageMetadata.Platform.windows.equals(imagePlatform))
         virtType = ImageMetadata.VirtualizationType.hvm;
       final ImageMetadata.VirtualizationType virtualizationType = virtType;
+      
+      if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
+          ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType)){
+        // make sure kernel and ramdisk are present with the request or manifest
+        if(request.getKernelId()==null && manifest.getKernelId()==null)
+          throw new ClientComputeException("MissingParameter","Kernel ID must be specified");
+        if(request.getRamdiskId()==null && manifest.getRamdiskId()==null)
+          throw new ClientComputeException("MissingParameter","Ramdisk ID must be specified");
+      }
       
     	//Check that the manifest-specified size of the image is within bounds.
     	//If null image max size then always allow
@@ -243,7 +252,6 @@ public class ImageManager {
     			? null
     					: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
     	Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
-
     		@Override
     		public ImageInfo get( ) {
     			try {

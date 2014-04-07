@@ -603,9 +603,7 @@ public class Emis {
     if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = disk.getKernelId( );
     }
-    if ( ( kernelId == null ) || "".equals( kernelId ) ) {
-      kernelId = Images.lookupDefaultKernelId( );
-    }
+   
     Preconditions.checkNotNull( kernelId, "Attempt to resolve a kerneId for "
                                           + bootSet.toString( )
                                           + " during request "
