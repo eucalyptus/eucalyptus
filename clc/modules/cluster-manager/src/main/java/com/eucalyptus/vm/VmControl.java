@@ -197,6 +197,7 @@ import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 
+
 public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
@@ -1060,6 +1061,8 @@ public class VmControl {
     } else if (!validBucketName(request.getPrefix( ) ) ) {
        throw new ClientComputeException(" InvalidParameterValue", "Value (" + request.getPrefix( ) + ") for parameter Prefix is invalid." );
     }
+    
+    Bundles.checkAndCreateBucket(ctx.getUser(), request.getBucket());
     Function<String, VmInstance> bundleFunc = new Function<String,VmInstance> () {
 
       @Override
