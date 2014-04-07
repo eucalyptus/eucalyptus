@@ -79,6 +79,7 @@ public class UDPListener extends Thread {
 		this.port = port;
 		try {
 			socket = new DatagramSocket(port, address);
+			socket.setSoTimeout( 10000 );
 		} catch(Exception ex) {
 			LOG.error(ex);
 			throw ex;

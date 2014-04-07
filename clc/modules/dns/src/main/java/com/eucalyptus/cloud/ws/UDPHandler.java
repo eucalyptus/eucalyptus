@@ -118,6 +118,10 @@ public class UDPHandler extends Thread {
 	public void run() {
 		final short udpLength = 512;
 		while (Bootstrap.isOperational( )) {
+			if ( socket.isClosed( ) ) {
+				LOG.info( "Exiting due to closed socket" );
+				return;
+			}
 			try {
 			  byte [] in = new byte[udpLength];
 			  DatagramPacket indp = new DatagramPacket(in, in.length);
