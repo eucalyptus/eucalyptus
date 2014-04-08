@@ -117,17 +117,19 @@ public class PropertyChangeListeners {
     if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
       if ( changeListenerClass.isEnum( ) ) {
         changeListener = changeListenerClass.getEnumConstants( )[0];
-      }
+        } else {
       try {
-        changeListener = changeListenerClass.newInstance( );
-      } catch ( Throwable e ) {
-        LOG.error("Can't set listener to " + changeListenerClass);
-        LOG.error(e, e);
-        changeListener = NoopEventListener.NOOP;
+          changeListener = changeListenerClass.newInstance( );
+        } catch ( Throwable e ) {
+          LOG.error("Can't set listener to " + changeListenerClass);
+          LOG.error(e, e);
+          changeListener = NoopEventListener.NOOP;
+        }
       }
     } else {
       changeListener = NoopEventListener.NOOP;
     }
+    LOG.debug("Property change listener set to: " + changeListener.getClass());
     return changeListener;
   }
   

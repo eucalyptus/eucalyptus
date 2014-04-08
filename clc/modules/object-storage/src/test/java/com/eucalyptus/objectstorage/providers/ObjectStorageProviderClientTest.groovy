@@ -47,8 +47,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
-
-import static com.ibm.icu.impl.Assert.fail
+import static org.junit.Assert.*
 
 /**
  * Intended for testing the InMemoryProvider. Will need

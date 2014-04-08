@@ -507,7 +507,6 @@ public class DnsResolvers extends ServiceJarDiscovery {
         return SetResponse.ofType( SetResponse.UNKNOWN );
       } else {
         final Iterable<DnsResolver> resolverList = DnsResolvers.resolversFor( queryRecord, source );
-        LOG.debug( "DnsResolvers.findRecords(): resolvers for " + name + " are: " + resolverList );
         if ( Iterables.isEmpty( resolverList ) ) {
           return SetResponse.ofType( SetResponse.UNKNOWN );
         } else {
