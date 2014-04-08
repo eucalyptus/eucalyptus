@@ -331,26 +331,28 @@ public class DownloadManifestFactory {
 
 	private static boolean checkManifestsBucket(EucaS3Client s3Client) {
 		try {
-            //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
-            AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
-            if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
-                //Bucket exists, but is owned by another account
-                LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME + " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
-                return false;
-            }
-
-            BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
-            return (config.getRules() != null &&
-                    config.getRules().size() == 1 &&
-                    config.getRules().get(0).getExpirationInDays() == 1 &&
-                    "enabled".equals(config.getRules().get(0).getStatus()) &&
-                    DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
-        } catch(AmazonServiceException e) {
-            //Expected possible path if doesn't exist.
-            return false;
-        } catch(Exception e) {
-            LOG.warn("Unexpected error checking for download manifest bucket", e);
+        //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
+        AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
+        if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
+            //Bucket exists, but is owned by another account
+            LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME +
+                " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
             return false;
         }
+
+        BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
+
+        return (config.getRules() != null &&
+                config.getRules().size() == 1 &&
+                config.getRules().get(0).getExpirationInDays() == 1 &&
+                "enabled".equalsIgnoreCase(config.getRules().get(0).getStatus()) &&
+                DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
+    } catch(AmazonServiceException e) {
+        //Expected possible path if doesn't exist.
+        return false;
+    } catch(Exception e) {
+        LOG.warn("Unexpected error checking for download manifest bucket", e);
+        return false;
+    }
 	}
 }
