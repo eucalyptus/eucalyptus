@@ -58,12 +58,14 @@ class WF_base():
 # specific workflows, one per class
 
 class EucaImager():
-    def __init__(self, cache_dir, work_dir, cache_limit_bytes=None, work_limit_bytes=None, debug=True):
+    def __init__(self, cache_dir, work_dir, cache_limit_bytes=None, work_limit_bytes=None, debug=True, service_key=None, cloud_cert=None):
         self.cache_dir = cache_dir
         self.work_dir = work_dir
         self.cache_limit_bytes=cache_limit_bytes
         self.work_limit_bytes=work_limit_bytes
         self.debug=debug
+        self.service_key=service_key
+        self.cloud_cert=cloud_cert
         if (self.cache_limit_bytes == None):
             statfs = os.statvfs(self.cache_dir)
             self.cache_limit_bytes = statfs.f_bavail * statfs.f_bsize
@@ -75,6 +77,10 @@ class EucaImager():
                             'cache_size=' + str(self.cache_limit_bytes),
                             'work=' + self.work_dir,
                             'work_size=' + str(self.work_limit_bytes)]
+        if (self.cloud_cert != None):
+            self.common_args += 'cloud_cert=' + self.cloud_cert
+        if (self.service_key != None):
+            self.common_args += 'service_key=' + self.service_key
 
     def prepare(self, args):
         disk_name='dsk-%s' % (args.emi)
@@ -184,7 +190,7 @@ class WF_DownBundleFS_UpBundle(WF_base):
         cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
         bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
-        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1, service_key=args.decryption_key_path, cloud_cert=args.cloud_cert_path)
         euca2ools = Euca2ools()
 
         try:
@@ -280,6 +286,7 @@ class WF_ReadRaw_UpBundle(WF_base):
         parser = subparsers.add_parser(id, help='a help')
         parser.add_argument('--input-path', required=True, metavar='PATH', help="Path to the file or block device to read from")
         _add_up_bundle_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -394,7 +401,7 @@ def _check_euca2ools(problems):
     return problems
 
 def _check_imager(problems):
-    _check_executable(problems, [PATHS['euca-imager']], "euca-imager")
+    _check_executable(problems, [PATHS['euca-imager'], 'work=/tmp'], "euca-imager") # /tmp is needed so PID file can be created
     return problems
 
 def _check_bundle_args(problems, args):

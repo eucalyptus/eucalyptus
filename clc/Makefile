@@ -109,7 +109,7 @@ ifeq ($(DISABLEGIT), 0)
 endif
 
 
-.PHONY: all build update_properties update_theme deps extras install gitcheck
+.PHONY: all build deps install gitcheck
 
 all: build
 test: build-test
@@ -148,35 +148,7 @@ ifeq ($(DISABLEGIT), 0)
 	@touch .nogit
 endif
 
-update_properties: ${web_prop_dir}/eucalyptus-web.properties
-
-${web_prop_dir}/eucalyptus-web.properties: ${web_prop_dir}/eucalyptus-web-default.properties ${TOP}/Makedefs
-	@sed "s/\(^extensions =\).*/\1 ${extensions}/" < ${web_prop_dir}/eucalyptus-web-default.properties > ${web_prop_dir}/eucalyptus-web.properties
-	@echo "Copied defaults to ${web_prop_dir}/eucalyptus-web.properties"
-
-update_theme:
-	@if test -d ${theme_dir}/${euca_theme} ; then \
-		if [ "`readlink ${theme_dir}/active`" != "${euca_theme}" ] ; then \
-			echo "Making '${euca_theme}' the active theme" ; \
-			rm -f ${theme_dir}/active ; \
-			ln -sf ${euca_theme} ${theme_dir}/active ; \
-		fi \
-	else \
-		echo "Theme ${theme_dir}/${euca_theme} is not found!"; exit 1; \
-	fi \
-
-extras: update_properties
-	@if test -n "${euca_theme}" ; then \
-		$(MAKE) update_theme; \
-	else \
-		if [ "`readlink ${theme_dir}/active`" != "eucalyptus" ] ; then \
-			echo "Making 'eucalyptus' the active theme" ; \
-			rm -f ${theme_dir}/active ; \
-			ln -sf eucalyptus ${theme_dir}/active ; \
-		fi \
-	fi
-
-build: deps extras
+build: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
@@ -184,7 +156,7 @@ build: deps extras
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C eucadmin
 
-build-test: deps extras
+build-test: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi

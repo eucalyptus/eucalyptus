@@ -302,20 +302,20 @@ public class Emis {
     }
     
     public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
-    		final String instanceId) throws MetadataException {
+    		final String reservationId) throws MetadataException {
       final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ));
+                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId);
             vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
+                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId);
             vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
@@ -324,7 +324,7 @@ public class Emis {
           // generate download manifest and replace machine URL
           String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodeCertificate().getPublicKey(), instanceId);
+            partition.getNodeCertificate().getPublicKey(), reservationId);
 	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
 	      }
       } catch (DownloadManifestException ex) {
@@ -603,9 +603,7 @@ public class Emis {
     if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = disk.getKernelId( );
     }
-    if ( ( kernelId == null ) || "".equals( kernelId ) ) {
-      kernelId = Images.lookupDefaultKernelId( );
-    }
+   
     Preconditions.checkNotNull( kernelId, "Attempt to resolve a kerneId for "
                                           + bootSet.toString( )
                                           + " during request "

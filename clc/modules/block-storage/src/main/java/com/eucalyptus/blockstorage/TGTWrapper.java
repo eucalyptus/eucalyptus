@@ -73,8 +73,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.validation.constraints.NotNull;
-
+import javax.annotation.Nonnull;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -272,7 +271,7 @@ public class TGTWrapper {
 	 * @return CommandOutput
 	 * @throws EucalyptusCloudException
 	 */
-	private static CommandOutput execute(@NotNull String[] command, @NotNull Long timeout) 
+	private static CommandOutput execute(@Nonnull String[] command, @Nonnull Long timeout)
 			throws EucalyptusCloudException, CallTimeoutException {
 		try {			
 			Integer returnValue = -999999;
@@ -314,7 +313,7 @@ public class TGTWrapper {
 	 * @throws OperationFailedException
 	 * @throws ResourceNotFoundException
 	 */
-	private static CommandOutput executeTGT(@NotNull String[] command, @NotNull Long timeout) 
+	private static CommandOutput executeTGT(@Nonnull String[] command, @Nonnull Long timeout) 
 			throws OperationFailedException, CallTimeoutException, ResourceNotFoundException {
 		CommandOutput output = null;
 		try {
@@ -339,7 +338,7 @@ public class TGTWrapper {
 		return output;
 	}
 	
-	private static String buildCommand(@NotNull String[] command) {
+	private static String buildCommand(@Nonnull String[] command) {
 		StringBuilder builder = new StringBuilder();
 		for (String part : command) {
 			builder.append(part).append(' ');
@@ -416,7 +415,7 @@ public class TGTWrapper {
 	 * @throws CallTimeoutException
 	 * @throws EucalyptusCloudException
 	 */
-	public static void createTarget(@NotNull String volumeId, int tid, @NotNull String name, @NotNull Long timeout) 
+	public static void createTarget(@Nonnull String volumeId, int tid, @Nonnull String name, @Nonnull Long timeout) 
 			throws CallTimeoutException, OperationFailedException, ResourceNotFoundException {
 		CommandOutput output = executeTGT(new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "new", 
 				"--mode", "target", "--tid", String.valueOf(tid), "-T", name }, timeout);
@@ -435,7 +434,7 @@ public class TGTWrapper {
 	 * @return
 	 * @throws EucalyptusCloudException
 	 */
-	public static void deleteTarget(@NotNull String volumeId, int tid, @NotNull Long timeout, boolean force) 
+	public static void deleteTarget(@Nonnull String volumeId, int tid, @Nonnull Long timeout, boolean force) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException {
 		LOG.debug("Tearing down target " + tid + " for volume " + volumeId);
 		CommandOutput output = null;
@@ -463,7 +462,7 @@ public class TGTWrapper {
 	 * @throws CallTimeoutException
 	 * @throws EucalyptusCloudException
 	 */
-	public static void createLun(@NotNull String volumeId, int tid, int lun, @NotNull String resourcePath, @NotNull Long timeout) 
+	public static void createLun(@Nonnull String volumeId, int tid, int lun, @Nonnull String resourcePath, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException {
 		CommandOutput output = executeTGT(new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "new", 
 				"--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun), "-b", resourcePath }, timeout);
@@ -482,7 +481,7 @@ public class TGTWrapper {
 	 * @param lun
 	 * @param timeout
 	 */
-	public static void deleteLun(@NotNull String volumeId, int tid, int lun, @NotNull Long timeout) 
+	public static void deleteLun(@Nonnull String volumeId, int tid, int lun, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException {
 		LOG.debug("Removing LUN " + lun + " from target " + tid + " for volume " + volumeId);
 		CommandOutput output = executeTGT(new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "delete", 
@@ -506,7 +505,7 @@ public class TGTWrapper {
 	 * @throws CallTimeoutException
 	 * @throws EucalyptusCloudException
 	 */
-	public static void bindUser (@NotNull String volumeId, @NotNull String user, int tid, @NotNull Long timeout) 
+	public static void bindUser (@Nonnull String volumeId, @Nonnull String user, int tid, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException {
 		CommandOutput output = executeTGT(new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "bind", 
 				"--mode", "account", "--tid", String.valueOf(tid), "--user", user }, timeout);
@@ -530,7 +529,7 @@ public class TGTWrapper {
 	 * @throws CallTimeoutException
 	 * @throws EucalyptusCloudException
 	 */
-	public static void bindTarget(@NotNull String volumeId, int tid, @NotNull Long timeout) 
+	public static void bindTarget(@Nonnull String volumeId, int tid, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException {
 		try {
 			CommandOutput output = executeTGT(new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", 
@@ -548,7 +547,7 @@ public class TGTWrapper {
 	 * @param timeout
 	 * @return
 	 */
-	public static void unbindTarget(String volumeId, int tid, @NotNull Long timeout) 
+	public static void unbindTarget(String volumeId, int tid, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException  {
 		LOG.debug("Unbinding target " + tid + " for volume " + volumeId);
 		CommandOutput output = executeTGT (new String[]{ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "unbind", 
@@ -572,7 +571,7 @@ public class TGTWrapper {
 	 * @param timeout
 	 * @return
 	 */
-	public static boolean targetExists(@NotNull String volumeId, int tid, String resource, @NotNull Long timeout) 
+	public static boolean targetExists(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout) 
 			throws EucalyptusCloudException {
 		try {
 			CommandOutput output = executeTGT(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", 
@@ -608,7 +607,7 @@ public class TGTWrapper {
 	 * @return
 	 * @throws EucalyptusCloudException
 	 */
-	public static boolean targetHasLun(@NotNull String volumeId, int tid, int lun, @NotNull Long timeout) 
+	public static boolean targetHasLun(@Nonnull String volumeId, int tid, int lun, @Nonnull Long timeout) 
 			throws EucalyptusCloudException {
 		try {
 			CommandOutput output = executeTGT(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", 
@@ -633,7 +632,7 @@ public class TGTWrapper {
 	 * @param resource
 	 * @return
 	 */
-	private static boolean hasResource(@NotNull String output, int tid, @NotNull String resource) {
+	private static boolean hasResource(@Nonnull String output, int tid, @Nonnull String resource) {
 		Matcher targetMatcher = null;
 		Matcher resourceMatcher = null;
 		String target = null;
@@ -665,7 +664,7 @@ public class TGTWrapper {
 	 * @param tid the target to look in
 	 * @return
 	 */
-	private static boolean hasLun(@NotNull String output, int tid, int lun) {		
+	private static boolean hasLun(@Nonnull String output, int tid, int lun) {		
 		Matcher targetMatcher = null;
 		Matcher lunMatcher = null;
 		String target = null;
@@ -690,19 +689,19 @@ public class TGTWrapper {
 		return false;
 	}
 	
-	public static void addUser(@NotNull String username, @NotNull String password, @NotNull Long timeout) 
+	public static void addUser(@Nonnull String username, @Nonnull String password, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException  {
 		executeTGT(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", 
 				"--user", username, "--password", password }, timeout);
 	}
 
-	public static void deleteUser(@NotNull String username, @NotNull Long timeout) 
+	public static void deleteUser(@Nonnull String username, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException  {
 		executeTGT(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", 
 				"--user", username }, timeout);
 	}
 
-	public static boolean userExists(@NotNull String username, @NotNull Long timeout) 
+	public static boolean userExists(@Nonnull String username, @Nonnull Long timeout) 
 			throws OperationFailedException, ResourceNotFoundException, CallTimeoutException  {
 		CommandOutput output = executeTGT(new String[] { ROOT_WRAP, "tgtadm", "--op", "show", "--mode", "account" }, timeout);
 		String returnValue = output.output;

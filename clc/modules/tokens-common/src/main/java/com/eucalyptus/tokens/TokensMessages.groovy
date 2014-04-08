@@ -98,7 +98,16 @@ class TokensErrorDetailType extends EucalyptusData {
 class TokensErrorResponseType extends TokenMessage {
   String requestId
   HttpResponseStatus httpStatus;
-  ArrayList<TokensErrorType> errors = new ArrayList<TokensErrorType>()
+  ArrayList<TokensErrorType> errors = new ArrayList<TokensErrorType>( )
+
+  TokensErrorResponseType( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${errors?.getAt(0)?.type} error (${errors?.getAt(0)?.code}): ${errors?.getAt(0)?.message}"
+  }
 }
 
 class GetSessionTokenResultType extends EucalyptusData {

@@ -55,6 +55,7 @@ class ComputeMessage extends BaseMessage implements Cloneable, Serializable {
   }
 }
 
+@ComponentMessage(Compute.class)
 public class ExceptionResponseType extends BaseMessage {
   String source = "not available";
   String message = "not available";
@@ -128,7 +129,14 @@ public class ErrorDetail extends EucalyptusData {
 
 public class ErrorResponse extends ComputeMessage {
   String requestId
-  public ErrorResponse() {
+  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>( )
+
+  ErrorResponse( ) {
+    set_return( false )
   }
-  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>()
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }

@@ -102,8 +102,6 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
-import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
-import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
 public class X509Download extends HttpServlet {
   
@@ -184,6 +182,7 @@ public class X509Download extends HttpServlet {
   public static void hasError( int statusCode, String message, HttpServletResponse response ) {
     try {
       response.setStatus( statusCode );
+      response.setContentType( "text/plain; charset=utf-8" );
       response.getWriter( ).print( getError( message ) );
       response.getWriter( ).flush( );
     } catch ( IOException e ) {
@@ -349,11 +348,10 @@ public class X509Download extends HttpServlet {
   }
   
   public static String getError( String message ) {
-    SafeHtmlBuilder builder = new SafeHtmlBuilder( );
-    builder.append( SafeHtmlUtils.fromTrustedString( "<html><title>Getting credentials failed</title><body><div align=\"center\"><p><h1>Getting credentails failed</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" ) );
-    builder.appendEscaped( message );
-    builder.append( SafeHtmlUtils.fromTrustedString( "</h3></p></div></body></html>" ) );
-    return builder.toSafeHtml( ).asString( );
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Getting credentials failed:\n" );
+    builder.append( message );
+    return builder.toString( );
   }
   
 }

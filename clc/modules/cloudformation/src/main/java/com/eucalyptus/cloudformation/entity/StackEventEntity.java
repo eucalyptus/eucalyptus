@@ -52,7 +52,7 @@ public class StackEventEntity extends AbstractPersistent {
   String logicalResourceId;
   @Column(name = "physical_resource_id")
   String physicalResourceId;
-  @Column(name = "resource_properties", nullable = false )
+  @Column(name = "resource_properties" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String resourceProperties;

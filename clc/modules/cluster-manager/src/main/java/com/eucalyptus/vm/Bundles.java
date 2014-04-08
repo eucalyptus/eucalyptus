@@ -62,36 +62,37 @@
 
 package com.eucalyptus.vm;
 
+import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.context.Context;
+import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.CreateBucketType;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
 
 public class Bundles {
@@ -230,5 +231,56 @@ public class Bundles {
     if ( !bucketAndAcl.contains( "ec2-bundle-read" ) )
       throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
     
+  }
+  
+  static void checkAndCreateBucket(final User user, String bucketName) throws ComputeException {
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+    try{
+      final List<Bucket> buckets = s3c.listBuckets();
+      for(final Bucket bucket : buckets){
+        if(bucketName.equals(bucket.getName())){
+          throw new ClientComputeException("InvalidParameter","Existing bucket found with the same name");
+        }
+      }
+      final Bucket created = s3c.createBucket(bucketName);
+    }catch(final EucalyptusCloudException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.debug("Uanble to create the bucket", ex);
+      throw new ComputeException("InternalError","Unable to create the bucket");
+    }
+  }
+  
+  static void deleteBucket(final User user, String bucketName, boolean deleteObject) throws ComputeException {
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+    try{
+      final List<Bucket> buckets = s3c.listBuckets();
+      boolean bucketFound = false;
+      for(final Bucket bucket : buckets){
+        if(bucketName.equals(bucket.getName())){
+          bucketFound=true;
+          break;
+        }
+      }
+      if(!bucketFound){
+        return;
+      }
+      final ObjectListing objects = s3c.listObjects(bucketName);
+      final List<S3ObjectSummary> objectSummaries = objects.getObjectSummaries();
+      if(!deleteObject && objectSummaries.size()>0){
+        throw new ClientComputeException("InvalidParameter","Bucket is not empty");
+      }
+      if(deleteObject){
+        for(final S3ObjectSummary object : objectSummaries){
+          s3c.deleteObject(bucketName, object.getKey());
+        }
+      }
+      s3c.deleteBucket(bucketName);
+    }catch(final EucalyptusCloudException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.debug("Unable to delete the bucket", ex);
+      throw new ComputeException("InternalError", "Unable to delete the bucket");
+    }
   }
 }

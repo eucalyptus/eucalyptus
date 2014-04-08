@@ -109,14 +109,6 @@ public class ImageConfiguration extends AbstractPersistent {
   @ConfigurableField( displayName = "default_visibility", description = "The default value used to determine whether or not images are marked 'public' when first registered." )
   @Column( name = "config_image_is_public", nullable = false, columnDefinition = "boolean default false" )
   private Boolean       defaultVisibility;
-  
-  @ConfigurableField( displayName = "default_kernel_id", description = "The default used for running images which do not have a kernel specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_kernel_id" )
-  private String        defaultKernelId;
-  
-  @ConfigurableField( displayName = "default_ramdisk_id", description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_ramdisk_id" )
-  private String        defaultRamdiskId;
 
   @ConfigurableField( displayName = "cleanup_period", description = "The period between runs for clean up of deregistered images.", initial = "10m" )
   @Column( name = "config_image_cleanup_period" )
@@ -179,22 +171,6 @@ public class ImageConfiguration extends AbstractPersistent {
     this.defaultVisibility = defaultVisibility;
   }
   
-  public String getDefaultKernelId( ) {
-    return this.defaultKernelId;
-  }
-  
-  public void setDefaultKernelId( String defaultKernelId ) {
-    this.defaultKernelId = defaultKernelId;
-  }
-  
-  public String getDefaultRamdiskId( ) {
-    return this.defaultRamdiskId;
-  }
-  
-  public void setDefaultRamdiskId( String defaultRamdiskId ) {
-    this.defaultRamdiskId = defaultRamdiskId;
-  }
-
   public String getCleanupPeriod() {
     return cleanupPeriod;
   }

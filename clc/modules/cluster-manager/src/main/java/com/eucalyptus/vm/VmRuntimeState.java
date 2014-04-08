@@ -687,9 +687,21 @@ public class VmRuntimeState {
         this.getBundleTask( ).setState( state );
         bundleRestartInstance( this.getBundleTask( ) );
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
+        try{
+          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
+              this.getBundleTask().getBucket(), true);
+        }catch(final Exception ex){
+          LOG.error("After bundle failure, failed to delete the bucket", ex);
+        }
         this.getBundleTask( ).setState( state );
         bundleRestartInstance( this.getBundleTask( ) );
       } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current ) ) {
+        try{
+          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
+              this.getBundleTask().getBucket(), true);
+        }catch(final Exception ex){
+          LOG.error("After bundle cancellation, failed to delete the bucket", ex);
+        }
         this.getBundleTask( ).setState( state );
         bundleRestartInstance( this.getBundleTask( ) );
       } else if ( BundleState.canceling.equals( state ) || BundleState.canceling.equals( current ) ) {

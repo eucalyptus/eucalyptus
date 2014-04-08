@@ -101,15 +101,15 @@ public class LoadBalancers {
 	
 	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
-		final LoadBalancer lb= LoadBalancers.getLoadbalancer(ctx.getAccount().getName(), lbName);
+		final LoadBalancer lb= LoadBalancers.getLoadbalancer(ctx.getAccount().getAccountNumber(), lbName);
 		return lb;
 	}
 	
-	private static LoadBalancer getLoadbalancer(final String accountName, final String lbName){
+	private static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 LoadBalancer lb = null;
 		 try {
-			 lb = Entities.uniqueResult( LoadBalancer.namedByAccount(accountName, lbName)); 
+			 lb = Entities.uniqueResult( LoadBalancer.namedByAccountId(accountNumber, lbName)); 
 			 db.commit();
 			 return lb;
 		 }catch(NoSuchElementException ex){
@@ -182,7 +182,7 @@ public class LoadBalancers {
 		 final EntityTransaction db = Entities.get( LoadBalancer.class );
 		 try {
 		        try {
-		        	if(Entities.uniqueResult( LoadBalancer.namedByAccount( user.getAccountName(), lbName )) != null)
+		        	if(Entities.uniqueResult( LoadBalancer.namedByAccountId( user.getAccountNumber(), lbName )) != null)
 		        		throw new DuplicateAccessPointName();
 		        } catch ( NoSuchElementException e ) {
 		        	final LoadBalancer lb = LoadBalancer.newInstance(user, lbName);

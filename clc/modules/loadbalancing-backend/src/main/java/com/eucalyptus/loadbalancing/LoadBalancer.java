@@ -116,7 +116,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	static LoadBalancer newInstance(final OwnerFullName userFullName, final String lbName){
 		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
 		if(userFullName!=null)
-			instance.setOwnerAccountName(userFullName.getAccountName());
+			instance.setOwnerAccountNumber(userFullName.getAccountNumber());
 		return instance;
 	}
 	
@@ -126,15 +126,15 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	}
 	
 	public static LoadBalancer named(final OwnerFullName userFullName, final String lbName){
-		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
+		final LoadBalancer instance= new LoadBalancer(null, lbName);
 		if(userFullName!=null)
-			instance.setOwnerAccountName(userFullName.getAccountName());
+			instance.setOwnerAccountNumber(userFullName.getAccountNumber());
 		return instance;
 	}
 	
-	public static LoadBalancer namedByAccount(final String accountName, final String lbName){
+	public static LoadBalancer namedByAccountId(final String accountId, final String lbName){
 		final LoadBalancer instance = new LoadBalancer(null, lbName);
-		instance.setOwnerAccountName(accountName);
+		instance.setOwnerAccountNumber(accountId);
 		return instance;
 	}
 	

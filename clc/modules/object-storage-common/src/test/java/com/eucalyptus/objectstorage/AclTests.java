@@ -3,6 +3,7 @@ package com.eucalyptus.objectstorage;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import com.eucalyptus.auth.Accounts;
@@ -21,7 +22,6 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.Permission;
-import com.google.gwt.dev.util.collect.HashMap;
 
 public class AclTests {
 	public static Grant PUBLIC_READ_GRANT = null;

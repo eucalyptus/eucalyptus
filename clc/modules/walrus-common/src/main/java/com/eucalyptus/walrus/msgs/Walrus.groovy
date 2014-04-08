@@ -91,6 +91,7 @@ import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Principals;
 
+@ComponentMessage(WalrusBackend.class)
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	HttpResponseStatus status;
@@ -108,6 +109,7 @@ public class WalrusResponseType extends BaseMessage {
 	}
 }
 
+@ComponentMessage(WalrusBackend.class)
 public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
 	def WalrusStreamingResponseType() {

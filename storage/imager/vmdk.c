@@ -1000,8 +1000,8 @@ int vmdk_convert_local(const char *disk_path, const char *vmdk_path, boolean ove
     // sometimes ownership changes to 'root' as a result of operations that we perform.
     // Here we try to ensure we can open the file by forcing the ownership right before use.
     // This is a conservative measure, in case sleep(1) in vbr.c is not long enough.
-    if (diskutil_ch(disk_path, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
-        LOGINFO("failed to change user for '%s' to '%s'\n", disk_path, EUCALYPTUS_ADMIN);
+    if (diskutil_ch(disk_path, get_username(), NULL, 0) != EUCA_OK) {
+        LOGINFO("failed to change user for '%s' to '%s'\n", disk_path, get_username());
         return ret;
     }
 

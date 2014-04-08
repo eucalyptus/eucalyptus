@@ -188,11 +188,6 @@ public class BindingHandler extends MessageStackHandler {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( msg.getHttpStatus( ) );
         }
       } else {
-        Class targetClass = httpMessage.getMessage( ).getClass( );
-        while ( !targetClass.getSimpleName( ).endsWith( "Type" ) ) {
-          targetClass = targetClass.getSuperclass( );
-        }
-        Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( targetClass.getName( ) );
         try {
           omElem = this.binding.toOM( httpMessage.getMessage( ), this.namespace );
         } catch ( BindingException ex ) {

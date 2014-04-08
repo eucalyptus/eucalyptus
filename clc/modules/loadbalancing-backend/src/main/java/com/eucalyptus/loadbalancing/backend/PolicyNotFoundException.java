@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
@@ -28,6 +29,6 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 @QueryBindingInfo( statusCode = 400 )
 public class PolicyNotFoundException extends LoadBalancingException {
   public PolicyNotFoundException(){
-    super("One or more specified policies were not found.");
+    super("PolicyNotFound", Role.Sender, "One or more specified policies were not found.");
   }
 }

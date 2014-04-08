@@ -635,9 +635,15 @@ public class Images {
     		  ImageMetadata.State.failed.equals( img.getState())) {
         Entities.delete( img );
       } else {
-        if( img instanceof MachineImageInfo)
-          img.setState(ImageMetadata.State.deregistered_cleanup);
-        else
+        if( img instanceof MachineImageInfo){
+          final String runManifestLocation = ((MachineImageInfo)img).getRunManifestLocation();
+          final String manifestLocation = ((MachineImageInfo)img).getManifestLocation();
+          // cleanup system generated buckets if exist
+          if(!manifestLocation.equals(runManifestLocation))
+            img.setState(ImageMetadata.State.deregistered_cleanup);
+          else
+            img.setState( ImageMetadata.State.deregistered );
+        } else
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
@@ -966,6 +972,7 @@ public class Images {
 			  ret.setSnapshotId(snap.getDisplayName());
 			  ret.setDeleteOnTerminate(targetDeleteOnTermination);
 			  ret.setImageSizeBytes(imageSizeBytes);
+			  ret.setRootDeviceName(rootDeviceName);
 			  ret.setState( ImageMetadata.State.available );
 			  Entities.persist(ret);
 			  tx.commit( );
@@ -1041,15 +1048,9 @@ public class Images {
     eki = ( eki != null )
       ? eki
       : manifest.getKernelId( );
-    eki = ( eki != null )
-      ? eki
-      : ImageConfiguration.getInstance( ).getDefaultKernelId( );
     eri = ( eri != null )
       ? eri
       : manifest.getRamdiskId( );
-    eri = ( eri != null )
-      ? eri
-      : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
@@ -1106,7 +1107,6 @@ public class Images {
 // imageInfo.addProductCode( p );
 // }
 // imageInfo.grantPermission( ctx.getAccount( ) );
-    maybeUpdateDefault( ret );
     LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
     if ( ret instanceof ImageMetadata.StaticDiskImage && ret.getRunManifestLocation()!=null) {
       StaticDiskImages.prepare( ret.getRunManifestLocation( ) );
@@ -1114,45 +1114,10 @@ public class Images {
     return ret;
   }
   
-  
-  private static void maybeUpdateDefault( PutGetImageInfo ret ) {
-    final String id = ret.getDisplayName();
-    if ( ImageMetadata.Type.kernel.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultKernelId( ) == null ) {
-      try {
-        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
-          @Override
-          public void fire( ImageConfiguration t ) {
-            t.setDefaultKernelId( id );
-          }
-        } );
-      } catch ( ExecutionException ex ) {
-        LOG.error( ex, ex );
-      }
-    } else if ( ImageMetadata.Type.ramdisk.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) == null ) {
-      try {
-        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
-          @Override
-          public void fire( ImageConfiguration t ) {
-            t.setDefaultRamdiskId( id );
-          }
-        } );
-      } catch ( ExecutionException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-  }
-  
   public static ImageConfiguration configuration( ) {
     return ImageConfiguration.getInstance( );
   }
   
-  public static String lookupDefaultKernelId( ) {
-    return ImageConfiguration.getInstance( ).getDefaultKernelId( );
-  }
-  
-  public static String lookupDefaultRamdiskId( ) {
-    return ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
-  }
 
   public static void setConversionTaskId(final String imageId, final String taskId){
     try ( final TransactionResource db =

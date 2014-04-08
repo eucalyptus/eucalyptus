@@ -1067,7 +1067,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
             char entry_path[BLOBSTORE_MAX_PATH];
             snprintf(entry_path, sizeof(entry_path), "%s/%s", path, entry_name);
 
-            if (diskutil_ch(entry_path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
+            if (diskutil_ch(entry_path, get_username(), NULL, BACKING_FILE_PERM)) {
                 LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
             }
         }

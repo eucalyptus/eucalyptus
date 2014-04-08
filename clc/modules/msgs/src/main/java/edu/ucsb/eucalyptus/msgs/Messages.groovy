@@ -184,6 +184,7 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
   }
 }
 
+@ComponentMessage(Eucalyptus.class)
 public class ExceptionResponseType extends BaseMessage {
   String source = "not available";
   String message = "not available";
@@ -712,10 +713,18 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 
+@ComponentMessage(Eucalyptus.class) // not strictly correct as this is used for other components also
 public class ErrorResponse extends BaseMessage {
   String requestId
-  public ErrorResponse() {
+  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>( )
+
+  ErrorResponse( ) {
+    set_return( false )
   }
-  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>()
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 

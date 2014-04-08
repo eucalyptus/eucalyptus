@@ -24,8 +24,8 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   NO_VALUE {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = ((jsonNode == null)
-        || (
+      boolean match = ((jsonNode != null)
+        && (
         jsonNode.isObject() && jsonNode.size() == 1 && jsonNode.has(FunctionEvaluation.REF_STR) && jsonNode.get(FunctionEvaluation.REF_STR) != null
           && jsonNode.get(FunctionEvaluation.REF_STR).isTextual() && FunctionEvaluation.AWS_NO_VALUE.equals(jsonNode.get(FunctionEvaluation.REF_STR).textValue())
       ));
@@ -636,8 +636,8 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
       // Something that starts with Fn:  (any existing functions will already have been evaluated)
-      boolean match = ((jsonNode == null)
-        || (
+      boolean match = ((jsonNode != null)
+        && (
         jsonNode.isObject() && jsonNode.size() == 1 && jsonNode.fieldNames().next().startsWith("Fn:")
       ));
       return new MatchResult(match, jsonNode, this);

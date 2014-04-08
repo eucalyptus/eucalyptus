@@ -2048,6 +2048,19 @@ int euca_execlp(int *pStatus, const char *file, ...)
     return (EUCA_TIMEOUT_ERROR);
 }
 
+//!
+//! Returns username of the real user ID of the calling process
+//!
+//! @return on success, a pointer to a string (in static memory, 
+//!         no need to free it) or NULL on failure
+//!
+char *get_username(void)
+{
+    struct passwd *passwd = getpwuid(getuid());
+    assert(passwd!=NULL);
+    return passwd->pw_name;
+}
+
 #ifdef _UNIT_TEST
 //!
 //! Main entry point of the application
