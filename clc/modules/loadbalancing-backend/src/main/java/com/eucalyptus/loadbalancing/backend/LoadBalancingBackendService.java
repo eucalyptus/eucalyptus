@@ -637,7 +637,7 @@ public class LoadBalancingBackendService {
   public DescribeLoadBalancersResponseType describeLoadBalancers(DescribeLoadBalancersType request) throws EucalyptusCloudException {
     DescribeLoadBalancersResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final String accountName = ctx.getAccount().getName();
+    final String accountNumber = ctx.getAccount().getAccountNumber();
     final Set<String> requestedNames = Sets.newHashSet( );
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
@@ -655,7 +655,7 @@ public class LoadBalancingBackendService {
 
             final LoadBalancer example = showAll ?
                 LoadBalancer.named( null, null ) :
-                LoadBalancer.namedByAccount( accountName , null );
+                LoadBalancer.namedByAccountId( accountNumber , null );
             final List<LoadBalancer> lbs = Entities.query( example, true);
             return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
           }
