@@ -156,7 +156,7 @@ class Euca2ools(object):
         if (args.secret_key != None):
             op_args.extend(['--secret-key', args.secret_key])
         if (args.upload_policy != None):
-            op_args.extend(['--upload-policy', args.upload_policy])
+            op_args.extend(['--upload-policy', args.upload_policy.decode('base64', 'strict')])
         if (args.upload_policy_signature != None):
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
