@@ -55,6 +55,7 @@ class ComputeMessage extends BaseMessage implements Cloneable, Serializable {
   }
 }
 
+@ComponentMessage(Compute.class)
 public class ExceptionResponseType extends BaseMessage {
   String source = "not available";
   String message = "not available";
