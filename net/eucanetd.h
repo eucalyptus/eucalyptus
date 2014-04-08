@@ -176,7 +176,6 @@ int parse_ccpubprivmap(char *cc_configfile);
 int update_private_ips(void);
 int update_public_ips(void);
 int update_sec_groups(void);
-int update_metadata_redirect(void);
 int update_isolation_rules(void);
 
 int flush_all(void);
