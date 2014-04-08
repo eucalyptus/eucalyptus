@@ -208,38 +208,48 @@ public class SnapshotManager {
           throw Exceptions.toUndeclared( new EucalyptusCloudException( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted" ) );
         } else {
           fireUsageEvent(snap, SnapShotEvent.forSnapShotDelete());
-          
-          final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
-          try {
-            DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
-            if ( scReply.get_return( ) ) {
-              final String snapshotId = snap.getDisplayName( );
-              Callable<Boolean> deleteBroadcast = new Callable<Boolean>( ) {
-                public Boolean call( ) {
-                  final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snapshotId );
-                  return Iterables.all( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>( ) {
-                    
-                    @Override
-                    public boolean apply( ServiceConfiguration arg0 ) {
-                      if ( !arg0.getPartition( ).equals( sc.getPartition( ) ) ) {
-                        try {
-                          AsyncRequests.sendSync( arg0, deleteMsg );
-                        } catch ( Exception ex ) {
-                          LOG.error( ex );
-                          Logs.extreme( ).error( ex, ex );
-                        }
-                      }
-                      return true;
+          final String partition = snap.getPartition();
+          final String snapshotId = snap.getDisplayName( );
+          Callable<Boolean> deleteBroadcast = new Callable<Boolean>( ) {
+            public Boolean call( ) {
+              final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snapshotId );
+              return Iterables.all( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>( ) {
+                
+                @Override
+                public boolean apply( ServiceConfiguration arg0 ) {
+                  if ( !arg0.getPartition( ).equals( partition ) ) {
+                    try {
+                      AsyncRequests.sendSync( arg0, deleteMsg );
+                    } catch ( Exception ex ) {
+                      LOG.error( ex );
+                      Logs.extreme( ).error( ex, ex );
                     }
-                  } );
+                  }
+                  return true;
                 }
-              };
-              Threads.enqueue( Eucalyptus.class, Snapshots.class, deleteBroadcast );
-            } else {
-              throw Exceptions.toUndeclared( new EucalyptusCloudException( "Unable to delete snapshot: " + snap ) );
+              } );
             }
-          } catch ( Exception ex1 ) {
-            throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
+          };
+          
+          ServiceConfiguration sc = null;
+          try{
+            sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
+          }catch(final Exception ex){
+            sc= null;
+          }
+          if(sc!=null){
+            try {
+              DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+              if ( scReply.get_return( ) ) {
+                Threads.enqueue( Eucalyptus.class, Snapshots.class, deleteBroadcast );
+              } else {
+                throw Exceptions.toUndeclared( new EucalyptusCloudException( "Unable to delete snapshot: " + snap ) );
+              }
+            } catch ( Exception ex1 ) {
+              throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
+            }
+          }else{
+            Threads.enqueue( Eucalyptus.class, Snapshots.class, deleteBroadcast );
           }
           return true;
         }
