@@ -27,6 +27,7 @@ import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.Stack;
 import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.cloudformation.Tags;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
@@ -47,7 +48,7 @@ import java.util.List;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(StackEntity stackEntity) throws Exception {
+  public static void addStack(StackEntity stackEntity) throws ValidationErrorException {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -56,7 +57,7 @@ public class StackEntityManager {
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
-        throw new Exception("Stack already exists");
+        throw new ValidationErrorException("Stack already exists");
       }
       if (stackEntity.getCreateOperationTimestamp() == null) {
         stackEntity.setCreateOperationTimestamp(new Date());
@@ -72,12 +73,16 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("accountId", accountId));
+      if (stackNameOrId != null) {
         // stack name or id can be stack name on non-deleted stacks or stack id on any stack
-        .add(Restrictions.or(
+        criteria.add(Restrictions.or(
           Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
           Restrictions.eq("stackId", stackNameOrId))
         );
+      } else {
+        criteria.add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      }
       returnValue = criteria.list();
       db.commit( );
     }
