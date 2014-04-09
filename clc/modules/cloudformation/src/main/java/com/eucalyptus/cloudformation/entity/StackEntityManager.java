@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.cloudformation.AlreadyExistsException;
 import com.eucalyptus.cloudformation.Output;
 import com.eucalyptus.cloudformation.Outputs;
 import com.eucalyptus.cloudformation.Parameter;
@@ -48,7 +49,7 @@ import java.util.List;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(StackEntity stackEntity) throws ValidationErrorException {
+  public static void addStack(StackEntity stackEntity) throws AlreadyExistsException {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -57,7 +58,7 @@ public class StackEntityManager {
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
-        throw new ValidationErrorException("Stack already exists");
+        throw new AlreadyExistsException("Stack already exists");
       }
       if (stackEntity.getCreateOperationTimestamp() == null) {
         stackEntity.setCreateOperationTimestamp(new Date());
