@@ -211,8 +211,10 @@ public interface ObjectMetadataManager {
      * @throws Exception
      */
     public List<ObjectEntity> lookupFailedObjects() throws Exception;
-	
-	/**
+
+    public List<ObjectEntity> lookupObjectsForReaping(Bucket bucket, String objectKeyPrefix, Date age);
+
+    /**
 	 * Fix an object history if needed. Scans the sorted object records and marks
 	 * latest as well as marking contiguous null-versioned records for deletion to
 	 * remove contiguous nulls in the version history

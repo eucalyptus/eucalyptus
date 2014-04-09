@@ -47,6 +47,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
@@ -121,6 +122,30 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             throw e;
         }
 	}
+
+    @Override
+    public List<ObjectEntity> lookupObjectsForReaping(Bucket bucket, String objectKeyPrefix, Date age) {
+        List<ObjectEntity> results;
+        try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
+            // setup example and criteria
+            ObjectEntity example = new ObjectEntity().withState(ObjectState.extant).withBucket(bucket);
+            Criteria search = Entities.createCriteria(ObjectEntity.class)
+                    .add(Example.create(example));
+            search.add( Restrictions.and(
+                    Restrictions.like("objectKey", objectKeyPrefix, MatchMode.START),
+                    Restrictions.lt("creationTimestamp", age)
+            ));
+            search = getSearchByBucket(search, bucket);
+            results = search.list();
+            tran.commit();
+        }
+        catch (Exception ex) {
+            LOG.error("exception caught while retrieving objects prefix with " + objectKeyPrefix +
+                    " from bucket " + bucket.getBucketName() + ", error message - " + ex.getMessage());
+            return Collections.EMPTY_LIST;
+        }
+        return results;
+    }
 
     /**
      * Provides the search criteria to handle the FK relation from ObjectEntity->Bucket

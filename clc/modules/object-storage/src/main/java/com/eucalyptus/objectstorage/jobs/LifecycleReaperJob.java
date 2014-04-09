@@ -66,6 +66,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.BucketLifecycleManagers;
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
@@ -190,26 +191,11 @@ public class LifecycleReaperJob implements InterruptableJob {
         queryCal.set(Calendar.SECOND, 0);
         queryCal.set(Calendar.MILLISECOND, 0);
 
-        List<ObjectEntity> results = null;
-        try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
-            // setup example and criteria
-            ObjectEntity example = new ObjectEntity();
-            example.withBucket(bucket);
-            Criterion criterion = Restrictions.and(
-                    Restrictions.like("objectKey", objPrefix, MatchMode.START),
-                    Restrictions.lt("creationTimestamp", queryCal.getTime()));
-
-            results = Entities.query(example, true, criterion, Collections.EMPTY_MAP);
-            tran.commit();
-        }
-        catch (Exception ex) {
-            LOG.error("exception caught while retrieving objects prefix with " + objPrefix +
-                    " from bucket " + bucket.getBucketName() + ", error message - " + ex.getMessage());
-            return Collections.EMPTY_LIST;
-        }
+        List<ObjectEntity> results = ObjectMetadataManagers.getInstance()
+                .lookupObjectsForReaping(bucket, objPrefix, queryCal.getTime());
 
         if (results == null || results.size() == 0) {
-            LOG.debug("there were no objects in bucket " + bucket.getBucketName() + " with prefix " + objPrefix);
+            LOG.debug("there were no objects in bucket " + bucket.getBucketName() + " with prefix " + objPrefix + " older than " + queryCal.toString());
             // no matches
             return Collections.EMPTY_LIST;
         }
@@ -237,23 +223,13 @@ public class LifecycleReaperJob implements InterruptableJob {
             if (objectKeys != null && objectKeys.size() > 0) {
                 for (int idx = 0; !interrupted && idx < objectKeys.size(); idx++) {
                     String objectKey = objectKeys.get(idx);
-
-                    // versioning and lifecycle cannot coexist, so there should only be one record per bucket/key
-                    try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
-                        ObjectEntity objectInfo = new ObjectEntity();
-                        objectInfo.withBucket(bucket);
-                        objectInfo.setObjectKey(objectKey);
-                        List<ObjectEntity> results = Entities.query(objectInfo);
-                        if (results == null || results.size() < 1) {
+                    try  {
+                        ObjectEntity objectEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, objectKey, null);
+                        if (objectEntity == null) {
                             LOG.debug("failed to process object " + objectKey + " in bucket " +
                                     bucket.getBucketName() + " because it was not found in the database");
                         }
-                        else {
-                            for (ObjectEntity obj : results) {
-                                handle(obj);
-                            }
-                        }
-                        tran.commit();
+                        handle(objectEntity);
                     }
                     catch (Exception ex) {
                         LOG.error("failed to process object " + objectKey + " in bucket " + bucket.getBucketName() +
@@ -279,8 +255,7 @@ public class LifecycleReaperJob implements InterruptableJob {
         ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
-                retrieved.setState(ObjectState.deleting);
-                Entities.merge(retrieved);
+                ObjectMetadataManagers.getInstance().transitionObjectToState(retrieved, ObjectState.deleting);
                 if (interrupted) {
                     this.interrupt();
                 }
@@ -301,8 +276,7 @@ public class LifecycleReaperJob implements InterruptableJob {
         ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
-                retrieved.setState(ObjectState.deleting);
-                Entities.merge(retrieved);
+                ObjectMetadataManagers.getInstance().transitionObjectToState(retrieved, ObjectState.deleting);
                 if (interrupted) {
                     this.interrupt();
                 }
@@ -320,7 +294,7 @@ public class LifecycleReaperJob implements InterruptableJob {
             @Override
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?
-                Entities.merge(retrieved);
+
                 if (interrupted) {
                     this.interrupt();
                 }
@@ -341,7 +315,7 @@ public class LifecycleReaperJob implements InterruptableJob {
             @Override
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?
-                Entities.merge(retrieved);
+
                 if (interrupted) {
                     this.interrupt();
                 }
