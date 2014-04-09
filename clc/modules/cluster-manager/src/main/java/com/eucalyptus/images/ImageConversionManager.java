@@ -189,42 +189,51 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
     
     for(final ImageInfo image: images){
-      if(!(image instanceof MachineImageInfo))
-        continue;
-      final MachineImageInfo machineImage = (MachineImageInfo) image;
-      
-      final String manifestLocation = machineImage.getManifestLocation();
-      final String[] tokens = manifestLocation.split("/");
-      final String bucketName = tokens[0];
-      final String prefix = tokens[1].replace(".manifest.xml", "");
-      
-      String newBucket = null;
-      do{
-        newBucket = String.format("%s-%s-%s", 
-            BUCKET_PREFIX, Crypto.generateAlphanumericId(5, ""), bucketName);
-        if(newBucket.length()>63){
-          newBucket = String.format("%s-%s", BUCKET_PREFIX, Crypto.generateAlphanumericId(8, ""));
-        }
-        newBucket = newBucket.toLowerCase();
-      }while (systemBuckets.contains(newBucket));
-      
       try{
-        final CreateBucketTask task = new CreateBucketTask(newBucket);
-        final CheckedListenableFuture<Boolean> result = task.dispatch();
-        if(result.get()){
+        if(!(image instanceof MachineImageInfo))
+          continue;
+        final MachineImageInfo machineImage = (MachineImageInfo) image;
+
+        final String manifestLocation = machineImage.getManifestLocation();
+        final String[] tokens = manifestLocation.split("/");
+        final String bucketName = tokens[0];
+        final String prefix = tokens[1].replace(".manifest.xml", "");
+
+        String newBucket = null;
+        do{
+          newBucket = String.format("%s-%s-%s", 
+              BUCKET_PREFIX, Crypto.generateAlphanumericId(5, ""), bucketName);
+          if(newBucket.length()>63){
+            newBucket = String.format("%s-%s", BUCKET_PREFIX, Crypto.generateAlphanumericId(8, ""));
+          }
+          newBucket = newBucket.toLowerCase();
+        }while (systemBuckets.contains(newBucket));
+
+        try{
+          final CreateBucketTask task = new CreateBucketTask(newBucket);
+          final CheckedListenableFuture<Boolean> result = task.dispatch();
+          if(result.get()){
+            ;
+          }
+        }catch(final Exception ex){
+          throw new Exception("Failed to create a system-owned bucket for converted image", ex);
+        }
+
+        // set run manifest path
+        final String runManifestPath = String.format("%s/%s.manifest.xml", newBucket, prefix);
+        try{
+          machineImage.setRunManifestLocation(runManifestPath);
+          Images.setRunManifestLocation(machineImage.getDisplayName(), runManifestPath);
+        }catch(final Exception ex){
+          throw new Exception("Failed to update run manifest location");
+        }
+      }catch(final Exception ex){
+        try{
+          Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+        }catch(final Exception ex2){
           ;
         }
-      }catch(final Exception ex){
-        throw new Exception("Failed to create a system-owned bucket for converted image", ex);
-      }
-      
-      // set run manifest path
-      final String runManifestPath = String.format("%s/%s.manifest.xml", newBucket, prefix);
-      try{
-        machineImage.setRunManifestLocation(runManifestPath);
-        Images.setRunManifestLocation(machineImage.getDisplayName(), runManifestPath);
-      }catch(final Exception ex){
-        throw new Exception("Failed to update run manifest location");
+        throw ex;
       }
     }
   }
@@ -305,7 +314,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
        final String kernelId = machineImage.getKernelId();
        final String ramdiskId = machineImage.getRamdiskId();
        if(kernelId==null || ramdiskId ==null)
-         continue;
+         throw new Exception("Kernel and ramdisk are not found for the image");
        
        final KernelImageInfo kernel = Images.lookupKernel(kernelId);
        final RamdiskImageInfo ramdisk = Images.lookupRamdisk(ramdiskId);

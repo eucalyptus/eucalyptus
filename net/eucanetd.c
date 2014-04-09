@@ -355,18 +355,9 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-        // now, preform any updates that are required
-        if (update_globalnet) {
-            LOGINFO("new networking state (CLC IP metadata service): updating system\n");
-            // update metadata redirect rule
-            rc = update_metadata_redirect();
-            if (rc) {
-                LOGERROR("could not update metadata redirect rules: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
-            }
-        }
+
+        // now, perform any updates that are required
+
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM security groups): updating system\n");
@@ -744,49 +735,6 @@ int update_isolation_rules(void)
 }
 
 //!
-//! handle 169.254.169.254 AWS metadata redirect to the CLC
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int update_metadata_redirect(void)
-{
-    int ret = 0, rc;
-    char rule[1024];
-    char *strptra = NULL;
-
-    LOGDEBUG("updating metadata redirect rules\n");
-
-    if (!globalnetworkinfo->enabledCLCIp) {
-        LOGWARN("no valid CLC IP has been set yet, skipping metadata redirect update\n");
-        return (1);
-    }
-
-    if (ipt_handler_repopulate(config->ipt))
-        return (1);
-
-    strptra = hex2dot(globalnetworkinfo->enabledCLCIp);
-    snprintf(rule, 1024, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
-    rc = ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", rule);
-    EUCA_FREE(strptra);
-
-    rc = ipt_handler_deploy(config->ipt);
-    if (rc) {
-        LOGERROR("could not apply metadata redirect rule '%s': check above log errors for details\n", rule);
-        ret = 1;
-    }
-
-    return (ret);
-}
-
-//!
 //! initialize eucanetd config
 //!
 //! @return
@@ -877,10 +825,14 @@ int update_sec_groups(void)
         return (1);
     }
     // make sure euca chains are in place
+    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_PREUSERHOOK", "-", "[0:0]");
     rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD", "-", "[0:0]");
+    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_POSTUSERHOOK", "-", "[0:0]");
     rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_IN", "-", "[0:0]");
     rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_OUT", "-", "[0:0]");
+    rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
     rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
+    rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
 
     // clear all chains that we're about to (re)populate with latest network metadata
     rc = ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
@@ -932,7 +884,7 @@ int update_sec_groups(void)
 
             strptra = hex2dot(mycluster->private_subnet.gateway);
             ips_set_add_ip(config->ips, chainname, strptra);
-            ips_set_add_ip(config->ips, "EUCA_ALLPRIVATE", strptra);
+            ips_set_add_ip(config->ips, "EUCA_ALLNONEUCA", strptra);
             EUCA_FREE(strptra);
 
             rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
@@ -1059,13 +1011,25 @@ int update_public_ips(void)
 
     // install EL IP addrs and NAT rules
     rc = ipt_handler_repopulate(config->ipt);
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE_PREUSERHOOK", "-", "[0:0]");
     ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE", "-", "[0:0]");
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE_POSTUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST_PREUSERHOOK", "-", "[0:0]");
     ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST", "-", "[0:0]");
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST_POSTUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT_PREUSERHOOK", "-", "[0:0]");
     ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT", "-", "[0:0]");
+    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT_POSTUSERHOOK", "-", "[0:0]");
 
+    ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
     ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+    ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
+    ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
     ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+    ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
+    ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
     ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
+    ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
 
     //  rc = ipt_handler_print(config->ipt);
     rc = ipt_handler_deploy(config->ipt);
@@ -1084,7 +1048,9 @@ int update_public_ips(void)
     //    strptra = hex2dot(vnetconfig->networks[0].nw);
     strptra = hex2dot(nw);
 
-    //    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
     ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
@@ -1138,6 +1104,12 @@ int update_public_ips(void)
         EUCA_FREE(strptrb);
     }
     EUCA_FREE(instances);
+
+    // lastly, install metadata redirect rule
+    strptra = hex2dot(globalnetworkinfo->enabledCLCIp);
+    snprintf(rule, 1024, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
+    rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    EUCA_FREE(strptra);
 
     se_print(&cmds);
     rc = se_execute(&cmds);
@@ -1927,6 +1899,7 @@ int flush_all(void)
     rc = ebt_handler_repopulate(ebt);
     rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
     rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
+    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
     rc = ebt_handler_deploy(ebt);
 
     EUCA_FREE(ipt);
