@@ -830,16 +830,17 @@ public class Images {
       final UserFullName userFullName,
       final String imageName,
       final String imageDescription,
-            String eki,
-      final String eri,
+      final ImageMetadata.Platform platform,
+      String eki,
+      String eri,
       final String rootDeviceName, 
       final List<BlockDeviceMappingItemType> blockDeviceMappings 
   ) throws EucalyptusCloudException {
     final ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
-    ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
-    if ( ImageMetadata.Platform.windows.name( ).equals( eki ) ) {
-      imagePlatform = ImageMetadata.Platform.windows;
+    final ImageMetadata.Platform imagePlatform = platform;
+    if(ImageMetadata.Platform.windows.equals(imagePlatform)){
       eki = null;
+      eri = null;
     }
     // Block device mappings have been verified before control gets here. 
     // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
@@ -995,11 +996,12 @@ public class Images {
                                                 String imageDescription,
                                                 ImageMetadata.Architecture requestArch,
                                                 ImageMetadata.VirtualizationType virtType,
+                                                ImageMetadata.Platform platform,
                                                 ImageMetadata.ImageFormat imgFormat,
                                                 String eki,
                                                 String eri,
                                                 ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, imgFormat, eki, eri, manifest );
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, platform, imgFormat, eki, eri, manifest );
     ret.setState( ImageMetadata.State.available );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
@@ -1010,11 +1012,12 @@ public class Images {
                                                      String imageDescription,
                                                      ImageMetadata.Architecture requestArch,
                                                      ImageMetadata.VirtualizationType virtType,
+                                                     ImageMetadata.Platform platform,
                                                      ImageMetadata.ImageFormat imgFormat,
                                                      String eki,
                                                      String eri,
                                                      ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, imgFormat, eki, eri, manifest );
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, platform, imgFormat, eki, eri, manifest );
     ret.setState( ImageMetadata.State.pending_conversion );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
@@ -1037,6 +1040,7 @@ public class Images {
                                                       String imageDescription,
                                                       ImageMetadata.Architecture requestArch,
                                                       ImageMetadata.VirtualizationType virtType, 
+                                                      ImageMetadata.Platform platform,
                                                       ImageMetadata.ImageFormat format,
                                                       String eki,
                                                       String eri,
@@ -1054,7 +1058,7 @@ public class Images {
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
-    ImageMetadata.Platform imagePlatform = manifest.getPlatform( );    
+    final ImageMetadata.Platform imagePlatform = platform;    
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.kernel.getTypePrefix() ),

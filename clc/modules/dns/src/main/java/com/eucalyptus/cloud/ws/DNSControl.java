@@ -78,11 +78,18 @@ import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.*;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -187,6 +194,29 @@ public class DNSControl {
 			throw ex;
 		}
 	}
+	
+	public static class DnsPopulateTimer implements EventListener<ClockTick> {
+	  public static void register( ) {
+	      Listeners.register( ClockTick.class, new DnsPopulateTimer() );
+	  }
+	  private static int EventCounter = 0;
+	  @Override
+	  public void fireEvent(ClockTick event) {
+	    if (!( Bootstrap.isFinished() &&
+	         Topology.isEnabledLocally(Eucalyptus.class) && 
+	             Topology.isEnabled(Dns.class) ) )
+	       return;
+	    
+	    if(EventCounter++ >= 3){
+	      try{
+	        populateRecords();
+	      }catch(final Exception ex){
+	        LOG.error("Failed to populate DNS records");
+	      }
+	      EventCounter = 0;
+	    }
+	  }
+	}
 
 	public static void populateRecords() {
 		DNSProperties.update();
@@ -231,7 +261,7 @@ public class DNSControl {
 					}
 				}
 			}
-			LOG.info(String.format("%d DNS records populated from database", count));
+			LOG.debug(String.format("%d DNS records populated from database", count));
 			db2.commit();
 		}catch(Exception ex){
 			db2.rollback();
