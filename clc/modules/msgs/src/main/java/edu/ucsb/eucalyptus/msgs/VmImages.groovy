@@ -245,7 +245,8 @@ public class RegisterImageType extends VmImageMessage {
   String kernelId;
   String ramdiskId;
   String rootDeviceName;
-  String virtualizationType
+  String virtualizationType;
+  String platform;
   @HttpParameterMapping (parameter = "BlockDeviceMapping")
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();

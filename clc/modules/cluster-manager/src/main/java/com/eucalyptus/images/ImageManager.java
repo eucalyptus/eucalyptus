@@ -226,7 +226,8 @@ public class ImageManager {
     	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
     	
-      ImageMetadata.Platform imagePlatform = manifest.getPlatform( ); 
+      final ImageMetadata.Platform imagePlatform = request.getPlatform()!=null ? ImageMetadata.Platform.valueOf(request.getPlatform())
+          : manifest.getPlatform( ); 
       if(ImageMetadata.Platform.windows.equals(imagePlatform))
         virtType = ImageMetadata.VirtualizationType.hvm;
       final ImageMetadata.VirtualizationType virtualizationType = virtType;
@@ -260,10 +261,10 @@ public class ImageManager {
     			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
     			      ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType))
               return Images.createPendingConversionFromManifest( ctx.getUserFullName( ), request.getName( ), 
-                  request.getDescription( ), arch, virtualizationType, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
+                  request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
     			  else
     			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
-    			        request.getDescription( ), arch, virtualizationType, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
+    			        request.getDescription( ), arch, virtualizationType, imagePlatform, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
     			} catch ( Exception ex ) {
     				LOG.error( ex );
     				Logs.extreme( ).error( ex, ex );
@@ -277,14 +278,20 @@ public class ImageManager {
     	Supplier<ImageInfo> allocator = null;
     	// Verify all the device mappings first. Dont fuss if both snapshot id and volume size are left blank
     	bdmBfebsImageVerifier( ).apply( request );
-
+    	ImageMetadata.Platform platform = ImageMetadata.Platform.linux; 
+    	if (request.getPlatform()!=null)
+    	  platform = ImageMetadata.Platform.valueOf(request.getPlatform());
+    	else if (ImageMetadata.Platform.windows.name( ).equals( eki ))
+    	  platform = ImageMetadata.Platform.windows;
+    	final ImageMetadata.Platform imagePlatform = platform;
+    	
     	allocator = new Supplier<ImageInfo>( ) {
 
     		@Override
     		public ImageInfo get( ) {
     			try {
     				return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
-    						request.getDescription( ), eki, eri, rootDevName,
+    						request.getDescription( ), imagePlatform, eki, eri, rootDevName,
     						request.getBlockDeviceMappings( ) );
     			} catch ( EucalyptusCloudException ex ) {
     				throw new RuntimeException( ex );
