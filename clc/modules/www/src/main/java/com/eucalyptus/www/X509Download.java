@@ -73,6 +73,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.eucalyptus.cloudformation.CloudFormation;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.log4j.Logger;
@@ -272,6 +273,11 @@ public class X509Download extends HttpServlet {
         sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
       } else {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
+      }
+      if ( Topology.isEnabled( CloudFormation.class ) ) {
+        sb.append( "\nexport AWS_CLOUDFORMATION_URL=" + ServiceUris.remotePublicify( CloudFormation.class ) );
+      } else {
+//        sb.append( "\necho WARN:  Cloud Formation service URL is not configured. >&2" );
       }
       if ( Topology.isEnabled( CloudWatch.class ) ) {
         sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
