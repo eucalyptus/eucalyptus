@@ -485,7 +485,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                             parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
                             if (parts.length > 1) {
                                 prefixString = prefix + parts[0] + delimiter;
-                                if (!commonPrefixes.contains(prefixString)) {
+                                if (!prefixString.equals(keyMarker) && !commonPrefixes.contains(prefixString)) {
                                     if (resultKeyCount == maxUploads) {
                                         // This is a new record, so we know
                                         // we're truncating if this is true
@@ -642,7 +642,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 							parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
 							if (parts.length > 1) {
 								prefixString = prefix + parts[0] + delimiter;
-								if (!commonPrefixes.contains(prefixString)) {
+								if (!prefixString.equals(fromKeyMarker) && !commonPrefixes.contains(prefixString)) {
 									if (resultKeyCount == maxEntries) {
 										// This is a new record, so we know
 										// we're truncating if this is true
