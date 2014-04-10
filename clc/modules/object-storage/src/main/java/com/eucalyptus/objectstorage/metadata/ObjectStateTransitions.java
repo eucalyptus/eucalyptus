@@ -78,13 +78,11 @@ public class ObjectStateTransitions {
                         throw new IllegalResourceStateException(extantBucket.getBucketUuid(), null, BucketState.extant.toString(), extantBucket.getState().toString());
                     }
                     //Update the bucket size.
-                    if(ObjectState.creating.equals(initializedObject.getLastState()) || ObjectState.mpu_pending.equals(initializedObject.getLastState())) {
-                        try {
-                            BucketMetadataManagers.getInstance().updateBucketSize(extantBucket, initializedObject.getSize());
-                        } catch (TransactionException e) {
-                            LOG.error("attempting to update bucket size during object creation lead to a transaction exception", e);
-                            throw new MetadataOperationFailureException(e);
-                        }
+                    try {
+                        BucketMetadataManagers.getInstance().updateBucketSize(extantBucket, initializedObject.getSize());
+                    } catch (TransactionException e) {
+                        LOG.error("attempting to update bucket size during object creation lead to a transaction exception", e);
+                        throw new MetadataOperationFailureException(e);
                     }
                     initializedObject.setBucket(extantBucket);
                     initializedObject.setState(ObjectState.creating);
