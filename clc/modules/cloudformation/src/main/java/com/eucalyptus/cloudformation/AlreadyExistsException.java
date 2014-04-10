@@ -30,6 +30,6 @@ public class AlreadyExistsException extends CloudFormationException {
   private static final long serialVersionUID = 1L;
 
   public AlreadyExistsException(final String message) {
-    super( "AlreadyExistsException", Role.Sender, message );
+    super( "AlreadyExists", Role.Sender, message );
   }
 }

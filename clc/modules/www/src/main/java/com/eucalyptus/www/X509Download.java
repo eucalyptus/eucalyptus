@@ -277,7 +277,7 @@ public class X509Download extends HttpServlet {
       if ( Topology.isEnabled( CloudFormation.class ) ) {
         sb.append( "\nexport AWS_CLOUDFORMATION_URL=" + ServiceUris.remotePublicify( CloudFormation.class ) );
       } else {
-        sb.append( "\necho WARN:  Cloud Formation service URL is not configured. >&2" );
+//        sb.append( "\necho WARN:  Cloud Formation service URL is not configured. >&2" );
       }
       if ( Topology.isEnabled( CloudWatch.class ) ) {
         sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
