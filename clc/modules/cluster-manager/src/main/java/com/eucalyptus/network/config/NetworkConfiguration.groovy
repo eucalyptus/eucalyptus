@@ -147,7 +147,6 @@ class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration>
   @Override
   void validate( final NetworkConfiguration configuration ) {
     require( configuration.&getPublicIps );
-    require( configuration.&getClusters );
     validate( configuration.&getInstanceDnsDomain, new DomainValidator(errors) )
     validateAll( configuration.&getInstanceDnsServers, new IPValidator(errors) )
     validate( configuration.&getMacPrefix, new RegexValidator( errors, MAC_PREFIX_PATTERN, 'Invalid MAC prefix "{0}": "{1}"' ) )
