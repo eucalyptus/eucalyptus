@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.Internets;
@@ -69,6 +71,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import org.apache.tools.ant.util.DateUtils;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -119,4 +123,42 @@ public class OSGUtil {
             operationPath = operationPath.substring(1);
         return operationPath.split("/");
     }
+
+    public static class ByteMatcherBeginningIndexFinder implements ChannelBufferIndexFinder {
+        private byte[] toMatch;
+
+        public ByteMatcherBeginningIndexFinder(byte[] bytesToFind) {
+            this.toMatch = bytesToFind;
+        }
+
+        @Override
+        public boolean find(ChannelBuffer channelBuffer, int i) {
+            channelBuffer.markReaderIndex();
+            try {
+                int matchedCount = 0;
+                //Check basic params, like length
+                if(i  + this.toMatch.length > channelBuffer.readableBytes()) {
+                    return false;
+                }
+
+                //Match byte for byte
+                for(int j = i ; j - i < this.toMatch.length; j++) {
+                    if(channelBuffer.getByte(j) != this.toMatch[j - i]) {
+                        return false;
+                    }
+                    matchedCount++;
+                }
+                return matchedCount == toMatch.length;
+            } catch(IndexOutOfBoundsException e) {
+                return false;
+            } finally {
+                channelBuffer.resetReaderIndex();
+            }
+        }
+    }
+
+    public static ChannelBuffer getTruncatedBuffer(ChannelBuffer source, byte[] toMatch) {
+        return null;
+    }
+
 }

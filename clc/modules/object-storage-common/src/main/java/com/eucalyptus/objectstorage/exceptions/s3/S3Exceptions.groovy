@@ -392,6 +392,12 @@ class InvalidPolicyDocumentException extends S3ClientException {
         this();
         this.resource = resource;
     }
+
+    def InvalidPolicyDocumentException(String resource, String detailMessage) {
+        this();
+        this.resource = resource;
+        this.message = this.message + " Detail: " + detailMessage
+    }
 }
 
 class InvalidRangeException extends S3ClientException {

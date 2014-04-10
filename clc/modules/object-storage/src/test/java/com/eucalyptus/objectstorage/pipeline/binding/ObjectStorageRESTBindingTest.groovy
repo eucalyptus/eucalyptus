@@ -34,7 +34,18 @@ public class ObjectStorageRESTBindingTest {
 
     @Test
     public void testGetOperation() throws Exception {
-        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding();
+        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
+
+            @Override
+            protected Map<String, String> populateOperationMap() {
+                return null
+            }
+
+            @Override
+            protected Map<String, String> populateUnsupportedOperationMap() {
+                return null
+            }
+        };
 
         MappingHttpRequest request;
 
@@ -46,7 +57,18 @@ public class ObjectStorageRESTBindingTest {
 
     @Test
     public void testGetOperationPath() throws Exception {
-        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding();
+        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
+
+            @Override
+            protected Map<String, String> populateOperationMap() {
+                return null
+            }
+
+            @Override
+            protected Map<String, String> populateUnsupportedOperationMap() {
+                return null
+            }
+        };
 
         MappingHttpRequest request;
 

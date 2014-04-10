@@ -94,7 +94,7 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 	private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
     private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage( );
 	private final UnrollableStage bind = new ObjectStoragePUTBindingStage( );
-	private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage( );
+    private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage( );
 	private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
 	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
 
@@ -103,10 +103,11 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 		if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
 			return true;
 		}
+
 		if (super.checkAccepts(message) && 
-				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
-				&& !("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))) {
-			return true;
+				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
+            String contentType = message.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            return contentType == null || !contentType.startsWith("multipart/form-data;");
 		}
 		return false;
 	}

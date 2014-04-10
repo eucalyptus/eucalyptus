@@ -77,10 +77,6 @@ public class ObjectStorageProperties {
     public static int IO_CHUNK_SIZE = 4096;
     public static boolean enableTorrents = false;
     public static final String NAMESPACE_VERSION = "2006-03-01";
-    public static final String CONTENT_LEN = "Content-Length";
-    public static final String CONTENT_TYPE = "Content-Type";
-    public static final String CONTENT_MD5 = "Content-MD5";
-    public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
     public static int MAX_KEYS = 1000;
 
     public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
@@ -132,7 +128,9 @@ public class ObjectStorageProperties {
     public static String TRACKER_PORT = "6969";
 
     public static long MAX_INLINE_DATA_SIZE = 10 * M;
-
+    public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
+    public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
+    public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
     public static long MPU_PART_MIN_SIZE = 5 * 1024 * 1024; //5MB
 
     //15 minutes

@@ -62,7 +62,6 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.ComponentIds;
@@ -79,7 +78,6 @@ import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingSecurityHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
-import com.eucalyptus.objectstorage.pipeline.UploadPolicyChecker;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedComponentCredentials;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -220,9 +218,6 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 			// Consolidate duplicates, etc.
 
 			canonicalizeHeaders(httpRequest);
-			if (httpRequest.containsHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString())) {
-				checkUploadPolicy(httpRequest);
-			}
 			handle(httpRequest);
 		}
 	}
@@ -290,8 +285,8 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
      * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
      * Simply verifies the policy and signature of the policy.
      */
-    private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AccessDeniedException {
-        Map<String, String> fields = new HashMap<String, String>();
+    private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws S3Exception {
+        Map<String, String> fields = httpRequest.getFormFields();
         String policy = httpRequest.getHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString());
         fields.put(ObjectStorageProperties.FormField.policy.toString(), policy);
         String policySignature = httpRequest.getHeader(ObjectStorageProperties.Headers.S3UploadPolicySignature.toString());
@@ -313,11 +308,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
                 fields.put(ObjectStorageProperties.FormField.key.toString(), target[1]);
         }
 
-        try {
-            UploadPolicyChecker.checkPolicy(httpRequest, fields);
-        } catch (AuthenticationException aex) {
-            throw new AccessDeniedException(aex.getMessage());
-        }
+        UploadPolicyChecker.checkPolicy(httpRequest);
     }
 
     /**
@@ -574,7 +565,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
             String addrString = getS3AddressString(httpRequest, true);
             String content_md5 = httpRequest.getHeader("Content-MD5");
             content_md5 = content_md5 == null ? "" : content_md5;
-            String content_type = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
+            String content_type = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
             content_type = content_type == null ? "" : content_type;
             String securityToken = httpRequest.getHeader(ObjectStorageProperties.X_AMZ_SECURITY_TOKEN);
             String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
@@ -624,7 +615,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
             String verb = httpRequest.getMethod().getName();
             String content_md5 = httpRequest.getHeader("Content-MD5");
             content_md5 = content_md5 == null ? "" : content_md5;
-            String content_type = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
+            String content_type = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
             content_type = content_type == null ? "" : content_type;
             String addrString = getS3AddressString(httpRequest, true);
             String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());

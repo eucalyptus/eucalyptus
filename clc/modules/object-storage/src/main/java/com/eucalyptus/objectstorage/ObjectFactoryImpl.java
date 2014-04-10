@@ -290,7 +290,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 public PutObjectResponseType call() throws Exception {
                     LOG.debug("Putting data");
                     PutObjectResponseType response = provider.putObject(putRequest, content);
-                    LOG.debug("Done with put. " + response.getStatusMessage());
+                    LOG.debug("Done with put. Response status: " + response.getStatusMessage());
                     return response;
                 }
             };
@@ -361,11 +361,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 //fall thru and retry
                 timeoutUpdate.call();
 
-                /*try {
-                    entity = ObjectMetadataManagers.getInstance().updateCreationTimeout(entity);
-                } catch(Exception ex) {
-                    LOG.warn("Could not update the creation expiration time for ObjectUUID " + entity.getObjectUuid() + " Will retry next interval", e);
-                }*/
             } catch(CancellationException e) {
                 LOG.debug("PUT operation cancelled for object/part UUID " + objectUuid);
                 throw e;
