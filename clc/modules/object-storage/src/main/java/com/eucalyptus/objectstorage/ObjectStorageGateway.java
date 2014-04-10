@@ -380,6 +380,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
             response.setEtag(objectEntity.geteTag());
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
+            try {
+                fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(),
+                        objectEntity.getVersionId(),
+                        requestUser.getUserId(), objectEntity.getSize(), null);
+            } catch (Exception ex) {
+                LOG.debug("Failed to fire reporting event for OSG object creation", ex);
+            }
             return response;
         } catch(S3Exception e) {
             LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
