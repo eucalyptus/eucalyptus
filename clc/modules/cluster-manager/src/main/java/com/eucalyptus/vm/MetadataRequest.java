@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,16 +70,16 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
+import com.google.common.base.Optional;
 
 public class MetadataRequest {
   private static Logger    LOG = Logger.getLogger( MetadataRequest.class );
   private final String     requestIp;
   private final String     metadataName;
   private final String     localPath;
-  private final VmInstance vm;
-  
-  public MetadataRequest( String requestIp, String requestUrl ) {
+  private final String     vmId;
+
+  public MetadataRequest( String requestIp, String requestUrl, Optional<String> vmId ) {
     try {
       this.requestIp = requestIp;
       requestUrl = requestUrl.replaceAll( "[/]+", "/" );
@@ -95,9 +95,9 @@ public class MetadataRequest {
         this.metadataName = "";
         this.localPath = "";
       }
-      this.vm = resolveVm( requestIp );
+      this.vmId = vmId.orNull( );
     } finally {
-      LOG.debug( ( this.vm != null
+      LOG.debug( ( this.vmId != null
                                   ? "Instance"
                                   : "External" )
                  + " Metadata: requestIp=" + this.requestIp
@@ -108,7 +108,7 @@ public class MetadataRequest {
   }
 
   public boolean isInstance( ) {
-    return vm != null;
+    return vmId != null;
   }
   
   /**
@@ -132,8 +132,8 @@ public class MetadataRequest {
     return this.localPath;
   }
   
-  public VmInstance getVmInstance( ) {
-    return this.vm;
+  public String getVmInstanceId( ) {
+    return this.vmId;
   }
   
   public boolean isSystem( ) {
@@ -159,26 +159,34 @@ public class MetadataRequest {
           db.commit( );
         }
       } catch ( Exception e ) {
-        LOG.debug( "Unable to find Cluster Controller request addresss.", e );
+        LOG.debug( "Unable to find Cluster Controller request address.", e );
         db.rollback( );
       }
     }
     return false;
   }
 
-  protected VmInstance resolveVm( final String requestIp ) {
-    VmInstance findVm = null;
-    if ( !Databases.isVolatile() ) {
-      try {
-        findVm = VmInstances.lookupByPublicIp( requestIp );
-      } catch ( Exception ex2 ) {
-        try {
-          findVm = VmInstances.lookupByPrivateIp( requestIp );
-        } catch ( Exception ex ) {
-          Logs.exhaust().error( ex );
-        }
-      }
-    }
-    return findVm;
+  @Override
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( o == null || getClass() != o.getClass() ) return false;
+
+    final MetadataRequest that = (MetadataRequest) o;
+
+    if ( localPath != null ? !localPath.equals( that.localPath ) : that.localPath != null ) return false;
+    if ( metadataName != null ? !metadataName.equals( that.metadataName ) : that.metadataName != null ) return false;
+    if ( requestIp != null ? !requestIp.equals( that.requestIp ) : that.requestIp != null ) return false;
+    if ( vmId != null ? !vmId.equals( that.vmId ) : that.vmId != null ) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = requestIp != null ? requestIp.hashCode() : 0;
+    result = 31 * result + ( metadataName != null ? metadataName.hashCode() : 0 );
+    result = 31 * result + ( localPath != null ? localPath.hashCode() : 0 );
+    result = 31 * result + ( vmId != null ? vmId.hashCode() : 0 );
+    return result;
   }
 }

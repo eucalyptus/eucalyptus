@@ -164,6 +164,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -324,59 +325,103 @@ public class VmInstances {
   @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
                       initial = "10" )
   public static final int TX_RETRIES                    = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
                       initial = "720" )
   public static Integer   INSTANCE_TIMEOUT              = 720;
+
   @ConfigurableField( description = "Amount of time (in minutes) between updates for a running instance.",
                       initial = "15" )
   public static Integer   INSTANCE_TOUCH_INTERVAL       = 15;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   SHUT_DOWN_TIME                = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a stopping VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   STOPPING_TIME                 = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
                       initial = "60" )
   public static Integer   TERMINATED_TIME               = 60;
+
   @ConfigurableField( description = "Amount of time (in minutes) to retain unreported terminated instance data.",
                       initial = "60" )
   public static Integer   BURIED_TIME                   = 60;
+
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
   public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
+
   @ConfigurableField( description = "Maximum amount of time (in seconds) that migration state will take to propagate state changes (e.g., to tags).",
                       initial = "" + 60 )
   public static Long      MIGRATION_REFRESH_TIME        = 60l;
+
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
+
   @ConfigurableField( description = "Subdomain to use for instance DNS.",
                       initial = ".eucalyptus",
                       changeListener = SubdomainListener.class )
   public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
+
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "3" )
   public static Long      VOLATILE_STATE_INTERVAL_SEC   = Long.MAX_VALUE;
+
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
                       initial = "60" )
   public static Long      VOLATILE_STATE_TIMEOUT_SEC    = 60l;
+
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
   public static Integer   MAX_STATE_THREADS             = 16;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+
   @ConfigurableField( description = "Name for root block device mapping",
                       initial = "emi" )
   public static volatile String EBS_ROOT_DEVICE_NAME    = "emi";
+
   @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
                       initial = "40" )
   public static Integer   VM_STATE_SETTLE_TIME          = 40;
+
   @ConfigurableField( description = "Amount of time (in seconds) since completion of the creating run instance operation that the new instance is treated as unreported if not... reported.",
                       initial = "300" )
   public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
-  
+
+  @ConfigurableField( description = "Instance metadata user data cache configuration.",
+      initial = "maximumSize=50, expireAfterWrite=5s, softValues",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_USER_DATA_CACHE   = "maximumSize=50, expireAfterWrite=5s, softValues";
+
+  @ConfigurableField( description = "Instance metadata cache configuration.",
+      initial = "maximumSize=250, expireAfterWrite=5s",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_INSTANCE_CACHE    = "maximumSize=250, expireAfterWrite=5s";
+
+  @ConfigurableField( description = "Instance metadata instance resolution cache configuration.",
+      initial = "maximumSize=250, expireAfterWrite=1s",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_REQUEST_CACHE     = "maximumSize=250, expireAfterWrite=1s";
+
+  public static class CacheSpecListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        CacheBuilderSpec.parse( String.valueOf( newValue ) );
+      } catch ( Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
+
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {

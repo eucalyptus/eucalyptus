@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,9 +65,12 @@ package com.eucalyptus.compute.metadata;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import javax.persistence.EntityTransaction;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
@@ -75,8 +78,14 @@ import com.eucalyptus.vm.MetadataRequest;
 import com.eucalyptus.vm.NetworkGroupsMetadata;
 import com.eucalyptus.vm.SensorsConfigMetadata;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheBuilderSpec;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 public class VmMetadata {
   private static//
@@ -91,24 +100,27 @@ public class VmMetadata {
   private static//
   Function<MetadataRequest, ByteArray>                        userDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                            return ByteArray.newInstance( arg0.getVmInstance( ).getUserData( ) );
+                                                                                            try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+                                                                                              final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId( ) );
+                                                                                              return ByteArray.newInstance( instance.getUserData() );
+                                                                                            } catch ( NoSuchElementException e ) {
+                                                                                              throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+                                                                                            }
                                                                                           }
                                                                                         };
   private static//
   Function<MetadataRequest, ByteArray>                        metaDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                            final EntityTransaction db = Entities.get( VmInstance.class );
-                                                                                            try {
-                                                                                              final VmInstance instance = Entities.merge( arg0.getVmInstance() );
-                                                                                              String res = instance.getByKey( arg0.getLocalPath( ) );
-                                                                                              if ( res == null ) {
-                                                                                                throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
-                                                                                              } else {
+                                                                                            try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+                                                                                              final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId() );
+                                                                                              final String res = instance.getByKey( arg0.getLocalPath( ) );
+                                                                                              if ( res != null ) {
                                                                                                 return ByteArray.newInstance( res );
                                                                                               }
-                                                                                            } finally {
-                                                                                              db.rollback();
+                                                                                            } catch ( NoSuchElementException e ) {
+                                                                                              // fall through and throw
                                                                                             }
+                                                                                            throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
                                                                                           }
                                                                                         };
   
@@ -142,8 +154,8 @@ public class VmMetadata {
                                                                                                 }
                                                                                               } );
                                                                                             put( "dynamic", dynamicFunc );
-                                                                                            put( "user-data", userDataFunc );
-                                                                                            put( "meta-data", metaDataFunc );
+                                                                                            put( "user-data", cache( userDataFunc, VmInstances.VM_METADATA_USER_DATA_CACHE ) );
+                                                                                            put( "meta-data", cache( metaDataFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                           }
                                                                                         };
   
@@ -163,13 +175,51 @@ public class VmMetadata {
                                                                                             put( "sensors-conf", new SensorsConfigMetadata( ) );
                                                                                           }
                                                                                         };
-  
-  public byte[] handle( String path ) {
-    String[] parts = path.split( ":" );
+
+  private static final LoadingCache<String, Optional<String>> ipToVmIdCache =
+      cache( resolveVm(), VmInstances.VM_METADATA_REQUEST_CACHE );
+
+  private static <K,V> LoadingCache<K,V> cache( final Function<K,V> loader,
+                                                final String cacheSpec ) {
+    return CacheBuilder
+        .from( CacheBuilderSpec.parse( cacheSpec ) )
+        .build( CacheLoader.from( loader ) );
+  }
+
+  private static Function<String,Optional<String>> resolveVm( ) {
+    return new Function<String,Optional<String>>() {
+      @Nullable
+      @Override
+      public Optional<String> apply( final String requestIp  ) {
+        VmInstance findVm = null;
+        if ( !Databases.isVolatile() ) {
+          try {
+            findVm = VmInstances.lookupByPublicIp( requestIp );
+          } catch ( Exception ex2 ) {
+            try {
+              findVm = VmInstances.lookupByPrivateIp( requestIp );
+            } catch ( Exception ex ) {
+              Logs.exhaust().error( ex );
+            }
+          }
+        }
+        return Optional.fromNullable( findVm ).transform( CloudMetadatas.toDisplayName( ) );
+      }
+    };
+  }
+
+
+  public byte[] handle( final String path ) {
+    final String[] parts = path.split( ":" );
     try {
-      MetadataRequest request = new MetadataRequest( parts[0], parts.length == 2
-                                                                                ? parts[1]
-                                                                                : "/" );
+      final String requestIp = parts[0];
+      final MetadataRequest request = new MetadataRequest(
+          requestIp,
+          parts.length == 2 ?
+              parts[1] :
+              "/",
+          ipToVmIdCache.get( requestIp ) );
+
       if ( instanceMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isInstance( ) ) {
         return instanceMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else if ( systemMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isSystem( ) ) {
@@ -182,6 +232,8 @@ public class VmMetadata {
     } catch ( NoSuchElementException ex ) {
       throw ex;
     } catch ( Exception ex ) {
+      NoSuchElementException noSuchElementException = Exceptions.findCause( ex, NoSuchElementException.class );
+      if ( noSuchElementException != null ) throw noSuchElementException;
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )
                                                                                     ? " cause: " + ex.getMessage( )
                                                                                     : "" );
