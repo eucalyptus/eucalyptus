@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,22 +62,28 @@
 
 package com.eucalyptus.entities;
 
+import java.util.List;
 import javax.persistence.Column;
+import javax.persistence.EntityManager;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
+import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType.AccountRestrictedType;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 
 @MappedSuperclass
 public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements AccountRestrictedType, HasFullName<AccountMetadata> {
   @Column( name = "metadata_account_id" )
   private String          ownerAccountNumber;
-  @Column( name = "metadata_account_name" )
-  private String          ownerAccountName;
   @Column( name = "metadata_unique_name", unique = true, nullable = false, length = 300 )
   private String          uniqueName;
   @Transient
@@ -95,10 +101,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
-    this.ownerAccountName = null;
-    //this.ownerAccountName = owner != null
-    //  ? owner.getAccountName( )
-    //  : null;
   }
   
   public AccountMetadata( OwnerFullName owner, String displayName ) {
@@ -106,10 +108,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
-    this.ownerAccountName = null;
-    //this.ownerAccountName = owner != null
-    //  ? owner.getAccountName( )
-    //  : null;
   }
   
   public OwnerFullName getOwner( ) {
@@ -142,20 +140,8 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   protected void setOwner( OwnerFullName owner ) {
     this.ownerFullNameCached = null;
     this.setOwnerAccountNumber( owner != null
-      ? owner.getAccountNumber( )
-      : null );
-    this.setOwnerAccountName( owner != null
-      ? owner.getAccountName( )
-      : null );
-  }
-  
-  public String getOwnerAccountName( ) {
-    return this.ownerAccountName;
-  }
-  
-  public void setOwnerAccountName( String ownerAccountName ) {
-    // this.ownerAccountName = null;
-    this.ownerAccountName = ownerAccountName;
+        ? owner.getAccountNumber()
+        : null );
   }
   
   protected String getUniqueName( ) {
@@ -214,5 +200,34 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   public int compareTo( AccountMetadata that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
   }
-  
+
+  public abstract static class AccountName400UpgradeSupport {
+    private static final Logger logger = Logger.getLogger( AccountName400UpgradeSupport.class );
+
+    private static final String SQL_DROP_NAME_COLUMN = "alter table %s drop column if exists metadata_account_name";
+
+    /**
+     * Get the non-empty list of classes for upgrade.
+     *
+     * Classes must belong to the same persistence context.
+     */
+    protected abstract List<Class<? extends AccountMetadata>> getAccountMetadataClasses( );
+
+    public Boolean call( ) throws Exception {
+      final List<Class<? extends AccountMetadata>> accountMetadataClasses = getAccountMetadataClasses( );
+      final Class<? extends AccountMetadata> contextClass = Iterables.get( accountMetadataClasses, 0 );
+      return Upgrades.transactionalForEntity(contextClass, new Function<EntityManager, Boolean>() {
+        @Override
+        public Boolean apply( final EntityManager entityManager ) {
+          for ( final Class<? extends AccountMetadata> accountMetadataClass : accountMetadataClasses ) {
+            final int updated = entityManager.createNativeQuery(
+                String.format( SQL_DROP_NAME_COLUMN, Ats.from( accountMetadataClass ).get( Table.class ).name() )
+            ).executeUpdate();
+            logger.info( "Cleared account alias for " + updated + " " + accountMetadataClass.getSimpleName( ) + "(s)" );
+          }
+          return true;
+        }
+      } );
+    }
+  }
 }
