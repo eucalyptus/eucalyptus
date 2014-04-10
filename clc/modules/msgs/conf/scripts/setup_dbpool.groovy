@@ -117,12 +117,10 @@ def setupDbPool = { String ctx_simplename ->
       sync(id:'passive');
       state(id:'simple');
       cluster(
-//          'auto-activate-schedule':'0 * * ? * *',
           balancer:'simple', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
           durability:'none',//(none|coarse|fine)
-          'failure-detect-schedule':'0/15 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
           'detect-sequences':'false',

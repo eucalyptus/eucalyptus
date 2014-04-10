@@ -62,9 +62,61 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
 	private static Logger LOG = Logger.getLogger( ObjectStoragePUTBinding.class );
-	
+
+    @Override
+    protected Map<String, String> populateOperationMap() {
+        Map<String, String> newMap = new HashMap<>();
+
+        //Bucket operations
+        newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
+        newMap.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
+        newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
+        newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
+        newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
+
+        //Object operations
+        newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
+        newMap.put(OBJECT + HttpMethod.PUT.toString(), "PutObject");
+        newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.COPY_SOURCE, "CopyObject");
+
+        // Multipart Uploads
+        newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
+        newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
+        newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
+        newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload");
+
+        return newMap;
+    }
+
+    protected Map<String, String> populateUnsupportedOperationMap() {
+        Map<String, String> opsMap = new HashMap<>();
+
+        // Bucket operations
+        // Cross-Origin Resource Sharing (cors)
+        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
+
+        // Policy
+        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
+
+        // Notification
+        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
+
+        // Tagging
+        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "PUT Bucket tagging");
+
+        // Website
+        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
+
+        // Object operations
+        return opsMap;
+    }
 }

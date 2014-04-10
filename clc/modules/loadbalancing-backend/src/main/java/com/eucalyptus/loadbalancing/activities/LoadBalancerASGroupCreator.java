@@ -342,12 +342,28 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	    }
 	    return singleton;
 	  }
-
+	  
+	  private static int CheckCounter =0 ;
+	  private static boolean EmiCheckResult = true;
 	  @Override
     public boolean check( ) throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
-        return true;
-      } else {
+        if(CheckCounter == 3){
+          try{
+            final List<ImageDetails> emis =
+                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.LOADBALANCER_EMI));
+            if( LoadBalancerASGroupCreator.LOADBALANCER_EMI.equals(emis.get(0).getImageId()))
+              EmiCheckResult = true;
+            else 
+              EmiCheckResult =  false;
+          }catch(final Exception ex){
+            EmiCheckResult=false;
+          }
+          CheckCounter = 0;
+        }else
+          CheckCounter++;
+        return EmiCheckResult;
+        } else {
         imageNotConfiguredFaultRunnable.run( );
         return false;
       }

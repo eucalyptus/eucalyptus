@@ -401,7 +401,7 @@ def _check_euca2ools(problems):
     return problems
 
 def _check_imager(problems):
-    _check_executable(problems, [PATHS['euca-imager']], "euca-imager")
+    _check_executable(problems, [PATHS['euca-imager'], 'work=/tmp'], "euca-imager") # /tmp is needed so PID file can be created
     return problems
 
 def _check_bundle_args(problems, args):

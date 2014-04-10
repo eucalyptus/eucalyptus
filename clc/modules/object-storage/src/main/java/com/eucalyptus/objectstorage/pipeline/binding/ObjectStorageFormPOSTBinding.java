@@ -62,8 +62,84 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import com.eucalyptus.util.LogUtil;
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.UpstreamMessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
 	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTBinding.class );
+
+    @Override
+    protected Map<String, String> populateOperationMap() {
+        Map<String, String> newMap = new HashMap<>();
+        newMap.put(BUCKET + HttpMethod.POST.toString(), "PostObject");
+        return newMap;
+    }
+
+    protected Map<String, String> populateUnsupportedOperationMap() {
+        Map<String, String> opsMap = new HashMap<>();
+        // Object operations
+        return opsMap;
+    }
+
+    @Override
+    public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
+        LOG.trace( LogUtil.dumpObject(channelEvent) );
+        UpstreamMessageEvent firstChunkEvent = null;
+        DefaultHttpChunk firstChunk = null;
+        if ( channelEvent instanceof MessageEvent ) {
+            //Grab the chunk data from the form field if it is found.
+            final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+            try {
+                if(msgEvent.getMessage() instanceof MappingHttpRequest) {
+                    //Get first chunk data here
+                    MappingHttpRequest request = (MappingHttpRequest) msgEvent.getMessage();
+                    if(request.getFormFields() != null && request.getFormFields().get(ObjectStorageProperties.FIRST_CHUNK_FIELD) != null) {
+                        firstChunk = new DefaultHttpChunk((ChannelBuffer)request.getFormFields().get(ObjectStorageProperties.FIRST_CHUNK_FIELD));
+
+                        if(request.isChunked()) {
+                            firstChunkEvent = new UpstreamMessageEvent(channelHandlerContext.getChannel(), firstChunk, msgEvent.getRemoteAddress());
+                        }
+                    }
+
+                }
+                //Do the binding
+                this.incomingMessage( channelHandlerContext, msgEvent );
+
+                //Handle the first data chunk properly
+                if(firstChunkEvent == null && firstChunk != null && msgEvent.getMessage() instanceof MappingHttpRequest && ((MappingHttpRequest)msgEvent.getMessage()).getMessage() instanceof ObjectStorageDataRequestType) {
+                    ObjectStorageDataRequestType dataReq = (ObjectStorageDataRequestType)((MappingHttpRequest) msgEvent.getMessage()).getMessage();
+                    handleData(dataReq, firstChunk.getContent());
+                }
+            } catch ( Exception e ) {
+                LOG.error("Error in POST multipart form binding", e );
+                Channels.fireExceptionCaught(channelHandlerContext, e);
+                return;
+            }
+        }
+
+        //Send the bound message up
+        channelHandlerContext.sendUpstream(channelEvent);
+
+        //Follow immediately with first data chunk
+        if(firstChunkEvent != null) {
+            LOG.trace("Dispatching follow-up chunk directly after initial request.");
+            channelHandlerContext.sendUpstream(firstChunkEvent);
+        }
+    }
 }

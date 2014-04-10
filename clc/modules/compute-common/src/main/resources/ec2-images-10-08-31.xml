@@ -42,6 +42,7 @@
     <value name="ramdiskId" field="ramdiskId" usage="optional" />
     <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
     <value name="virtualizationType" field="virtualizationType" usage="optional" />
+    <value name="platform" field="platform" usage="optional" />
     <structure name="blockDeviceMapping" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
         <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />

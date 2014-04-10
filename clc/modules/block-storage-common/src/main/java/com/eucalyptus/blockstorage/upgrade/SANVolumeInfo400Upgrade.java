@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage.upgrade;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_0_0;
+import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
 import java.util.List;
@@ -75,65 +76,82 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.san.common.entities.SANVolumeInfo;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.PostUpgrade;
 import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.google.common.base.Predicate;
 
-public class SANVolumeInfo40Upgrade {
+public class SANVolumeInfo400Upgrade {
 
-	// @PreUpgrade(since = v4_0_0, value = Storage.class)
-	// public static class RenameTable implements Callable<Boolean> {
-	//
-	// private static final Logger LOG = Logger.getLogger(SANVolumeInfo40Upgrade.RenameTable.class);
-	//
-	// @Override
-	// public Boolean call() throws Exception {
-	// LOG.info("Converting equallogicinfo table into san_volume_info");
-	// Sql sql = null;
-	// String oldTable = "equallogicvolumeinfo";
-	// String newTable = "san_volume_info";
-	//
-	// try {
-	// sql = Databases.getBootstrapper().getConnection("eucalyptus_storage");
-	// try {
-	// // Check if the table even exists
-	// sql.execute(String.format("select volumeid from %s where volumeid is not null", oldTable));
-	// } catch (Exception e) {
-	// LOG.info("Select * from " + oldTable + " failed. The table may not exist. Nothing to update here");
-	// return true;
-	// }
-	//
-	// try {
-	// sql.execute(String
-	// .format("insert into %s (id, creation_timestamp, last_update_timestamp, metadata_perm_uuid, version, encryptedpassword, iqn, scname, size, snapshot_of, status, storeuser, volumeid) "
-	// +
-	// "select id, creation_timestamp, last_update_timestamp, metadata_perm_uuid, version, encryptedpassword, iqn, scname, size, snapshot_of, status, storeuser, volumeid from %s",
-	// newTable, oldTable));
-	// } catch (Exception e) {
-	// LOG.info("Failed to copy rows using select into statement from " + oldTable + " to " + newTable, e);
-	// return false;
-	// }
-	//
-	// // Drop the old table
-	// sql.execute(String.format("drop table if exists %s", oldTable));
-	// return true;
-	// } catch (Exception e) {
-	// LOG.error("Failed to convert " + oldTable + " to " + newTable, e);
-	// return false;
-	// } finally {
-	// if (sql != null) {
-	// sql.close();
-	// }
-	// }
-	// }
-	// }
+	static final String OLDTABLE = "equallogicvolumeinfo";
+	static final String NEWTABLE = "san_volume_info";
+
+	@PreUpgrade(since = v4_0_0, value = Storage.class)
+	public static class CopyRows implements Callable<Boolean> {
+
+		private static final Logger LOG = Logger.getLogger(SANVolumeInfo400Upgrade.CopyRows.class);
+
+		@Override
+		public Boolean call() throws Exception {
+			LOG.info("Copying rows from " + OLDTABLE + " table to " + NEWTABLE);
+			Sql sql = null;
+
+			try {
+				sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+
+				try {
+					// Check if the new table contains any rows, if it does there is no point updating
+					List<GroovyRowResult> result = sql.rows(String.format("select id from %s where id is not null", NEWTABLE));
+					if (result != null && result.size() > 0) {
+						// Table already contains rows, don't try to copy stuff again
+						return true;
+					}
+				} catch (Exception e) {
+					LOG.error("Select statement from " + NEWTABLE + " failed. The table may not exist or was not setup correctly");
+					return false;
+				}
+
+				try {
+					// Check if the old table exists and contains any rows
+					List<GroovyRowResult> result = sql.rows(String.format("select id from %s where id is not null", OLDTABLE));
+					if (result == null || result.size() <= 0) {
+						// No rows exist in this table, nothing to be copied over
+						return true;
+					}
+				} catch (Exception e) {
+					LOG.info("Select statement from " + OLDTABLE + " failed. The table may not exist");
+					return true;
+				}
+
+				try {
+					// Copy the rows from equallogicvolumeinfo to san_volume_info
+					sql.execute(String
+							.format("insert into %s (id, creation_timestamp, last_update_timestamp, metadata_perm_uuid, version, encryptedpassword, iqn, scname, size, snapshot_of, status, storeuser, volumeid) "
+									+ "select id, creation_timestamp, last_update_timestamp, metadata_perm_uuid, version, encryptedpassword, iqn, scname, size, snapshot_of, status, storeuser, volumeid from %s",
+									NEWTABLE, OLDTABLE));
+				} catch (Exception e) {
+					LOG.error("Failed to copy rows using select into statement from " + OLDTABLE + " to " + NEWTABLE);
+					return false;
+				}
+
+				return true;
+			} catch (Exception e) {
+				LOG.warn("Failed to copy entities from " + OLDTABLE + " table to " + NEWTABLE);
+				return false;
+			} finally {
+				if (sql != null) {
+					sql.close();
+				}
+			}
+		}
+	}
 
 	@EntityUpgrade(entities = { SANVolumeInfo.class }, since = v4_0_0, value = Storage.class)
 	public static enum AddResourceName implements Predicate<Class> {
 		INSTANCE;
-		private static final Logger LOG = Logger.getLogger(SANVolumeInfo40Upgrade.AddResourceName.class);
+		private static final Logger LOG = Logger.getLogger(SANVolumeInfo400Upgrade.AddResourceName.class);
 
 		@Override
 		public boolean apply(@Nullable Class arg0) {
@@ -153,9 +171,34 @@ public class SANVolumeInfo40Upgrade {
 				tran.commit();
 				return true;
 			} catch (Exception e) {
-				tran.rollback();
 				LOG.warn("Failed to perform entity upgrade for SANVolumeInfo entities", e);
+				tran.rollback();
 				return false;
+			}
+		}
+	}
+
+	@PostUpgrade(since = v4_0_0, value = Storage.class)
+	public static class DropTable implements Callable<Boolean> {
+		private static final Logger LOG = Logger.getLogger(SANVolumeInfo400Upgrade.DropTable.class);
+
+		@Override
+		public Boolean call() throws Exception {
+			LOG.info("Dropping table " + OLDTABLE);
+			Sql sql = null;
+
+			try {
+				// Drop the old table if it exists
+				sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+				sql.execute(String.format("drop table if exists %s", OLDTABLE));
+				return true;
+			} catch (Exception e) {
+				LOG.warn("Failed to drop table " + OLDTABLE);
+				return true;
+			} finally {
+				if (sql != null) {
+					sql.close();
+				}
 			}
 		}
 	}

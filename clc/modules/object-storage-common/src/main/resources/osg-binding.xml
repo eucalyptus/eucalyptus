@@ -63,7 +63,6 @@
     <mapping
             class="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"
             abstract="true">
-        <value name="RandomKey" field="randomKey" usage="optional"/>
         <value name="IsCompressed" field="isCompressed" usage="optional"/>
     </mapping>
 

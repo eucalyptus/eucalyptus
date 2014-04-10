@@ -38,6 +38,10 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
@@ -61,6 +65,7 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
@@ -419,7 +424,7 @@ public class Upgrades {
     }
   }
   
-  enum DatabaseFilters implements Predicate<String> {
+  public enum DatabaseFilters implements Predicate<String> {
     EUCALYPTUS {
       
       @Override
@@ -976,5 +981,28 @@ public class Upgrades {
       throw Exceptions.toUndeclared( e );
     }
   }
-  
+
+  /**
+   * Perform upgrade work in a callback for the given context.
+   */
+  public static boolean transactionalForEntity( final Class entityClass,
+                                                final Function<EntityManager,Boolean> callback ) {
+    final String context = Ats.inClassHierarchy( entityClass ).get( PersistenceContext.class ).name();
+    final EntityManagerFactory entityManagerFactory = PersistenceContexts.getEntityManagerFactory( context );
+    final EntityManager entityManager = entityManagerFactory.createEntityManager( );
+    final EntityTransaction transaction = entityManager.getTransaction( );
+    transaction.begin();
+    boolean success = false;
+    try {
+      success = callback.apply( entityManager );
+    } finally {
+      if ( success && !transaction.getRollbackOnly() ) {
+        transaction.commit();
+      } else {
+        transaction.rollback();
+      }
+    }
+    return success;
+  }
+
 }

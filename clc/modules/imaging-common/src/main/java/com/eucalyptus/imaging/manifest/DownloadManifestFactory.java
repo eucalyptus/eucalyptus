@@ -25,6 +25,9 @@ import java.io.Writer;
 import java.net.URL;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
@@ -44,10 +47,12 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -72,6 +77,7 @@ public class DownloadManifestFactory {
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
 	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
 	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
+	private static String MANIFEST_EXPIRATION = "expire";
 	private static int DEFAULT_EXPIRE_TIME_HR = 3;
 
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
@@ -99,13 +105,13 @@ public class DownloadManifestFactory {
 			//prepare to do pre-signed urls
       EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
 
-      java.util.Date expiration = new java.util.Date();
+      Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
       expiration.setTime(msec);
       
       // check if download-manifest already exists
       if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
-        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created. Skipping creation");
+        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created and has not expired. Skipping creation");
         URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
             DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
         return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
@@ -219,7 +225,7 @@ public class DownloadManifestFactory {
 			String downloadManifest = nodeToString(manifestDoc, true);
 			//TODO: move this ?
 			createManifestsBucket(s3Client);
-			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest);
+			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest, expiration);
 			// generate pre-sign url for download manifest
 			URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
                     DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
@@ -263,14 +269,17 @@ public class DownloadManifestFactory {
 		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
 	}
 	
-	private static void putManifestData(@Nonnull EucaS3Client s3Client, String bucketName, String objectName, String data ) throws EucalyptusCloudException {
+	private static void putManifestData(@Nonnull EucaS3Client s3Client, String bucketName, String objectName,
+	    String data, Date expiration) throws EucalyptusCloudException {
     int retries = 3;
     long backoffTime = 500L; // 1 second to start.
     for(int i = 0 ; i < retries; i++) {
       try {
-          String etag = s3Client.putObjectContent(bucketName, objectName, data, null);
-          LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
-          return;
+        Map<String, String> metadata = new HashMap<String, String>();
+        metadata.put( MANIFEST_EXPIRATION, Long.toString(expiration.getTime()) );
+        String etag = s3Client.putObjectContent(bucketName, objectName, data, metadata);
+        LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
+        return;
       } catch (AmazonClientException e) {
           LOG.warn("Upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
       } catch(Exception e) {
@@ -292,7 +301,18 @@ public class DownloadManifestFactory {
 	
 	private static boolean objectExist(@Nonnull EucaS3Client s3Client, String bucketName, String objectName) throws EucalyptusCloudException {
 	  try {
-	    return s3Client.getS3Client().getObjectMetadata(bucketName, objectName) == null ? false : true;
+	    ObjectMetadata metadata = s3Client.getS3Client().getObjectMetadata(bucketName, objectName);
+	    if (metadata == null || metadata.getUserMetadata() == null)
+	      return false;
+	    Map<String, String> userData = metadata.getUserMetadata();
+	    String expire = userData.get(MANIFEST_EXPIRATION);
+	    if (expire == null) {
+	      return false;
+	    } else {
+	      Long currentTime = (new Date()).getTime();
+	      Long expireTime = Long.parseLong(expire);
+	      return expireTime > currentTime;
+	    }
 	  } catch (Exception ex) {
 	    return false;
 	  }
@@ -331,26 +351,28 @@ public class DownloadManifestFactory {
 
 	private static boolean checkManifestsBucket(EucaS3Client s3Client) {
 		try {
-            //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
-            AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
-            if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
-                //Bucket exists, but is owned by another account
-                LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME + " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
-                return false;
-            }
-
-            BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
-            return (config.getRules() != null &&
-                    config.getRules().size() == 1 &&
-                    config.getRules().get(0).getExpirationInDays() == 1 &&
-                    "enabled".equals(config.getRules().get(0).getStatus()) &&
-                    DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
-        } catch(AmazonServiceException e) {
-            //Expected possible path if doesn't exist.
-            return false;
-        } catch(Exception e) {
-            LOG.warn("Unexpected error checking for download manifest bucket", e);
+        //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
+        AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
+        if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
+            //Bucket exists, but is owned by another account
+            LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME +
+                " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
             return false;
         }
+
+        BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
+
+        return (config.getRules() != null &&
+                config.getRules().size() == 1 &&
+                config.getRules().get(0).getExpirationInDays() == 1 &&
+                "enabled".equalsIgnoreCase(config.getRules().get(0).getStatus()) &&
+                DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
+    } catch(AmazonServiceException e) {
+        //Expected possible path if doesn't exist.
+        return false;
+    } catch(Exception e) {
+        LOG.warn("Unexpected error checking for download manifest bucket", e);
+        return false;
+    }
 	}
 }

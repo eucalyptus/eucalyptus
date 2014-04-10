@@ -80,11 +80,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class Registration extends HttpServlet {
@@ -99,7 +98,7 @@ public class Registration extends HttpServlet {
   
   private static String getConfigurationString( String uuid ) {
     return "<CloudSchema>\n" + "  <Services type=\"array\">\n" + "    <Service>\n" + "      <Name>ec2</Name>\n" + "      <EndpointUrl>"
-       + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
+           + ServiceUris.remote( Topology.lookup( Compute.class ) ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
            + "          <Name>instances</Name>\n" + "        </Resource>\n" + "        <Resource>\n" + "          <Name>security_groups</Name>\n"
            + "        </Resource>\n" + "        <Resource>\n" + "          <Name>ssh_keys</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
            + "          <Name>images</Name>\n" + "        </Resource>\n" + blockStorageConfiguration( ) + publicAddressConfiguration( )
@@ -137,7 +136,7 @@ public class Registration extends HttpServlet {
   }
   
   private static String getWalrusUrl( ) {
-    if( Topology.isEnabledLocally( ObjectStorage.class ) ) {
+    if( Topology.isEnabled( ObjectStorage.class ) ) {
       ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
       return ServiceUris.remote( walrusConfig ).toASCIIString( );
     } else {

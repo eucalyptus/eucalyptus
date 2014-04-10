@@ -63,7 +63,25 @@
 package com.eucalyptus.objectstorage.pipeline.binding;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ObjectStorageOPTIONSBinding extends ObjectStorageRESTBinding {
 	private static Logger LOG = Logger.getLogger( ObjectStorageOPTIONSBinding.class );
+
+    @Override
+    protected Map<String, String> populateOperationMap() {
+        Map<String, String> newMap = new HashMap<>();
+        return newMap;
+    }
+
+    protected Map<String, String> populateUnsupportedOperationMap() {
+        Map<String, String> opsMap = new HashMap<>();
+
+        // Cross-Origin Resource Sharing (cors)
+        opsMap.put(OBJECT + HttpMethod.OPTIONS.toString(), "OPTIONS request on object");
+        return opsMap;
+    }
 }

@@ -55,12 +55,14 @@ import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage
 import org.jboss.netty.channel.Channel
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
+@ComponentMessage(ObjectStorage.class)
 public class ObjectStorageResponseType extends ObjectStorageRequestType {
     HttpResponseStatus status; //Most should be 200-ok, but for deletes etc it may be 204-No Content
 
     def ObjectStorageResponseType() {}
 }
 
+@ComponentMessage(ObjectStorage.class)
 public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
     BucketLogData logData;
 
@@ -150,7 +152,6 @@ public class ObjectStorageRequestType extends BaseMessage {
 }
 
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
-    String randomKey;
     Boolean isCompressed;
     ChannelBufferStreamingInputStream data;
     boolean isChunked;

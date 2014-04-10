@@ -656,7 +656,7 @@ public class BindingCache {
               if ( Ats.inClassHierarchy( this.type ).has( ComponentMessage.class ) ) {
                 ComponentMessage compMsg = Ats.inClassHierarchy( this.type ).get( ComponentMessage.class );
                 elementName = compMsg.value( ).getSimpleName( ) + "." + elementName;
-                LOG.info( "Binding generation encountered an element naming conflict.  Using " + elementName + " for " + this.type.getCanonicalName( ) );
+                LOG.debug( "Binding generation encountered an element naming conflict.  Using " + elementName + " for " + this.type.getCanonicalName( ) );
               } else {
                 /**
                  * GRZE:WTF: this is a degenerate case which is ugly:

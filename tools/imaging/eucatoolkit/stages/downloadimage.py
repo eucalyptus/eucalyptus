@@ -61,9 +61,6 @@ class DownloadImage(object):
                             to validate manfiest xml.''')
         parser.add_argument('--toolspath', dest='toolspath', default=None,
                             help='''Local path to euca2ools.''')
-        parser.add_argument('--maxbytes', dest='maxbytes', default=0,
-                            help='''Maximum bytes allowed to be written to the
-                            destination.''')
         parser.add_argument('--debug', dest='debug', default=False,
                             action='store_true',
                             help='''Enable debug to a log file''')
@@ -289,10 +286,8 @@ class DownloadImage(object):
         unbundle_tool_path = tools_path+'euca-unbundle-stream'
 
         unbundle_ps_args = [unbundle_tool_path,
-                            '-e', str(manifest.enc_key),
-                            '-v', str(manifest.enc_iv),
-                            '-d', "-",  # write to process's stdout
-                            '--maxbytes', str(self.args.maxbytes)]
+                            '--enc-key', str(manifest.enc_key),
+                            '--enc-iv', str(manifest.enc_iv)]
 
         #Enable debug on this subprocess if local arg is set
         if self.args.debug:
@@ -402,9 +397,12 @@ class DownloadImage(object):
                 if not self.args.privatekey:
                     raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
+                #Download and unbundle...
                 bytes = self._download_to_unbundlestream(
-                    dest_fileobj=dest_fileobj, manifest=manifest)
+                    dest_fileobj=dest_fileobj,
+                    manifest=manifest)
             else:
+                #Download raw parts...
                 with dest_fileobj:
                     bytes = self._download_parts_to_fileobj(
                         manifest=manifest, dest_fileobj=dest_fileobj)

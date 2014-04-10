@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline;
+package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -69,6 +69,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidPolicyDocumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.groovy.JsonSlurper;
@@ -77,15 +79,14 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.http.MappingHttpRequest;
 
 public class UploadPolicyChecker {
 	private static Logger LOG = Logger.getLogger( UploadPolicyChecker.class );
 
-	public static void checkPolicy(MappingHttpRequest httpRequest, Map<String, String> formFields) throws AuthenticationException {
+	public static void checkPolicy(MappingHttpRequest httpRequest) throws S3Exception {
+        Map<String, String> formFields = httpRequest.getFormFields();
 		if(formFields.containsKey(ObjectStorageProperties.FormField.policy.toString())) {
 			String authenticationHeader = "";
 			String policy = new String(Base64.decode(formFields.remove(ObjectStorageProperties.FormField.policy.toString())));
@@ -93,8 +94,8 @@ public class UploadPolicyChecker {
 			try {
 				policyData = new String(Base64.encode(policy.getBytes()));
 			} catch (Exception ex) {
-				LOG.warn(ex, ex);
-				throw new AuthenticationException("error reading policy data.");
+				LOG.warn("Denying POST upload due to inability to decode/read required upload Policy from request", ex);
+				throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Invalid policy content");
 			}
 			//parse policy
 			try {
@@ -104,8 +105,8 @@ public class UploadPolicyChecker {
 				if(expiration != null) {
 					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
 					if((new Date()).getTime() > expirationDate.getTime()) {
-						LOG.warn("Policy has expired.");
-						throw new AuthenticationException("Policy has expired.");
+						LOG.warn("Denying POST upload because included policy has expired.");
+						throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Expired policy: " + expiration);
 					}
 				}
 				List<String> policyItemNames = new ArrayList<String>();
@@ -116,14 +117,14 @@ public class UploadPolicyChecker {
 					if(policyItem instanceof JSONObject) {
 						JSONObject jsonObject = (JSONObject) policyItem;
 						if(!exactMatch(jsonObject, formFields, policyItemNames)) {
-							LOG.warn("Policy verification failed. ");
-							throw new AuthenticationException("Policy verification failed.");
+                            LOG.warn("Denying POST upload because Policy verification failed due to mismatch of conditions");
+                            throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy conditions not met: " + jsonObject.toString());
 						}
 					} else if(policyItem instanceof  JSONArray) {
 						JSONArray jsonArray = (JSONArray) policyItem;
 						if(!partialMatch(jsonArray, formFields, policyItemNames)) {
-							LOG.warn("Policy verification failed. ");
-							throw new AuthenticationException("Policy verification failed.");
+                            LOG.warn("Denying POST upload because Policy verification failed due to mismatch of conditions");
+                            throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy conditions not met: " + jsonArray.toString());
 						}
 					}
 				}
@@ -143,14 +144,18 @@ public class UploadPolicyChecker {
 						continue;
 					if(policyItemNames.contains(formKey))
 						continue;
-					LOG.error("All fields except those marked with x-ignore- should be in policy. Form Key: " + formKey);
-					throw new AuthenticationException("All fields except those marked with x-ignore- should be in policy.");
+					LOG.warn("Denying POST upload due to: All fields except those marked with x-ignore- should be in policy. Form Key: " + formKey);
+					throw new InvalidPolicyDocumentException(httpRequest.getUri(), "All fields except those marked with x-ignore- should be in policy.");
 				}
+            } catch(S3Exception e) {
+                //pass thru
+                throw e;
 			} catch(Exception ex) {
 				//rethrow
-				LOG.warn(ex);
-				throw new AuthenticationException(ex);
+				LOG.error("Denying POST upload due to: Unexpected exception during POST policy checks", ex);
+				throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Error processing the policy");
 			}
+
 			//all form uploads without a policy are anonymous
 			if(formFields.containsKey(ObjectStorageProperties.FormField.AWSAccessKeyId.toString())) {
 				String accessKeyId = formFields.remove(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
@@ -179,12 +184,12 @@ public class UploadPolicyChecker {
 				else
 					returnValue = false;
 			} catch(Exception ex) {
-				LOG.error(ex);
+				LOG.error("Unexpected error evaluating the policy for an exact match", ex);
 				return false;
 			}
 		}
 		if(!returnValue)
-			LOG.error("exact match on " + key + " failed");
+			LOG.trace("POST upload policy exact match on " + key + " failed");
 		return returnValue;
 	}
 
@@ -209,11 +214,11 @@ public class UploadPolicyChecker {
 					returnValue = true;
 			}
 		} catch(Exception ex) {
-			LOG.error(ex);
+			LOG.error("Unexpected error evaluating the policy for a partial match", ex);
 			return false;
 		}
 		if(!returnValue)
-			LOG.error("partial match on " + key + " failed");
+			LOG.trace("POST upload policy partial match on " + key + " failed");
 		return returnValue;
 	}
 }
