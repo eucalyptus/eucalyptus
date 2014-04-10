@@ -449,6 +449,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LoadBalancerServoInstance sample = 
 						LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Retired.name());
 				retired = Entities.query(sample);
+				sample =  LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Error.name());
+				retired.addAll(Entities.query(sample));
 				db.commit();
 			}catch(NoSuchElementException ex){
 				db.rollback();
@@ -465,7 +467,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			final List<LoadBalancerServoInstance> retiredAndDnsClean = Lists.newArrayList();
 			for(final LoadBalancerServoInstance instance: retired){
   		/// make sure DNS is deregistered
-        if(LoadBalancerServoInstance.DNS_STATE.Deregistered.equals(instance.getDnsState()))
+        if(! LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState()))
           retiredAndDnsClean.add(instance);
 			}
 			/// for each:
@@ -493,7 +495,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			  }
 			  latestState.put(instanceId, instanceState);
 			}
-
+			
 			// if state==terminated or describe instances return no result,
 			//    delete the database record
 			for(String instanceId : latestState.keySet()){
