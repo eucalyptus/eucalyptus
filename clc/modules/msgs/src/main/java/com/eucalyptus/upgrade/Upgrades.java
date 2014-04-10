@@ -419,7 +419,7 @@ public class Upgrades {
     }
   }
   
-  enum DatabaseFilters implements Predicate<String> {
+  public enum DatabaseFilters implements Predicate<String> {
     EUCALYPTUS {
       
       @Override

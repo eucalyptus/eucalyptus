@@ -90,7 +90,7 @@ import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
-@Table( name = "EquallogicVolumeInfo" )
+@Table( name = "san_volume_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SANVolumeInfo extends AbstractPersistent {
 	protected String volumeId;
