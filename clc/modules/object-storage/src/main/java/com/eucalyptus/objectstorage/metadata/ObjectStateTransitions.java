@@ -77,6 +77,15 @@ public class ObjectStateTransitions {
                         //invalid bucket, cannot create
                         throw new IllegalResourceStateException(extantBucket.getBucketUuid(), null, BucketState.extant.toString(), extantBucket.getState().toString());
                     }
+                    //Update the bucket size.
+                    if(ObjectState.creating.equals(initializedObject.getLastState()) || ObjectState.mpu_pending.equals(initializedObject.getLastState())) {
+                        try {
+                            BucketMetadataManagers.getInstance().updateBucketSize(extantBucket, initializedObject.getSize());
+                        } catch (TransactionException e) {
+                            LOG.error("attempting to update bucket size during object creation lead to a transaction exception", e);
+                            throw new MetadataOperationFailureException(e);
+                        }
+                    }
                     initializedObject.setBucket(extantBucket);
                     initializedObject.setState(ObjectState.creating);
                     initializedObject.updateCreationExpiration();
@@ -123,12 +132,6 @@ public class ObjectStateTransitions {
                         if(ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
                             MpuPartMetadataManagers.getInstance().removeParts(updatingEntity.getBucket(), updatingEntity.getUploadId());
                         }
-
-                        //Update the bucket size.
-                        if(ObjectState.creating.equals(updatingEntity.getLastState()) || ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
-                            BucketMetadataManagers.getInstance().updateBucketSize(updatingEntity.getBucket(), entity.getSize());
-                        }
-
                     } else {
                         throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }
