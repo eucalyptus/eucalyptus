@@ -1469,12 +1469,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 reply.getKeyEntries().add(ent.toVersionEntry());
             }
 
-            if(versionListing.getLastEntry() instanceof ObjectEntity) {
-                reply.setNextKeyMarker(((ObjectEntity)versionListing.getLastEntry()).getObjectKey());
-                reply.setNextVersionIdMarker(((ObjectEntity)versionListing.getLastEntry()).getVersionId());
-            } else if(versionListing.getLastEntry() instanceof String) {
-                //CommonPrefix entry
-                reply.setNextKeyMarker(((String)versionListing.getLastEntry()));
+            if ( reply.getIsTruncated() ) {
+                if(versionListing.getLastEntry() instanceof ObjectEntity) {
+                    reply.setNextKeyMarker(((ObjectEntity)versionListing.getLastEntry()).getObjectKey());
+                    reply.setNextVersionIdMarker(((ObjectEntity)versionListing.getLastEntry()).getVersionId());
+                } else if(versionListing.getLastEntry() instanceof String) {
+                    //CommonPrefix entry
+                    reply.setNextKeyMarker(((String)versionListing.getLastEntry()));
+                }
             }
 
             for(String s : versionListing.getCommonPrefixes()) {

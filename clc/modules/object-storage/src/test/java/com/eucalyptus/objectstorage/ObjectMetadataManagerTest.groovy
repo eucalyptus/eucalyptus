@@ -8,6 +8,7 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.junit.After
@@ -16,7 +17,9 @@ import org.junit.Before
 import org.junit.BeforeClass;
 
 import com.eucalyptus.objectstorage.entities.Bucket;
-import org.apache.log4j.Logger;
+import org.apache.log4j.Logger
+
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 
@@ -107,6 +110,51 @@ public class ObjectMetadataManagerTest {
 			}
 		}
 	}
+
+    @Test
+    public void testVersioningBucketObjectListing() {
+        LOG.info("Testing object listing");
+
+        int entityCount = 10;
+        String key = "objectkey";
+
+        Bucket bucket = TestUtils.createTestBucket(mgr, "testbucket")
+        assert(bucket != null)
+        assert(mgr.lookupBucket(bucket.getName()) != null)
+        mgr.setVersioning(bucket, ObjectStorageProperties.VersioningStatus.Enabled);
+
+        User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+
+        def objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
+        assert(objs != null && objs.size() == entityCount)
+        objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
+        assertTrue("expected version 2 of objects to be created",
+                objs != null && objs.size() == entityCount)
+
+        try {
+            assert( ((int) objMgr.countValid(bucket)) == ( 2 * entityCount ) ) // should be 2 versions of each object
+            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, key, null, null, null, true);
+
+            for(ObjectEntity e : r.getEntityList()) {
+                println e.toString()
+            }
+
+            assert(r.getEntityList().size() == entityCount);
+
+        } catch(Exception e) {
+            LOG.error("Transaction error", e);
+            fail("Failed getting listing");
+
+        } finally {
+            for(ObjectEntity obj : objs) {
+                try {
+                    objMgr.delete(obj);
+                } catch(Exception e) {
+                    LOG.error("Error deleteing entity: " + obj.toString(), e);
+                }
+            }
+        }
+    }
 	
 	/*
 	 * Tests create, lookup, delete lifecycle a single object

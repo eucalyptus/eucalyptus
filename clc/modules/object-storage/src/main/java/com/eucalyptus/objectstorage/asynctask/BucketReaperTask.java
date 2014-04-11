@@ -27,7 +27,6 @@ import com.eucalyptus.objectstorage.*;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -136,7 +135,7 @@ public class BucketReaperTask implements Runnable {
 				try {
 					ObjectMetadataManagers.getInstance().cleanupInvalidObjects(b, obj.getObjectKey());
 				} catch(final Throwable f) {
-					LOG.error("Error doing async repair of object " + b.getBucketName() + "/" + obj.getObjectKey() + " Continuing to next object", f);					
+					LOG.error("Error doing async repair of object " + b.getBucketName() + "/" + obj.getObjectKey() + " Continuing to next object", f);
 				}
                 if (interrupted) {
                     break INNER;
