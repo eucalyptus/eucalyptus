@@ -212,6 +212,48 @@ class NetworkConfigurationTest {
     assertEquals( 'Result does not match template', expected, result )
   }
 
+  @Test
+  void testNoClusterLevelParse() {
+    String config = """
+    {
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Name": "1.0.0.0",
+                "Subnet": "1.0.0.0",
+                "Netmask": "255.255.0.0",
+                "Gateway": "1.0.0.1"
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        macPrefix: 'd0:0d',
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        privateIps: [ '1.0.0.33-1.0.0.34' ],
+        subnets: [
+            new Subnet(
+                name: "1.0.0.0",
+                subnet: "1.0.0.0",
+                netmask: "255.255.0.0",
+                gateway: "1.0.0.1"
+            )
+        ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
   @Test( expected = NetworkConfigurationException )
   void testValidateClusterMacPrefix( ) {
     String config = """
