@@ -169,12 +169,16 @@ class NetworkInfoBroadcaster {
   }
 
   @PackageScope
-  static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> networkConfiguration,
+  static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
                                                 final Supplier<List<Cluster>> clusterSupplier,
                                                 final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier,
                                                 final Supplier<Iterable<NetworkGroupNetworkView>> securityGroupSupplier,
                                                 final Supplier<String> clcHostSupplier,
                                                 final Function<List<String>,List<String>> systemNameserverLookup ) {
+    Iterable<Cluster> clusters = clusterSupplier.get( )
+    Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
+        Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
+        configuration
     NetworkInfo info = networkConfiguration
         .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
         .or( new NetworkInfo( ) )
@@ -182,36 +186,31 @@ class NetworkInfoBroadcaster {
     // populate clusters
     info.configuration.clusters = new NIClusters(
         name: 'clusters',
-        clusters: clusterSupplier.get( ).collect{ Cluster cluster ->
+        clusters: clusters.findResults{ Cluster cluster ->
           ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
-          Subnet subnet = networkConfiguration.present ?
-              NetworkConfigurations.getSubnetForCluster( networkConfiguration.get( ), cluster.partition ) :
-              null
-          Collection<String> privateIpRanges = networkConfiguration.present ?
-              NetworkConfigurations.getPrivateAddressRanges( networkConfiguration.get( ), cluster.partition ) :
-              null
-          new NICluster(
-              name: (String)cluster.partition,
-              subnet: subnet ?  new NISubnet(
-                  name: subnet.subnet, // broadcast name is always the subnet value
-                  properties: [
-                      new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
-                      new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
-                      new NIProperty( name: 'gateway', values: [ subnet.gateway ])
-                  ]
-              ) : null,
-              properties: ( [
-                  new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
-                  new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:networkConfiguration.orNull()?.macPrefix?:VmInstances.MAC_PREFIX ] ),
-              ] + ( privateIpRanges ? [
-                  new NIProperty( name: 'privateIps', values: privateIpRanges as List<String> )
-              ] : [ ] as List<NIProperty> ) ) as List<NIProperty>,
-              nodes: new NINodes(
-                  name: 'nodes',
-                  nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
-              )
-          )
-        }
+          configCluster && configCluster.subnet ?
+            new NICluster(
+                name: configCluster.name,
+                subnet: new NISubnet(
+                    name: configCluster.subnet.subnet, // broadcast name is always the subnet value
+                    properties: [
+                        new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
+                        new NIProperty( name: 'netmask', values: [ configCluster.subnet.netmask ]),
+                        new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
+                    ]
+                ),
+                properties: [
+                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix?:VmInstances.MAC_PREFIX ] ),
+                    new NIProperty( name: 'privateIps', values: configCluster.privateIps )
+                ],
+                nodes: new NINodes(
+                    name: 'nodes',
+                    nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+                )
+            ) :
+            null
+        } as List<NICluster>
     )
 
     // populate dynamic properties
