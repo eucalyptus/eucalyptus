@@ -600,16 +600,28 @@ public class BlockStorageController {
         final Function<VolumeInfo, String> exportAndAttach = new Function<VolumeInfo, String>() {
             @Override
             public String apply(VolumeInfo volume) {
+                int tokenRetry = 3;
                 VolumeToken tokenInfo = null;
                 VolumeInfo volEntity = Entities.merge(volume);
-                try {
-                    tokenInfo = volEntity.getAttachmentTokenIfValid(token);
-                    if(tokenInfo == null) {
-                        throw new Exception("Cannot export, due to invalid token");
+                for(int i = 0; i < tokenRetry ; i++ ) {
+                    try {
+                        tokenInfo = volEntity.getAttachmentTokenIfValid(token);
+                        if(tokenInfo != null) {
+                            break;
+                        }
+                    } catch(Exception e) {
+                        LOG.warn("Could not check for valid token. Will retry. ", e);
+                        tokenInfo = null;
                     }
-                } catch(Exception e) {
-                    LOG.error("Could not check for valid token", e);
-                    return null;
+                    try {
+                        Thread.sleep(100); //sleep 100ms to make retry useful.
+                    } catch(InterruptedException e) {
+                        throw new RuntimeException("Token check backoff sleep interrupted", e);
+                    }
+                }
+
+                if(tokenInfo == null) {
+                    throw new RuntimeException("Cannot export, due to invalid token");
                 }
 
                 VolumeExportRecord export = null;
