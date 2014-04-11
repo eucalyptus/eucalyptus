@@ -77,10 +77,6 @@ CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
                      'walrusbackend', 'vmware', 'vmwarebroker', 'osg']
 CheckableServicesString = '|'.join(CheckableServices)
 
-# list of services which can be enabled/disabled
-EnableableServices = ['cloud', 'walrusbackend', 'sc', 'vmwarebroker', 'osg']
-EnableableServicesString = '|'.join(EnableableServices)
-
 # config entries that must be updated when registering a broker
 ConfigBrokerReg = {'NC_SERVICE' : '/services/EucalyptusBroker',
                    'NC_PORT' : '8773'}
@@ -366,18 +362,6 @@ class EucaConf(object):
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
                                help='Perform initial setup.')
-        self.parser.add_option('--enable',
-                               action='append', type='choice',
-                               choices=EnableableServices,
-                               metavar='[%s]' % EnableableServicesString,
-                               dest='enable_whats',
-                               help='Enable service at next start.')
-        self.parser.add_option('--disable',
-                               action='append', type='choice',
-                               choices=EnableableServices,
-                               metavar='[%s]' % EnableableServicesString,
-                               dest='disable_whats',
-                               help='Disable service at next start.')
         self.parser.add_option('--check',
                                action='store', type='choice',
                                choices=CheckableServices,
@@ -664,16 +648,6 @@ class EucaConf(object):
             sys.exit(req.status)
         elif self.options.check_what == 'vmware':
             print 'do vmware check here'
-
-    def do_enable(self):
-        if self.options.enable_whats:
-            self.warn('This command is deprecated and no longer has any effect.')
-            sys.exit(0)
-
-    def do_disable(self):
-        if self.options.disable_whats:
-            self.warn('This command is deprecated and no longer has any effect.')
-            sys.exit(0)
 
     def do_heartbeat(self):
         if self.options.heartbeat:
