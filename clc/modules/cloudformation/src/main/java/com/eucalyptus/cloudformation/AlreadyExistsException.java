@@ -17,32 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.vm
+package com.eucalyptus.cloudformation;
 
-import com.google.common.base.Optional
-
-import static org.junit.Assert.*
-import org.junit.Test
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
- * 
+ * Created by ethomas on 4/8/14.
  */
-class MetadataRequestTest {
+@QueryBindingInfo( statusCode = 400 )
+public class AlreadyExistsException extends CloudFormationException {
+  private static final long serialVersionUID = 1L;
 
-  @Test
-  void testPathCanonicalization( ) {
-    assertPath( "a", "b", "a/b" )
-    assertPath( "a", "b/c/d", "a/b/c/d" )
-    assertPath( "a", "b/c/d/", "a/b/c/d/" )
-    assertPath( "a", "b/c/d/", "a//b/c/d/" )
-    assertPath( "a", "b/c/d/", "a/b//c/d/" )
-    assertPath( "a", "b/c/d/", "a/b/c/d////" )
-  }
-
-  private void assertPath( String expectedMetadata, String expectedPath, String input ) {
-    MetadataRequest request = new MetadataRequest( "127.0.0.1", input, Optional.absent( ) );
-
-    assertEquals( expectedMetadata, request.getMetadataName() )
-    assertEquals( expectedPath, request.getLocalPath() )
+  public AlreadyExistsException(final String message) {
+    super( "AlreadyExists", Role.Sender, message );
   }
 }

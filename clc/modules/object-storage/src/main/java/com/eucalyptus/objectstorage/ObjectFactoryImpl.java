@@ -402,7 +402,23 @@ public class ObjectFactoryImpl implements ObjectFactory {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
-
+        try {
+            List<ObjectEntity> entities =
+                    ObjectMetadataManagers.getInstance().lookupObjectVersions(entity.getBucket(), entity.getObjectKey(), Integer.MAX_VALUE);
+            if (entities != null && entities.size() > 0) {
+                for (ObjectEntity latest : entities) {
+                    if (latest.getObjectUuid().equals( entity.getObjectUuid() )) {
+                        continue;
+                    }
+                    if (!latest.getIsLatest().booleanValue()) {
+                        ObjectMetadataManagers.getInstance().makeLatest(latest);
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
+        }
         if(!entity.getIsDeleteMarker()) {
             ObjectEntity deletingObject = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
 

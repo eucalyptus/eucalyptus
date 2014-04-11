@@ -27,16 +27,19 @@ import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
@@ -125,11 +128,12 @@ public class ObjectStateTransitions {
                         updatingEntity.seteTag(entity.geteTag());
                         updatingEntity.setSize(entity.getSize());
 
-                        ObjectMetadataManagers.getInstance().cleanupInvalidObjects(updatingEntity.getBucket(), updatingEntity.getObjectKey());
-
                         if(ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
                             MpuPartMetadataManagers.getInstance().removeParts(updatingEntity.getBucket(), updatingEntity.getUploadId());
                         }
+
+                        ObjectMetadataManagers.getInstance().cleanupInvalidObjects(updatingEntity.getBucket(), updatingEntity.getObjectKey());
+
                     } else {
                         throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }
@@ -198,6 +202,7 @@ public class ObjectStateTransitions {
                         entity = objectToUpdate;
                     }
                     entity.setState(ObjectState.deleting);
+                    entity.setIsLatest(Boolean.FALSE);
 
                     if(ObjectState.extant.equals(entity.getLastState())) {
                         BucketMetadataManagers.getInstance().updateBucketSize(entity.getBucket(), -entity.getSize());
