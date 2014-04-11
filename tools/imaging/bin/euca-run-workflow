@@ -78,9 +78,9 @@ class EucaImager():
                             'work=' + self.work_dir,
                             'work_size=' + str(self.work_limit_bytes)]
         if (self.cloud_cert != None):
-            self.common_args += 'cloud_cert=' + self.cloud_cert
+            self.common_args.append('cloud_cert=' + self.cloud_cert)
         if (self.service_key != None):
-            self.common_args += 'service_key=' + self.service_key
+            self.common_args.append('service_key=' + self.service_key)
 
     def prepare(self, args):
         disk_name='dsk-%s' % (args.emi)

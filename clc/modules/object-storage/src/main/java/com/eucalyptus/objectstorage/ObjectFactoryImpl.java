@@ -290,7 +290,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 public PutObjectResponseType call() throws Exception {
                     LOG.debug("Putting data");
                     PutObjectResponseType response = provider.putObject(putRequest, content);
-                    LOG.debug("Done with put. " + response.getStatusMessage());
+                    LOG.debug("Done with put. Response status: " + response.getStatusMessage());
                     return response;
                 }
             };
@@ -361,11 +361,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 //fall thru and retry
                 timeoutUpdate.call();
 
-                /*try {
-                    entity = ObjectMetadataManagers.getInstance().updateCreationTimeout(entity);
-                } catch(Exception ex) {
-                    LOG.warn("Could not update the creation expiration time for ObjectUUID " + entity.getObjectUuid() + " Will retry next interval", e);
-                }*/
             } catch(CancellationException e) {
                 LOG.debug("PUT operation cancelled for object/part UUID " + objectUuid);
                 throw e;
@@ -407,7 +402,23 @@ public class ObjectFactoryImpl implements ObjectFactory {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
-
+        try {
+            List<ObjectEntity> entities =
+                    ObjectMetadataManagers.getInstance().lookupObjectVersions(entity.getBucket(), entity.getObjectKey(), Integer.MAX_VALUE);
+            if (entities != null && entities.size() > 0) {
+                for (ObjectEntity latest : entities) {
+                    if (latest.getObjectUuid().equals( entity.getObjectUuid() )) {
+                        continue;
+                    }
+                    if (!latest.getIsLatest().booleanValue()) {
+                        ObjectMetadataManagers.getInstance().makeLatest(latest);
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
+        }
         if(!entity.getIsDeleteMarker()) {
             ObjectEntity deletingObject = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
 

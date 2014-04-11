@@ -22,14 +22,10 @@ package com.eucalyptus.objectstorage.metadata;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,7 +40,6 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
 import com.google.common.base.Function;
-import com.google.common.collect.Iterators;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -197,48 +192,50 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 		}
 	};
 
-    private static final Comparator timestampComparator = new Comparator<ObjectEntity>() {
-
-        @Override
-        public int compare(ObjectEntity objectEntity, ObjectEntity objectEntity2) {
-            return objectEntity2.getObjectModifiedTimestamp().compareTo(objectEntity.getObjectModifiedTimestamp());
-        }
-    };
-
 	@Override
 	public void cleanupInvalidObjects(final Bucket bucket, final String objectKey) throws Exception {
 		ObjectEntity searchExample = new ObjectEntity(bucket, objectKey, null);
-		
-		final Predicate<ObjectEntity> repairPredicate = new Predicate<ObjectEntity>() {
+
+        final Predicate<ObjectEntity> repairPredicate = new Predicate<ObjectEntity>() {
 			public boolean apply(ObjectEntity example) {
-                try {
+                    try {
 
-                    //Find not-latest null-versioned objects and mark them for deletion.
-                    ObjectEntity searchExample = new ObjectEntity().withKey(example.getObjectKey()).withBucket(example.getBucket()).withState(ObjectState.extant).withVersionId(ObjectStorageProperties.NULL_VERSION_ID);
-                    Criteria searchCriteria = Entities.createCriteria(ObjectEntity.class);
-                    searchCriteria.add(Example.create(searchExample)).addOrder(Order.desc("objectModifiedTimestamp"));
-                    searchCriteria = getSearchByBucket(searchCriteria, example.getBucket());
-                    List<ObjectEntity> results = searchCriteria.list();
-                    if(results.size() <= 1) {
-                        //nothing to do
-                        return true;
-                    }
+                        //Find object versions that need updated
+                        ObjectEntity searchExample = new ObjectEntity().withKey(example.getObjectKey()).withBucket(example.getBucket()).withState(ObjectState.extant);
+                        Criteria searchCriteria = Entities.createCriteria(ObjectEntity.class);
+                        searchCriteria.add(Example.create(searchExample));
+                        searchCriteria.add(Restrictions.or(
+                                Restrictions.eq("versionId", ObjectStorageProperties.NULL_VERSION_ID),
+                                Restrictions.eq("isLatest", Boolean.TRUE)
+                        ));
+                        searchCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
+                        searchCriteria = getSearchByBucket(searchCriteria, example.getBucket());
+                        List<ObjectEntity> results = searchCriteria.list();
+                        if(results.size() <= 1) {
+                            //nothing to do
+                            return true;
+                        }
 
-                    results.get(0).setIsLatest(true);
-                    // Set all but the first element as not latest
-                    for (ObjectEntity obj : results.subList(1, results.size())) {
-                        LOG.trace("Marking object " + obj.getObjectUuid() + " as no longer latest version");
-                        obj.setIsLatest(false);
-                        obj = transitionObjectToState(obj, ObjectState.deleting);
+                        ObjectEntity latest = results.get(0);
+                        latest.setIsLatest(Boolean.TRUE);
+                        // Set all but the first element as not latest
+                        for (ObjectEntity obj : results.subList(1, results.size())) {
+                            LOG.trace("Marking object " + obj.getObjectUuid() + " as no longer latest version");
+                            obj.setIsLatest(Boolean.FALSE);
+                            if (latest.getVersionId() != null && ObjectStorageProperties.NULL_VERSION_ID.equals(latest.getVersionId())
+                                    && obj.getVersionId() != null && ObjectStorageProperties.NULL_VERSION_ID.equals(obj.getVersionId())) {
+                                transitionObjectToState(obj, ObjectState.deleting);
+                            }
+
+                        }
+                    } catch (NoSuchElementException e) {
+                        // Nothing to do.
+                    } catch (Exception e) {
+                        LOG.error("Error consolidationg Object records for " + example.getBucket().getBucketName() + "/"
+                                + example.getObjectKey());
+                        return false;
                     }
-                } catch (NoSuchElementException e) {
-                    // Nothing to do.
-                } catch (Exception e) {
-                    LOG.error("Error consolidationg Object records for " + example.getBucket().getBucketName() + "/"
-                            + example.getObjectKey());
-                    return false;
-                }
-                return true;
+                    return true;
             }
         };
 
@@ -359,6 +356,8 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             deleteMarker.setOwnerIamUserDisplayName(owningUser.getName());
             deleteMarker.setOwnerIamUserId(owningUser.getUserId());
             ObjectEntity persistedDeleteMarker = Entities.persist(deleteMarker);
+            currentObject.setIsLatest(Boolean.FALSE);
+            Entities.mergeDirect(currentObject);
             trans.commit();
             return persistedDeleteMarker;
         } catch(Exception e) {
@@ -510,7 +509,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                             parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
                             if (parts.length > 1) {
                                 prefixString = prefix + parts[0] + delimiter;
-                                if (!commonPrefixes.contains(prefixString)) {
+                                if (!prefixString.equals(keyMarker) && !commonPrefixes.contains(prefixString)) {
                                     if (resultKeyCount == maxUploads) {
                                         // This is a new record, so we know
                                         // we're truncating if this is true
@@ -588,7 +587,57 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
 	}
 
-	@Override
+    @Override
+    public List<ObjectEntity> lookupObjectVersions(Bucket bucket, String objectKey, int numResults) throws Exception {
+        ObjectEntity searchObj = new ObjectEntity().withBucket(bucket).withState(ObjectState.extant).withKey(objectKey);
+
+        List<ObjectEntity> objectInfos = null;
+        try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
+            Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
+            objCriteria.setMaxResults(numResults);
+            objCriteria.setReadOnly(true);
+            objCriteria.add(Example.create(searchObj));
+            objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
+
+            objCriteria = getSearchByBucket(objCriteria, bucket);
+            objectInfos = objCriteria.list();
+            tran.commit();
+        }
+        catch (Exception ex) {
+            LOG.warn("exception caught while retrieving all versions of object " + objectKey + " in bucket " + bucket.getBucketName());
+            throw ex;
+        }
+        return objectInfos;
+    }
+
+    @Override
+    public ObjectEntity makeLatest(ObjectEntity entity) throws Exception {
+        ObjectEntity retrieved = null ;
+        try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
+            retrieved = lookupObject(entity.getBucket(), entity.getObjectKey(), entity.getVersionId());
+            retrieved.setIsLatest(Boolean.TRUE);
+            Entities.mergeDirect(retrieved);
+            tran.commit();
+        } catch (Exception ex) {
+            LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
+            throw ex;
+        }
+        return retrieved;
+    }
+
+    private ObjectEntity makeNotLatest(ObjectEntity entity) throws Exception {
+        try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
+            ObjectEntity retrieved = Entities.merge(entity);
+            retrieved.setIsLatest(Boolean.FALSE);
+            tran.commit();
+            return retrieved;
+        } catch (Exception ex) {
+            LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
+            throw ex;
+        }
+    }
+
+    @Override
 	public PaginatedResult<ObjectEntity> listVersionsPaginated(final Bucket bucket, int maxEntries, String prefix,
 			String delimiter, String fromKeyMarker, String fromVersionId, boolean latestOnly) throws Exception {
 
@@ -667,7 +716,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 							parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
 							if (parts.length > 1) {
 								prefixString = prefix + parts[0] + delimiter;
-								if (!commonPrefixes.contains(prefixString)) {
+								if (!prefixString.equals(fromKeyMarker) && !commonPrefixes.contains(prefixString)) {
 									if (resultKeyCount == maxEntries) {
 										// This is a new record, so we know
 										// we're truncating if this is true
@@ -766,7 +815,8 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
         }
 
         try {
-            return Entities.asTransaction(ObjectEntity.class, transitionFunction).apply(entity);
+            ObjectEntity result = Entities.asTransaction(ObjectEntity.class, transitionFunction).apply(entity);
+            return result;
         } catch(ObjectStorageInternalException e) {
             throw e;
         } catch(Exception e) {

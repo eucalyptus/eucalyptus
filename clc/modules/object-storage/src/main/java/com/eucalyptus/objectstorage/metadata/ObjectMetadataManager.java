@@ -69,6 +69,9 @@ public interface ObjectMetadataManager {
 
     public List<ObjectEntity> lookupObjectsInState(Bucket bucket, String objectKey, String versionId, ObjectState state) throws Exception;
 
+
+    public List<ObjectEntity> lookupObjectVersions(Bucket bucket, String objectKey, int numResults) throws Exception;
+
     /**
      * Given an initialized object, set the state and persist it
      * @param objectToCreate
@@ -175,6 +178,8 @@ public interface ObjectMetadataManager {
          */
     public ObjectEntity transitionObjectToState(ObjectEntity entity, ObjectState destState) throws IllegalResourceStateException, MetadataOperationFailureException;
 
+
+    public ObjectEntity makeLatest(ObjectEntity entity) throws Exception;
 
     /**
      * Sets the access control policy on the object.

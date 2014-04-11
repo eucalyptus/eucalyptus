@@ -62,6 +62,8 @@ import java.util.UUID;
 @Table(name = "objects")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
+
+    @Index(name = "IDX_object_key")
     @Column(name = "object_key")
     private String objectKey;
 
@@ -75,6 +77,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     @Column(name = "object_uuid", unique = true, nullable = false)
     private String objectUuid; //The a uuid for this specific object content & request
 
+    @Index(name = "IDX_version_id")
     @Column(name = "version_id", nullable = false)
     private String versionId; //VersionId is required to uniquely identify ACLs and auth
 

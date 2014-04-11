@@ -73,6 +73,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.eucalyptus.cloudformation.CloudFormation;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.log4j.Logger;
@@ -83,6 +84,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.component.ServiceBuilder;
@@ -102,6 +104,7 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.Optional;
 
 public class X509Download extends HttpServlet {
   
@@ -229,8 +232,9 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
-      if ( Topology.isEnabled( Compute.class ) ) {
-        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Compute.class ) ) );
+      final Optional<String> computeUrl = remotePublicify( Compute.class );
+      if ( computeUrl.isPresent( ) ) {
+        sb.append( entryFor( "EC2_URL", null, computeUrl ) );
       } else {
         sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
         ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Compute.class );
@@ -241,48 +245,22 @@ public class X509Download extends HttpServlet {
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
       }
       
-      if ( Topology.isEnabled( ObjectStorage.class ) ) {
-        ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
-        try {
-          String uri = ServiceUris.remotePublicify( walrusConfig ).toASCIIString( );
-          LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
-          sb.append( "\nexport S3_URL=" + uri );
-        } catch (Exception e) {
-          LOG.error("Failed to set Walrus URL: " + walrusConfig, e);	
-        }
-      } else {
-        sb.append( "\necho WARN:  A valid OSG is not configured. S3_URL is not set. "
-        		+ "Please register/configure an OSG and download credentials again. "
-        		+ "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage >&2" );
-      }      
-      
-      //Disable notifications for now
-      //sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
-      if ( Topology.isEnabled( Euare.class ) ) {//GRZE:NOTE: this is temporary
-        sb.append( "\nexport EUARE_URL=" + ServiceUris.remotePublicify( Euare.class ) );
-      } else {
-        sb.append( "\necho WARN:  EUARE URL is not configured. >&2" );
-      }
-      if ( Topology.isEnabled( Tokens.class ) ) {
-        sb.append( "\nexport TOKEN_URL=" + ServiceUris.remotePublicify( Tokens.class ) );
-      } else {
-        sb.append( "\necho WARN:  TOKEN URL is not configured. >&2" );
-      }
-      if ( Topology.isEnabled( AutoScaling.class ) ) {
-        sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
-      } else {
-        sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
-      }
-      if ( Topology.isEnabled( CloudWatch.class ) ) {
-        sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
-      } else {
-        sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
-      }
-      if ( Topology.isEnabled( LoadBalancing.class ) ) {
-        sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( LoadBalancing.class ) );
-      } else {
-        sb.append( "\necho WARN:  Load Balancing service URL is not configured. >&2" );
-      }
+      sb.append( entryFor( "S3_URL", "A valid OSG is not configured. S3_URL is not set. " +
+          "Please register/configure an OSG and download credentials again. " +
+          "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
+          remotePublicify( ObjectStorage.class ) ) );
+      sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
+          remotePublicify( Euare.class ) ) );
+      sb.append( entryFor( "TOKEN_URL", "TOKEN URL is not configured.",
+          remotePublicify( Tokens.class ) ) );
+      sb.append( entryFor( "AWS_AUTO_SCALING_URL", "Auto Scaling service URL is not configured.",
+          remotePublicify( AutoScaling.class ) ) );
+      sb.append( entryFor( "AWS_CLOUDFORMATION_URL", null,
+          remotePublicify( CloudFormation.class ) ) );
+      sb.append( entryFor( "AWS_CLOUDWATCH_URL", "Cloud Watch service URL is not configured.",
+          remotePublicify( CloudWatch.class ) ) );
+      sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
+          remotePublicify( LoadBalancing.class ) ) );
       sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
@@ -346,8 +324,30 @@ public class X509Download extends HttpServlet {
     zipOut.close( );
     return byteOut.toByteArray( );
   }
-  
-  public static String getError( String message ) {
+
+  private static Optional<String> remotePublicify( final Class<? extends ComponentId> componentClass ) {
+    Optional<String> url = Optional.absent( );
+    if ( Topology.isEnabled( componentClass ) ) try {
+      url = Optional.of( ServiceUris.remotePublicify( Topology.lookup( componentClass ) ).toString( ) );
+    } catch ( final Exception e ) {
+      LOG.error( "Failed to get URL for service " + componentClass.getSimpleName( ), e );
+    }
+    return url;
+  }
+
+  private static String entryFor( final String variable,
+                                  final String warning,
+                                  final Optional<String> url ) {
+    if ( url.isPresent( ) ) {
+      return "\nexport " + variable + "=" + url.get( );
+    } else if ( warning != null ) {
+      return "\necho WARN:  " + warning + " >&2";
+    } else {
+      return "";
+    }
+  }
+
+  private static String getError( String message ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Getting credentials failed:\n" );
     builder.append( message );

@@ -127,17 +127,6 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
                 if (putObjectResponse.getVersionId() != null) {
                     httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
                 }
-            } else if (msg instanceof ObjectStorageDataResponseType) {
-                ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
-                if (response.getEtag() != null) {
-                    httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
-                }
-                if (response.getLastModified() != null) {
-                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(response.getLastModified()));
-                }
-                if (response.getVersionId() != null) {
-                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, response.getVersionId());
-                }
             } else if (msg instanceof PostObjectResponseType) {
                 PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
                 String redirectUrl = postObjectResponse.getRedirectUrl();
@@ -158,6 +147,17 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
                 }
                 //have to force a close for browsers
                 event.getFuture().addListener(ChannelFutureListener.CLOSE);
+            } else if (msg instanceof ObjectStorageDataResponseType) {
+                ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
+                if (response.getEtag() != null) {
+                    httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
+                }
+                if (response.getLastModified() != null) {
+                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(response.getLastModified()));
+                }
+                if (response.getVersionId() != null) {
+                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, response.getVersionId());
+                }
             } else if (msg instanceof CopyObjectResponseType) {
                 CopyObjectResponseType copyResponse = (CopyObjectResponseType) msg;
                 if (copyResponse.getVersionId() != null)

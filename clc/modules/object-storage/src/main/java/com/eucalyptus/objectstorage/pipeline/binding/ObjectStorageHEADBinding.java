@@ -62,7 +62,12 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Does binding for REST HEAD requests in the ObjectStorageGateway for the S3 API.
@@ -72,4 +77,19 @@ import org.apache.log4j.Logger;
 public class ObjectStorageHEADBinding extends ObjectStorageRESTBinding {
 	private static Logger LOG = Logger.getLogger( ObjectStorageHEADBinding.class );
 
+    @Override
+    protected Map<String, String> populateOperationMap() {
+        Map<String, String> newMap = new HashMap<>();
+
+        newMap.put(BUCKET + HttpMethod.HEAD.toString(), "HeadBucket");
+        newMap.put(OBJECT + HttpMethod.HEAD.toString(), "HeadObject");
+        return newMap;
+    }
+
+    protected Map<String, String> populateUnsupportedOperationMap() {
+        Map<String, String> opsMap = new HashMap<>();
+
+        // Object operations
+        return opsMap;
+    }
 }

@@ -337,7 +337,6 @@ public class CloudFormationService {
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
       String stackName = request.getStackName();
-      if (stackName == null) throw new ValidationErrorException("Stack name is null");
       // TODO: support next token
       List<StackEntity> stackEntities = StackEntityManager.describeStacks(accountId, stackName);
       ArrayList<Stack> stackList = new ArrayList<Stack>();
