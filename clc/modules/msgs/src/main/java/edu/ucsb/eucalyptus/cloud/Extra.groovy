@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.cloud
 
 import com.eucalyptus.component.Component

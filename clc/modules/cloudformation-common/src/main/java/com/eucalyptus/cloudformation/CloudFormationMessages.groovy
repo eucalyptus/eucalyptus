@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.cloudformation
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -26,11 +27,10 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Date;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
