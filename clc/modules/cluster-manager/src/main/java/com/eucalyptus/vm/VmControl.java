@@ -73,6 +73,7 @@ import java.util.Set;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
@@ -96,6 +97,7 @@ import com.google.common.base.Joiner;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
@@ -830,7 +832,12 @@ public class VmControl {
     Context ctx = Contexts.lookup( );
 
     try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+      final VmInstance vm;
+      try {
+        vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+      } catch ( AuthException | NoSuchElementException e ) {
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
+      }
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
         boolean isValidBlockDevice = false;
@@ -901,7 +908,12 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          final byte[] userData;
+          try {
+            userData = B64.standard.dec( request.getUserDataValue( ) );
+          } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
+            throw new ClientComputeException( "InvalidParameterValue", "User data decoding error." );
+          }
           if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
@@ -913,8 +925,9 @@ public class VmControl {
         }
       }
       reply.set_return( true );
+    } catch ( final ComputeException e ) {
+      throw  e;
     } catch ( Exception ex ) {
-      LOG.error( ex );
       if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
         throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + instanceId + "' is not in the 'stopped' state." );
       } else if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
@@ -933,7 +946,8 @@ public class VmControl {
       } else if ( Exceptions.isCausedBy( ex, InvalidMetadataException.class ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
-      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
+      LOG.error( ex, ex );
+      throw new ComputeException( "InternalError", "Error processing request: " + ex.getMessage( ) );
     }
     return reply;
   }
