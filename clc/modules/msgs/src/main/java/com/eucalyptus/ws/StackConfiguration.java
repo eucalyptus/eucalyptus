@@ -190,7 +190,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500L;
   
   @ConfigurableField( description = "Maximum HTTP chunk size (bytes)." )
-  public static Integer       HTTP_MAX_CHUNK_BYTES              = 10 * 10 * 1024;
+  public static Integer       HTTP_MAX_CHUNK_BYTES              = 100 * 1024 * 1024;
   
   @ConfigurableField( description = "Maximum HTTP initial line size (bytes)." )
   public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;

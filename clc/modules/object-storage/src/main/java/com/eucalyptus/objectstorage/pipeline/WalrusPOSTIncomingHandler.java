@@ -68,10 +68,12 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+//import org.jboss.netty.channel.ChannelBuffer;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class WalrusPOSTIncomingHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusPOSTIncomingHandler.class );
@@ -82,7 +84,7 @@ public class WalrusPOSTIncomingHandler extends MessageStackHandler {
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-		LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+		//LOG.info( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
 		if ( channelEvent instanceof MessageEvent ) {
 			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
 			this.incomingMessage( channelHandlerContext, msgEvent );
@@ -98,18 +100,20 @@ public class WalrusPOSTIncomingHandler extends MessageStackHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
     Throwable t = exceptionEvent.getCause( );
     if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
-      LOG.debug( t, t );
+      LOG.error( t, t );
     } else {
-      LOG.debug( t, t );
+      LOG.error( t, t );
     }
     ctx.sendUpstream( exceptionEvent );
   }
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+		LOG.info("Got message " + event.getMessage());
 		if(event.getMessage() instanceof MappingHttpRequest) {
 			MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
 			if(httpRequest.getContent().readableBytes() == 0) {
+				LOG.info("awaiting the next message");
 				waitForNext = true;
 				processedFirstChunk = false;
 				this.httpRequest = httpRequest;
@@ -117,10 +121,12 @@ public class WalrusPOSTIncomingHandler extends MessageStackHandler {
 		} else if(event.getMessage() instanceof DefaultHttpChunk) {
 			if(!processedFirstChunk) {
 				DefaultHttpChunk httpChunk = (DefaultHttpChunk) event.getMessage();
+				LOG.info("getting content, chunkisze " + StackConfiguration.HTTP_MAX_CHUNK_BYTES );
 				httpRequest.setContent(httpChunk.getContent());
 				processedFirstChunk = true;
-		        UpstreamMessageEvent newEvent = new UpstreamMessageEvent( ctx.getChannel( ), httpRequest, null);
-		        ctx.sendUpstream(newEvent);
+			    LOG.info("Sending upstream");
+		    	    UpstreamMessageEvent newEvent = new UpstreamMessageEvent( ctx.getChannel( ), httpRequest, null);
+		    	    ctx.sendUpstream(newEvent);
 			}
 		}
 	}
