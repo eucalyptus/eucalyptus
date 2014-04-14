@@ -17,9 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.cloudwatch.common.msgs
 
 import com.eucalyptus.cloudwatch.common.CloudWatch
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.lang.reflect.Field;
 

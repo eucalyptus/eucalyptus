@@ -17,12 +17,14 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.compute.common.network
 
 import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 

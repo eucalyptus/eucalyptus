@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.auth.euare.config
 
 import com.eucalyptus.config.DeregisterComponentResponseType
@@ -27,6 +28,7 @@ import com.eucalyptus.config.ModifyComponentAttributeResponseType
 import com.eucalyptus.config.ModifyComponentAttributeType
 import com.eucalyptus.config.RegisterComponentResponseType
 import com.eucalyptus.config.RegisterComponentType
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class RegisterEuareType extends RegisterComponentType {}
 public class RegisterEuareResponseType extends RegisterComponentResponseType {}

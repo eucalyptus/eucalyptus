@@ -30,6 +30,7 @@ import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
+import com.google.common.base.Charsets;
 import groovyjarjarasm.asm.Opcodes;
 
 /**
@@ -51,13 +52,23 @@ public class GroovyAddClassUUIDASTTransformation implements ASTTransformation {
             Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC,
             new ClassNode(String.class),
             new ClassNode(cNode.getClass()),
-            new ConstantExpression( UUID.randomUUID( ).toString( ) )
+            new ConstantExpression( UUID.nameUUIDFromBytes( cNode.getName().getBytes( Charsets.UTF_8 ) ).toString( ) )
         );
 
         cNode.addField( field );
-      }
+
+        // Added so Groovy thinks it has already added the "__timeStamp__239_neverHappen$TIMESTAMP" field and skips it
+        final FieldNode timeTagField = new FieldNode(
+            "__timeStamp",
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+            new ClassNode(Long.class),
+            new ClassNode(cNode.getClass()),
+            new ConstantExpression( 0 )
+        );
+
+        cNode.addField( timeTagField );
+       }
     }
-    
   }
 
 }
