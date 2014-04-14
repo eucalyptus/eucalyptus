@@ -115,7 +115,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-		LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+		LOG.info( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
 		if ( channelEvent instanceof MessageEvent ) {
 			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
 			this.incomingMessage( channelHandlerContext, msgEvent );

@@ -185,6 +185,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+		LOG.info("Got binding message " + event);
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			// TODO: get real user data here too			
@@ -421,14 +422,14 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void setRequiredParams(final GroovyObject msg, Context context) throws Exception {
 		User user = context.getUser( );
-		if ( user != null && !user.equals( Principals.nobodyUser( ) ) ) {
-			final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
-			if ( !queryIdCreds.isEmpty( ) ) {
-				msg.setProperty( "accessKeyID", Iterables.getOnlyElement( queryIdCreds ).getQueryId( ) );
-			} else {
-				msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
-			}
-		}
+		//if (0) user != null && !user.equals( Principals.nobodyUser( ) ) ) {
+		//	final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
+		//	if ( !queryIdCreds.isEmpty( ) ) {
+		//		msg.setProperty( "accessKeyID", Iterables.getOnlyElement( queryIdCreds ).getQueryId( ) );
+		//	} else {
+		//		msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
+		//	}
+		//}
 		msg.setProperty("timeStamp", new Date());
 	}
 
@@ -1283,8 +1284,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
 			putQueue.put(WalrusDataMessage.DataMessage(read));
-			if(!httpRequest.isChunked())
+			if(!httpRequest.isChunked()) {
+				LOG.info("The message is not chunked: " + read);
 				putQueue.put(WalrusDataMessage.EOF());
+			} else {
+			    LOG.info("The message is chunked");
+			}
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		}
@@ -1293,12 +1298,17 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void handleFirstChunk(MappingHttpRequest httpRequest, ChannelBuffer firstChunk, long dataLength) {
 		try {
+			LOG.info("Handling upload chunk");
 			putQueue.put(WalrusDataMessage.StartOfData(dataLength));
 			byte[] read = new byte[firstChunk.readableBytes( )];
 			firstChunk.readBytes( read );
 			putQueue.put(WalrusDataMessage.DataMessage(read));
-			if(!httpRequest.isChunked())
+			if(!httpRequest.isChunked()) {
+				LOG.info("the message is chunked " + read);
 				putQueue.put(WalrusDataMessage.EOF());
+			} else {
+			    LOG.info("the message is not chunked");
+			}
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		}
