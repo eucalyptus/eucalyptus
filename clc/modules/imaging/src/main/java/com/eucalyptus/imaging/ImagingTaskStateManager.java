@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.net.URI;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -26,6 +27,9 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.amazonaws.services.s3.model.S3Object;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -33,6 +37,8 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.Dates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -351,6 +357,14 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   private void processNewTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
       try{
+        if(isExpired(task)){
+          try{
+            ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.CANCELLING, "Task expired");
+          }catch(final Exception ex){
+            ;
+          }
+          continue;
+        }
         // create a volume and update the database
        if(task instanceof ImportVolumeImagingTask)
          processNewImportVolumeImagingTask((ImportVolumeImagingTask) task); 
@@ -378,7 +392,17 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     final List<ImportInstanceVolumeDetail> volumes = taskDetail.getVolumes();
     if(volumes==null)
       return;
-    
+    for(final ImportInstanceVolumeDetail volume: volumes){
+      if(volume.getImage().getImportManifestUrl()!=null)
+        try{
+          if(! doesManifestExist(instanceTask.getOwnerUserId(), volume.getImage().getImportManifestUrl())) {
+            return;
+          }
+        }catch(final Exception ex){
+          throw new Exception("Failed to check import manifest", ex);
+        }
+    }
+
     try{
       int numVolumeCreated = 0;
       for(final ImportInstanceVolumeDetail volume : volumes){
@@ -434,6 +458,16 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   }
   
   private void processNewImportVolumeImagingTask(final ImportVolumeImagingTask volumeTask) throws Exception{
+    if(volumeTask.getImportManifestUrl() !=null){
+      try{
+        if(! doesManifestExist(volumeTask.getOwnerUserId(), volumeTask.getImportManifestUrl())) {
+          return;
+        }
+      }catch(final Exception ex){
+        throw new Exception("Failed to check import manifest", ex);
+      }
+    }
+    
     if(volumeTask.getVolumeId()==null || volumeTask.getVolumeId().length()<=0){
       final String zone = volumeTask.getAvailabilityZone();
       final int size = volumeTask.getVolumeSize();
@@ -466,6 +500,37 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         throw new Exception("The volume "+volume.getVolumeId()+"'s state is "+volumeStatus);
       }
     }  
+  }
+  
+  private boolean doesManifestExist(final String userId, final String manifestUrl) throws Exception {
+    final User user = Accounts.lookupUserById(userId);
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+    //http://euca010.objectstorage.thinkpad:8773/e3a03ce6-211b-44af-9984-5a2cebc4af18/disk-little-image.imgmanifest.xml?AWSAccessKeyId=AKIHK4NNTU53RYHGHUZX&Expires=1400054576&Signature=j6%2FVi2dOHMr5MdBEoFn1EY5ZwZs%3D
+    final URI uri = new URI(manifestUrl);
+    String path = uri.getPath();
+    if(path.startsWith("/"))
+      path = path.substring(1);
+    final String[] tokens = path.split("/");
+    
+    String keyObj = tokens[tokens.length-1];
+    final String keyDir = tokens[tokens.length-2];
+    keyObj = keyObj.substring(0, keyObj.lastIndexOf("manifest.xml"))+"manifest.xml";
+    
+    final String key = String.format("%s/%s", keyDir, keyObj);
+    String bucket = null;
+    if(tokens.length>2){ // bucket is in the path
+      bucket = tokens[0];
+    }else{ // bucket is virtual hosted
+      bucket = uri.getHost();
+      bucket = bucket.substring(0, bucket.indexOf("."));
+    }
+    
+    try{
+      final S3Object obj = s3c.getObject(bucket, key);
+      return obj!=null;
+    }catch(final Exception ex){
+      return false;
+    }
   }
 }
 

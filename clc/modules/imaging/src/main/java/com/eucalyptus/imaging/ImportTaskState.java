@@ -21,9 +21,9 @@ package com.eucalyptus.imaging;
 
 
 public enum ImportTaskState {
-  NEW("active", "active", "pending"),
-  PENDING("active","active","pending"),
-  CONVERTING("active", "active", "active"),
+  NEW("active", "active", "pending"),  // a task is accepted
+  PENDING("active","active","pending"), // waiting for processing by worker
+  CONVERTING("active", "active", "active"), // being processed by worker
   INSTANTIATING("active", "active", "active"), // image registration and launch for import-instance
   CANCELLING("cancelling", "cancelling", ""), 
   CANCELLED("cancelled", "cancelled", ""),

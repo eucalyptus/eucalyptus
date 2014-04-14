@@ -112,10 +112,10 @@ public class ImagingServiceProperties {
   @ConfigurableField( displayName = "import_task_expiration_hours",
      description = "expiration hours of import volume/instance tasks",
      readonly = false,
-     initial = "48",
+     initial = "168",
      type = ConfigurableFieldType.KEYVALUE,
      changeListener = ImportTaskExpirationHoursListener.class)
-  public static String IMPORT_TASK_EXPIRATION_HOURS = "48";
+  public static String IMPORT_TASK_EXPIRATION_HOURS = "168";
 
   @ConfigurableField( displayName = "imaging_worker_log_server",
      description = "address/ip of the server that collects logs from imaging wokrers",
