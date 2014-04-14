@@ -85,13 +85,16 @@ class IPRange implements Iterable<Integer> {
     }
     final int snet = PrivateAddresses.asInteger( subnet )
     final int mask = PrivateAddresses.asInteger( netmask )
-    new IPRange( snet & mask, snet | ( -1 ^ mask ) )
+    new IPRange( snet & mask, snet | ( -1 ^ mask ) ).perhapsShrink( )
   }
 
   static boolean isIPRange( String range ) {
     parse( ).apply( range ).present
   }
 
+  /**
+   * Split this range around ip, omitting ip from the resulting ranges.
+   */
   List<IPRange> split( String ip ) {
     Parameters.checkParam( "ip", ip, notNullValue( ) )
     if ( !InetAddresses.isInetAddress( ip ) ) {
@@ -100,16 +103,38 @@ class IPRange implements Iterable<Integer> {
     final int address =  PrivateAddresses.asInteger( ip )
     if ( UnsignedInts.compare( address, lower ) > 0 && UnsignedInts.compare( address, upper ) < 0 ) {
       [
-          new IPRange( lower, UnsignedInteger.fromIntBits(address).minus(1).intValue() ),
-          new IPRange( UnsignedInteger.fromIntBits(address).plus(1).intValue(), upper )
+          new IPRange( lower, unsigned(address).minus(unsigned(1)).intValue() ),
+          new IPRange( unsigned(address).plus(unsigned(1)).intValue(), upper )
       ]
     } else if ( UnsignedInts.compare( lower, address ) == 0 ) {
-      [ new IPRange( UnsignedInteger.fromIntBits(address).plus(1).intValue(), upper ) ]
+      [ new IPRange( unsigned(address).plus(unsigned(1)).intValue(), upper ) ]
     } else if ( UnsignedInts.compare( upper, address ) == 0 ) {
-      [ new IPRange( lower, UnsignedInteger.fromIntBits(address).minus(1).intValue() ) ]
+      [ new IPRange( lower, unsigned(address).minus(unsigned(1)).intValue() ) ]
     } else {
       [ this ]
     }
+  }
+
+  /**
+   * Does this range (inclusively) contain the given range.
+   *
+   * @param range The range to test
+   */
+  boolean contains( IPRange range ) {
+    UnsignedInts.compare( lower, range.lower ) < 1 && UnsignedInts.compare( upper, range.upper ) > -1
+  }
+
+  /**
+   * Shrink this range if possible by one at each end.
+   *
+   * <p>Useful to skip the network address and broadcast address in a subnet.</p>
+   */
+  IPRange perhapsShrink( ) {
+    UnsignedInteger shrinkLower = unsigned( lower ).plus( unsigned( 1 ) )
+    UnsignedInteger shrinkUpper = unsigned( upper ).minus( unsigned( 1 ) )
+    shrinkLower.compareTo( shrinkUpper ) <= 0 ?
+        new IPRange( shrinkLower.intValue( ), shrinkUpper.intValue( ) ) :
+        this
   }
 
   @Override
@@ -123,6 +148,10 @@ class IPRange implements Iterable<Integer> {
     lower == upper ?
         PrivateAddresses.fromInteger( lower ) :
         "${PrivateAddresses.fromInteger( lower )}-${PrivateAddresses.fromInteger( upper )}"
+  }
+
+  private static UnsignedInteger unsigned( int value ) {
+    UnsignedInteger.fromIntBits( value )
   }
 
   private static class LongSequentialIterator extends AbstractSequentialIterator<Long> implements Iterator<Long> {

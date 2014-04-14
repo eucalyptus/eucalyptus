@@ -65,6 +65,7 @@ import java.util.concurrent.TimeUnit
 /**
  *
  */
+@SuppressWarnings("UnnecessaryQualifiedReference")
 @CompileStatic
 class NetworkConfigurations {
   private static final Logger logger = Logger.getLogger( NetworkConfigurations )
@@ -77,7 +78,6 @@ class NetworkConfigurations {
   private static final boolean validateConfiguration =
       Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.config.validateNetworkConfiguration', 'true' ) )
 
-  @SuppressWarnings("UnnecessaryQualifiedReference")
   static Optional<NetworkConfiguration> getNetworkConfiguration( ) {
     NetworkConfigurations.networkConfigurationFromProperty.or(
         NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) )
@@ -105,7 +105,7 @@ class NetworkConfigurations {
     final String dnsServersProperty = SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( )
     '127.0.0.1'.equals( dnsServersProperty ) ?
         fallback :
-        Lists.newArrayList( Splitter.on(',').omitEmptyStrings().trimResults().split( dnsServersProperty ) ) as List<String>
+        Lists.newArrayList( Splitter.on(',').omitEmptyStrings().trimResults().split( dnsServersProperty ) ) as List<String> ?: fallback
   }
 
   @PackageScope
@@ -169,16 +169,14 @@ class NetworkConfigurations {
   static Collection<String> getPrivateAddressRanges( NetworkConfiguration configuration, String clusterName ) {
     configuration.clusters?.find{ Cluster cluster -> cluster.name == clusterName }?.privateIps ?:
         configuration.privateIps ?:
-            getSubnetForCluster( configuration, clusterName )?.with{ IPRange.fromSubnet( subnet, netmask ).split( gateway )*.toString( ) } ?:
+            getSubnetForCluster( configuration, clusterName )?.with{ IPRange.fromSubnet( subnet, netmask ).split( gateway ).collect{ IPRange range -> range.toString( ) } } ?:
                 [ ]
   }
 
-  @SuppressWarnings("UnnecessaryQualifiedReference")
   static Iterable<Integer> getPrivateAddresses( NetworkConfiguration configuration, String clusterName ) {
     Lists.newArrayList( NetworkConfigurations.iterateRanges( getPrivateAddressRanges( configuration, clusterName ) ) )
   }
 
-  @SuppressWarnings("UnnecessaryQualifiedReference")
   static Iterable<Integer> getPrivateAddresses( String clusterName ) {
     Optional<NetworkConfiguration> configuration = NetworkConfigurations.networkConfiguration
     configuration.present ?
@@ -204,6 +202,115 @@ class NetworkConfigurations {
       throw new NetworkConfigurationException( source.getMessage( errors.getAllErrors( ).get( 0 ), Locale.getDefault( ) ) )
     }
     networkConfiguration
+  }
+
+  /**
+   * Create a deep copy of the given network configuration.
+   *
+   * @param configuration The configuration to copy.
+   * @return The copy.
+   */
+  static NetworkConfiguration copyOf( final NetworkConfiguration configuration ) {
+    final ObjectMapper mapper = new ObjectMapper( )
+    mapper.readValue( mapper.valueToTree( configuration ), NetworkConfiguration )
+  }
+
+  /**
+   * Explode the configuration by populating all values at the cluster level
+   * including filling in default values where possible.
+   *
+   * @param networkConfiguration The configuration to explode.
+   * @param clusterNames The required clusters in the result
+   * @return The exploded configuration.
+   */
+  static NetworkConfiguration explode( final NetworkConfiguration networkConfiguration,
+                                       final Iterable<String> clusterNames = [ ] ) {
+    NetworkConfiguration configuration = copyOf( networkConfiguration )
+
+    List<Cluster> clusters = configuration.clusters ?: [ ] as List<Cluster>
+    configuration.clusters = clusters
+
+    // Ensure required clusters exist
+    clusters.collect{ Cluster cluster -> cluster.name }.with{ Collection<String> names ->
+      clusters.addAll( ((Iterable) clusterNames).findResults{ String requiredName ->
+        names.contains( requiredName ) ?
+            null:
+            new Cluster( name: requiredName )
+      } )
+    }
+
+    // Populate values at cluster level
+    clusters.each{ Cluster cluster ->  cluster.with{
+      if ( !macPrefix ) {
+        macPrefix = configuration.macPrefix
+      }
+
+      if ( subnet == null && name ) {
+        subnet = NetworkConfigurations.getSubnetForCluster( configuration, name )
+      }
+
+      // Groovy gets confused here so we use the "cluster." prefix for the privateIps property
+      if ( cluster.privateIps == null && configuration.privateIps ) {
+        cluster.privateIps = configuration.privateIps
+      } else if ( !cluster.privateIps && subnet ) {
+        cluster.privateIps = subnet.with{ IPRange.fromSubnet( subnet, netmask ).split( gateway ).collect{ IPRange range -> range.toString( ) } }
+      }
+
+      void
+    } }
+
+    configuration
+  }
+
+  /**
+   * Validate the given configuration
+   *
+   * <p>Validate the configuration as populated. This will not validate absent
+   * properties, if this is desired the configuration should first be
+   * exploded.</p>
+   *
+   * <p>This method currently validates that:</p>
+   *
+   * <ul>
+   *   <li>Exactly one subnet (with valid IPs) is configured if there are no clusters specified</li>
+   *   <li>Each cluster has valid private IPs for its subnet.</li>
+   * </ul>
+   *
+   * <p>Lower level validation is performed when parsing, this method will only
+   * perform the semantic validation described above.</p>
+   *
+   * @see #explode( NetworkConfiguration )
+   */
+  static void validate( final NetworkConfiguration configuration ) throws NetworkConfigurationException {
+    configuration?.with{
+      if ( configuration.clusters ) {
+        configuration.clusters.each{ Cluster cluster ->
+          if ( cluster.subnet && cluster.privateIps ) {
+            validateIPsForSubnet( cluster.subnet, cluster.privateIps, " for cluster ${cluster.name}" )
+          }
+          void
+        }
+      } else {
+        if ( !configuration.subnets || configuration.subnets.size( ) != 1 ) {
+          throw new NetworkConfigurationException('A single subnet must be configured when clusters are not specified.' )
+        }
+        validateIPsForSubnet( configuration.subnets[0], configuration.privateIps )
+      }
+    }
+  }
+
+  private static void validateIPsForSubnet( final Subnet net,
+                                            final List<String> ipRanges,
+                                            final String desc = '' ) {
+    String subnet = net.subnet
+    String netmask = net.netmask
+    IPRange subnetRange = IPRange.fromSubnet( subnet, netmask )
+    ipRanges?.collect{ String range -> IPRange.parse( ).apply( range ) }?.findResults{ Optional<IPRange> range -> range.orNull( ) }?.each{ IPRange range ->
+      if ( !subnetRange.contains( range ) ) {
+        throw new NetworkConfigurationException( "Private IP range ${range} not valid for subnet/netmask ${subnet}/${netmask}${desc}" )
+      }
+    }
+
   }
 
   @PackageScope
@@ -263,13 +370,14 @@ class NetworkConfigurations {
   }
 
   static class NetworkConfigurationPropertyChangeListener implements PropertyChangeListener<String> {
-    @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     void fireChange( final ConfigurableProperty property,
                      final String newValue ) throws ConfigurablePropertyException {
       if ( !Strings.isNullOrEmpty( newValue ) ) {
         try {
-          parse( newValue )
+          validate( explode( parse( newValue ) ) )
+        } catch ( NetworkConfigurationException e ) {
+          throw e
         } catch ( e ) {
           throw new ConfigurablePropertyException( e.getMessage( ), e )
         }
@@ -282,7 +390,6 @@ class NetworkConfigurations {
       Listeners.register( ClockTick.class, new NetworkConfigurationEventListener( ) )
     }
 
-    @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     public void fireEvent( final ClockTick event ) {
       if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {

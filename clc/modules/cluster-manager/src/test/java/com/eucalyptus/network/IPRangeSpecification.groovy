@@ -92,11 +92,13 @@ class IPRangeSpecification extends Specification {
 
     where:
     subnet        | netmask           | lower          | upper
-    '0.0.0.0'     | '0.0.0.0'         |  0             | -1
-    '10.20.30.40' | '0.0.0.0'         |  0             | -1
-    '10.20.30.40' | '255.0.0.0'       |  0x0A000000    | 0x0AFFFFFF
-    '10.10.10.40' | '255.255.255.0'   |  0x0A0A0A00    | 0x0A0A0AFF
-    '10.10.10.40' | '255.255.255.128' |  0x0A0A0A00    | 0x0A0A0A7F
+    '0.0.0.0'     | '0.0.0.0'         |  1             | -2
+    '10.20.30.40' | '0.0.0.0'         |  1             | -2
+    '10.20.30.40' | '255.0.0.0'       |  0x0A000001    | 0x0AFFFFFE
+    '10.10.10.40' | '255.255.255.0'   |  0x0A0A0A01    | 0x0A0A0AFE
+    '10.10.10.40' | '255.255.255.128' |  0x0A0A0A01    | 0x0A0A0A7E
+    '10.10.10.0'  | '255.255.255.252' |  0x0A0A0A01    | 0x0A0A0A02
+    '10.10.10.0'  | '255.255.255.254' |  0x0A0A0A00    | 0x0A0A0A01 // range too small to shrink
   }
 
   def 'should reject invalid ranges with IllegalArgumentException'() {
@@ -120,6 +122,24 @@ class IPRangeSpecification extends Specification {
         '1.2.3.5-1.2.3.4',
         '1.2.3.4-1.2.3.4-1.2.3.4',
     ]
+  }
+
+  def 'should be able to check for sub ranges'(){
+    expect: 'parsed range containment check has expected result'
+    Groovyness.expandoMetaClass( parse( range ) )
+        .contains( Groovyness.expandoMetaClass( parse( perhapsContains ) ) ) == result
+
+    where:
+    range               | perhapsContains           | result
+    '10.1.0.0-10.2.0.0' | '10.1.0.0'                | true
+    '10.1.0.0-10.2.0.0' | '10.2.0.0'                | true
+    '10.1.0.0-10.2.0.0' | '10.1.0.0-10.2.0.0'       | true
+    '10.1.0.0-10.2.0.0' | '10.0.0.255-10.2.0.0'     | false
+    '10.1.0.0-10.2.0.0' | '10.1.0.0-10.2.0.1'       | false
+    '10.1.0.0-10.2.0.0' | '10.1.1.0-10.1.255.255'   | true
+    '10.1.0.0-10.2.0.0' | '10.1.1.1'                | true
+    '10.1.0.0'          | '10.1.0.0'                | true
+    '10.1.0.0'          | '10.1.0.1'                | false
   }
 
   private static IPRange range( lower, upper ) {
