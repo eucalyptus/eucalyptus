@@ -25,6 +25,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
+import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -385,7 +386,8 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
                                         + " uploadId: " + partEntity.getUploadId()
                                         + " partNumber: " + partEntity.getPartNumber()
                                         + " for deletion because it is not latest.");
-                                partEntity.setState(ObjectState.deleting);
+                                //partEntity.setState(ObjectState.deleting);
+                                MpuPartMetadataManagers.getInstance().transitionPartToState(partEntity, ObjectState.deleting);
                             }
                         } catch (IndexOutOfBoundsException e) {
                             // Either 0 or 1 result, nothing to do

@@ -254,7 +254,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         deleteMarker.setStorageClass("STANDARD");
         deleteMarker.setObjectModifiedTimestamp(new Date());
         deleteMarker.setIsDeleteMarker(true);
-        deleteMarker.setSize(-1L);
+        deleteMarker.setSize(0L);
         deleteMarker.setIsLatest(true);
         return deleteMarker;
     }

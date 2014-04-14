@@ -132,25 +132,25 @@ public class ObjectMetadataManagerTest {
                 objs != null && objs.size() == entityCount)
 
         try {
-            assert( ((int) objMgr.countValid(bucket)) == ( 2 * entityCount ) ) // should be 2 versions of each object
-            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, key, null, null, null, true);
-
+            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, null, null, null, null, true);
+            println 'Entity list:'
             for(ObjectEntity e : r.getEntityList()) {
                 println e.toString()
             }
-
-            assert(r.getEntityList().size() == entityCount);
-
+            println 'End of entity list'
+            assert(r.getEntityList().size() == 2 * entityCount)
+            assert( ((int) objMgr.countValid(bucket)) == ( 2 * entityCount ) ) // should be 2 versions of each object
         } catch(Exception e) {
-            LOG.error("Transaction error", e);
-            fail("Failed getting listing");
+            LOG.error("Transaction error", e)
+            fail("Failed getting listing")
 
         } finally {
             for(ObjectEntity obj : objs) {
                 try {
-                    objMgr.delete(obj);
+                    obj = objMgr.transitionObjectToState(obj, ObjectState.deleting)
+                    objMgr.delete(obj)
                 } catch(Exception e) {
-                    LOG.error("Error deleteing entity: " + obj.toString(), e);
+                    LOG.error("Error deleting entity: " + obj.toString(), e)
                 }
             }
         }
@@ -292,26 +292,6 @@ public class ObjectMetadataManagerTest {
             last = e;
         }
         return true;
-    }
-
-    public void testListPaginatedMultiPage() {
-
-    }
-
-    public void testListPaginatedPrefix() {
-
-    }
-
-    public void testListPaginatedDelim() {
-
-    }
-
-    public void testListPaginatedPagedPrefixDelim() {
-
-    }
-
-    public void testListVersionsPaginated() {
-
     }
 
     @Test
