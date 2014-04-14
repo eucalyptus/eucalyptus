@@ -116,6 +116,15 @@ public class DomainNameRecords {
     return soaRecord;
   }
   
+  public static SOARecord sourceOfAuthorityStaticSerial( Name name ) {
+    final Name soa = DomainNames.sourceOfAuthority( name );
+    final Name ns = DomainNames.nameServerRecords( name ).get( 0 ).getTarget( );
+    final SOARecord soaRecord = new SOARecord( name, DClass.IN, TTL, ns,
+        Name.fromConstantString( "root." + soa ),
+        1, 3600L, 600L, 86400L, 3600L);
+    return soaRecord;
+  }
+  
   public static Record canonicalName( Name aliasName, Name canonicalName ) {
     return new CNAMERecord( aliasName, DClass.IN, TTL, canonicalName );
   }
