@@ -832,38 +832,6 @@ class EucaConf(object):
                              'vtunpass')]
             self._sync_keys_if_necessary(global_keys + cluster_keys)
 
-            # temporary credential propagation hack
-            try:
-                tempd = tempfile.mkdtemp()
-                tempf = os.path.join(tempd, 'creds.zip')
-                tempc = os.path.join(tempd, 'eucarc')
-                cls = boto.utils.find_class('eucadmin.getcredentials',
-                                            'GetCredentials')
-                obj = cls()
-                obj.main(euca_home=self.config['EUCALYPTUS'],
-                         account=self.options.cred_account,
-                         user=self.options.cred_user,
-                         zipfile=tempf)
-                if os.system('unzip ' + tempf + ' -d ' + tempd) != 0:
-                    raise Exception('failed to unzip')
-                ncrc = os.path.join(self.config['EUCALYPTUS'], 'var/lib/eucalyptus/keys/ncrc')
-                if os.system('egrep "^EUCA_KEY_DIR"          ' + tempc + '  >' + ncrc) != 0: raise Exception('failed to grep EUCA_KEY_DIR from ' + tempc + ' to ' + ncrc)
-                if os.system('egrep "^export AWS_ACCESS_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep AWS_ACCESS_KEY from ' + tempc + ' to ' + ncrc)
-                if os.system('egrep "^export AWS_SECRET_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep AWS_SECRET_KEY from ' + tempc + ' to ' + ncrc)
-                if os.system('rm -rf ' + tempd) != 0:
-                    self.warn('failed to clean up by deleting ' + tempd)
-                if os.system('chown eucalyptus.eucalyptus ' + ncrc) != 0:
-                    raise Exception('failed to chown ncrc to eucalyptus')
-                tmp_keys = ['cloud-pk.pem', 'ncrc']
-                self._sync_keys_if_necessary(tmp_keys)
-                self.warn('************************************************************************************')
-                self.warn('This DEVELOPMENT version of Eucalyptus requires cloud-level credentials on all nodes')
-                self.warn('Such arrangement of credentials is not secure and should NEVER be used in production')
-                self.warn('************************************************************************************')
-            except Exception, err:
-                print Exception, err
-                self.warn('Failed to sync cloud-level credentials with a cluster, downloads from Object Store will fail')
-
     def do_register_walrusbackend(self):
         if hasattr(self.options, 'register_walrusbackend'):
             self._do_register('eucadmin.registerwalrusbackend',
@@ -1065,16 +1033,6 @@ class EucaConf(object):
                             'DeregisterTokens')
 
     def _sync_node(self, node):
-        try:
-            tmp_keys = ['cloud-pk.pem', 'ncrc']
-            self._sync_keys_if_necessary(tmp_keys, host=node)
-            self.warn('************************************************************************************')
-            self.warn('This DEVELOPMENT version of Eucalyptus requires cloud-level credentials on all nodes')
-            self.warn('Such arrangement of credentials is not secure and should NEVER be used in production')
-            self.warn('************************************************************************************')
-        except Exception, err:
-            print Exception, err
-            self.warn('Failed to sync cloud-level credentials with a node, downloads from Object Store will fail')
         keys = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
                 'node-pk.pem']
         return self._sync_keys_if_necessary(keys, host=node)
