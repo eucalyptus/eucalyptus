@@ -62,10 +62,15 @@
 
 package com.eucalyptus.empyrean;
 
+import static com.eucalyptus.util.Parameters.checkParam;
+import static org.hamcrest.Matchers.notNullValue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -87,8 +92,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -397,7 +400,7 @@ public class EmpyreanService {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( final ServiceConfiguration input ) {
-          return ( names == null ) || names.isEmpty( ) || names.contains( input.getName( ) );
+          return ( names == null ) || names.isEmpty( ) || names.contains( input.getName() ) || names.contains( input.getFullName().toString() );
         }
       };
     }
