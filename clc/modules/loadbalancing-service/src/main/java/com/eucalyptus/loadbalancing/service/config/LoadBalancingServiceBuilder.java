@@ -53,7 +53,7 @@ public class LoadBalancingServiceBuilder extends AbstractServiceBuilder<LoadBala
 
   @Override
   public LoadBalancingConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new LoadBalancingConfiguration( name, host, port );
+    return new LoadBalancingConfiguration( partition, name, host, port );
   }
 
   @Override

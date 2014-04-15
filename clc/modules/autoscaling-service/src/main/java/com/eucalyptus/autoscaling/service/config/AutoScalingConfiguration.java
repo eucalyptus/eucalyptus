@@ -42,7 +42,7 @@ public class AutoScalingConfiguration extends ComponentConfiguration implements 
 
   public AutoScalingConfiguration() { }
 
-  public AutoScalingConfiguration( String name, String hostName, Integer port ) {
-    super( "autoscaling", name, hostName, port, SERVICE_PATH );
+  public AutoScalingConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, SERVICE_PATH );
   }
 }

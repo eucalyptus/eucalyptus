@@ -42,7 +42,7 @@ public class LoadBalancingConfiguration extends ComponentConfiguration implement
 
   public LoadBalancingConfiguration() { }
 
-  public LoadBalancingConfiguration( String name, String hostName, Integer port ) {
-    super( "loadbalancing", name, hostName, port, SERVICE_PATH );
+  public LoadBalancingConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, SERVICE_PATH );
   }
 }

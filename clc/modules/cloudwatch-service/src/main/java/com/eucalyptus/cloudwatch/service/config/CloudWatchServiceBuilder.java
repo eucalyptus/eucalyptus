@@ -53,7 +53,7 @@ public class CloudWatchServiceBuilder extends AbstractServiceBuilder<CloudWatchC
 
   @Override
   public CloudWatchConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new CloudWatchConfiguration( name, host, port );
+    return new CloudWatchConfiguration( partition, name, host, port );
   }
 
   @Override
