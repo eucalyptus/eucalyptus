@@ -22,7 +22,7 @@ package com.eucalyptus.cloud.util;
 /**
  *
  */
-public class InvalidInstanceProfileMetadataException extends MetadataException {
+public class InvalidInstanceProfileMetadataException extends InvalidMetadataException {
   private static final long serialVersionUID = 1L;
 
   public InvalidInstanceProfileMetadataException( final String message ) {
