@@ -221,7 +221,10 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
         throw new NoSuchElementException( );
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
+        throw new TransactionExecutionException(
+          "Too many instances running in security group '"+this.displayName+"', unable to allocate a private network " +
+          "index. Please either reduce the number of instances in the security group or use another security group.",
+          ex );
       }
     }
   }
