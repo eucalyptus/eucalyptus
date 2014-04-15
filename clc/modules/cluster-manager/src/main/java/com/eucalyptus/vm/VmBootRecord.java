@@ -129,6 +129,9 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_virtualization_type" )
   @Enumerated(  EnumType.STRING )
   private VirtualizationType      virtType;
+  @Column( name = "metadata_vm_architecture" )
+  @Enumerated(  EnumType.STRING )
+  private ImageMetadata.Architecture architecture;
   @ElementCollection
   @CollectionTable( name = "metadata_instances_persistent_volumes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -178,6 +181,7 @@ public class VmBootRecord {
     if ( bootSet.hasRamdisk( ) ) {
       this.ramdisk = bootSet.getRamdisk( );
     }
+    this.architecture = (bootSet.getMachine() != null) ? bootSet.getMachine().getArchitecture() : null;
     this.platform = bootSet.getMachine( ).getPlatform( );
     this.virtType = getDisplayVirtualizationType( ); // requires machineImage is set
     this.userData = userData;
@@ -454,6 +458,14 @@ public class VmBootRecord {
       return false;
     }
     return true;
+  }
+
+  public ImageMetadata.Architecture getArchitecture() {
+    return architecture;
+  }
+
+  public void setArchitecture(ImageMetadata.Architecture architecture) {
+    this.architecture = architecture;
   }
 
   private String getSshKeyString( ) {
