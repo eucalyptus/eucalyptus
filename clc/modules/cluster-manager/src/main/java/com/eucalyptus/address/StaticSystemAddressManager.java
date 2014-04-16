@@ -99,7 +99,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
       for ( Address putBackAddr : addressList ) {
         putBackAddr.clearPending( );
       }
-      throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
+      throw new NotEnoughAddressResourcesException( );
     }
     return addressList;
   }
@@ -107,15 +107,6 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
     super.doAssignSystemAddress( vm );
-  }
-  
-  private Address getNext( ) throws NotEnoughResourcesException {
-    for ( Address a : Addresses.getInstance( ).listValues( ) ) {
-      if ( a.isSystemOwned( ) && !a.isAssigned( ) ) {
-        return a.pendingAssignment( );
-      }
-    }
-    throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
   }
   
   @Override
