@@ -972,7 +972,6 @@ public class WalrusManager {
 								if (fileIO != null) {
 									fileIO.finish();
 								}
-                                LOG.info("Commit: " + bucketName + "/" + tempObjectName + " to: " + bucketName + "/" + objectName);
 								storageManager.renameObject(bucketName, tempObjectName, objectName);
 							} catch (IOException ex) {
 								LOG.error(ex);
