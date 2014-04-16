@@ -162,8 +162,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -1999,13 +1997,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 }
             }
             reply.setIsTruncated(result.isTruncated);
-            if(result.isTruncated) {
-                if(	result.getLastEntry() instanceof ObjectEntity) {
-                    reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
-                } else {
-                    //If max-keys = 0, then last entry may be empty
-                    reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
-                }
+            if(result.getLastEntry() instanceof ObjectEntity) {
+                reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
+                reply.setNextUploadIdMarker(((ObjectEntity)result.getLastEntry()).getUploadId());
+            } else {
+                //If max-keys = 0, then last entry may be empty
+                reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
             }
         }
 
