@@ -113,6 +113,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
@@ -666,32 +667,37 @@ public class NetworkGroups {
    * <p>Caller must have open transaction.</p>
    *
    * @param permissions - The permissions to update
+   * @param defaultUserId - The account number to use when not specified
+   * @param revoke - True if resolving for a revoke operation
    * @throws MetadataException If an error occurs
    */
-  public static void resolvePermissions( final Iterable<IpPermissionType> permissions , boolean revoke) throws MetadataException {
+  public static void resolvePermissions( final Iterable<IpPermissionType> permissions,
+                                         final String defaultUserId,
+                                         final boolean revoke) throws MetadataException {
     for ( final IpPermissionType ipPermission : permissions ) {
       if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
-        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId() ) ) {
-        	try{
-	          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
-	          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
-	          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
-        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId() ) ||
-            Strings.isNullOrEmpty( groupInfo.getSourceGroupName() )) {
-          throw new MetadataException( "Group ID or User ID/Group Name required." );
+        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId( ) ) ) {
+          try{
+            final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
+            groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
+            groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
+          }catch(final NoSuchMetadataException ex){
+            if(!revoke)
+              throw ex;
+          }
+        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceGroupName( ) ) ) {
+          throw new MetadataException( "Group ID or Group Name required." );
         } else {
-        	try{
-	          final NetworkGroup networkGroup =
-	              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
-	          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
+          try{
+            final NetworkGroup networkGroup = NetworkGroups.lookup(
+                AccountFullName.getInstance(
+                    Objects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) ),
+                groupInfo.getSourceGroupName( ) );
+            groupInfo.setSourceGroupId( networkGroup.getGroupId( ) );
+          }catch(final NoSuchMetadataException ex){
+            if(!revoke)
+              throw ex;
+          }
         }
       }
     }
