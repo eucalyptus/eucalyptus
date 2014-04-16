@@ -116,6 +116,15 @@ public class ImagingServiceProperties {
      type = ConfigurableFieldType.KEYVALUE,
      changeListener = ImportTaskExpirationHoursListener.class)
   public static String IMPORT_TASK_EXPIRATION_HOURS = "168";
+  
+
+  @ConfigurableField( displayName = "import_task_timeout_minutes",
+     description = "expiration time in minutes of import tasks",
+     readonly = false,
+     initial = "180",
+     type = ConfigurableFieldType.KEYVALUE,
+     changeListener = ImportTaskTimeoutMinutesListener.class)
+  public static String IMPORT_TASK_TIMEOUT_MINUTES = "180";  
 
   @ConfigurableField( displayName = "imaging_worker_log_server",
      description = "address/ip of the server that collects logs from imaging wokrers",
@@ -294,6 +303,19 @@ public class ImagingServiceProperties {
         throw new ConfigurablePropertyException("Invalid number");
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change log server port to " + newValue, e);
+      }
+    }
+  }
+  
+  public static class ImportTaskTimeoutMinutesListener implements PropertyChangeListener<String> {
+
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        Integer.parseInt(newValue);
+      }catch(final NumberFormatException ex){
+        throw new ConfigurablePropertyException("Invalid number");
       }
     }
   }

@@ -4,6 +4,9 @@
     "Action": [
       "iam:*"
     ],
-    "NotResource": "arn:aws:iam::eucalyptus:*"
+    "NotResource": "arn:aws:iam::eucalyptus:*",
+    "Condition": {
+      "Bool": { "iam:SystemAccount": "false" }
+    }
   } ]
 }

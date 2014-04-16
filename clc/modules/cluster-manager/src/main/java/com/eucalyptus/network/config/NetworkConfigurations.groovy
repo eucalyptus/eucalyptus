@@ -167,21 +167,28 @@ class NetworkConfigurations {
   }
 
   static Collection<String> getPrivateAddressRanges( NetworkConfiguration configuration, String clusterName ) {
-    configuration.clusters?.find{ Cluster cluster -> cluster.name == clusterName }?.privateIps ?:
-        configuration.privateIps ?:
-            getSubnetForCluster( configuration, clusterName )?.with{ IPRange.fromSubnet( subnet, netmask ).split( gateway ).collect{ IPRange range -> range.toString( ) } } ?:
-                [ ]
+    NetworkConfigurations.explode( configuration, [ clusterName ] ).with{ NetworkConfiguration exploded ->
+      exploded.clusters.find{ Cluster cluster -> cluster.name == clusterName }.with{ Cluster cluster ->
+        if ( cluster.subnet == null || !cluster.privateIps ) {
+          // We check the subnet since if this is not configured the
+          // request will fail on the back end
+          throw new IllegalStateException( "Networking configuration not found for cluster '${clusterName}'" )
+        }
+        cluster.privateIps
+      }
+    }
   }
 
   static Iterable<Integer> getPrivateAddresses( NetworkConfiguration configuration, String clusterName ) {
-    Lists.newArrayList( NetworkConfigurations.iterateRanges( getPrivateAddressRanges( configuration, clusterName ) ) )
+    Lists.newArrayList( NetworkConfigurations.iterateRanges( NetworkConfigurations.getPrivateAddressRanges( configuration, clusterName ) ) )
   }
 
   static Iterable<Integer> getPrivateAddresses( String clusterName ) {
     Optional<NetworkConfiguration> configuration = NetworkConfigurations.networkConfiguration
-    configuration.present ?
-      getPrivateAddresses( configuration.get( ), clusterName ) :
-      [ ]
+    if ( !configuration.present ) {
+      throw new IllegalStateException( "Networking configuration not found for cluster '${clusterName}'" )
+    }
+    NetworkConfigurations.getPrivateAddresses( configuration.get( ), clusterName )
   }
 
   static NetworkConfiguration parse( final String configuration ) throws NetworkConfigurationException {

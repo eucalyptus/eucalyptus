@@ -17,20 +17,13 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloud.util;
+package com.eucalyptus.auth.euare.policy;
+
+import com.eucalyptus.auth.policy.key.Key;
 
 /**
  *
  */
-public class InvalidInstanceProfileMetadataException extends InvalidMetadataException {
-  private static final long serialVersionUID = 1L;
+public interface EuareKey extends Key {
 
-  public InvalidInstanceProfileMetadataException( final String message ) {
-    super( message );
-  }
-
-  public InvalidInstanceProfileMetadataException( final String message,
-                                                  final Throwable cause ) {
-    super( message, cause );
-  }
 }

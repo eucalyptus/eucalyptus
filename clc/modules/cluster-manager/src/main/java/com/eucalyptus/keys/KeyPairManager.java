@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,11 +71,14 @@ import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.ImmutableList;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.DecoderException;
@@ -124,8 +127,19 @@ public class KeyPairManager {
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
+    final List<String> foundKeyNameList = new ArrayList<String>( );
     for ( final SshKeyPair kp : KeyPairs.list( ownerFullName, requestedAndAccessible, filter.asCriterion(), filter.getAliases() ) ) {
       reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
+      foundKeyNameList.add( kp.getDisplayName( ) );
+    }
+
+    if ( !request.getKeySet( ).isEmpty( ) && request.getKeySet( ).size( ) != reply.getKeySet( ).size( ) ) {
+      List<String> reverseRequestedKeySet = ImmutableList.copyOf( request.getKeySet( ) ).reverse( );
+      for ( String requestedKey : reverseRequestedKeySet ) {
+        if ( !foundKeyNameList.contains( requestedKey ) ) {
+          throw new ClientComputeException( "InvalidKeyPair.NotFound", "The key pair '" + requestedKey + "' does not exist" );
+        }
+      }
     }
     return reply;
   }

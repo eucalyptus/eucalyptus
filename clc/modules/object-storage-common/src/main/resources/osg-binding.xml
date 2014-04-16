@@ -671,7 +671,7 @@
         <value name="IsTruncated" field="isTruncated" usage="optional"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="uploads">
-            <structure name="Uploads" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
+            <structure name="Upload" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
         </collection>
         <value name="Prefix" field="prefix" usage="optional"/>
         <value name="Delimiter" field="delimiter" usage="optional"/>

@@ -915,58 +915,62 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return reply;
 	}
 
-    private static boolean isCannedAclPolicy(AccessControlPolicy acp) {
-        if(acp.getOwner() == null && acp.getAccessControlList() != null && acp.getAccessControlList().getGrants().size() == 1) {
-            try {
-                return ObjectStorageProperties.CannedACL.valueOf(acp.getAccessControlList().getGrants().get(0).getPermission().replace("-", "_")) != null;
-            } catch(IllegalArgumentException e) {
-                return false;
-            }
-        } else {
-            //canned-acls are not bound with owner imbedded
-            return false;
-        }
-    }
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#SetRESTBucketAccessControlPolicy(com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType)
 	 */
 	@Override
 	public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(final SetBucketAccessControlPolicyType request) throws S3Exception {
         Bucket bucket = getBucketAndCheckAuthorization(request);
-        if(request.getAccessControlPolicy() == null || request.getAccessControlPolicy().getAccessControlList() == null) {
-            //Can't set to null
-            throw new MalformedACLErrorException(request.getBucket() + "/" + request.getKey() + "?acl");
-        } else {
-            AccessControlPolicy fullPolicy;
-            //Expand the acl first
-            if(isCannedAclPolicy(request.getAccessControlPolicy())) {
-                fullPolicy = new AccessControlPolicy();
-                fullPolicy.setOwner(new CanonicalUser(bucket.getOwnerCanonicalId(), bucket.getOwnerDisplayName()));
-                try {
-                    fullPolicy.setAccessControlList(AclUtils.expandCannedAcl(request.getAccessControlPolicy().getAccessControlList(), bucket.getOwnerCanonicalId(), null));
-                } catch(Exception e) {
-                    throw new MalformedACLErrorException(request.getBucket() + "?acl");
-                }
-            } else {
-                fullPolicy = request.getAccessControlPolicy();
-                //Must have explicit owner
-                if(fullPolicy.getAccessControlList() == null || fullPolicy.getOwner() == null) {
-                    //Something happened in acl expansion.
-                    LOG.error("Cannot put ACL that does not exist in request");
-                    throw new MalformedACLErrorException(request.getBucket() + "?acl");
-                }
-            }
+		if (request.getAccessControlPolicy() == null || request.getAccessControlPolicy().getAccessControlList() == null) {
+			// Can't set to null
+			LOG.error("Cannot put ACL that does not exist in request");
+			throw new MalformedACLErrorException(request.getBucket() + "?acl");
+		} else {
+			// Expand the acl first
+			AccessControlPolicy fullPolicy = new AccessControlPolicy();
+			try {
+				fullPolicy.setAccessControlList(AclUtils.expandCannedAcl(request.getAccessControlPolicy().getAccessControlList(), bucket.getOwnerCanonicalId(),
+						null));
+			} catch (Exception e) {
+				LOG.error("Cannot expand the ACL in the request");
+				throw new MalformedACLErrorException(request.getBucket() + "?acl");
+			}
 
-            try {
-                BucketMetadataManagers.getInstance().setAcp(bucket, fullPolicy);
-                SetBucketAccessControlPolicyResponseType reply = request.getReply();
-                reply.setBucket(request.getBucket());
-                return reply;
-            } catch(Exception e) {
-                LOG.error("Transaction error updating bucket ACL for bucket " + request.getBucket(),e);
-                throw new InternalErrorException(request.getBucket() + "?acl");
-            }
-        }
+			// Check for the grants
+			if (fullPolicy.getAccessControlList() == null || fullPolicy.getAccessControlList().getGrants() == null
+					|| fullPolicy.getAccessControlList().getGrants().size() == 0) {
+				LOG.error("Cannot put ACL that does not exist in request");
+				throw new MalformedACLErrorException(request.getBucket() + "?acl");
+			}
+
+			// Check for the owner
+			if (request.getAccessControlPolicy().getOwner() == null) {
+				fullPolicy.setOwner(new CanonicalUser(bucket.getOwnerCanonicalId(), bucket.getOwnerDisplayName()));
+			} else {
+				fullPolicy.setOwner(request.getAccessControlPolicy().getOwner());
+			}
+
+			// Marshal into a string
+			try {
+				String aclString = S3AccessControlledEntity.marshallAcpToString(fullPolicy);
+				if (Strings.isNullOrEmpty(aclString)) {
+					throw new MalformedACLErrorException(request.getBucket() + "?acl");
+				}
+			} catch (Exception e) {
+				LOG.error("Invalid ACL policy");
+				throw new MalformedACLErrorException(request.getBucket() + "?acl");
+			}
+
+			try {
+				BucketMetadataManagers.getInstance().setAcp(bucket, fullPolicy);
+				SetBucketAccessControlPolicyResponseType reply = request.getReply();
+				reply.setBucket(request.getBucket());
+				return reply;
+			} catch (Exception e) {
+				LOG.error("Transaction error updating bucket ACL for bucket " + request.getBucket(), e);
+				throw new InternalErrorException(request.getBucket() + "?acl");
+			}
+		}
 	}
 
 	/* (non-Javadoc)
@@ -1993,13 +1997,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 }
             }
             reply.setIsTruncated(result.isTruncated);
-            if(result.isTruncated) {
-                if(	result.getLastEntry() instanceof ObjectEntity) {
-                    reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
-                } else {
-                    //If max-keys = 0, then last entry may be empty
-                    reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
-                }
+            if(result.getLastEntry() instanceof ObjectEntity) {
+                reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
+                reply.setNextUploadIdMarker(((ObjectEntity)result.getLastEntry()).getUploadId());
+            } else {
+                //If max-keys = 0, then last entry may be empty
+                reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
             }
         }
 

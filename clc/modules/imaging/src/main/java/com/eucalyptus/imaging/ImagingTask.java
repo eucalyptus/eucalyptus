@@ -20,6 +20,7 @@
 package com.eucalyptus.imaging;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import javax.persistence.Column;
@@ -44,6 +45,7 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -77,6 +79,12 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
   
   @Column( name = "metadata_worker_id")
   private String workerId;
+  
+  @Column ( name = "metadata_worker_timeout")
+  private Date workerTimeOut  = null;
+  
+  @Column ( name = "metadata_timeout_counter")
+  private Integer timeOutCounter = null;
   
   protected ImagingTask( ) {
     this(null,null);
@@ -152,10 +160,38 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
   
   public void setWorkerId(final String workerId){
     this.workerId = workerId;
+    
+    Calendar cal = Calendar.getInstance(); // creates calendar
+    cal.setTime(new Date()); // sets calendar time/date
+    cal.add(Calendar.MINUTE, Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_TIMEOUT_MINUTES)); // adds one hour
+    this.workerTimeOut = cal.getTime(); //
   }
   
   public String getWorkerId(){
     return this.workerId;
+  }
+  
+  public boolean isTimedOut(){
+    if(this.workerTimeOut!=null){
+      return this.workerTimeOut.before(new Date());
+    }
+    return false;
+  }
+  
+  public void resetTimeout(){
+    this.workerTimeOut = null;
+  }
+  
+  public void incrementTimeout(){
+    if(this.timeOutCounter == null)
+      this.timeOutCounter = 0;
+    this.timeOutCounter++;
+  }
+  
+  public int getTimeoutCount(){
+    if(this.timeOutCounter==null)
+      this.timeOutCounter = 0;
+    return this.timeOutCounter;
   }
   
   @Override

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,11 @@ package com.eucalyptus.auth.principal;
 
 import java.util.List;
 import java.util.Map;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
@@ -40,6 +42,16 @@ public class TestAccount implements Account {
 
   public void setName( final String name ) {
     this.name = name;
+  }
+
+  @Override
+  public String getDisplayName() {
+    return Accounts.getAccountFullName( this );
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance( this );
   }
 
   public String getAccountNumber() {

@@ -106,6 +106,7 @@
     </structure>
     <value name="privateIpAddress" field="privateIpAddress" usage="required" />
     <value name="ipAddress" field="ipAddress" usage="required" />
+    <value name="architecture" field="architecture" usage="optional" />
     <value name="rootDeviceType" field="rootDeviceType" usage="required" />
     <value name="rootDeviceName" field="rootDeviceName" usage="required" />
     <collection name="blockDeviceMapping" field="blockDevices" usage="required"
