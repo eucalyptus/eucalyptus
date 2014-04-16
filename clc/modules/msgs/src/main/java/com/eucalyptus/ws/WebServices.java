@@ -75,6 +75,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -281,8 +282,13 @@ public class WebServices {
     };
     final ServerBootstrap bootstrap = serverBootstrap( serverChannelFactory, pipelineFactory );
     if ( !StackConfiguration.INTERNAL_PORT.equals( StackConfiguration.PORT ) ) {
-      final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
-      serverChannelGroup.add( serverChannel );
+      try {
+        final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
+        serverChannelGroup.add( serverChannel );
+      } catch (ChannelException ex) {
+        LOG.error("Unable to bind to auxiliary port " + StackConfiguration.PORT + " in the web services stack, port may be already in use.  " +
+          "Port " + StackConfiguration.INTERNAL_PORT + " will still be available as the internal web services port, however.");
+      }
     }
     try {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
