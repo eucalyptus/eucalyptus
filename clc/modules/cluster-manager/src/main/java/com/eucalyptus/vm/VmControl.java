@@ -76,6 +76,7 @@ import javax.persistence.EntityTransaction;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
@@ -248,6 +249,8 @@ public class VmControl {
       if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
       final InvalidInstanceProfileMetadataException e4 = Exceptions.findCause( ex, InvalidInstanceProfileMetadataException.class );
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
+      final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
+      if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
       LOG.error( ex, ex );
       throw ex;
     } finally {

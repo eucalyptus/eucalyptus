@@ -67,6 +67,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -513,7 +514,7 @@ public class Emis {
         } catch ( final IllegalMetadataAccessException ex ) {
           throw Exceptions.toUndeclared( ex );
         } catch ( final NoSuchElementException ex ) {
-          throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup image named: " + input, ex ) );
+          throw Exceptions.toUndeclared( new NoSuchImageIdException( "Failed to lookup image named: " + input, ex ) );
         } catch ( final PersistenceException ex ) {
           throw Exceptions.toUndeclared( new InvalidMetadataException( "Error occurred while trying to lookup image named: " + input, ex ) );
         }
