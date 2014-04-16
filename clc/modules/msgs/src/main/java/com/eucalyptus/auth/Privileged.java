@@ -82,6 +82,7 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -112,7 +113,7 @@ public class Privileged {
   
   public static void deleteAccount( AuthContext requestUser, Account account, boolean recursive ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNT, requestUser ) ) {
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
@@ -128,12 +129,13 @@ public class Privileged {
   
   public static boolean allowListOrReadAccountPolicy( AuthContext requestUser, Account account ) throws AuthException {
     return requestUser.isSystemUser() &&
+        RestrictedTypes.filterPrivileged( ).apply( account ) &&
         Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), Accounts.getAccountFullName(account) ) &&
         Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), Accounts.getAccountFullName(account) );
   }
   
   public static void modifyAccount( AuthContext requestUser, Account account, String newName ) throws AuthException {
-    if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+    if ( Accounts.isSystemAccount( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     try {
@@ -148,7 +150,7 @@ public class Privileged {
   }
   
   public static void deleteAccountAlias( AuthContext requestUser, Account account, String alias ) throws AuthException {
-    if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+    if ( Accounts.isSystemAccount( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
@@ -444,7 +446,8 @@ public class Privileged {
   }
 
   public static void putAccountPolicy( AuthContext requestUser, Account account, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
+    if ( !requestUser.isSystemUser( ) ||
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     // Can not add policy to system account "eucalyptus"
@@ -480,7 +483,7 @@ public class Privileged {
 
   public static void deleteAccountPolicy( AuthContext requestUser, Account account, String name ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();

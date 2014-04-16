@@ -589,7 +589,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public boolean isSystemAdmin( ) {
     try {
-      return DatabaseAuthUtils.isSystemAccount( this.getAccount( ).getName( ) );
+      return Accounts.isSystemAccount( this.getAccount( ).getName( ) );
     } catch ( AuthException e ) {
       LOG.error( e, e );
       return false;

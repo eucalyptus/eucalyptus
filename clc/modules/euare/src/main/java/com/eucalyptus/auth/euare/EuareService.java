@@ -113,6 +113,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 
 public class EuareService {
   
@@ -174,17 +175,13 @@ public class EuareService {
   public ListAccountsResponseType listAccounts(ListAccountsType request) throws EucalyptusCloudException {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
-    Context ctx = Contexts.lookup( );
-    AuthContext requestUser = getAuthContext( ctx );
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
-      for ( Account account : Accounts.listAllAccounts( ) ) {
-        if ( Privileged.allowReadAccount( requestUser, account ) ) {
-          AccountType at = new AccountType( );
-          at.setAccountName( account.getName( ) );
-          at.setAccountId( account.getAccountNumber( ) );
-          accounts.add( at );
-        }
+      for ( final Account account : Iterables.filter( Accounts.listAllAccounts( ), RestrictedTypes.filterPrivileged( ) ) ) {
+        AccountType at = new AccountType( );
+        at.setAccountName( account.getName( ) );
+        at.setAccountId( account.getAccountNumber( ) );
+        accounts.add( at );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -2221,7 +2218,11 @@ public class EuareService {
     if ( delegateAccount != null ) {
       if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
         try {
-          return Accounts.lookupAccountByName( delegateAccount );
+          Account account = Accounts.lookupAccountByName( delegateAccount );
+          if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
+            throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
+          }
+          return account;
         } catch ( AuthException e ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
         }        

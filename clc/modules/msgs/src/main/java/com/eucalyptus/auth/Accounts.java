@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,8 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
@@ -143,7 +145,7 @@ public class Accounts {
   public static Account addAccount( String accountName ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( accountName );
   }
-  
+
   public static void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     Accounts.getAccountProvider( ).deleteAccount( accountName, forceDeleteSystem, recursive );
   }
@@ -152,10 +154,44 @@ public class Accounts {
     return Accounts.getAccountProvider( ).listAllAccounts( );
   }
 
+  public static boolean isSystemAccount( String accountName ) {
+    return
+        Account.SYSTEM_ACCOUNT.equals( accountName ) ||
+        Objects.toString( accountName, "" ).startsWith( Account.SYSTEM_ACCOUNT_PREFIX );
+  }
+
+  public static boolean isSystemAccount( Account account ) {
+    return isSystemAccount( account == null ? null : account.getName( ) );
+  }
+
   public static Account addSystemAccount( ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( Account.SYSTEM_ACCOUNT );
   }
-  
+
+  /**
+   * Add a system account.
+   *
+   * @return The new account or an existing account with the specified name.
+   */
+  public static Account addSystemAccount( final String accountName ) throws AuthException {
+    return Accounts.getAccountProvider( ).addSystemAccount( accountName );
+  }
+
+  /**
+   * Add a system account with an admin user.
+   *
+   * @return The new account or an existing account with the specified name.
+   */
+  public static Account addSystemAccountWithAdmin( final String accountName ) throws AuthException {
+    final Account account = addSystemAccount( accountName );
+    try {
+      account.lookupUserByName( User.ACCOUNT_ADMIN );
+    } catch ( final AuthException e ) {
+      account.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+    }
+    return account;
+  }
+
   public static Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
     return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );    
   }
