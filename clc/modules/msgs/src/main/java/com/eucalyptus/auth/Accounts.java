@@ -187,7 +187,7 @@ public class Accounts {
     try {
       account.lookupUserByName( User.ACCOUNT_ADMIN );
     } catch ( final AuthException e ) {
-      account.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+      account.addUser( User.ACCOUNT_ADMIN, "/", true, null );
     }
     return account;
   }
