@@ -103,8 +103,9 @@
 \*----------------------------------------------------------------------------*/
 
 #ifndef _UNIT_TEST
-#define TOTAL_RETRIES                              3    //!< download is retried in case of connection problems
+#define TOTAL_RETRIES                             40    //!< download is retried in case of connection problems (2.5hrs+)
 #define FIRST_TIMEOUT                              4    //!< in seconds, goes in powers of two afterwards
+#define MAX_TIMEOUT                              300    //!< in seconds, the cap for growing timeout values
 #define STRSIZE                                  245    //!< for short strings: files, hosts, URLs
 #endif /* ! _UNIT_TEST */
 
@@ -704,8 +705,11 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         if ((code != EUCA_OK) && (retries > 0)) {
             LOGERROR("download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
             sleep(timeout);
-            fseek(fp, 0L, SEEK_SET);
             timeout <<= 1;
+            if (timeout > MAX_TIMEOUT)
+                timeout = MAX_TIMEOUT;
+
+            fseek(fp, 0L, SEEK_SET);   // move the file pointer to the beginning for the retry
         }
 
         retries--;
