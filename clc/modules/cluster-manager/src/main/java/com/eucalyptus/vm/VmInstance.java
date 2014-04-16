@@ -1058,6 +1058,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * Clear references that are not valid for a terminated instance
    */
   public void clearReferences( ) {
+    if (bootRecord.getArchitecture() == null) bootRecord.setArchitecture(bootRecord.getMachine().getArchitecture());
     bootRecord.setMachine( );
     bootRecord.setKernel( );
     bootRecord.setRamdisk( );
@@ -1995,7 +1996,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setIpAddress( Strings.emptyToNull( input.getDisplayPublicAddress() ) );
           runningInstance.setPrivateDnsName( input.getDisplayPrivateDnsName() );
           runningInstance.setPrivateIpAddress( Strings.emptyToNull( input.getDisplayPrivateAddress() ) );
-
+          if (input.getBootRecord() == null || input.getBootRecord().getArchitecture() == null) {
+            LOG.warn("No architecture set for instance " + input.getInstanceId() + ", defaulting to x86_64");
+            runningInstance.setArchitecture( "x86_64" );
+          } else {
+            runningInstance.setArchitecture( input.getBootRecord().getArchitecture().toString() );
+          }
           runningInstance.setReason( input.runtimeState.getReason( ) );
           if ( input.getBootRecord( ).getSshKeyPair( ) != null ) {
             runningInstance.setKeyName( input.getBootRecord( ).getSshKeyPair( ).getName( ) );
