@@ -75,6 +75,9 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         taskByState.put(task.getState(), Lists.<ImagingTask>newArrayList());
      taskByState.get(task.getState()).add(task); 
     }
+    
+
+    
     /*
      *  NEW, PENDING, CONVERTING, CANCELLING, CANCELLED, COMPLETED, FAILED
      */

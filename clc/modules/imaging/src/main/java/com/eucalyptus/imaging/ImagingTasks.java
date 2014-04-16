@@ -437,6 +437,20 @@ public class ImagingTasks {
     return null;
   }
   
+  public static void timeoutTask(final String taskId){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+        entity.incrementTimeout();
+        entity.resetTimeout();
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
   /************************* Methods for volume imaging tasks ************************/
   public static List<VolumeImagingTask> getVolumeImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
     synchronized(lock){
