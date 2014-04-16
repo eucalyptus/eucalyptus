@@ -69,14 +69,16 @@ class NetworkConfigurationsTest {
 
   @Test
   void testConfiguredPrivateIPsForCluster(){
-    // verify behavior with empty configuration
-    NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration( ), 'cluster1' ).with{
-      assertFalse( 'expected no addresses', iterator( ).hasNext( ) )
-    }
-
     // verify configuration from top level
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '10.10.10.10-10.10.10.11' ],
+        subnets: [
+            new Subnet(
+                subnet: "10.10.10.0",
+                netmask: "255.255.255.0",
+                gateway: "10.10.10.1"
+            )
+        ],
         clusters: [
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] )
         ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
@@ -86,12 +88,19 @@ class NetworkConfigurationsTest {
     // verify configuration from cluster level
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '1.1.1.1' ],
+        subnets: [
+            new Subnet(
+                subnet: "10.0.0.0",
+                netmask: "255.0.0.0",
+                gateway: "10.0.0.1"
+            )
+        ],
         clusters: [
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] ),
             new Cluster( name: 'cluster1', privateIps: [ '10.10.10.10-10.10.10.11' ] ),
             new Cluster( name: 'cluster2', privateIps: [ '10.30.10.10-10.30.10.11' ] )
         ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
-      assertEquals( 'private address list from top level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
+      assertEquals( 'private address list from cluster level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
     }
   }
 
