@@ -1939,10 +1939,53 @@ int check_for_string_in_list(char *string, char **list, int count)
     return (FALSE);
 }
 
+char ** build_argv(const char * first, va_list va)
+{
+    if (first == NULL) {
+        LOGDEBUG("internal error: build_argv called with NULL\n");
+        return NULL;
+    }
+
+    int args = 1; // count 'first' as one
+    char ** argv = EUCA_ZALLOC(args + 1, sizeof(char *)); // one more for NULL
+    if (argv == NULL) {
+        LOGERROR("out of memory\n");
+        return NULL;
+    }
+    argv[0] = strdup(first);
+
+    for (char *s = NULL; (s = va_arg(va, char *)) != NULL; args++) {
+        argv = EUCA_REALLOC(argv, (args + 2), sizeof(char *));
+        if (argv == NULL) {
+            LOGERROR("out of memory\n");
+            return NULL;
+        }
+        argv[args] = strdup(s);
+        argv[args+1] = (char *)NULL;
+    }
+
+    return argv;
+}
+
 //!
-//! Eucalyptus wrapper function around execlp
+//! Eucalyptus wrapper function around exec with file-descriptor support and argv[]
 //!
-//! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
+//! This is the low-level function that actually sets up file descriptors, forks, 
+//! and calls execvp(). The function does not wait for the child process to finish:
+//! that can and probably should be done with the complementary low-level function:
+//! euca_waitpid().  Consider higher-level alternatives, too:
+//!
+//! - Those who want to use variable arguments (in lue of argv[]), can use
+//!   euca_execlp_fd(), which constructs the argv[] and calls this function.
+//!
+//! - Those who want to use variable arguments (in lue of argv[]) and also
+//!   have the function wait for the child to complete, can use euca_execlp()
+//!   (and thus give up on the ability to feed stdin and read stdout and stderr).
+//!
+//! @param[in] ppid pointer to populate with child process's PID (must not be NULL)
+//! @param[in] stdin_fd a pointer to populate with child process's stdin descriptr, if not NULL
+//! @param[in] stdout_fd a pointer to populate with child process's stdout descriptr, if not NULL
+//! @param[in] stderr_fd a pointer to populate with child process's stderr descriptr, if not NULL
 //! @param[in] file a constant pointer to the pathname of a file which is to be executed
 //! @param[in] ... the list of string arguments to pass to the program
 //!
@@ -1950,7 +1993,109 @@ int check_for_string_in_list(char *string, char **list, int count)
 //!         \li EUCA_ERROR if the execution terminated but failed
 //!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
 //!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
-//!         \li EUCA_TIMEOUT_ERROR if the execution of the program timed out
+//!
+//! @pre The file and ppid parameters must not be NULL
+//!
+//! @post
+//!
+//! @note
+//!
+int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv)
+{
+    int result = 0;
+    int stdin_p[2];
+    int stdout_p[2];
+    int stderr_p[2];
+
+    assert(ppid);
+    * ppid = -1;
+
+    // set up the pipes, if requested
+    if (stdin_fd) {
+        * stdin_fd = -1;
+        if (pipe(stdin_p) != 0) {
+            LOGERROR("pipe() failed\n");
+            return (EUCA_ERROR);
+        }
+    }
+    if (stdout_fd) {
+        * stdout_fd = -1;
+        if (pipe(stdout_p) != 0) {
+            LOGERROR("pipe() failed: %s\n", strerror(errno));
+            return (EUCA_ERROR);
+        }
+    }
+    if (stderr_fd) {
+        * stderr_fd = -1;
+        if (pipe(stderr_p) != 0) {
+            LOGERROR("pipe() failed: %s\n", strerror(errno));
+            return (EUCA_ERROR);
+        }
+    }
+
+    // Fork the work
+    if ((* ppid = fork()) == -1) {
+        LOGDEBUG("failed to create a child process\n");
+        return (EUCA_THREAD_ERROR);
+    }
+    // child?
+    if (* ppid == 0) {
+        // arrange the file descriptors
+        if (stdin_fd) {
+            close(stdin_p[1]);
+            if (dup2(stdin_p[0], STDIN_FILENO) == -1) {
+                LOGERROR("dup2() failed: %s\n", strerror(errno));
+                exit(1);
+            }
+        }
+        if (stdout_fd) {
+            close(stdout_p[0]);
+            if (dup2(stdout_p[1], STDOUT_FILENO) == -1) {
+                LOGERROR("dup2() failed: %s\n", strerror(errno));
+                exit(1);
+            }
+        }
+        if (stderr_fd) {
+            close(stderr_p[0]);
+            if (dup2(stderr_p[1], STDERR_FILENO) == -1) {
+                LOGERROR("dup2() failed: %s\n", strerror(errno));
+                exit(1);
+            }
+        }
+
+        // Run the command. This should never return unless a failure occured
+        result = execvp(argv[0], argv);
+        exit(result);
+    }
+
+    // close the file descriptors on the parent appropriately
+    if (stdin_fd) {
+        close(stdin_p[0]);
+        * stdin_fd = stdin_p[1];
+    }
+    if (stdout_fd) {
+        close(stdout_p[1]);
+        * stdout_fd = stdout_p[0];
+    }
+    if (stderr_fd) {
+        close(stderr_p[1]);
+        * stderr_fd = stderr_p[0];
+    }
+
+    return EUCA_OK;
+}
+
+//!
+//! Eucalyptus wrapper function around waitpid() that waits for the child
+//! and returns status
+//!
+//! @param[in] pid the PID of the child process to wait for
+//! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
+//!
+//! @return EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution terminated but failed
+//!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
+//!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
 //!
 //! @pre The file parameter must not be NULL
 //!
@@ -1958,69 +2103,10 @@ int check_for_string_in_list(char *string, char **list, int count)
 //!
 //! @note
 //!
-int euca_execlp(int *pStatus, const char *file, ...)
+int euca_waitpid(pid_t pid, int *pStatus)
 {
-    int i = 0;
-    int j = 0;
-    int args = 0;
     int status = 0;
-    int result = 0;
-    char *str = NULL;
-    char **argv = NULL;
-    pid_t pid = 0;
-    va_list va = { {0} };
 
-    // Default the returned status to -1
-    if (pStatus != NULL)
-        (*pStatus) = -1;
-
-    // Make sure our given parameter isn't NULL
-    if (file == NULL) {
-        LOGDEBUG("failed to execute invalid command\n");
-        return (EUCA_INVALID_ERROR);
-    }
-    // Fork the work
-    if ((pid = fork()) == -1) {
-        LOGDEBUG("failed to create a child process\n");
-        return (EUCA_THREAD_ERROR);
-    }
-    // child?
-    if (pid == 0) {
-        // Count the number of arguments provided
-        va_start(va, file);
-        {
-            while ((str = va_arg(va, char *)) != NULL) {
-                args++;
-            }
-        }
-        va_end(va);
-
-        // Allocate memory for our list of arguments including the last NULL and the pathname in position 0
-        if ((argv = EUCA_ZALLOC((args + 2), sizeof(char *))) != NULL) {
-            // The first argument should be the pathname again per exec() family convention
-            argv[0] = strdup(file);
-
-            // Set our variable array
-            va_start(va, file);
-            {
-                for (i = 0, j = 1; i < args; i++, j++) {
-                    argv[j] = strdup(va_arg(va, char *));
-                }
-            }
-            va_end(va);
-
-            // Run the command. This should never return unless a failure occured
-            result = execvp(file, argv);
-
-            // Free the allocated memory
-            for (i = 0; i < (args + 1); i++)
-                EUCA_FREE(argv[i]);
-            EUCA_FREE(argv);
-            exit(result);
-        }
-        // out of memory
-        exit(ENOMEM);
-    }
     // We got a timeout value, see if we can complete successfully within the given time
     if (waitpid(pid, &status, 0) != -1) {
         // Return the status to our caller if requested
@@ -2049,6 +2135,95 @@ int euca_execlp(int *pStatus, const char *file, ...)
 }
 
 //!
+//! Eucalyptus wrapper function around exec with file-descriptor support and variable arguments
+//!
+//! @param[in] ppid pointer to populate with child process's PID (must not be NULL)
+//! @param[in] stdin_fd a pointer to populate with child process's stdin descriptr, if not NULL
+//! @param[in] stdout_fd a pointer to populate with child process's stdout descriptr, if not NULL
+//! @param[in] stderr_fd a pointer to populate with child process's stderr descriptr, if not NULL
+//! @param[in] file a constant pointer to the pathname of a file which is to be executed
+//! @param[in] ... the list of string arguments to pass to the program
+//!
+//! @return EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution terminated but failed
+//!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
+//!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
+//!
+//! @pre The file and ppid parameters must not be NULL
+//!
+//! @post
+//!
+//! @note
+//!
+int euca_execlp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...)
+{
+    char **argv = NULL;
+    int result;
+
+    assert(ppid);
+    * ppid = -1;
+
+    { // turn variable arguments into a array of strings for the execvp()
+        va_list va;
+        va_start(va, file);
+        argv = build_argv(file, va);
+        va_end(va);
+        if (argv == NULL) return EUCA_INVALID_ERROR;
+    }
+
+    result = euca_execvp_fd(ppid, stdin_fd, stdout_fd, stderr_fd, argv);
+    free_char_list(argv);
+
+    return result;
+}
+
+//!
+//! Eucalyptus wrapper function around exec() that waits for the child
+//! and returns status
+//!
+//! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
+//! @param[in] file a constant pointer to the pathname of a file which is to be executed
+//! @param[in] ... the list of string arguments to pass to the program
+//!
+//! @return EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution terminated but failed
+//!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
+//!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
+//!
+//! @pre The file parameter must not be NULL
+//!
+//! @post
+//!
+//! @note
+//!
+int euca_execlp(int *pStatus, const char *file, ...)
+{
+    char **argv = NULL;
+    int result;
+
+    // Default the returned status to -1
+    if (pStatus != NULL)
+        (*pStatus) = -1;
+
+    { // turn variable arguments into a array of strings for the execvp()
+        va_list va;
+        va_start(va, file);
+        argv = build_argv(file, va);
+        va_end(va);
+        if (argv == NULL) return EUCA_INVALID_ERROR;
+    }
+
+    pid_t pid;
+    result = euca_execvp_fd(&pid, NULL, NULL, NULL, argv);
+    if (result == EUCA_OK) {
+        result = euca_waitpid(pid, pStatus);
+    }
+    free_char_list(argv);
+
+    return result;
+}
+
+//!
 //! Returns username of the real user ID of the calling process
 //!
 //! @return on success, a pointer to a string (in static memory, 
@@ -2062,6 +2237,22 @@ char *get_username(void)
 }
 
 #ifdef _UNIT_TEST
+
+//! Helper function to read from a file descriptor until EOF,
+//! printing characters preceded by 'prefix'
+//!
+void drain_fd(const char * prefix, int fd)
+{
+    char buf;
+
+    printf("%s ", prefix);
+    while (read(fd, &buf, 1)==1) {
+        printf("%c", buf);
+    }
+    printf("\n");
+    close(fd);
+}
+
 //!
 //! Main entry point of the application
 //!
@@ -2215,6 +2406,29 @@ int main(int argc, char **argv)
             ret = get_blkid(dev_path, uuid, sizeof(uuid));
             printf("\t%s: %s\n", dev_path, ((ret == 0) ? uuid : "UUID not found"));
         }
+    }
+
+    {
+        printf("testing execlp_fd\n");
+        pid_t pid;
+        assert(euca_execlp_fd(&pid, NULL, NULL, NULL, "/bin/echo", "echo from stdout", NULL)==EUCA_OK);
+        waitpid(pid, NULL, 0);
+
+        int ifd, ofd, efd;
+        assert(euca_execlp_fd(&pid, NULL, &ofd, NULL, "/bin/echo", "echo from stdout", NULL)==EUCA_OK);
+        drain_fd("stdout:", ofd);
+        waitpid(pid, NULL, 0);
+
+        assert(euca_execlp_fd(&pid, NULL, &ofd, &efd, "/bin/ls", "/bin/sh", "/bin/foo", NULL)==EUCA_OK);
+        drain_fd("stdout:", ofd);
+        drain_fd("stderr:", efd);
+        waitpid(pid, NULL, 0);
+
+        assert(euca_execlp_fd(&pid, &ifd, &ofd, NULL, "sort", NULL)==EUCA_OK);
+        write(ifd, "e\nc\nh\no\n", 8);
+        close(ifd);
+        drain_fd("stdout:", ofd);
+        waitpid(pid, NULL, 0);
     }
 
     return (0);
