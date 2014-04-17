@@ -36,9 +36,12 @@ import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
+import com.eucalyptus.storage.msgs.s3.BucketListEntry
+import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.util.EucalyptusCloudException
 import com.google.common.base.Strings
+import groovy.transform.CompileStatic
 import org.apache.commons.codec.digest.DigestUtils
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import org.junit.After
@@ -53,11 +56,12 @@ import static org.junit.Assert.*
  * Intended for testing the InMemoryProvider. Will need
  * additional work to support real-backends that use persistent storage
  */
+@CompileStatic
 class ObjectStorageProviderClientTest {
     static ObjectStorageProviderClient provider
     static String configValue
-    static final def TEST_BUCKET_NAMES = ['bucket1', 'bucket2', 'bucket3', 'bucket4']
-    static final def TEST_ACCESS_KEY = 'testaccesskey123'
+    static final List<String> TEST_BUCKET_NAMES = ['bucket1', 'bucket2', 'bucket3', 'bucket4']
+    static final String TEST_ACCESS_KEY = 'testaccesskey123'
 
 
     @BeforeClass
@@ -108,26 +112,28 @@ class ObjectStorageProviderClientTest {
         //TODO: this is basically a test-case for listBuckets, listObjects, actuallyDeleteObject, deleteBucket
 
         ListAllMyBucketsType listRequest = new ListAllMyBucketsType()
-        listRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        listRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         ListAllMyBucketsResponseType bucketListing = provider.listAllMyBuckets(listRequest)
 
         ListBucketType listReq = new ListBucketType()
-        listReq.setAccessKeyID(TEST_ACCESS_KEY)
+        listReq.setEffectiveUserId(TEST_ACCESS_KEY)
         ListBucketResponseType objListing = null
         DeleteObjectType delObjReq = new DeleteObjectType();
-        delObjReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delObjReq.setEffectiveUserId(TEST_ACCESS_KEY)
 
         DeleteObjectResponseType delObjResp = null
         DeleteBucketType delBucketReq = null
         delBucketReq = new DeleteBucketType()
-        delBucketReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delBucketReq.setEffectiveUserId(TEST_ACCESS_KEY)
 
-        bucketListing.getBucketList().getBuckets().each { bucket ->
+        bucketListing.getBucketList().getBuckets().each { b ->
+            BucketListEntry bucket = (BucketListEntry) b
             listReq.setBucket(bucket.getName())
             println 'Flushing bucket ' + bucket.getName()
             objListing = provider.listBucket(listReq)
 
-            objListing.getContents().each { content ->
+            objListing.getContents().each { key ->
+                ListEntry content = (ListEntry) key
                 println 'Flushing key ' + content.getKey()
                 delObjReq.setBucket(bucket.getName())
                 delObjReq.setKey(content.getKey())
@@ -148,8 +154,8 @@ class ObjectStorageProviderClientTest {
 
     static void populateBuckets(List<String> bucketNames, String accessKey) {
         bucketNames.each { i ->
-            def req = new CreateBucketType(i)
-            req.setAccessKeyID(accessKey)
+            def req = new CreateBucketType((String)i)
+            req.setEffectiveUserId(accessKey)
             provider.createBucket(req)
             println 'Created bucket for testing: ' + i
         }
@@ -160,7 +166,7 @@ class ObjectStorageProviderClientTest {
         PutObjectType putObj = new PutObjectType()
         putObj.setKey(key)
         putObj.setBucket(bucket)
-        putObj.setAccessKeyID(TEST_ACCESS_KEY)
+        putObj.setEffectiveUserId(TEST_ACCESS_KEY)
         putObj.setContentLength(content.getBytes().length.toString())
 
         //For now, skip the acl stuff. Our providers set it to 'private' anyway
@@ -171,14 +177,14 @@ class ObjectStorageProviderClientTest {
         HeadObjectType headObjRequest = new HeadObjectType()
         headObjRequest.setBucket(bucket)
         headObjRequest.setKey(key)
-        headObjRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headObjRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.headObject(headObjRequest)
     }
 
     static HeadBucketResponseType headBucket(String bucket) {
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(bucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.headBucket(headRequest)
     }
 
@@ -186,7 +192,7 @@ class ObjectStorageProviderClientTest {
         DeleteBucketType delBucketReq = null
         delBucketReq = new DeleteBucketType()
         delBucketReq.setBucket(bucket)
-        delBucketReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delBucketReq.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.deleteBucket(delBucketReq)
     }
 
@@ -195,7 +201,7 @@ class ObjectStorageProviderClientTest {
         delReq = new DeleteObjectType()
         delReq.setBucket(bucket)
         delReq.setKey(key)
-        delReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delReq.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.deleteObject(delReq)
     }
 
@@ -203,7 +209,7 @@ class ObjectStorageProviderClientTest {
         ListPartsType initRequest = new ListPartsType()
         initRequest.setBucket(bucket)
         initRequest.setKey(key)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         initRequest.setUploadId(uploadId)
         return provider.listParts(initRequest)
     }
@@ -211,7 +217,7 @@ class ObjectStorageProviderClientTest {
     static ListMultipartUploadsResponseType listUploads(String bucket) {
         ListMultipartUploadsType initRequest = new ListMultipartUploadsType()
         initRequest.setBucket(bucket)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.listMultipartUploads(initRequest)
     }
 
@@ -219,7 +225,7 @@ class ObjectStorageProviderClientTest {
         InitiateMultipartUploadType initRequest = new InitiateMultipartUploadType()
         initRequest.setBucket(bucket)
         initRequest.setKey(key)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.initiateMultipartUpload(initRequest)
     }
 
@@ -228,17 +234,17 @@ class ObjectStorageProviderClientTest {
         abortRequest.setBucket(bucket)
         abortRequest.setKey(key)
         abortRequest.setUploadId(uploadId)
-        abortRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        abortRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.abortMultipartUpload(abortRequest)
     }
 
-    static CompleteMultipartUploadResponseType completeMPU(String bucket, String key, String uploadId, List<Part> parts) {
+    static CompleteMultipartUploadResponseType completeMPU(String bucket, String key, String uploadId, ArrayList<Part> parts) {
         CompleteMultipartUploadType completeRequest = new CompleteMultipartUploadType()
         completeRequest.setBucket(bucket)
         completeRequest.setKey(key)
         completeRequest.setUploadId(uploadId)
         completeRequest.setParts(parts)
-        completeRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        completeRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.completeMultipartUpload(completeRequest);
     }
 
@@ -249,7 +255,7 @@ class ObjectStorageProviderClientTest {
         upload.setBucket(bucket)
         upload.setUploadId(uploadId)
         upload.setPartNumber(partNumber.toString())
-        upload.setAccessKeyID(TEST_ACCESS_KEY)
+        upload.setEffectiveUserId(TEST_ACCESS_KEY)
         upload.setContentLength(content.getBytes().length.toString())
 
         //For now, skip the acl stuff. Our providers set it to 'private' anyway
@@ -278,7 +284,7 @@ class ObjectStorageProviderClientTest {
         populateBuckets(TEST_BUCKET_NAMES, TEST_ACCESS_KEY)
 
         ListAllMyBucketsType listRequest = new ListAllMyBucketsType()
-        listRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        listRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         ListAllMyBucketsResponseType bucketListing = provider.listAllMyBuckets(listRequest)
 
         assert (bucketListing != null)
@@ -288,7 +294,7 @@ class ObjectStorageProviderClientTest {
 
         //construct in order
         def returnedNames = bucketListing.getBucketList().getBuckets().collect { b ->
-            b.getName()
+            ((BucketListEntry)b).getName()
         }
         assert (returnedNames.equals(TEST_BUCKET_NAMES))
     }
@@ -300,7 +306,7 @@ class ObjectStorageProviderClientTest {
 
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(headBucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadBucketResponseType response = provider.headBucket(headRequest)
         assert (response != null)
@@ -332,7 +338,7 @@ class ObjectStorageProviderClientTest {
 
         DeleteBucketType deleteRequest = new DeleteBucketType()
         deleteRequest.setBucket(deleteBucket)
-        deleteRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        deleteRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         DeleteBucketResponseType deleteResponse = provider.deleteBucket(deleteRequest)
         assert (deleteResponse != null)
         assert (deleteResponse.getStatus() == HttpResponseStatus.NO_CONTENT)
@@ -350,7 +356,7 @@ class ObjectStorageProviderClientTest {
 
         GetBucketAccessControlPolicyType getAclRequest = new GetBucketAccessControlPolicyType()
         getAclRequest.setBucket(bucket)
-        getAclRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getAclRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         GetBucketAccessControlPolicyResponseType response = provider.getBucketAccessControlPolicy(getAclRequest)
         assert (response != null)
@@ -367,7 +373,7 @@ class ObjectStorageProviderClientTest {
 
 
         ListBucketType listReq = new ListBucketType()
-        listReq.setAccessKeyID(TEST_ACCESS_KEY)
+        listReq.setEffectiveUserId(TEST_ACCESS_KEY)
         listReq.setBucket(bucket)
         ListBucketResponseType objListing = null
 
@@ -428,7 +434,7 @@ class ObjectStorageProviderClientTest {
         GetObjectType getRequest = new GetObjectType()
         getRequest.setBucket(bucket)
         getRequest.setKey('obj0')
-        getRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         GetObjectResponseType getResponse = provider.getObject(getRequest)
 
         byte[] buffer = new byte[testContent.getBytes().length]
@@ -466,7 +472,7 @@ class ObjectStorageProviderClientTest {
 
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(headObjBucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadBucketResponseType response = provider.headBucket(headRequest)
         assert (response != null)
@@ -478,7 +484,7 @@ class ObjectStorageProviderClientTest {
         HeadObjectType headObjRequest = new HeadObjectType()
         headObjRequest.setBucket(headObjBucket)
         headObjRequest.setKey('obj0')
-        headObjRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headObjRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadObjectResponseType objResponse = provider.headObject(headObjRequest)
         assert (objResponse != null)
@@ -579,7 +585,7 @@ class ObjectStorageProviderClientTest {
         GetObjectType getRequest = new GetObjectType()
         getRequest.setBucket(bucket)
         getRequest.setKey(mpuKey)
-        getRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         GetObjectResponseType getResponse = provider.getObject(getRequest)
 
         byte[] buffer = new byte[fullContent.length()]

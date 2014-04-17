@@ -78,7 +78,6 @@ import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingSecurityHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
-import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedComponentCredentials;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -87,8 +86,6 @@ import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
@@ -106,10 +103,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 
 
@@ -310,240 +305,6 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 
         UploadPolicyChecker.checkPolicy(httpRequest);
     }
-
-    /**
-     * Class contains methods for implementing EucaRSA-V2 Authentication.
-     *
-     * @author zhill
-     */
-    public static class EucaAuthentication {
-        private static final Set<String> SAFE_HEADER_SET = Sets.newHashSet("transfer-encoding");
-
-        /**
-         * Implements the Euca2 auth method
-         * <p/>
-         * Add an Authorization HTTP header to the request that contains the following strings, separated by spaces:
-         * EUCA2-RSA-SHA256
-         * The lower-case hexadecimal encoding of the component's X.509 certificate's fingerprint
-         * The SignedHeaders list calculated in Task 1
-         * The Base64 encoding of the Signature calculated in Task 2
-         * <p/>
-         * Signature = RSA(privkey, SHA256(CanonicalRequest))
-         * <p/>
-         * CanonicalRequest =
-         * HTTPRequestMethod + '\n' +
-         * CanonicalURI + '\n' +
-         * CanonicalQueryString + '\n' +
-         * CanonicalHeaders + '\n' +
-         * SignedHeaders
-         *
-         * @param httpRequest
-         * @param authMap
-         * @throws AccessDeniedException
-         */
-        public static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
-            if (authMap == null || !EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-                throw new AccessDeniedException("Mismatch between expected and found authentication types");
-            }
-
-            //Remove unsigned headers so they are not consumed accidentally later
-            cleanHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
-
-            //Must contain a date of some sort signed
-            checkDate(httpRequest);
-
-            //Must be certificate signed
-            String certString = null;
-            if (authMap.containsKey(AuthorizationField.CertFingerPrint)) {
-                certString = authMap.get(AuthorizationField.CertFingerPrint);
-            } else {
-                throw new AccessDeniedException();
-            }
-
-            String verb = httpRequest.getMethod().getName();
-            String canonicalURI = getCanonicalURI(httpRequest);
-            String canonicalQueryString = getCanonicalQueryString(httpRequest);
-            String canonicalHeaders = getCanonicalHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
-            String signedHeaders = getSignedHeaders(httpRequest, authMap);
-
-            String data = verb + "\n" + canonicalURI + "\n" + canonicalQueryString + "\n" + canonicalHeaders + "\n" + signedHeaders;
-            String AWSAccessKeyID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
-            String signature = authMap.get(AuthorizationField.Signature);
-
-            try {
-                SecurityContext.getLoginContext(new ObjectStorageWrappedComponentCredentials(httpRequest.getCorrelationId(), data, AWSAccessKeyID, signature, certString)).login();
-            } catch (Exception ex) {
-                LOG.error(ex);
-                throw new AccessDeniedException();
-            }
-        }
-
-        private static void checkDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
-            String date;
-            String verifyDate;
-            if (httpRequest.containsHeader("x-amz-date")) {
-                date = "";
-                verifyDate = httpRequest.getHeader("x-amz-date");
-            } else {
-                date = httpRequest.getHeader(SecurityParameter.Date.toString());
-                verifyDate = date;
-                if (date == null || date.length() <= 0)
-                    throw new AccessDeniedException("User authentication failed. Date must be specified.");
-            }
-
-            try {
-                ArrayList<String> formats = new ArrayList<String>();
-                formats.add(ISO_8601_FORMAT);
-                Date dateToVerify = DateUtil.parseDate(verifyDate, formats);
-                Date currentDate = new Date();
-                if (Math.abs(currentDate.getTime() - dateToVerify.getTime()) > ObjectStorageProperties.EXPIRATION_LIMIT) {
-                    LOG.error("Incoming ObjectStorage message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
-                    throw new AccessDeniedException("Message expired. Sorry.");
-                }
-            } catch (DateParseException ex) {
-                LOG.error("ObjectStorage cannot parse date: " + verifyDate);
-                throw new AccessDeniedException("Unable to parse date.");
-            }
-        }
-
-        /**
-         * Gets the signed header string for Euca2 auth.
-         *
-         * @param httpRequest
-         * @param authMap
-         * @return
-         * @throws AccessDeniedException
-         */
-        private static String getSignedHeaders(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
-            String signedHeaders = authMap.get(AuthorizationField.SignedHeaders);
-            if (signedHeaders != null) return signedHeaders.trim();
-            return "";
-        }
-
-        /**
-         * Returns the canonical URI for euca2 auth, just the path from the end of the host header value to the first ?
-         *
-         * @param httpRequest
-         * @return
-         * @throws AccessDeniedException
-         */
-        private static String getCanonicalURI(MappingHttpRequest httpRequest) throws AccessDeniedException {
-            String addr = httpRequest.getUri();
-            String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
-            if (targetHost != null && targetHost.contains(".walrus")) {
-                String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-                addr = "/" + bucket + addr;
-            }
-            String[] addrStrings = addr.split("\\?");
-            String addrString = addrStrings[0];
-            return addrString;
-        }
-
-        /**
-         * Get the canonical headers list, a string composed of sorted headers and values, taken from the list of signed headers given by the request
-         *
-         * @param httpRequest
-         * @return
-         * @throws AccessDeniedException
-         */
-        private static String getCanonicalHeaders(MappingHttpRequest httpRequest, String signedHeaders) throws AccessDeniedException {
-            String[] signedHeaderArray = signedHeaders.split(";");
-            StringBuilder canonHeader = new StringBuilder();
-            boolean foundHost = false;
-            for (String headerName : signedHeaderArray) {
-                String headerNameString = headerName.toLowerCase().trim();
-                if ("host".equals(headerNameString)) {
-                    foundHost = true;
-                }
-                String value = httpRequest.getHeader(headerName);
-                if (value != null) {
-                    value = value.trim();
-                    String[] parts = value.split("\n");
-                    value = "";
-                    for (String part : parts) {
-                        part = part.trim();
-                        value += part + " ";
-                    }
-                    value = value.trim();
-                } else {
-                    value = "";
-                }
-                canonHeader.append(headerNameString).append(":").append(value).append('\n');
-            }
-
-            if (!foundHost) {
-                throw new AccessDeniedException("Host header not found when canonicalizing headers");
-            }
-
-            return canonHeader.toString().trim();
-        }
-
-        /**
-         * Gets Euca2 signing canonical query string.
-         *
-         * @param httpRequest
-         * @return
-         * @throws AccessDeniedException
-         */
-        private static String getCanonicalQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
-            String addr = httpRequest.getUri();
-            String[] addrStrings = addr.split("\\?");
-            StringBuilder addrString = new StringBuilder();
-
-            NavigableSet<String> sortedParams = new TreeSet<String>();
-            Map<String, String> params = httpRequest.getParameters();
-            if (params == null) {
-                return "";
-            }
-
-            sortedParams.addAll(params.keySet());
-
-            String key = null;
-            while ((key = sortedParams.pollFirst()) != null) {
-                addrString.append(key).append('=').append(params.get(key)).append('&');
-            }
-
-            if (addrString.length() > 0) {
-                addrString.deleteCharAt(addrString.length() - 1); //delete trailing '&';
-            }
-
-            return addrString.toString();
-        }
-
-        /**
-         * Removes all headers that are not in the signed-headers list. This prevents potentially modified headers from being used by later stages.
-         *
-         * @param httpRequest
-         * @param signedHeaders - semicolon delimited list of header names
-         */
-        private static void cleanHeaders(MappingHttpRequest httpRequest, String signedHeaders) {
-            if (Strings.isNullOrEmpty(signedHeaders)) {
-                //Remove all headers.
-                signedHeaders = "";
-            }
-
-            //Remove ones not found in the list
-            Set<String> signedNames = new TreeSet<String>();
-            String[] names = signedHeaders.split(";");
-            for (String n : names) {
-                signedNames.add(n.toLowerCase());
-            }
-
-            signedNames.addAll(SAFE_HEADER_SET);
-
-            Set<String> removeSet = new TreeSet<String>();
-            for (String headerName : httpRequest.getHeaderNames()) {
-                if (!signedNames.contains(headerName.toLowerCase())) {
-                    removeSet.add(headerName);
-                }
-            }
-
-            for (String headerName : removeSet) {
-                httpRequest.removeHeader(headerName);
-            }
-        }
-
-    } //End class EucaAuthentication
 
     static class S3Authentication {
         /**
@@ -860,10 +621,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
             String authHeader = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
             Map<AuthorizationField, String> authMap = processAuthorizationHeader(authHeader);
 
-            if (EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-                //Internally signed request. Using a certificate for signing
-                EucaAuthentication.authenticate(httpRequest, authMap);
-            } else if (AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
+           if(AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
                 //Normally signed request using AccessKeyId/SecretKeyId pair
                 S3Authentication.authenticate(httpRequest, authMap);
             } else {

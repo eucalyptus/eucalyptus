@@ -404,7 +404,7 @@ public class ObjectFactoryTest {
         byte[] content = 'fakecontent123'.getBytes()
         def key = 'testkey'
 
-        ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, -1, user)
+        ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, 0, user)
         objectEntity.setAcl(acp)
         ObjectEntity resultEntity = OsgObjectFactory.getFactory().createMultipartUpload(provider, objectEntity, user)
 
@@ -412,7 +412,7 @@ public class ObjectFactoryTest {
         assert (resultEntity.getState().equals(ObjectState.mpu_pending))
         ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, resultEntity.getUploadId());
         assert (fetched.getState() == ObjectState.mpu_pending)
-        assert (fetched.getSize() == -1)
+        assert (fetched.getSize() == 0)
         assert (fetched.getUploadId() == resultEntity.getUploadId())
 
         List<Part> partList = new ArrayList<Part>(10);
@@ -486,7 +486,7 @@ public class ObjectFactoryTest {
         byte[] content
         def key = 'testkey'
 
-        ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, -1, user)
+        ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, 0, user)
         objectEntity.setAcl(acp)
         ObjectEntity resultEntity = OsgObjectFactory.getFactory().createMultipartUpload(provider, objectEntity, user)
 
@@ -494,13 +494,13 @@ public class ObjectFactoryTest {
         assert(resultEntity.getState().equals(ObjectState.mpu_pending))
         ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, resultEntity.getUploadId());
         assert(fetched.getState() == ObjectState.mpu_pending)
-        assert(fetched.getSize() == -1)
+        assert(fetched.getSize() == 0)
         assert(fetched.getUploadId() == resultEntity.getUploadId())
 
         List<Part> partList = new ArrayList<Part>(10);
         List<PartEntity> partEntities = new ArrayList<PartEntity>();
 
-        //Don't change this, this tests overwritting the same part
+        //Don't change this, this tests overwriting the same part
         def partNumber = 1
         for(int i = 1; i <= 10; i++) {
             partEntities.clear();
@@ -514,7 +514,7 @@ public class ObjectFactoryTest {
             assert(partsList1.getEntityList().first().geteTag() == partEntities.get(partNumber - 1).geteTag())
             partList.add(partNumber - 1, new Part(partNumber, partEntities.last().geteTag()))
 
-            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.size())
+            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.length)
         }
 
         //Add the rest of the parts

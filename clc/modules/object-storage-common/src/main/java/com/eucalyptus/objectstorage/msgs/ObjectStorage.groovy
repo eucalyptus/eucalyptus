@@ -71,11 +71,7 @@ public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageRequestType extends BaseMessage {
-    protected String accessKeyID;
-    protected String securityToken;
     protected Date timeStamp;
-    protected String signature;
-    protected String credential;
     BucketLogData logData;
     protected String bucket;
     protected String key;
@@ -87,35 +83,8 @@ public class ObjectStorageRequestType extends BaseMessage {
         this.key = key;
     }
 
-    public ObjectStorageRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
-        this.accessKeyID = accessKeyID;
+    public ObjectStorageRequestType(Date timeStamp) {
         this.timeStamp = timeStamp;
-        this.signature = signature;
-        this.credential = credential;
-    }
-
-    public String getAccessKeyID() {
-        return accessKeyID;
-    }
-
-    public void setAccessKeyID(String accessKeyID) {
-        this.accessKeyID = accessKeyID;
-    }
-
-    String getSecurityToken() {
-        return securityToken;
-    }
-
-    void setSecurityToken(String securityToken) {
-        this.securityToken = securityToken;
-    }
-
-    public String getCredential() {
-        return credential;
-    }
-
-    public void setCredential(String credential) {
-        this.credential = credential;
     }
 
     public String getBucket() {

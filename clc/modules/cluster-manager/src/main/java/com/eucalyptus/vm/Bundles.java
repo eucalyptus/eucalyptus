@@ -250,7 +250,7 @@ public class Bundles {
       throw new ComputeException("InternalError","Unable to create the bucket");
     }
   }
-  
+
   static void deleteBucket(final User user, String bucketName, boolean deleteObject) throws ComputeException {
     final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
     try{

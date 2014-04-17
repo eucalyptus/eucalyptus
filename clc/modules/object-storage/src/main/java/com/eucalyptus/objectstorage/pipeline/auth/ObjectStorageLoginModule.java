@@ -65,17 +65,18 @@ package com.eucalyptus.objectstorage.pipeline.auth;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.AccessKeys;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 
 public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrappedCredentials> {
 	private static Logger LOG = Logger.getLogger(ObjectStorageLoginModule.class);

@@ -149,25 +149,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			}
 			
 			if(requestUser == null) {
-				if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
-					if(securityToken != null) {
-						requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
-					}
-					else {
-						requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
-					}
-					requestAccount = requestUser.getAccount();
-				} else {
-					//Set to anonymous user since all else failed
-					requestUser = Principals.nobodyUser();
-					requestAccount = requestUser.getAccount();
-				}
+                //Set to anonymous user since all else failed
+                requestUser = Principals.nobodyUser();
+                requestAccount = requestUser.getAccount();
 			}
 		} catch (AuthException e) {
 			LOG.error("Failed to get user for request, cannot verify authorization: " + e.getMessage(), e);				
 			return false;
 		}
-		
 		
 		if(allowAdmin && requestUser.isSystemAdmin()) {
 			//Admin override
