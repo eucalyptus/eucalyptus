@@ -183,11 +183,17 @@ configEntry configKeysRestartEUCANETD[] = {
 };
 
 configEntry configKeysNoRestartEUCANETD[] = {
-    {"CC_POLLING_FREQUENCY", "5"}
+    {"POLLING_FREQUENCY", "5"}
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
-    {"FAKE_ROUTER", "N"}
+    {"NC_ROUTER", "Y"}
+    ,
+    {"NC_ROUTER_IP", ""}
+    ,
+    {"METADATA_USE_VM_PRIVATE", "N"}
+    ,
+    {"METADATA_IP", ""}
     ,
     {"LOGLEVEL", "INFO"}
     ,
@@ -351,7 +357,7 @@ int main(int argc, char **argv)
         // whether or not updates have occurred due to remote content being updated, read local networking info
         rc = read_latest_network();
         if (rc) {
-            LOGWARN("read_latest_network failed, skipping update\n");
+            LOGWARN("read_latest_network failed, skipping update: check above errors for details\n");
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
@@ -429,11 +435,11 @@ int main(int argc, char **argv)
             LOGDEBUG("main loop complete: failures detected sleeping %d seconds before next poll\n", 1);
             sleep(1);
         } else {
-            LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->cc_polling_frequency);
-            sleep(config->cc_polling_frequency);
+            LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->polling_frequency);
+            sleep(config->polling_frequency);
         }
 
-        epoch_timer += config->cc_polling_frequency;
+        epoch_timer += config->polling_frequency;
     }
 
     //    gni_free(globalnetworkinfo);
@@ -460,6 +466,7 @@ int fetch_latest_localconfig(void)
             // something has changed that can be read in
             LOGINFO("configuration file has been modified, ingressing new options\n");
             logInit();
+
             // TODO  pick up other NC options dynamically
 
         }
@@ -604,7 +611,8 @@ int update_isolation_rules(void)
             // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
             vnetinterface = mac2interface(strptrb);
 
-            gwip = hex2dot(mycluster->private_subnet.gateway);
+            //gwip = hex2dot(mycluster->private_subnet.gateway);
+            gwip = hex2dot(config->vmGatewayIP);
             brmac = interface2mac(config->bridgeDev);
 
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
@@ -628,7 +636,7 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
                     // ARP
-                    if (config->fake_router) {
+                    if (config->nc_router && !config->nc_router_ip) {
                         snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
                     }
@@ -704,7 +712,7 @@ int update_isolation_rules(void)
                     
 
                 } else {
-                    if (config->fake_router) {
+                    if (config->nc_router && !config->nc_router_ip) {
                         snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
                     }
@@ -757,16 +765,8 @@ int eucanetdInit(void)
         }
     }
     bzero(config, sizeof(eucanetdConfig));
-    config->cc_polling_frequency = 5;
+    config->polling_frequency = 5;
     config->init = 1;
-
-    /*
-       fprintf(stderr, "SIZEOF: %lu\n", sizeof(globalNetworkInfo));
-       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_cluster));
-       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_node));
-       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_instance));
-       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_secgroup));
-     */
 
     if (!globalnetworkinfo) {
         globalnetworkinfo = gni_init();
@@ -882,7 +882,8 @@ int update_sec_groups(void)
             ips_handler_add_set(config->ips, chainname);
             ips_set_flush(config->ips, chainname);
 
-            strptra = hex2dot(mycluster->private_subnet.gateway);
+            //            strptra = hex2dot(mycluster->private_subnet.gateway);
+            strptra = hex2dot(config->vmGatewayIP);
             ips_set_add_ip(config->ips, chainname, strptra);
             ips_set_add_ip(config->ips, "EUCA_ALLNONEUCA", strptra);
             EUCA_FREE(strptra);
@@ -1048,8 +1049,11 @@ int update_public_ips(void)
     //    strptra = hex2dot(vnetconfig->networks[0].nw);
     strptra = hex2dot(nw);
 
-    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    if (config->metadata_use_vm_private) {
+        // set a mark so that VM to metadata service requests are not SNATed
+        snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
+        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    }
 
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
     ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
@@ -1106,11 +1110,15 @@ int update_public_ips(void)
     EUCA_FREE(instances);
 
     // lastly, install metadata redirect rule
-    strptra = hex2dot(globalnetworkinfo->enabledCLCIp);
+    if (config->metadata_ip) {
+        strptra = hex2dot(config->clcMetadataIP);
+    } else {
+        strptra = hex2dot(globalnetworkinfo->enabledCLCIp);
+    }
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
     rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
     EUCA_FREE(strptra);
-
+    
     se_print(&cmds);
     rc = se_execute(&cmds);
     if (rc) {
@@ -1258,7 +1266,7 @@ int generate_dhcpd_config()
     int max_instances = 0;
     char dhcpd_config_path[EUCA_MAX_PATH];
     FILE *OFH = NULL;
-    u32 nw, nm, rt;
+    u32 nw, nm;
     char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *strptra = NULL;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
@@ -1281,7 +1289,7 @@ int generate_dhcpd_config()
 
     nw = mycluster->private_subnet.subnet;
     nm = mycluster->private_subnet.netmask;
-    rt = mycluster->private_subnet.gateway;
+    //    rt = mycluster->private_subnet.gateway;
 
     snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
@@ -1296,7 +1304,8 @@ int generate_dhcpd_config()
         network = hex2dot(nw);
         netmask = hex2dot(nm);
         broadcast = hex2dot(nw | ~nm);
-        router = hex2dot(rt);
+        // this is set by configuration
+        router = hex2dot(config->vmGatewayIP);
 
         fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n", network, netmask, netmask, broadcast);
         if (strlen(globalnetworkinfo->instanceDNSDomain)) {
@@ -1477,10 +1486,13 @@ int read_config(void)
     cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
     cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
-    cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
+    cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
-    cvals[EUCANETD_CVAL_FAKE_ROUTER] = configFileValue("FAKE_ROUTER");
-
+    cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
+    cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
+    cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
+    cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
+    
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
     snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
@@ -1519,23 +1531,63 @@ int read_config(void)
     EUCA_FREE(config->eucauser);
     config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
-    config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
+    config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
+
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
         config->disable_l2_isolation = 1;
     } else {
         config->disable_l2_isolation = 0;
     }
-    if (!strcmp(cvals[EUCANETD_CVAL_FAKE_ROUTER], "Y")) {
-        config->fake_router = 1;
+
+    if (!strcmp(cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE], "Y")) {
+        config->metadata_use_vm_private = 1;
     } else {
-        config->fake_router = 0;
+        config->metadata_use_vm_private = 0;
     }
+
+    if (strlen(cvals[EUCANETD_CVAL_METADATA_IP])) {
+        u32 test_ip, test_localhost;
+                   
+        test_localhost = dot2hex("127.0.0.1");
+        test_ip = dot2hex(cvals[EUCANETD_CVAL_METADATA_IP]);
+        if (test_ip == test_localhost) {
+            LOGERROR("value specified for METADATA_IP is not a valid IP, defaulting to CLC registered address\n");
+            config->metadata_ip = 0;
+        } else {
+            config->clcMetadataIP = dot2hex(cvals[EUCANETD_CVAL_METADATA_IP]);
+            config->metadata_ip = 1;
+        }
+    } else {
+        config->metadata_ip = 0;
+    }
+
+    if (!strcmp(cvals[EUCANETD_CVAL_NC_ROUTER], "Y")) {
+        config->nc_router = 1;
+        if (strlen(cvals[EUCANETD_CVAL_NC_ROUTER_IP])) {
+            u32 test_ip, test_localhost;
+            test_localhost = dot2hex("127.0.0.1");
+            test_ip = dot2hex(cvals[EUCANETD_CVAL_NC_ROUTER_IP]);
+            if ( strcmp(cvals[EUCANETD_CVAL_NC_ROUTER_IP], "AUTO") && (test_ip == test_localhost) ) {
+                LOGERROR("value specified for NC_ROUTER_IP is not a valid IP or the string 'AUTO': defaulting to 'AUTO'\n");
+                snprintf(config->ncRouterIP, 32, "AUTO");
+            } else {
+                snprintf(config->ncRouterIP, 32, "%s", cvals[EUCANETD_CVAL_NC_ROUTER_IP]);
+            }
+            config->nc_router_ip = 1;
+        } else {
+            config->nc_router_ip = 0;
+            config->vmGatewayIP = 0;
+        }
+    } else {
+        config->nc_router = 0;
+        config->nc_router_ip = 0;
+        config->vmGatewayIP = 0;
+    }
+
     snprintf(config->pubInterface, 32, "%s", cvals[EUCANETD_CVAL_PUBINTERFACE]);
     snprintf(config->privInterface, 32, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
-
-    //    config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
     LOGDEBUG
         ("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n",
@@ -1547,18 +1599,6 @@ int read_config(void)
         LOGERROR("unable to initialize logging subsystem: check permissions and log config options\n");
         ret = 1;
     }
-
-    /*
-       rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE],
-       cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
-       cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
-       cvals[EUCANETD_CVAL_MACPREFIX]);
-
-       if (rc) {
-       LOGERROR("unable to initialize vnetwork subsystem\n");
-       ret = 1;
-       }
-     */
 
     config->ipt = malloc(sizeof(ipt_handler));
     if (!config->ipt) {
@@ -1709,7 +1749,11 @@ int fetch_latest_euca_network(int *update_globalnet)
 //!
 int read_latest_network(void)
 {
-    int rc, ret = 0;
+    int rc = 0, ret = 0;
+    u32 *brdev_ips = NULL, *brdev_nms = NULL;
+    int brdev_len = 0, i = 0, found_ip = 0;
+    char *strptra = NULL, *strptrb = NULL, *strptrc = NULL, *strptrd = NULL;
+    gni_cluster *mycluster = NULL;
 
     LOGDEBUG("reading latest network view into eucanetd\n");
 
@@ -1719,6 +1763,68 @@ int read_latest_network(void)
         ret = 1;
     } else {
         rc = gni_print(globalnetworkinfo);
+        
+        rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+        if (rc) {
+            LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
+            ret = 1;
+        } else {
+            if (!config->nc_router) {
+                // user has not specified NC router, use the default cluster private subnet gateway
+                config->vmGatewayIP = mycluster->private_subnet.gateway;
+                strptra = hex2dot(config->vmGatewayIP);
+                LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
+                EUCA_FREE(strptra);
+            } else {
+                // user has specified use of NC as router
+                if (!config->nc_router_ip) {
+                    // user has not specified a router IP, use 'fake_router' mode
+                    config->vmGatewayIP = mycluster->private_subnet.gateway;
+                    strptra = hex2dot(config->vmGatewayIP);
+                    LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                    EUCA_FREE(strptra);
+                } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
+                    // user has specified an explicit IP to use as NC router IP
+                    config->vmGatewayIP = dot2hex(config->ncRouterIP);
+                    LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
+                } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
+                    // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
+                    rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
+                    if (rc) {
+                        LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
+                        ret = 1;
+                    } else {
+                        LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
+                        for (i=0; i<brdev_len && !found_ip; i++) {
+                            strptra = hex2dot(brdev_ips[i]);
+                            strptrb = hex2dot(brdev_nms[i]);
+                            if ( (brdev_nms[i] == mycluster->private_subnet.netmask) && ( (brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet) ) {
+                                strptrc = hex2dot(mycluster->private_subnet.subnet);
+                                strptrd = hex2dot(mycluster->private_subnet.netmask);
+                                LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
+                                config->vmGatewayIP = brdev_ips[i];
+                                LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
+                                found_ip = 1;
+                                EUCA_FREE(strptrc);
+                                EUCA_FREE(strptrd);
+                            }
+                            EUCA_FREE(strptra);
+                            EUCA_FREE(strptrb);
+                        }
+                        if (!found_ip) {
+                            strptra = hex2dot(mycluster->private_subnet.subnet);
+                            strptrb = hex2dot(mycluster->private_subnet.netmask);
+                            LOGERROR("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n", config->bridgeDev, strptra, strptrb);
+                            EUCA_FREE(strptra);
+                            EUCA_FREE(strptrb);
+                            ret = 1;
+                        }
+                    }
+                    EUCA_FREE(brdev_ips);
+                    EUCA_FREE(brdev_nms);
+                }
+            }
+        }        
     }
     return (ret);
 }

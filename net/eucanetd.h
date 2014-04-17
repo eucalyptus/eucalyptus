@@ -112,29 +112,24 @@ typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
     ips_handler *ips;
     ebt_handler *ebt;
+
     char *eucahome, *eucauser;
     char cmdprefix[EUCA_MAX_PATH];
     char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
     char bridgeDev[32];
+    u32 vmGatewayIP, clcMetadataIP;
+    char ncRouterIP[32];
+    char metadataIP[32];
     char pubInterface[32];
     char privInterface[32];
     char dhcpDaemon[EUCA_MAX_PATH];
-    //    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
-    //    int max_all_public_ips;
 
-    //    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_info_file;
     atomic_file global_network_info_file;
 
-    int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation, fake_router;
+    // these are flags that can be set by values in eucalyptus.conf
+    int polling_frequency, disable_l2_isolation, nc_router_ip, nc_router, metadata_use_vm_private, metadata_ip;
+
     int debug, flushmode;
-
-    // u32 defaultgw;
-
-    //    char *clcIp, *ccIp;
-
-    //    gni_secgroup *security_groups;
-    //    int max_security_groups;
-
     int init;
 } eucanetdConfig;
 
