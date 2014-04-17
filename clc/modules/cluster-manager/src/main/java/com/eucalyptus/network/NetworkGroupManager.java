@@ -237,7 +237,7 @@ public class NetworkGroupManager {
             request.getIpPermissions());
         final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
         if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
-          NetworkGroups.resolvePermissions( ipPermissions , true );
+          NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), true );
           try {
             Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
                 ruleGroup.getNetworkRules( ).iterator( ),
@@ -280,7 +280,7 @@ public class NetworkGroupManager {
           request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(), 
           request.getSourceSecurityGroupName(), request.getSourceSecurityGroupOwnerId(), 
           request.getIpPermissions());
-      NetworkGroups.resolvePermissions( ipPermissions , false);
+      NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ) , false);
       for ( final IpPermissionType ipPerm : ipPermissions ) {
         if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
           continue; // see EUCA-5934

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
@@ -85,7 +86,6 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Maps;
 
 public class DatabaseAuthUtils {
 
@@ -100,11 +100,7 @@ public class DatabaseAuthUtils {
   public static boolean isUserGroupName( String groupName ) {
     return groupName.startsWith( User.USER_GROUP_PREFIX );
   }
-  
-  public static boolean isSystemAccount( String accountName ) {
-    return Account.SYSTEM_ACCOUNT.equals( accountName ) || "blockstorage".equals( accountName ); //TODO update this when there is a way to identify system accounts
-  }
-  
+
   /**
    * Must call within a transaction.
    * 

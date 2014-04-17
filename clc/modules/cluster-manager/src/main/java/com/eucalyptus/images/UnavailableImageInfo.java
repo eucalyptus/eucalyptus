@@ -43,6 +43,11 @@ class UnavailableImageInfo implements BootableImageInfo {
   }
 
   @Override
+  public ImageMetadata.Architecture getArchitecture() {
+    return null;
+  }
+
+  @Override
   public String getRamdiskId() {
     return null;
   }

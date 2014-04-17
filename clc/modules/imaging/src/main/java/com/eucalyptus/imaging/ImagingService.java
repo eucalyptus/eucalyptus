@@ -25,8 +25,10 @@ import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 
 import java.net.InetSocketAddress;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -39,6 +41,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
@@ -47,6 +50,7 @@ import com.google.common.collect.Iterables;
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
 
+  private static final int MAX_TIMEOUT_AND_RETRY = 1; 
   public static ImportImageResponseType importImage(ImportImageType request) throws ImagingServiceException {
     final ImportImageResponseType reply = request.getReply();
     final Context context = Contexts.lookup( );
@@ -230,7 +234,23 @@ public class ImagingService {
         
         switch(workerState){
         case EXTANT:
-            ;
+          if(imagingTask.isTimedOut()){
+            try{
+              if(imagingTask.getTimeoutCount() < MAX_TIMEOUT_AND_RETRY) {
+                LOG.warn(String.format("Imaging import task %s has timed out; will retry later", imagingTask.getDisplayName()));
+                ImagingTasks.timeoutTask(taskId);
+                ImagingTasks.killAndRerunTask(taskId);
+              }else{
+                LOG.warn(String.format("Imaging import task %s has timed out and failed", imagingTask.getDisplayName()));
+                ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Task timed out during conversion");
+              }
+            }catch(final Exception ex){
+              LOG.error("Failed to handle timed-out task", ex);
+              ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Task timed out during conversion");
+            }finally{
+              reply.setCancelled(true);
+            }
+          }
           break;
 
         case DONE:
@@ -338,4 +358,5 @@ public class ImagingService {
     }
     return reply;
   }
+
 }

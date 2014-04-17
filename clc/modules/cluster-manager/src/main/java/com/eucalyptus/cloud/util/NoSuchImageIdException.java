@@ -59,33 +59,24 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.cloud.util;
 
-package com.eucalyptus.walrus.auth;
+/**
+ * Created by ethomas on 4/16/14.
+ */
+public class NoSuchImageIdException extends MetadataException {
+  public NoSuchImageIdException() {
+  }
 
-import com.eucalyptus.auth.login.WrappedCredentials;
+  public NoSuchImageIdException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-public class WalrusWrappedComponentCredentials extends WrappedCredentials<String> {
-	private String queryId;
-	private String signature;
-	private String certMD5Fingerprint;
-	
-	public WalrusWrappedComponentCredentials(String correlationId, String data,
-			String accessKeyId, String signature, String certFingerprint) {
-		super( correlationId, data );
-		this.queryId = accessKeyId;
-		this.signature = signature;
-		this.certMD5Fingerprint = certFingerprint;
-	}
+  public NoSuchImageIdException(String message) {
+    super(message);
+  }
 
-	public String getQueryId() {
-		return this.queryId;
-	}
-
-	public String getSignature() {
-		return this.signature;
-	}
-
-	public String getCertMD5Fingerprint() {
-		return this.certMD5Fingerprint;
-	}
+  public NoSuchImageIdException(Throwable cause) {
+    super(cause);
+  }
 }

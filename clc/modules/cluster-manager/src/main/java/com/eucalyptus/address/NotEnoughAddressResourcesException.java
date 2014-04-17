@@ -17,20 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloud.util;
+package com.eucalyptus.address;
+
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 
 /**
  *
  */
-public class InvalidInstanceProfileMetadataException extends InvalidMetadataException {
+public class NotEnoughAddressResourcesException extends NotEnoughResourcesException {
   private static final long serialVersionUID = 1L;
 
-  public InvalidInstanceProfileMetadataException( final String message ) {
-    super( message );
-  }
-
-  public InvalidInstanceProfileMetadataException( final String message,
-                                                  final Throwable cause ) {
-    super( message, cause );
+  public NotEnoughAddressResourcesException( ) {
+    super( "Not enough resources available: addresses; please stop or terminate unwanted instances or release unassociated elastic IPs and try again, or run with private addressing only" );
   }
 }

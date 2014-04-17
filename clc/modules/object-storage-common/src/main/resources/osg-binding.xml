@@ -52,10 +52,7 @@
 
     <mapping class="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
              abstract="true">
-        <value name="AWSAccessKeyId" field="accessKeyID" usage="optional"/>
         <value name="Timestamp" field="timeStamp" usage="optional"/>
-        <value name="Signature" field="signature" usage="optional"/>
-        <value name="Credential" field="credential" usage="optional"/>
         <value name="Bucket" field="bucket" usage="optional"/>
         <value name="Key" field="key" usage="optional"/>
     </mapping>
@@ -671,7 +668,7 @@
         <value name="IsTruncated" field="isTruncated" usage="optional"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="uploads">
-            <structure name="Uploads" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
+            <structure name="Upload" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
         </collection>
         <value name="Prefix" field="prefix" usage="optional"/>
         <value name="Delimiter" field="delimiter" usage="optional"/>

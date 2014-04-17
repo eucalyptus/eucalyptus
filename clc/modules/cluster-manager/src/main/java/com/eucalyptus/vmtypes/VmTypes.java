@@ -552,8 +552,8 @@ public class VmTypes {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
       } else if(ImageMetadata.VirtualizationType.hvm.equals(img.getVirtualizationType())){
-    	vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
-        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
+        vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
+        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
       } else
       {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );

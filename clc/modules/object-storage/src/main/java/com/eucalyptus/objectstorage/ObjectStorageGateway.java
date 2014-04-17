@@ -162,8 +162,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -668,25 +666,22 @@ public class ObjectStorageGateway implements ObjectStorageService {
 			 */
 			Account accnt;
 			try {
-				accnt = Contexts.lookup().getAccount();
+				accnt = Contexts.lookup(request.getCorrelationId()).getAccount();
 				if(accnt == null) {
 					throw new NoSuchContextException();
 				}
 			} catch (NoSuchContextException e) {
-				try {
-					accnt = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID()).getAccount();
-				} catch(AuthException ex) {
-					LOG.error("Could not retrieve canonicalId for user with accessKey: " + request.getAccessKeyID());
-					throw new InternalErrorException();
-				}
+                LOG.error("Could not retrieve canonicalId for user with userId: " + request.getUserId() + " effectiveUserId: " + request.getEffectiveUserId());
+                throw new AccountProblemException(request.getUserId());
 			}
+
 			try {
 				List<Bucket> listing = BucketMetadataManagers.getInstance().lookupBucketsByOwner(accnt.getCanonicalId());
 				response.setBucketList(generateBucketListing(listing));
 				response.setOwner(AclUtils.buildCanonicalUser(accnt));
 				return response;
 			} catch(Exception e) {
-				throw new InternalErrorException();
+				throw new InternalErrorException("Error getting bucket metadata", e);
 			}
 		} else {
 			AccessDeniedException ex = new AccessDeniedException("ListAllMyBuckets");
@@ -745,9 +740,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         putObject.setAccessControlList(request.getAccessControlList());
         putObject.setContentType(request.getContentType());
         putObject.setContentLength(request.getContentLength());
-        putObject.setAccessKeyID(request.getAccessKeyID());
         putObject.setEffectiveUserId(request.getEffectiveUserId());
-        putObject.setCredential(request.getCredential());
         putObject.setIsCompressed(request.getIsCompressed());
         putObject.setMetaData(request.getMetaData());
         putObject.setStorageClass(request.getStorageClass());
@@ -1999,13 +1992,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 }
             }
             reply.setIsTruncated(result.isTruncated);
-            if(result.isTruncated) {
-                if(	result.getLastEntry() instanceof ObjectEntity) {
-                    reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
-                } else {
-                    //If max-keys = 0, then last entry may be empty
-                    reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
-                }
+            if(result.getLastEntry() instanceof ObjectEntity) {
+                reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
+                reply.setNextUploadIdMarker(((ObjectEntity)result.getLastEntry()).getUploadId());
+            } else {
+                //If max-keys = 0, then last entry may be empty
+                reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
             }
         }
 

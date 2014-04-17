@@ -150,15 +150,10 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
         AccessControlPolicy policy = msgAcl;
 
 		// Check for the owner and add it if not already set
-		if (policy.getOwner() != null) {
-			if (!StringUtils.equals(policy.getOwner().getID(), this.getOwnerCanonicalId())
-					|| !StringUtils.equals(policy.getOwner().getDisplayName(), this.getOwnerDisplayName())) {
-				throw new RuntimeException("Owner cannot be changed");
-			} else {
-				// Nothing to do here
-			}
+		if (policy.getOwner() != null && this.getOwnerCanonicalId() != null && !StringUtils.equals(policy.getOwner().getID(), this.getOwnerCanonicalId())) {
+			throw new RuntimeException("Owner cannot be changed");
 		} else {
-			 policy.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+			policy.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
 		}
 
         Map<String, Integer> resultMap = AccessControlPolicyToMap.INSTANCE.apply(policy);

@@ -334,6 +334,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String kernel;
   String ramdisk;
   String platform;
+  String architecture;
   String monitoring;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"

@@ -26,7 +26,6 @@ import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.eucalyptus.auth.AuthException;
@@ -39,7 +38,6 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import net.sf.hajdbc.util.SystemProperties;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -47,7 +45,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A convenience wrapper for an AWS Java SDK S3 Client that sets default

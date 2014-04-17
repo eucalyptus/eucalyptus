@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 import com.eucalyptus.auth.Accounts;
@@ -684,6 +683,16 @@ public class Principals {
 
     @Override
     public void setName( String name ) throws AuthException {}
+
+    @Override
+    public String getDisplayName() {
+      return Accounts.getAccountFullName( this );
+    }
+
+    @Override
+    public OwnerFullName getOwner() {
+      return AccountFullName.getInstance( this );
+    }
 
     @Override
     public List<User> getUsers( ) throws AuthException {

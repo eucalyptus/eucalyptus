@@ -65,8 +65,6 @@ package com.eucalyptus.walrus.tests;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
-import com.eucalyptus.objectstorage.ObjectTest;
-
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     BukkitTest.class,

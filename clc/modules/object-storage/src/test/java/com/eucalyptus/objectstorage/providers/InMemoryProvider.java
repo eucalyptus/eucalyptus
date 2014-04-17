@@ -270,7 +270,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         ListAllMyBucketsList list = new ListAllMyBucketsList();
         list.setBuckets(new ArrayList<BucketListEntry>());
         response.setBucketList(list);
-        response.setOwner(new CanonicalUser(request.getAccessKeyID(), ""));
+        response.setOwner(new CanonicalUser(request.getEffectiveUserId(), ""));
         for (Map.Entry<String, MemoryBucket> bucketEntry : this.myBuckets.entrySet()) {
             list.getBuckets().add(bucketEntry.getValue().toBucketListEntry());
         }
@@ -289,7 +289,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
             default:
         }
 
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
         HeadBucketResponseType response = request.getReply();
         response.setBucket(request.getBucket());
         response.setStatus(HttpResponseStatus.OK);
@@ -319,7 +319,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
             default:
         }
         try {
-            bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
         } catch (NoSuchBucketException e) {
             //Create
             bucket = null;
@@ -328,7 +328,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         if (bucket == null) {
             bucket = new MemoryBucket();
             bucket.name = request.getBucket();
-            bucket.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            bucket.canonicalId = getOwnerCanonicalId(request.getEffectiveUserId());
             bucket.createdDate = new Date();
             bucket.acl = request.getAccessControlList();
             if (request.getAccessControlList() == null) {
@@ -362,7 +362,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         response.setStatusMessage("NoContent");
 
         try {
-            MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
             if (b != null) {
                 //Do the delete
                 if (b.objects.size() > 0) {
@@ -381,7 +381,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
             GetBucketAccessControlPolicyType request) throws S3Exception {
         GetBucketAccessControlPolicyResponseType response = request.getReply();
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
         response.setAccessControlPolicy(new AccessControlPolicy());
         response.getAccessControlPolicy().setAccessControlList(b.acl);
         response.getAccessControlPolicy().setOwner(new CanonicalUser(b.canonicalId, IN_MEMORY_USERNAME));
@@ -404,7 +404,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         Does not yet support prefix, delim, pagination, etc
          */
 
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
         ListBucketResponseType response = request.getReply();
 
         response.setContents(new ArrayList<ListEntry>());
@@ -430,7 +430,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     @Override
     public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request)
             throws S3Exception {
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
         GetBucketLocationResponseType response = request.getReply();
         response.setBucket(request.getBucket());
         response.setLocationConstraint(b.location);
@@ -488,14 +488,14 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
         try {
             ObjectKey key = new ObjectKey(request.getKey(), "null");
-            MemoryBucket bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
 
             MemoryObject memObj = new MemoryObject();
             memObj.key = request.getKey();
             memObj.versionId = "null";
             memObj.content = new byte[Integer.valueOf(request.getContentLength())];
             memObj.modifiedDate = new Date();
-            memObj.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            memObj.canonicalId = getOwnerCanonicalId(request.getEffectiveUserId());
             memObj.acl = request.getAccessControlList();
             memObj.userMetadata = request.getMetaData();
 
@@ -560,9 +560,9 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         response.setStatus(HttpResponseStatus.NO_CONTENT);
 
         try {
-            MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getAccessKeyID());
+            MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getEffectiveUserId());
             if (obj != null) {
-                MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+                MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
                 b.objects.remove(new ObjectKey(request.getKey(), obj.versionId));
             }
         } catch (NoSuchKeyException e) {
@@ -597,7 +597,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
                 throw new NoSuchKeyException(request.getKey());
             default:
         }
-        MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getAccessKeyID());
+        MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getEffectiveUserId());
         GetObjectResponseType response = request.getReply();
         response.setEtag(obj.eTag);
         response.setLastModified(obj.modifiedDate);
@@ -626,7 +626,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
                 throw new NoSuchKeyException(request.getKey());
             default:
         }
-        MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getAccessKeyID());
+        MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getEffectiveUserId());
         HeadObjectResponseType response = request.getReply();
         response.setEtag(obj.eTag);
         response.setLastModified(obj.modifiedDate);
@@ -652,16 +652,16 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         }
 
         try {
-            MemoryBucket sourceBucket = getBucket(request.getSourceBucket(), request.getAccessKeyID());
-            MemoryBucket destBucket = getBucket(request.getDestinationBucket(), request.getAccessKeyID());
+            MemoryBucket sourceBucket = getBucket(request.getSourceBucket(), request.getEffectiveUserId());
+            MemoryBucket destBucket = getBucket(request.getDestinationBucket(), request.getEffectiveUserId());
             MemoryObject sourceObject = getObject(sourceBucket.name, request.getSourceObject(),
-                    getOwnerCanonicalId(request.getAccessKeyID()));
+                    getOwnerCanonicalId(request.getEffectiveUserId()));
 
             MemoryObject destObject = new MemoryObject();
             destObject.key = request.getDestinationObject();
             destObject.versionId = "null";
             destObject.modifiedDate = new Date();
-            destObject.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            destObject.canonicalId = getOwnerCanonicalId(request.getEffectiveUserId());
             destObject.acl = request.getAccessControlList();
             if (request.getAccessControlList() == null) {
                 destObject.acl = genPrivateAcl(destObject.canonicalId);
@@ -713,14 +713,14 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         }
 
         try {
-            MemoryBucket bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
 
             MemoryMpu memObj = new MemoryMpu();
             memObj.key = request.getKey();
             memObj.uploadId = UUID.randomUUID().toString();
             memObj.versionId = "null";
             memObj.modifiedDate = new Date();
-            memObj.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            memObj.canonicalId = getOwnerCanonicalId(request.getEffectiveUserId());
             memObj.acl = request.getAccessControlList();
             if (request.getAccessControlList() == null) {
                 memObj.acl = genPrivateAcl(memObj.canonicalId);
@@ -760,7 +760,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         }
 
         try {
-            MemoryBucket bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
             if (!bucket.uploads.containsKey(request.getUploadId())) {
                 throw new NoSuchUploadException(request.getUploadId());
             }
@@ -769,7 +769,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
             memObj.key = request.getKey();
             memObj.content = new byte[Integer.valueOf(request.getContentLength())];
             memObj.modifiedDate = new Date();
-            memObj.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            memObj.canonicalId = getOwnerCanonicalId(request.getEffectiveUserId());
             memObj.partNumber = Integer.parseInt(request.getPartNumber());
 
             try {
@@ -808,7 +808,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     @Override
     public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception {
         try {
-            MemoryBucket bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
             if (!bucket.uploads.containsKey(request.getUploadId())) {
                 throw new NoSuchUploadException(request.getUploadId());
             }
@@ -879,7 +879,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     @Override
     public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception {
         try {
-            MemoryBucket bucket = getBucket(request.getBucket(), request.getAccessKeyID());
+            MemoryBucket bucket = getBucket(request.getBucket(), request.getEffectiveUserId());
             if (!bucket.uploads.containsKey(request.getUploadId())) {
                 throw new NoSuchUploadException(request.getUploadId());
             }
@@ -903,7 +903,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
     @Override
     public ListPartsResponseType listParts(ListPartsType request) throws S3Exception {
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
         MemoryMpu upload = b.uploads.get(request.getUploadId());
         if (upload == null) {
             throw new NoSuchUploadException(request.getUploadId());
@@ -930,7 +930,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
     @Override
     public ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws S3Exception {
-        MemoryBucket b = getBucket(request.getBucket(), request.getAccessKeyID());
+        MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
 
         ListMultipartUploadsResponseType response = request.getReply();
         response.setBucket(request.getBucket());

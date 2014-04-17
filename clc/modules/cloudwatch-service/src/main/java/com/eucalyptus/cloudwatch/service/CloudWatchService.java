@@ -23,6 +23,7 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.NoSuchElementException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
@@ -30,6 +31,7 @@ import com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -73,6 +75,12 @@ public class CloudWatchService {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( CloudWatchBackend.class ), request );
     } catch ( NoSuchElementException e ) {
       throw new CloudWatchUnavailableException( "Service Unavailable" );
+    } catch ( ServiceDispatchException e ) {
+      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
+      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
+        throw (Exception) componentException.getCause( );
+      }
+      throw e;
     }
   }
 

@@ -166,7 +166,7 @@ public class Images {
 	  INSTANCE;
 	  @Override
 	  public boolean apply( ImageInfo input ) {
-		  if (ImageMetadata.State.available.equals(input.getState()))
+		  if (ImageMetadata.State.available.name().equals(input.getState().getExternalStateName()))
 			  return true;
 		  else
 			  return false;
@@ -1007,7 +1007,7 @@ public class Images {
     return ret;
   }
   
-  public static ImageInfo createPendingConversionFromManifest( UserFullName creator,
+  public static ImageInfo createPendingAvailableFromManifest( UserFullName creator,
                                                      String imageNameArg,
                                                      String imageDescription,
                                                      ImageMetadata.Architecture requestArch,
@@ -1017,8 +1017,9 @@ public class Images {
                                                      String eki,
                                                      String eri,
                                                      ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, platform, imgFormat, eki, eri, manifest );
-    ret.setState( ImageMetadata.State.pending_conversion );
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, 
+        ImageMetadata.VirtualizationType.hvm, platform, imgFormat, eki, eri, manifest );
+    ret.setState( ImageMetadata.State.pending_available );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
   }
@@ -1074,18 +1075,15 @@ public class Images {
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
     		  virtType = ImageMetadata.VirtualizationType.hvm;
     	}
-    	if(	ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
-    	    	eki = null; 
-    	    	eri = null;
+    	
+    	ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
+    	    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
+    	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
+    	ret.setImageFormat(format.toString());
+    	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
+    	  ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
     	}
-        ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
-                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
-        ret.setImageFormat(format.toString());
-        if( ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
-          ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
-        }
-        break;
+    	break;
     }
     if ( ret == null ) {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );

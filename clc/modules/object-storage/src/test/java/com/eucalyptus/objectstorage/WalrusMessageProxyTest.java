@@ -37,12 +37,10 @@ public class WalrusMessageProxyTest {
     @Test
     public void listBucketsTest() throws Exception {
         com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType bucketRequest = new com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType();
-        bucketRequest.setAccessKeyID("testkey");
         bucketRequest.setCorrelationId("test-correlation-id");
 
         com.eucalyptus.walrus.msgs.ListAllMyBucketsType walrusRequest = MessageMapper.INSTANCE.proxyWalrusRequest(com.eucalyptus.walrus.msgs.ListAllMyBucketsType.class, bucketRequest);
         assert (walrusRequest.getCorrelationId() != bucketRequest.getCorrelationId());
-        assert (walrusRequest.getAccessKeyID().equals(bucketRequest.getAccessKeyID()));
 
         System.out.println("Request: " + bucketRequest.toSimpleString() + "\nProxied: " + walrusRequest.toSimpleString());
 
@@ -69,13 +67,11 @@ public class WalrusMessageProxyTest {
     @Test
     public void createBucketTest() throws Exception {
         com.eucalyptus.objectstorage.msgs.CreateBucketType bucketRequest = new com.eucalyptus.objectstorage.msgs.CreateBucketType();
-        bucketRequest.setAccessKeyID("testkey");
         bucketRequest.setCorrelationId("test-correlation-id");
         bucketRequest.setBucket("testbucket123");
 
         com.eucalyptus.walrus.msgs.CreateBucketType walrusRequest = MessageMapper.INSTANCE.proxyWalrusRequest(com.eucalyptus.walrus.msgs.CreateBucketType.class, bucketRequest);
         assert (walrusRequest.getCorrelationId() != bucketRequest.getCorrelationId());
-        assert (walrusRequest.getAccessKeyID().equals(bucketRequest.getAccessKeyID()));
         assert (walrusRequest.getBucket().equals(bucketRequest.getBucket()));
 
         System.out.println("Request: " + bucketRequest.toSimpleString() + "\nProxied: " + walrusRequest.toSimpleString());

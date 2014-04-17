@@ -91,6 +91,7 @@ import com.eucalyptus.node.Nodes;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -102,6 +103,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -229,14 +231,21 @@ public class ClusterEndpoint implements Startable {
       }
     }
 
+    final Clusters clusterRegistry = Clusters.getInstance( );
     final List<Cluster> clusters;
     if ( args.isEmpty( ) ) {
-      clusters = Clusters.getInstance( ).listValues( );
+      clusters = Lists.newArrayList( clusterRegistry.listValues( ) );
+      Iterables.addAll( clusters, Iterables.filter(
+          clusterRegistry.listDisabledValues( ),
+          Predicates.not(
+              CollectionUtils.propertyPredicate(
+                  Collections2.transform( clusters, CloudMetadatas.toDisplayName() ),
+                  CloudMetadatas.toDisplayName() ) ) ) );
     } else {
       clusters = Lists.newArrayList();
       for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          clusters.add( Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+          clusters.add( Iterables.find( clusterRegistry.listValues( ), new Predicate<Cluster>( ) {
             @Override
             public boolean apply( Cluster input ) {
               return partitionName.equals( input.getConfiguration( ).getPartition( ) );
@@ -244,8 +253,12 @@ public class ClusterEndpoint implements Startable {
           } ) );
         } catch ( NoSuchElementException e ) {
           try {
-            clusters.add( Clusters.getInstance( ).lookup( partitionName ) );
-          } catch ( NoSuchElementException ex ) {}
+            clusters.add( clusterRegistry.lookup( partitionName ) );
+          } catch ( NoSuchElementException ex ) {
+            try {
+              clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
+            } catch ( NoSuchElementException ex2 ) { }
+          }
         }
       }
     }
@@ -258,10 +271,8 @@ public class ClusterEndpoint implements Startable {
   }
   
   private List<ClusterInfoType> getDescriptionEntry( Cluster c ) {
-    List<ClusterInfoType> ret = Lists.newArrayList( );
-    String clusterName = c.getName( );
-    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), c.getConfiguration( ).getHostName( ) + " "
-                                                                                                      + c.getConfiguration( ).getFullName( ) ) );
+    final List<ClusterInfoType> ret = Lists.newArrayList( );
+    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), ClusterFunctions.STATE.apply( c ) ) );
     NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
     if ( tagList.size( ) == 1 )
       tagList = c.getNodeTags( );
@@ -450,12 +461,23 @@ public class ClusterEndpoint implements Startable {
     }
   }
 
+  private enum ClusterFunctions implements Function<Cluster,String> {
+    STATE {
+      @Override
+      public String apply( final Cluster cluster ) {
+        return cluster.getStateMachine().getState().ordinal() > Cluster.State.ENABLING_ADDRS_PASS_TWO.ordinal () ?
+            "available" :
+            "unavailable";
+      }
+    },
+  }
+
   public static class AvailabilityZoneFilterSupport extends FilterSupport<Cluster> {
     public AvailabilityZoneFilterSupport() {
       super( builderFor( Cluster.class )
           .withUnsupportedProperty( "message" )
           .withUnsupportedProperty( "region-name" )
-          .withUnsupportedProperty( "state" )
+          .withStringProperty( "state", ClusterFunctions.STATE )
           .withStringProperty( "zone-name", CloudMetadatas.toDisplayName() ) );
     }
   }

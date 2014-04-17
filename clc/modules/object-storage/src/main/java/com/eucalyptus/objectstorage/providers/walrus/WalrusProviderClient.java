@@ -186,7 +186,7 @@ public class WalrusProviderClient extends S3ProviderClient {
     }
 
 	@Override
-	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws InternalErrorException {
+	protected AmazonS3Client getS3Client(User requestUser) throws InternalErrorException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
 		if (osgInternalS3Client == null) {
 			synchronized(this) {
@@ -196,7 +196,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 				}
 				AWSCredentials credentials = null;
 				try {
-					credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
+					credentials = mapCredentials(requestUser);
 				} catch(Exception e) {
                     LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
                     InternalErrorException ex = new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
@@ -245,7 +245,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 * Walrus provider mapping maps all requests to the single ObjectStorage account used for interaction with Walrus
 	 */
 	@Override
-	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {
+	protected  BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
 		List<AccessKey> eucaAdminKeys = systemAdmin.getKeys();
 		if(eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
 			return new BasicAWSCredentials( eucaAdminKeys.get(0).getAccessKey(),  eucaAdminKeys.get(0).getSecretKey());

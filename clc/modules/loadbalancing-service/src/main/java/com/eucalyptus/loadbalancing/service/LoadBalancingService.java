@@ -24,9 +24,11 @@ import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingBackendMessage;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingServoBackendMessage;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
@@ -83,6 +85,12 @@ public class LoadBalancingService {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), request );
     } catch ( NoSuchElementException e ) {
       throw new LoadBalancingUnavailableException( "Service Unavailable" );
+    } catch ( ServiceDispatchException e ) {
+      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
+      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
+        throw (Exception) componentException.getCause( );
+      }
+      throw e;
     }
   }
 

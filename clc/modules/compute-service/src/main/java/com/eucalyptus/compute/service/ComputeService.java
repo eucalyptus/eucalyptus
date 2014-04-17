@@ -21,10 +21,8 @@ package com.eucalyptus.compute.service;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.NoSuchElementException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.component.ComponentException;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -35,12 +33,12 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
-import com.eucalyptus.ws.Role;
 import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
@@ -81,6 +79,12 @@ public class ComputeService {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), request );
     } catch ( NoSuchElementException e ) {
       throw new ComputeServiceUnavailableException( "Service Unavailable" );
+    } catch ( ServiceDispatchException e ) {
+      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
+      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
+        throw (Exception) componentException.getCause( );
+      }
+      throw e;
     }
   }
 
