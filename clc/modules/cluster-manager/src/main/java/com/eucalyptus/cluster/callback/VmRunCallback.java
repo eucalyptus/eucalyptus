@@ -68,7 +68,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.AddressingDispatcher;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
@@ -83,8 +82,6 @@ import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmVolumeAttachment;
-import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -109,20 +106,15 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   @Override
   public void initialize( final VmRunType msg ) {
     LOG.debug( this.token + ":" + msg );
-    try {
-      this.token.submit( );
-    } catch ( final NoSuchTokenException e2 ) {
-      LOG.error( e2 );
-      Logs.extreme( ).error( e2, e2 );
-    }
-    EntityTransaction db = Entities.get( VmInstance.class );
+
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
       msg.setUserId( vm.getOwnerUserId( ) );
       msg.setOwnerId( vm.getOwnerUserId( ) );
       msg.setAccountId( vm.getOwnerAccountNumber( ) );
-      if ( !VmState.PENDING.equals( vm.getState( ) ) ) {
-        throw new EucalyptusClusterException( "Intercepted a RunInstances request for an instance which has meanwhile been terminated." );
+      if ( !VmState.PENDING.apply( vm) ) {
+        throw new EucalyptusClusterException( "Intercepted a RunInstances request for an instance with unexpected state: " + vm.getState( ) );
       }
       db.rollback( );
     } catch ( final Exception e ) {
@@ -136,6 +128,15 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         Logs.extreme( ).error( ex, ex );
       }
       throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
+    } finally {
+      if ( db.isActive( ) ) db.rollback( );
+    }
+
+    try {
+      this.token.submit( );
+    } catch ( final NoSuchTokenException e2 ) {
+      LOG.error( e2 );
+      Logs.extreme( ).error( e2, e2 );
     }
   }
   
@@ -148,9 +149,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       LOG.error( this.token + ": " + ex );
       Logs.extreme( ).error( this.token + ": " + ex, ex );
     }
-    final Volume rootVolume = this.token.getRootVolume( );
-    final String rootVolumeId = ( rootVolume != null ? rootVolume.getDisplayName( ) : null );
-    Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
+    final Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
@@ -158,29 +157,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );
-          final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
-            public boolean apply( VmVolumeAttachment input ) {
-              final String volumeId = input.getVolumeId( );
-              if ( !volumeId.equals( rootVolumeId ) ) {
-                try {
-                  if ( !AttachmentState.attached.equals( input.getAttachmentState( ) ) && !AttachmentState.attaching.equals( input.getAttachmentState( ) ) ) {
-                    input.setStatus( AttachmentState.attaching.name( ) );
-                  }
-                } catch ( Exception ex ) {
-                  input.setStatus( AttachmentState.attaching_failed.name( ) );
-                  LOG.error( VmRunCallback.this.token + ": " + ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-              }
-              return true;
-            }
-          };
-          try {
-            vm.eachVolumeAttachment( attachVolumes );
-          } catch ( Exception ex ) {
-            LOG.error( VmRunCallback.this.token + ": " + ex );
-            Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
-          }
         } catch ( Exception ex ) {
           LOG.error( VmRunCallback.this.token + ": " + ex );
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );

@@ -1854,6 +1854,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       private void updateState( final VmInfo runVm ) {
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+        VmInstance.this.updateMacAddress( runVm.getNetParams( ).getMacAddress( ) );
         VmInstance.this.setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());
         if ( VmStateSet.RUN.apply( VmInstance.this ) ) {
