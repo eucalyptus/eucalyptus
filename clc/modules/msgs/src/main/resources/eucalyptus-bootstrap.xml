@@ -74,13 +74,13 @@
   <configuration>
     <default-threading-profile 
             doThreading="true" 
-            maxThreadsActive="16"
+            maxThreadsActive="256"
             poolExhaustedAction="RUN" />
   </configuration>
   <management:jmx-server/>
   <euca:connector name="eucaws" />
   <vm:connector name="internal-async">
-    <vm:queue-profile maxOutstandingMessages="256" />
+    <vm:queue-profile maxOutstandingMessages="1024" />
   </vm:connector>
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" exchange-pattern="one-way" />
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" exchange-pattern="one-way" />

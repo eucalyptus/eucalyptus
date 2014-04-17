@@ -63,6 +63,7 @@
 package com.eucalyptus.walrus.msgs;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 // A concurrent hash map that holds a map of queues, which can be used for passing data
@@ -115,7 +116,15 @@ public class WalrusDataMessenger {
 		if(queueMap.containsKey(key1)) {
 			ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
 			if(queues.containsKey(key2)) {
-				queues.remove(key2);
+                WalrusDataQueue<WalrusDataMessage> q = queues.get(key2);
+                if (q!= null) {
+                    try {
+                        q.offer(WalrusDataMessage.InterruptTransaction(), 10L, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        LOG.error(e);
+                    }
+                    queues.remove(key2);
+                }
 				synchronized(queues) {
 					if(queues.size() == 0) {
 						queueMap.remove(key1);

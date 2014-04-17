@@ -79,6 +79,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
@@ -1086,7 +1087,7 @@ public class WalrusFSManager extends WalrusManager {
                     MessageDigest digest = null;
                     long size = 0;
                     FileIO fileIO = null;
-                    while ((dataMessage = putQueue.take()) != null) {
+                    while ((dataMessage = putQueue.poll(60L, TimeUnit.SECONDS)) != null) {
                         if (putQueue.getInterrupted()) {
                             if (WalrusDataMessage.isEOF(dataMessage)) {
                                 WalrusMonitor monitor = messenger.getMonitor(key);
@@ -1302,6 +1303,11 @@ public class WalrusFSManager extends WalrusManager {
                                 digest.update(data);
                             }
                         }
+                    }
+                    if (dataMessage == null) {
+                        db.rollback();
+                        messenger.removeQueue(key, randomKey);
+                        throw new InternalErrorException("Put timed out: " + key + "." + randomKey);
                     }
                 } catch (InterruptedException ex) {
                     LOG.error(ex, ex);
