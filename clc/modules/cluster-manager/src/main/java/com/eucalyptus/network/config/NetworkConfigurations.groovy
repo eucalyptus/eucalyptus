@@ -122,7 +122,7 @@ class NetworkConfigurations {
     Addresses.addressManager.update( iterateRangesAsString( networkConfiguration.publicIps ) )
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
-        networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.name }?:new Cluster().with{
+        (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with{
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult( config )
           clusterConfiguration.networkMode = 'EDGE'
           clusterConfiguration.addressesPerNetwork = -1
