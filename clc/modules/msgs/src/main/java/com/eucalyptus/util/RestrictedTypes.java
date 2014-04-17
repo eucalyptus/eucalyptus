@@ -445,12 +445,15 @@ public class RestrictedTypes {
 
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
       notifyResourceInterceptors( requestedObject, qualifiedAction );
-
-      if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
-                                      PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
-                                      qualifiedAction, requestUser, evaluatedKeys ) ) {
-        throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
-                                 + UserFullName.getInstance( requestUser ) );
+      try {
+        if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
+                                        PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
+                                        qualifiedAction, requestUser, evaluatedKeys ) ) {
+          throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
+                                   + UserFullName.getInstance( requestUser ) );
+        }
+      } finally {
+        notifyResourceInterceptors( null, null );
       }
       return requestedObject;
     }
@@ -546,6 +549,8 @@ public class RestrictedTypes {
             return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName( ) );
           } catch ( Exception ex ) {
             return false;
+          } finally {
+            notifyResourceInterceptors( null, null );
           }
         }
         return true;

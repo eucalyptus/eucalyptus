@@ -145,7 +145,7 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum State implements Predicate<ImageMetadata> {
-    pending("pending"), pending_conversion("pending"), available("available"), 
+    pending("pending"), pending_available("available"), pending_conversion("available"), available("available"), 
     failed("failed"), deregistered( false , "deregistered"), deregistered_cleanup( false, "deregistered"),
     hidden( false , "hidden"), unavailable ( false, "unavailable");
     

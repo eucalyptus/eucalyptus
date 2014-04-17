@@ -236,6 +236,22 @@ public class DownloadManifestFactory {
 		}
 	}
 	
+	public static String generatePresignedUrl(final String manifestName) throws DownloadManifestException {
+	  try{
+	    EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+	    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
+	    Date expiration = new Date();
+	    long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
+	    expiration.setTime(msec);
+	    URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+	        DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
+	    return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
+	  }catch(final Exception ex){
+	    LOG.error("Failed to generate presigned url", ex);
+	    throw new DownloadManifestException("Failed to generate presigned url", ex);
+	  }
+ }
+	
 	private static final String nodeToString(Node node, boolean addDeclaration) throws Exception {
 		Transformer tf = TransformerFactory.newInstance().newTransformer();
 		tf.setOutputProperty(OutputKeys.ENCODING, "UTF-8");

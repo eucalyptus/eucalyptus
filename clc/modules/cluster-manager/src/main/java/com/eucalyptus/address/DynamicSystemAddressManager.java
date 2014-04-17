@@ -80,7 +80,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       int count
   ) throws NotEnoughResourcesException {
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
-      throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
+      throw new NotEnoughAddressResourcesException( );
     } else {
       final List<Address> addressList = Lists.newArrayList( );
       for ( final Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
@@ -101,7 +101,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
             LOG.error( e, e );
           }
         }
-        throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
+        throw new NotEnoughAddressResourcesException( );
       }
       return addressList;
     }

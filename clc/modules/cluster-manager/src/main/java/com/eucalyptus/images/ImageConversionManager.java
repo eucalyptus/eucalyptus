@@ -36,10 +36,13 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
@@ -47,6 +50,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.imaging.ConvertedImageDetail;
 import com.eucalyptus.imaging.DescribeConversionTasksResponseType;
 import com.eucalyptus.imaging.DescribeConversionTasksType;
@@ -57,6 +61,9 @@ import com.eucalyptus.imaging.ImportDiskImage;
 import com.eucalyptus.imaging.ImportDiskImageDetail;
 import com.eucalyptus.imaging.ImportImageResponseType;
 import com.eucalyptus.imaging.ImportImageType;
+import com.eucalyptus.imaging.manifest.BundleImageManifest;
+import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
+import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
@@ -77,6 +84,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -414,6 +424,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
            /// the service and the backend (NC) rely on virtualizationType=HVM when they prepare full-disk type instances
            Images.setImageVirtualizationType(machineImage.getDisplayName(), ImageMetadata.VirtualizationType.hvm);
            Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.available);
+           try{
+             generateDownloadManifests(machineImage.getDisplayName());
+           }catch(final Exception ex){
+             ;
+           }
           }
        }else{
          Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.failed);
@@ -436,6 +451,31 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         }catch(final Exception ex1){
           ;
         }
+      }
+    }
+  }
+  
+  private void generateDownloadManifests(final String imageId){
+    // lookup all reservations that reference the newly available image id
+    final List<VmInstance> pendingInstances = VmInstances.list(new Predicate<VmInstance>(){
+      @Override
+      public boolean apply(VmInstance arg0) {
+        return imageId.equals(arg0.getBootRecord().getMachineImageId()) && 
+            VmState.PENDING.equals(arg0.getState());
+      }
+    });
+    for(final VmInstance instance : pendingInstances){
+      final String reservationId = instance.getReservationId();
+      final String partitionName = instance.getPartition();
+      final Partition partition = Partitions.lookupByName(partitionName);
+      final MachineImageInfo machineImage = LookupMachine.INSTANCE.apply(imageId);
+      try{
+        final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile(machineImage.getRunManifestLocation(), BundleImageManifest.INSTANCE ), 
+            partition.getNodeCertificate().getPublicKey(), reservationId);
+        LOG.debug(String.format("Generated download manifest for instance %s", instance.getDisplayName()));
+      }catch(final Exception ex){
+        LOG.error(String.format("Failed to generate download manifest for instance %s", instance.getDisplayName()), ex);
       }
     }
   }

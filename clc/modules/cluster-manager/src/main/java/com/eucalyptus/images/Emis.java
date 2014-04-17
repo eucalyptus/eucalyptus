@@ -181,7 +181,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( MachineImageInfo.class );
       try {
         final MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -203,7 +203,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( KernelImageInfo.class );
       try {
         final KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -225,7 +225,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( RamdiskImageInfo.class );
       try {
         final RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -321,13 +321,24 @@ public class Emis {
         }
       
         if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(this.getMachine().getDisplayName());
+          String manifestLocation = null;
           // generate download manifest and replace machine URL
-          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodeCertificate().getPublicKey(), reservationId);
-	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
-	      }
+          if(ImageMetadata.State.pending_available.equals(emi.getState())){
+            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
+            Images.setImageState(emi.getDisplayName(), ImageMetadata.State.pending_conversion);
+          }else if(ImageMetadata.State.pending_conversion.equals(emi.getState())){
+            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
+          }else{
+            manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
+                partition.getNodeCertificate().getPublicKey(), reservationId);
+          }
+          vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
+        }
       } catch (DownloadManifestException ex) {
+        throw new MetadataException(ex);
+      } catch (Exception ex){
         throw new MetadataException(ex);
       }
       return vmTypeInfo;

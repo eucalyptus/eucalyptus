@@ -260,7 +260,7 @@ public class ImageManager {
     			  /// In the future, we should manifest's block device mapping which is an ec2-way for expressing the image format
     			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
     			      ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType))
-              return Images.createPendingConversionFromManifest( ctx.getUserFullName( ), request.getName( ), 
+              return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
                   request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
     			  else
     			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
