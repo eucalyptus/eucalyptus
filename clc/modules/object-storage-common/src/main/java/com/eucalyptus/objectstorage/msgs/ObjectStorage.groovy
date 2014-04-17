@@ -894,8 +894,8 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_LISTBUCKETMULTIPARTUPLOADS])
-@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
     String delimiter;
