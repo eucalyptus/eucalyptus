@@ -252,7 +252,7 @@ class NetworkConfigurations {
         macPrefix = configuration.macPrefix
       }
 
-      if ( subnet == null && name ) {
+      if ( ( subnet == null || subnet && subnet.name && !subnet.subnet ) && name ) {
         subnet = NetworkConfigurations.getSubnetForCluster( configuration, name )
       }
 
@@ -265,6 +265,17 @@ class NetworkConfigurations {
 
       void
     } }
+
+    // Remove any global subnets that are used by clusters
+    Collection<String> clusterSubnetsAndNetmasks = clusters.collect{ Cluster cluster ->
+      "${cluster?.subnet?.subnet}/${cluster?.subnet?.netmask}".toString( )
+    }
+    configuration.subnets?.removeAll{ Subnet subnet ->
+      clusterSubnetsAndNetmasks.contains( "${subnet?.subnet}/${subnet?.netmask}".toString( ) )
+    }
+    if ( configuration.subnets?.isEmpty( ) ) {
+      configuration.subnets = null
+    }
 
     configuration
   }

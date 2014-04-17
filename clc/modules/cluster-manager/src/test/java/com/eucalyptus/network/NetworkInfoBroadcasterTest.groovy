@@ -71,11 +71,20 @@ class NetworkInfoBroadcasterTest {
                   subnet: '10.0.0.0',
                   netmask: '255.255.0.0',
                   gateway: '10.0.1.0'
+              ),
+              new Subnet(
+                  name: 'global',
+                  subnet: '192.168.0.0',
+                  netmask: '255.255.0.0',
+                  gateway: '192.168.0.1'
               )
           ],
           clusters: [
               new ConfigCluster(
-                  name: 'cluster1'
+                  name: 'cluster1',
+                  subnet: new Subnet(
+                      name: 'default',
+                  )
               )
           ]
       ) ),
@@ -95,11 +104,11 @@ class NetworkInfoBroadcasterTest {
             ],
             subnets: new NISubnets( name: 'subnets', subnets: [
                 new NISubnet(
-                    name: '10.0.0.0',
+                    name: '192.168.0.0',
                     properties: [
-                        new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
+                        new NIProperty( name: 'subnet', values: ['192.168.0.0'] ),
                         new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                        new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
+                        new NIProperty( name: 'gateway', values: ['192.168.0.1'] )
                     ]
                 )
             ] ),
@@ -138,7 +147,7 @@ class NetworkInfoBroadcasterTest {
               securityGroups: [],
           )
         ],
-        securityGroups: [ ]  //TODO:STEVE: add some groups
+        securityGroups: [ ]
     ), info )
   }
 
@@ -175,16 +184,6 @@ class NetworkInfoBroadcasterTest {
                 new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
                 new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
             ],
-            subnets: new NISubnets( name: 'subnets', subnets: [
-                new NISubnet(
-                    name: '10.0.0.0',
-                    properties: [
-                        new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
-                        new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                        new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
-                    ]
-                )
-            ] ),
             clusters: new NIClusters( name: 'clusters', clusters: [
                 new NICluster(
                     name: 'cluster1',
