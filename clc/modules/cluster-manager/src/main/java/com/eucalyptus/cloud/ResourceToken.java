@@ -169,24 +169,32 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     aborted = true;
 
     LOG.debug( this );
-    try {
-      this.release( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-
-    try {
-      final ReleaseNetworkResourcesType releaseNetworkResourcesType = new ReleaseNetworkResourcesType( );
-      releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
-      Networking.getInstance( ).release( releaseNetworkResourcesType );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-
-    if ( this.vmInst != null ) {
+    if ( isPending( ) ) { // release unused resources
       try {
-        this.vmInst.release( );
-      } catch ( Exception ex ) {
+        this.release( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
+
+      try {
+        final ReleaseNetworkResourcesType releaseNetworkResourcesType = new ReleaseNetworkResourcesType( );
+        releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
+        Networking.getInstance( ).release( releaseNetworkResourcesType );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
+
+      if ( this.vmInst != null ) {
+        try {
+          this.vmInst.release( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } else { // redeem and release later (if not used)
+      try {
+        this.redeem( );
+      } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     }
