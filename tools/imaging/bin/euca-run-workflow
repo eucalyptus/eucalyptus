@@ -19,6 +19,7 @@
 # additional information or have any questions.
 
 # main
+import json
 import os
 from pprint import pprint
 import shutil
@@ -156,7 +157,13 @@ class Euca2ools(object):
         if (args.secret_key != None):
             op_args.extend(['--secret-key', args.secret_key])
         if (args.upload_policy != None):
-            op_args.extend(['--upload-policy', args.upload_policy.decode('base64', 'strict')])
+            policy = args.upload_policy
+            try:
+                json.loads(policy) # try parsing as JSON
+            except ValueError:
+                policy = args.upload_policy.decode('base64', 'strict')
+                json.loads(policy) # try parsing again, which should work
+            op_args.extend(['--upload-policy', policy])
         if (args.upload_policy_signature != None):
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
