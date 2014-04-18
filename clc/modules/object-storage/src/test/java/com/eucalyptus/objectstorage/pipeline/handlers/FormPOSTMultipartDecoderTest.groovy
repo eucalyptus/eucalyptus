@@ -28,11 +28,11 @@ import org.junit.Test
  * Created by zhill on 4/5/14.
  */
 @CompileStatic
-class POSTMultipartFormFieldHandlerTest {
+class FormPOSTMultipartDecoderTest {
 
     @Test
     public void testGetBucketName() {
         MappingHttpRequest request = POSTRequestGenerator.getPOSTRequest("testbucket", "testkey", "private")
-        assert(POSTMultipartFormFieldHandler.getBucketName(request) == "testbucket")
+        assert(FormPOSTMultipartDecoder.getBucketName(request) == "testbucket")
     }
 }

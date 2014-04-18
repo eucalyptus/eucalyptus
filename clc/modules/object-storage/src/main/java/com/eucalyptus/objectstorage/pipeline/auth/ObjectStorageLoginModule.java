@@ -121,11 +121,11 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 	}
 
 	protected String checkSignature(final String queryKey, final String subject) throws AuthenticationException {
-		SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes(), Hmac.HmacSHA1.toString());
 		try {
+            SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes("UTF-8"), Hmac.HmacSHA1.toString());
 			Mac mac = Mac.getInstance(Hmac.HmacSHA1.toString());
 			mac.init(signingKey);
-			byte[] rawHmac = mac.doFinal(subject.getBytes());
+			byte[] rawHmac = mac.doFinal(subject.getBytes("UTF-8"));
 			return new String(Base64.encode(rawHmac)).replaceAll("=", "");
 		} catch (Exception e) {
 			LOG.error(e, e);

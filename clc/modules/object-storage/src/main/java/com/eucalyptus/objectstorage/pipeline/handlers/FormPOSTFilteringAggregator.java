@@ -23,13 +23,12 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Bytes;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
@@ -43,12 +42,13 @@ import org.jboss.netty.channel.MessageEvent;
  * Extension of the ObjectStoragePUTAggregator that scans the input data for form-field delimiter to ensure
  * that only the file/data is included and not trailing form fields
  */
-public class FormFieldFilteringAggregator extends ObjectStoragePUTAggregator {
-    private static final Logger LOG = Logger.getLogger(FormFieldFilteringAggregator.class);
+public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
+    private static final Logger LOG = Logger.getLogger(FormPOSTFilteringAggregator.class);
 
     //The boundary delimiter to use to filter the chunks.
     private byte[] boundaryBytes;
     private OSGUtil.ByteMatcherBeginningIndexFinder boundaryFinder;
+    private long bytesSent;
 
     //Potentially a fully buffered previous chunk because partial boundary match may require next chunk to determine.
     private ChannelBuffer lastBufferedChunk;
@@ -58,27 +58,29 @@ public class FormFieldFilteringAggregator extends ObjectStoragePUTAggregator {
     //Set to true once the end of the file data is reached and no more bytes should be sent through
     private boolean truncateRemaining;
 
-    protected void setupBoundary(String boundaryString) throws Exception {
-        Logs.extreme().debug("Initialized boundary for form field filtering: '" + boundaryString + "'");
-        this.boundaryBytes = ("\r\n" + boundaryString).getBytes("UTF-8");
+    protected void setupBoundary(byte[] boundary) throws Exception {
+        Logs.extreme().debug("Initialized boundary for form field filtering: '" + new String(boundary) + "'");
+        //Add the leading \r\n to make matching easy
+        this.boundaryBytes = Bytes.concat(MultipartFormPartParser.PART_LINE_DELIMITER_BYTES, boundary);
         this.truncateRemaining = false;
         boundaryFinder = new OSGUtil.ByteMatcherBeginningIndexFinder(this.boundaryBytes);
+        this.bytesSent = 0L;
     }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
         LOG.trace( LogUtil.dumpObject(event));
-
+        LOG.trace("Filter pipe got event: " + event.getMessage().hashCode());
         if (event.getMessage() instanceof MappingHttpRequest) {
             MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
-            String boundaryString = (String)(httpRequest.getFormFields().get(ObjectStorageProperties.FORM_BOUNDARY_FIELD));
-            if(Strings.isNullOrEmpty(boundaryString)) {
+            byte[] boundary = (byte[])(httpRequest.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_formboundary.toString()));
+            if(boundary == null) {
                 //Error
                 LOG.error("No boundary found in the form. Cannot filter content. Failing POST form upload");
                 Channels.fireExceptionCaught(ctx, new InternalErrorException("Error processing POST form content"));
                 return;
             } else {
-                setupBoundary(boundaryString);
+                setupBoundary(boundary);
             }
         }
         Logs.extreme().debug("Sending event to PUT aggregator");
@@ -92,55 +94,71 @@ public class FormFieldFilteringAggregator extends ObjectStoragePUTAggregator {
      * @return
      */
     protected ChannelBuffer scanForFormBoundary(final ChannelBuffer data) throws Exception {
+        LOG.trace("Scanning data for boundary data buffer: " + data.toString());
         if(this.truncateRemaining) {
             this.trailingBytesFound += data.readableBytes();
-            Logs.extreme().debug("Truncating remaining chunks. Returning zero-length buffer");
+            LOG.trace("Truncating remaining chunks. Returning zero-length buffer. Data offered length: " + data.readableBytes());
             return ChannelBuffers.wrappedBuffer(new byte[0]);
         }
 
         ChannelBuffer dataToScan = data;
         if(this.lastBufferedChunk != null) {
             dataToScan = ChannelBuffers.wrappedBuffer(this.lastBufferedChunk, data);
+            LOG.trace("Found previously buffered data, appending it with length: " + this.lastBufferedChunk.readableBytes() + " to get data of size " + dataToScan.readableBytes());
         }
 
-        int lfIndex = dataToScan.indexOf(0, dataToScan.readableBytes(), ChannelBufferIndexFinder.CR);
-        int endOffset = lfIndex;
+        int lfIndex = 0;
+        int endOffset = -1;
+        int bufferSize = dataToScan.readableBytes();
 
-        if(lfIndex >= 0) {
-            //Scan the rest starting there
-            if(lfIndex + this.boundaryBytes.length > dataToScan.readableBytes()) {
-                //Can't be found here not enough space to check, save the slice in the last chunk
-                this.lastBufferedChunk = dataToScan.slice(lfIndex, dataToScan.readableBytes() - lfIndex);
-                //Return what we know is okay.
-                endOffset = lfIndex;
-                //return ChannelBuffers.copiedBuffer(dataToScan.slice(0, lfIndex));
-            } else {
-                //May be able to find the delimiter, look for it
-                endOffset = dataToScan.indexOf(lfIndex, dataToScan.readableBytes(), this.boundaryFinder);
-                if(endOffset >= lfIndex) {
-                    //Boundary found right after the crlf, send everything before the crlf
-                    this.lastBufferedChunk = null;
-                    this.truncateRemaining = true;
-                    this.trailingBytesFound = dataToScan.readableBytes() - endOffset;
-                    if(this.trailingBytesFound > this.boundaryBytes.length + 4) { //boundary + --\r\n
-                        //If more left in message than
+        //Scan through looking at all carriage returns to determine if beginning of boundary or end of data
+        do {
+            lfIndex = dataToScan.indexOf(lfIndex, dataToScan.readableBytes(), ChannelBufferIndexFinder.CR);
+
+            if(lfIndex >= 0) {
+                //Scan the rest starting there
+                if(lfIndex + this.boundaryBytes.length > bufferSize) {
+                    //Can't be found here not enough space to check, save the slice in the last chunk
+                    this.lastBufferedChunk = dataToScan.copy(lfIndex, bufferSize - lfIndex);
+                    LOG.trace("Buffering last " + (bufferSize - lfIndex) + " bytes for next chunk");
+                    LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
+                    //Return what we know is okay.
+                    endOffset = lfIndex;
+                } else {
+                    //May be able to find the delimiter, look for it in the next N bytes where N=boundary size
+                    endOffset = dataToScan.indexOf(lfIndex, lfIndex + this.boundaryBytes.length, this.boundaryFinder);
+                    if(endOffset >= lfIndex) {
+                        //Boundary found right after the crlf, send everything before the crlf
                         this.lastBufferedChunk = null;
-                        throw new MalformedPOSTRequestException("Must not have any trailing form parts after file content");
+                        this.truncateRemaining = true;
+                        this.trailingBytesFound = bufferSize - endOffset;
+                        if(this.trailingBytesFound > this.boundaryBytes.length + 4) { //boundary + --\r\n
+                            //If more left in message than
+                            this.lastBufferedChunk = null;
+                            throw new MalformedPOSTRequestException("Must not have any trailing form parts after file content");
+                        }
+                    } else {
+                        //didn't find it. continue
+                        lfIndex ++;
+                        endOffset = -1;
                     }
                 }
+            } else {
+                this.lastBufferedChunk = null;
+                endOffset = bufferSize;
             }
-        } else {
-            this.lastBufferedChunk = null;
-        }
+        } while(endOffset < 0);
 
         if(endOffset == 0) {
-            Logs.extreme().debug("Filtered all bytes in buffer. Returning zero-length buffer");
+            LOG.trace("No bytes to send. Delivering zero-length buffer");
             return ChannelBuffers.wrappedBuffer(new byte[0]);
         } else if(endOffset == -1 || endOffset == dataToScan.readableBytes()) {
-            Logs.extreme().debug("Filtered no bytes in buffer. Returning full-length buffer: " + dataToScan.readableBytes());
+            LOG.trace("Delivering full chunk: " + dataToScan.readableBytes());
+            LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
             return dataToScan;
         } else {
-            Logs.extreme().debug("Filtered some bytes. Returning length: "  + endOffset);
+            LOG.trace("Delivering subset of bytes: 0 - " + endOffset);
+            LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
             return ChannelBuffers.copiedBuffer(dataToScan.slice(0, endOffset));
         }
     }
@@ -148,7 +166,9 @@ public class FormFieldFilteringAggregator extends ObjectStoragePUTAggregator {
     @Override
     protected void appendChunk(ChannelBuffer input, Channel channel) throws Exception {
         ChannelBuffer data = scanForFormBoundary(input);
-        Logs.extreme().debug("Filtered POST content. Input buffer length: " + input.readableBytes() + " Filtered buffer length: " + data.readableBytes());
+        LOG.trace("Appending Chunk. Original: " + input.toString() + " scanned: " + data.toString());
+        this.bytesSent += data.readableBytes();
+        LOG.trace("Filtered POST content. Input buffer length: " + input.readableBytes() + " Filtered buffer length: " + data.readableBytes() + " Total sent upstream: " + this.bytesSent);
         super.appendChunk(data, channel);
     }
 }

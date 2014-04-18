@@ -276,36 +276,6 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
         return authMap;
     }
 
-    /*
-     * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
-     * Simply verifies the policy and signature of the policy.
-     */
-    private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws S3Exception {
-        Map<String, String> fields = httpRequest.getFormFields();
-        String policy = httpRequest.getHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString());
-        fields.put(ObjectStorageProperties.FormField.policy.toString(), policy);
-        String policySignature = httpRequest.getHeader(ObjectStorageProperties.Headers.S3UploadPolicySignature.toString());
-        if (policySignature == null)
-            throw new AccessDeniedException("Policy signature must be specified with policy.");
-        String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
-        if (awsAccessKeyId == null)
-            throw new AccessDeniedException("AWSAccessKeyID must be specified.");
-        fields.put(ObjectStorageProperties.FormField.signature.toString(), policySignature);
-        fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
-        String acl = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
-        if (acl != null)
-            fields.put(ObjectStorageProperties.FormField.acl.toString(), acl);
-        String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
-        String[] target = OSGUtil.getTarget(operationPath);
-        if (target != null) {
-            fields.put(ObjectStorageProperties.FormField.bucket.toString(), target[0]);
-            if (target.length > 1)
-                fields.put(ObjectStorageProperties.FormField.key.toString(), target[1]);
-        }
-
-        UploadPolicyChecker.checkPolicy(httpRequest);
-    }
-
     static class S3Authentication {
         /**
          * Authenticate using S3-spec REST authentication

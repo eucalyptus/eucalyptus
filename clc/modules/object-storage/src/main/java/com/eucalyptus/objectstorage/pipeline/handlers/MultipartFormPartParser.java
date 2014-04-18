@@ -21,37 +21,44 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.records.Logs;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Populates the form field map in the message based on the content body
  * Subsequent stages/handlers can use the map exclusively
  */
-public class MultipartFormFieldParser {
-    private static Logger LOG = Logger.getLogger(MultipartFormFieldParser.class);
+public class MultipartFormPartParser {
+    private static Logger LOG = Logger.getLogger(MultipartFormPartParser.class);
 
-    private static final String PART_HEADER_BOUNDARY = "\r\n\r\n"; //part headers and content separated by double-newline
-    private static final String PART_LINE_DELIMITER = "\r\n";
-    private static final String CR = "\r";
+    protected static final byte[] PART_HEADER_BOUNDARY_BYTES = new byte[] { 0x0D, 0x0A, 0x0D, 0x0A};
+    protected static final byte[] PART_LINE_DELIMITER_BYTES = new byte[] { 0x0D, 0x0A };
+    protected static final String PART_HEADER_BOUNDARY = "\r\n\r\n";
+    protected static final String PART_LINE_DELIMITER = "\r\n";
 
     public static Map<String, Object> parseForm(String msgContentTypeHeader, long requestContentLength, ChannelBuffer content) throws Exception {
         Map<String, Object> formFields = Maps.newHashMap();
-        //add this as it's needed for filtering the body later in the pipeline.
-        String boundary = getFormBoundary(msgContentTypeHeader);
-        formFields.put(ObjectStorageProperties.FORM_BOUNDARY_FIELD, boundary);
 
-        processFormParts(boundary, formFields, content, requestContentLength);
+        //add this as it's needed for filtering the body later in the pipeline.
+        String boundaryStr = getFormBoundary(msgContentTypeHeader);
+
+        //Don't include the leading whitespace because that causes the first boundary to not be found properly when doing scans.
+        byte[] boundaryBytes = (boundaryStr + PART_LINE_DELIMITER).getBytes("UTF-8");
+        byte[] finalBoundaryBytes = (boundaryStr + "--"+ PART_LINE_DELIMITER).getBytes("UTF-8");
+        formFields.put(ObjectStorageProperties.FormField.x_ignore_formboundary.toString(), boundaryBytes);
+
+        processFormParts(boundaryBytes, finalBoundaryBytes, formFields, content, requestContentLength);
         return formFields;
     }
 
@@ -67,49 +74,112 @@ public class MultipartFormFieldParser {
     }
 
     /**
-     * Populates the form fields map based on the message content buffer
-     * @param boundary
-     * @param formFields
-     * @param buffer
+     * Populates the form fields map based on the message content buffer.
+     * @param boundaryBytes the boundary byte set with no leading whitespace. E.g. --boundary\r\n
+     * @param finalBoundaryBytes the expanded byte set for the last boundary with no leading whitespace. E.g. --boundary--\r\n
+     * @param formFields the fields to populate with the results
+     * @param buffer the message content buffer to process
+     * @param fullContentLength the length of the full message, which may be different than buffer length for chunked messages
      * @throws com.eucalyptus.auth.login.AuthenticationException
      */
-    protected static void processFormParts(String boundary, Map formFields, ChannelBuffer buffer, long fullContentLength) throws Exception {
-        String message = getMessageString(buffer);
-        String[] parts = message.split(boundary + PART_LINE_DELIMITER); //Split on the boundary plus trailing crlf, won't match last part, but that's okay
-        int currentOffset = 0;
-        int boundarySize = boundary.length() + PART_LINE_DELIMITER.length();
-        for (String part : parts) {
-            if(part.length() == 0) {
-                //Leading newline for form body, skip it.
-                currentOffset += part.length() + boundarySize;
-                continue;
-            }
-            String[] partPieces = part.split(PART_HEADER_BOUNDARY);
-            if(partPieces.length != 2) {
-                throw new MalformedPOSTRequestException("Invalid form part: " + part);
-            }
-            String partHeader = partPieces[0];
-            String partContent = partPieces[1];
-            Map<String, String> keyMap = parseFormPartHeaders(partHeader);
-            String key = keyMap.get("name");
-            if(Strings.isNullOrEmpty(key)) {
-                throw new MalformedPOSTRequestException("Invalid part name null: " + partHeader);
-            } else if(Strings.isNullOrEmpty(partContent)) {
-                throw new MalformedPOSTRequestException("Empty part content");
+    protected static void processFormParts(byte[] boundaryBytes, byte[] finalBoundaryBytes, Map formFields, ChannelBuffer buffer, long fullContentLength) throws Exception {
+        PartIterator iter = new PartIterator(boundaryBytes, finalBoundaryBytes, buffer);
+        int offset = 0;
+        while(iter.hasNext()) {
+            ChannelBuffer partSlice = iter.next();
+            partSlice.markReaderIndex();
+
+            if(partSlice.readableBytes() > boundaryBytes.length) {
+
+                int headerEnd = OSGUtil.findFirstMatchInBuffer(partSlice, 0, PART_HEADER_BOUNDARY_BYTES);
+                if(headerEnd == -1) {
+                    throw new MalformedPOSTRequestException("Invalid form part starting at byte offset: " + offset);
+                } else {
+                    //add the header boundary itself
+                    headerEnd += PART_HEADER_BOUNDARY_BYTES.length;
+                }
+
+                String partHeader = getMessageString(partSlice.slice(0, headerEnd)).trim();
+                Map<String, String> keyMap = parseFormPartHeaders(partHeader);
+                String key = keyMap.get("name");
+                if(Strings.isNullOrEmpty(key)) {
+                    throw new MalformedPOSTRequestException("Invalid part name null: " + partHeader);
+                }
+
+                if (ObjectStorageProperties.FormField.file.toString().equals(key)) {
+                    formFields.put(key, keyMap.get("filename")); //Add filename if found
+                    String contentType = keyMap.get(HttpHeaders.Names.CONTENT_TYPE);
+                    formFields.put(ObjectStorageProperties.FormField.Content_Type.toString(), contentType);
+                    //Put the data into the form field with correct offsets etc.
+                    getFirstChunk(formFields, partSlice, offset, fullContentLength, boundaryBytes, finalBoundaryBytes);
+                } else {
+                    formFields.put(key, getMessageString(partSlice.slice(headerEnd, partSlice.readableBytes() - headerEnd - boundaryBytes.length)).trim());
+                }
             }
 
-            if (ObjectStorageProperties.FormField.file.toString().equals(key)) {
-                formFields.put(key, keyMap.get("filename")); //Add filename if found
-                String contentType = keyMap.get(HttpHeaders.Names.CONTENT_TYPE);
-                formFields.put(HttpHeaders.Names.CONTENT_TYPE, contentType);
-                //Put the data into the form field with correct offsets etc.
-                getFirstChunk(formFields, ChannelBuffers.wrappedBuffer(part.getBytes("UTF-8")) , currentOffset, fullContentLength, boundary);
-            } else {
-                formFields.put(key, partContent.trim());
-            }
-            currentOffset += part.length() + boundarySize;
+            partSlice.resetReaderIndex();
+            offset += partSlice.readableBytes();
         }
     }
+
+    static class PartIterator implements Iterator<ChannelBuffer> {
+        byte[] boundary;
+        byte[] finalBoundary;
+        ChannelBuffer buffer;
+        int currentIndex;
+        int totalSize;
+
+        public PartIterator(byte[] boundaryBytes, byte[] finalBoundaryBytes, ChannelBuffer content) {
+            this.boundary = boundaryBytes;
+            this.finalBoundary = finalBoundaryBytes;
+            this.buffer = content;
+            this.currentIndex = 0;
+            this.totalSize = content.readableBytes();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return nextPartLength() > 0;
+        }
+
+        private int nextPartLength() {
+            int nextFound = OSGUtil.findFirstMatchInBuffer(buffer, this.currentIndex, boundary) + boundary.length;
+            if(nextFound < boundary.length) {
+                //Try the final boundary
+                nextFound = OSGUtil.findFirstMatchInBuffer(buffer, this.currentIndex, finalBoundary) + finalBoundary.length;
+                if(nextFound < finalBoundary.length) {
+                    nextFound = -1;
+                }
+            }
+
+            if(nextFound > 0) {
+                return nextFound - this.currentIndex;
+            } else {
+                return totalSize - this.currentIndex;
+            }
+        }
+
+        @Override
+        public ChannelBuffer next() {
+            int partLength = nextPartLength();
+            if(partLength > 0) {
+                ChannelBuffer slice = buffer.slice(this.currentIndex, partLength);
+                this.currentIndex += partLength;
+                return slice;
+            } else {
+                return null;
+            }
+        }
+
+        /**
+         * Does nothing
+         */
+        @Override
+        public void remove() {
+            return;
+        }
+    }
+
 
     /**
      * Gets the first data chunk in this message and sets the IGNORE_PREFIXContent-Length for the actual content length
@@ -122,34 +192,42 @@ public class MultipartFormFieldParser {
      * @param boundary the boundary to expect at the end of the buffer
      * @throws Exception
      */
-    protected static void getFirstChunk(Map formFields, ChannelBuffer buffer, int startingOffset, long contentLength, String boundary) throws Exception {
+    protected static void getFirstChunk(Map formFields, ChannelBuffer buffer, int startingOffset, long contentLength, byte[] boundary, byte[] finalBoundary) throws Exception {
         buffer.markReaderIndex();
 
         byte[] read = new byte[buffer.readableBytes()];
         buffer.readBytes(read);
-        int index = getLastIndex(read, PART_HEADER_BOUNDARY.getBytes("UTF-8"));
+        int index = getLastIndex(read, PART_HEADER_BOUNDARY_BYTES);
         if (index > -1) {
             int firstIndex = index + 1;
-            int lastIndex = read.length;
-            boundary = PART_LINE_DELIMITER + boundary;
-            //Find the next boundary...end of the data chunk
-            //index = getFirstIndex(read, firstIndex, boundary.getBytes("UTF-8"));
-            index = getFirstIndex(read, firstIndex, CR.getBytes("UTF-8"));
-            if (index > -1) {
-                lastIndex = index;
-            }
+            int lastIndex;
 
-            ChannelBuffer firstBuffer = ChannelBuffers.copiedBuffer(read, firstIndex, (lastIndex - firstIndex));
-            formFields.put(ObjectStorageProperties.FIRST_CHUNK_FIELD, firstBuffer);
+            //The file content length is total length - offset of the start. Assume no trailing data. This is required for using HTTP on backend of OSG
+            long fileContentLength = contentLength - startingOffset - firstIndex - finalBoundary.length - PART_LINE_DELIMITER_BYTES.length;
+            lastIndex = (int)(firstIndex + fileContentLength);
 
-            //The file content length is total length - offset of the start. Assume no trailing data.
-            // Need to look at how to determine if trailing data is there and adjust. Account for trailing boundary + '--\r\n'
-            long fileContentLength = contentLength - startingOffset - firstIndex - boundary.getBytes("UTF-8").length - 4;
-            if(lastIndex < read.length) {
-                //The form ends before the end of the message chunk, and we know about it now, so use that size directly.
-                fileContentLength = lastIndex - firstIndex;
+            if(lastIndex > read.length) {
+                //off the end of the buffer we have now
+                //Danger from casting, but current buffer should not be longer than max int size, since chunks are 100K max in euca
+                lastIndex = read.length;
+            } else {
+                //Do a backup check for trailing form fields.
+                index = getFirstIndex(read, firstIndex, finalBoundary);
+                if(index < 0) {
+                    //Handle the case where it isn't the last field, but we have the whole form so we can do length properly
+                    index = getFirstIndex(read, firstIndex, boundary);
+                }
+                if(index > firstIndex) {
+                    //Found the end, take off the trailing crlf
+                    lastIndex = index - PART_LINE_DELIMITER_BYTES.length;
+                    fileContentLength = lastIndex - firstIndex;
+                }
             }
-            formFields.put(ObjectStorageProperties.UPLOAD_LENGTH_FIELD, fileContentLength);
+            //ChannelBuffer firstBuffer = ChannelBuffers.copiedBuffer(read, firstIndex, (lastIndex - firstIndex));
+            ChannelBuffer firstBuffer = buffer.slice(firstIndex, (lastIndex - firstIndex));
+            Logs.extreme().debug("Setting first buffer chunk with size: " + firstBuffer.readableBytes());
+            formFields.put(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString(), firstBuffer);
+            formFields.put(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString(), fileContentLength);
         }
         buffer.resetReaderIndex();
     }

@@ -109,9 +109,8 @@ public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
                 if(msgEvent.getMessage() instanceof MappingHttpRequest) {
                     //Get first chunk data here
                     MappingHttpRequest request = (MappingHttpRequest) msgEvent.getMessage();
-                    if(request.getFormFields() != null && request.getFormFields().get(ObjectStorageProperties.FIRST_CHUNK_FIELD) != null) {
-                        firstChunk = new DefaultHttpChunk((ChannelBuffer)request.getFormFields().get(ObjectStorageProperties.FIRST_CHUNK_FIELD));
-
+                    if(request.getFormFields() != null && request.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString()) != null) {
+                        firstChunk = new DefaultHttpChunk((ChannelBuffer)request.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString()));
                         if(request.isChunked()) {
                             firstChunkEvent = new UpstreamMessageEvent(channelHandlerContext.getChannel(), firstChunk, msgEvent.getRemoteAddress());
                         }
@@ -122,7 +121,10 @@ public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
                 this.incomingMessage( channelHandlerContext, msgEvent );
 
                 //Handle the first data chunk properly
-                if(firstChunkEvent == null && firstChunk != null && msgEvent.getMessage() instanceof MappingHttpRequest && ((MappingHttpRequest)msgEvent.getMessage()).getMessage() instanceof ObjectStorageDataRequestType) {
+                if(firstChunkEvent == null &&
+                        firstChunk != null &&
+                        msgEvent.getMessage() instanceof MappingHttpRequest &&
+                        ((MappingHttpRequest)msgEvent.getMessage()).getMessage() instanceof ObjectStorageDataRequestType) {
                     ObjectStorageDataRequestType dataReq = (ObjectStorageDataRequestType)((MappingHttpRequest) msgEvent.getMessage()).getMessage();
                     handleData(dataReq, firstChunk.getContent());
                 }
@@ -138,7 +140,7 @@ public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
 
         //Follow immediately with first data chunk
         if(firstChunkEvent != null) {
-            LOG.trace("Dispatching follow-up chunk directly after initial request.");
+            LOG.trace("Dispatching follow-up chunk directly after initial request. Size: " + firstChunk.getContent().readableBytes());
             channelHandlerContext.sendUpstream(firstChunkEvent);
         }
     }

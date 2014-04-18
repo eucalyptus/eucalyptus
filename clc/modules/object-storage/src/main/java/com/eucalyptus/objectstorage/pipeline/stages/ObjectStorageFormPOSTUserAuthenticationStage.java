@@ -62,7 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.POSTMultipartFormFieldHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.FormPOSTMultipartDecoder;
 import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
@@ -76,12 +76,12 @@ public class ObjectStorageFormPOSTUserAuthenticationStage implements UnrollableS
 
     @Override
     public String getName( ) {
-        return "objecstorage-post-user-authentication";
+        return "objectstorage-post-user-authentication";
     }
 
     @Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-        pipeline.addLast("objectstorage-post-form-processor", new POSTMultipartFormFieldHandler());
+        pipeline.addLast("objectstorage-post-form-processor", new FormPOSTMultipartDecoder());
 		pipeline.addLast("objectstorage-post-authenticator", new ObjectStorageFormPOSTAuthenticationHandler());
 	}
 

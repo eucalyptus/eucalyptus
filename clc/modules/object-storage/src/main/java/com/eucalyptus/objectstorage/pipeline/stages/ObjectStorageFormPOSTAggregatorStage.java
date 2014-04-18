@@ -20,8 +20,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.FormFieldFilteringAggregator;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePUTAggregator;
+import com.eucalyptus.objectstorage.pipeline.handlers.FormPOSTFilteringAggregator;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import org.jboss.netty.channel.ChannelPipeline;
 
@@ -39,7 +38,7 @@ public class ObjectStorageFormPOSTAggregatorStage implements UnrollableStage {
 	
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-form-post-aggregator", new FormFieldFilteringAggregator( ) );
+		pipeline.addLast( "objectstorage-form-post-aggregator", new FormPOSTFilteringAggregator( ) );
 	}
 	
 }

@@ -68,9 +68,6 @@ import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -176,8 +173,10 @@ public class HttpThresholdBufferingAggregator {
      */
     public AggregatedMessageEvent poll() {
         if(this.currentEvent != null && (this.currentEvent.isLastReceived() || this.currentEvent.getCurrentAggregatedSize() >= this.maxBufferingSize)) {
+            LOG.trace("Poll returning event: " + this.currentEvent.toString() + " data: " + this.currentEvent.getAggregatedContentBuffer().toString());
             return this.currentEvent;
         } else {
+            LOG.trace("Poll returning null");
             return null;
         }
     }
@@ -186,6 +185,7 @@ public class HttpThresholdBufferingAggregator {
      * Flushes and resets this instance. Will discard all pending data
      */
     public void hardReset() {
+        LOG.trace("HardReset invoked");
         this.currentEvent = null;
     }
 

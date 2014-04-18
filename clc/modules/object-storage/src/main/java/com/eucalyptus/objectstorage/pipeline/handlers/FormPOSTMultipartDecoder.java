@@ -23,7 +23,7 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -32,26 +32,22 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Populates the form field map in the message based on the content body
  * Subsequent stages/handlers can use the map exclusively
  */
 @ChannelPipelineCoverage("one")
-public class POSTMultipartFormFieldHandler extends MessageStackHandler {
-    private static Logger LOG = Logger.getLogger(POSTMultipartFormFieldHandler.class);
+public class FormPOSTMultipartDecoder extends MessageStackHandler {
+    private static Logger LOG = Logger.getLogger(FormPOSTMultipartDecoder.class);
     private static final int S3_FORM_BUFFER_SIZE = 25 * 1024; //20KB buffer for S3, give a bit of room extra to be safe here
     private HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(S3_FORM_BUFFER_SIZE);
 
@@ -65,54 +61,42 @@ public class POSTMultipartFormFieldHandler extends MessageStackHandler {
             } else {
                 channelHandlerContext.sendUpstream(channelEvent);
             }
-        } catch(S3Exception e) {
-            LOG.trace("Caught exception in POST form authentication.", e);
+        } catch(Exception e) {
+            LOG.warn("Caught exception in POST form authentication.", e);
             Channels.fireExceptionCaught(channelHandlerContext, e);
         }
     }
 
     @Override
     public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if ( event.getMessage() instanceof MappingHttpRequest ) {
-            MessageEvent upstreamEvent = event;
-            MappingHttpRequest httpRequest = (MappingHttpRequest)event.getMessage();
-            ChannelBuffer content = httpRequest.getContent();
-            if(aggregator.offer(event)) {
-                //Wait for buffering.
-                HttpThresholdBufferingAggregator.AggregatedMessageEvent result = aggregator.poll();
-                if(result == null) {
-                    //wait, not ready yet
-                    return;
-                } else {
-                    //process the aggregated result
-                    aggregator.hardReset(); //ensure no further polls return this result.
-                    httpRequest = (MappingHttpRequest)(result.getMessageEvent().getMessage());
-                    content = result.getAggregatedContentBuffer();
+        MappingHttpRequest upstreamRequest = null;
+        ChannelBuffer content = null;
+        MessageEvent upstreamEvent = event;
+        if(aggregator.offer(event)) {
+            HttpThresholdBufferingAggregator.AggregatedMessageEvent result = aggregator.poll();
+            if(result == null) {
+                return;
+            } else {
+                //process the aggregated result
+                aggregator.hardReset(); //ensure no further polls return this result.
+                if(result.getMessageEvent() == null || result.getMessageEvent().getMessage() == null) {
+                    throw new InternalErrorException("Unexpected state in message stack");
                 }
+                upstreamRequest = (MappingHttpRequest)(result.getMessageEvent().getMessage());
+                content = result.getAggregatedContentBuffer();
+                upstreamEvent = result.getMessageEvent();
             }
-            this.handleFormMessage(httpRequest, content);
-            ctx.sendUpstream(upstreamEvent);
-            return;
-        } else if( event.getMessage() instanceof DefaultHttpChunk ) {
-            MessageEvent upstreamEvent = event;
-            if(aggregator.offer(event)) {
-                //Wait for buffering.
-                HttpThresholdBufferingAggregator.AggregatedMessageEvent result = aggregator.poll();
-                if(result != null) {
-                    //process the aggregated result
-                    aggregator.hardReset(); //ensure no further polls return this result.
-                    MappingHttpRequest httpRequest = (MappingHttpRequest)(result.getMessageEvent().getMessage());
-                    this.handleFormMessage(httpRequest, result.getAggregatedContentBuffer());
-                    ctx.sendUpstream(result.getMessageEvent());
-                    return;
-                } else {
-                    //wait, not ready yet
-                    return;
-                }
+        } else {
+            if ( event.getMessage() instanceof MappingHttpRequest ) {
+                upstreamRequest = (MappingHttpRequest)event.getMessage();
+                content = upstreamRequest.getContent();
             }
-            //Fall thru if chunk was rejected from aggregator.
         }
-        ctx.sendUpstream(event);
+
+        if(upstreamRequest != null && content != null) {
+            this.handleFormMessage(upstreamRequest, content);
+        }
+        ctx.sendUpstream(upstreamEvent);
     }
 
     /**
@@ -136,7 +120,7 @@ public class POSTMultipartFormFieldHandler extends MessageStackHandler {
         formFields.put(ObjectStorageProperties.FormField.bucket.toString(), getBucketName(httpRequest));
 
         //add this as it's needed for filtering the body later in the pipeline.
-        formFields.putAll(MultipartFormFieldParser.parseForm(httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE),
+        formFields.putAll(MultipartFormPartParser.parseForm(httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE),
                 contentLength,
                 contentBuffer));
     }

@@ -124,6 +124,9 @@ public class OSGUtil {
         return operationPath.split("/");
     }
 
+    /**
+     * Returns index where bytesToFind begins in the buffer
+     */
     public static class ByteMatcherBeginningIndexFinder implements ChannelBufferIndexFinder {
         private byte[] toMatch;
 
@@ -157,8 +160,11 @@ public class OSGUtil {
         }
     }
 
-    public static ChannelBuffer getTruncatedBuffer(ChannelBuffer source, byte[] toMatch) {
-        return null;
+    public static int findFirstMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+        return buffer.indexOf(start, buffer.readableBytes(), new ByteMatcherBeginningIndexFinder(bytesToFind));
     }
 
+    public static int findLastMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+        return buffer.indexOf(buffer.readableBytes(), start, new ByteMatcherBeginningIndexFinder(bytesToFind));
+    }
 }

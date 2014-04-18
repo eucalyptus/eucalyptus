@@ -211,6 +211,10 @@ class HttpThresholdBufferingAggregatorTest {
         HttpThresholdBufferingAggregator.AggregatedMessageEvent output = aggregator.poll()
         assert(output.getAggregationCount() == 2)
         assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
+        ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
+        testbuffer.writeBytes(content)
+        testbuffer.writeBytes(chunkContent)
+        assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
         assert(output.getMessageEvent() == initialEvent)
 
     }
@@ -224,7 +228,7 @@ class HttpThresholdBufferingAggregatorTest {
         assert(!request.isChunked())
         UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
         assert(!aggregator.offer(initialEvent))
-
+        assert(request.getContent().array() == content)
     }
 
     @Test
@@ -236,6 +240,7 @@ class HttpThresholdBufferingAggregatorTest {
         assert(!request.isChunked())
         UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
         assert(!aggregator.offer(initialEvent))
+        assert(request.getContent().array() == content)
 
     }
 
@@ -264,6 +269,11 @@ class HttpThresholdBufferingAggregatorTest {
         assert(output.getAggregationCount() == 3)
         assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
         assert(output.getMessageEvent() == initialEvent)
+        ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
+        testbuffer.writeBytes(content)
+        testbuffer.writeBytes(chunkContent)
+        assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
+
 
     }
 }

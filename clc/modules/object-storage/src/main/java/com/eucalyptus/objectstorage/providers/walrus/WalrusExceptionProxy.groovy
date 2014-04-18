@@ -48,7 +48,7 @@ public class WalrusExceptionProxy<T extends BaseException> {
 	public static <O extends BaseException, I extends BaseException> O mapExcludeNulls( I source, O dest ) {
 		def props = dest.metaClass.properties.collect{ MetaProperty p -> p.name };
 		source.metaClass.properties.findAll{ MetaProperty it -> it.name != "metaClass" && it.name != "class" && !baseExceptionProps.contains(it.name) && props.contains(it.name) && source[it.name] != null }.each{ MetaProperty sourceField ->
-			LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
+			LOG.trace("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
 			try {
 				dest[sourceField.name]=source[sourceField.name];
 			} catch(GroovyCastException e) {
@@ -71,7 +71,7 @@ public class WalrusExceptionProxy<T extends BaseException> {
 	public static <O extends BaseException, I extends BaseException> O mapWithNulls( I source, O dest ) {
 		def props = dest.metaClass.properties.collect{ MetaProperty p -> p.name };
 		source.metaClass.properties.findAll{ MetaProperty it -> it.name != "metaClass" && it.name != "class" && !baseExceptionProps.contains(it.name) && props.contains(it.name) }.each{ MetaProperty sourceField ->
-			LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
+			LOG.trace("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
 			try {
 				dest[sourceField.name]=source[sourceField.name];
 			} catch(GroovyCastException e) {

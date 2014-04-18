@@ -65,7 +65,11 @@ package com.eucalyptus.objectstorage.util;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+
+import java.util.Set;
 
 public class ObjectStorageProperties {
     private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
@@ -128,9 +132,9 @@ public class ObjectStorageProperties {
     public static String TRACKER_PORT = "6969";
 
     public static long MAX_INLINE_DATA_SIZE = 10 * M;
-    public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
-    public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
-    public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
+    //public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
+    //public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
+    //public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
     public static long MPU_PART_MIN_SIZE = 5 * 1024 * 1024; //5MB
 
     //15 minutes
@@ -222,11 +226,38 @@ public class ObjectStorageProperties {
     }
 
     public enum FormField {
-        FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, redirect, success_action_redirect, success_action_status, signature, file
+        AWSAccessKeyId,
+        key,
+        bucket,
+        acl,
+        Policy,
+        redirect,
+        success_action_redirect,
+        success_action_status,
+        x_amz_security_token { public String toString() { return "x-amz-security-token"; }},
+        Signature,
+        file,
+        Cache_Control  { public String toString() { return HttpHeaders.Names.CACHE_CONTROL; }},
+        Content_Type  { public String toString() { return HttpHeaders.Names.CONTENT_TYPE; }},
+        Content_Disposition { public String toString() { return "Content-Disposition"; }},
+        Content_Encoding { public String toString() { return HttpHeaders.Names.CONTENT_ENCODING; }},
+        Expires,
+        x_ignore_firstdatachunk { public String toString() { return "x-ignore-firstdatachunk"; }},
+        x_ignore_filecontentlength { public String toString() { return "x-ignore-filecontentlength"; }},
+        x_ignore_formboundary{ public String toString() { return "x-ignore-formboundary"; }};
+
+        private static Set<FormField> HTTPHeaderFields = Sets.newHashSet(FormField.Content_Type, FormField.Cache_Control, FormField.Content_Disposition, FormField.Content_Encoding, FormField.Expires);
+        public static boolean isHttpField(String value) {
+            try {
+                return HTTPHeaderFields.contains(FormField.valueOf(value.replace('-','_')));
+            } catch(IllegalArgumentException e) {
+                return false;
+            }
+        }
     }
 
     public enum IgnoredFields {
-        AWSAccessKeyId, signature, file, policy, submit
+        AWSAccessKeyId, Signature, file, Policy, submit
     }
 
     public enum PolicyHeaders {

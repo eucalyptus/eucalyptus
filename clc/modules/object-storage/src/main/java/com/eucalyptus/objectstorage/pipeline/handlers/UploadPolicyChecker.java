@@ -85,17 +85,15 @@ import com.eucalyptus.http.MappingHttpRequest;
 public class UploadPolicyChecker {
 	private static Logger LOG = Logger.getLogger( UploadPolicyChecker.class );
 
-	public static void checkPolicy(MappingHttpRequest httpRequest) throws S3Exception {
-        Map<String, String> formFields = httpRequest.getFormFields();
-		if(formFields.containsKey(ObjectStorageProperties.FormField.policy.toString())) {
-			String authenticationHeader = "";
-			String policy = new String(Base64.decode(formFields.remove(ObjectStorageProperties.FormField.policy.toString())));
+	public static void checkPolicy(Map<String, String> formFields) throws S3Exception {
+		if(formFields.containsKey(ObjectStorageProperties.FormField.Policy.toString())) {
+			String policy = new String(Base64.decode(formFields.get(ObjectStorageProperties.FormField.Policy.toString())));
 			String policyData;
 			try {
 				policyData = new String(Base64.encode(policy.getBytes()));
 			} catch (Exception ex) {
 				LOG.warn("Denying POST upload due to inability to decode/read required upload Policy from request", ex);
-				throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Invalid policy content");
+				throw new InvalidPolicyDocumentException(policy, "Invalid policy content");
 			}
 			//parse policy
 			try {
@@ -106,7 +104,7 @@ public class UploadPolicyChecker {
 					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
 					if((new Date()).getTime() > expirationDate.getTime()) {
 						LOG.warn("Denying POST upload because included policy has expired.");
-						throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Expired policy: " + expiration);
+						throw new InvalidPolicyDocumentException(expiration, "Expired policy: " + expiration);
 					}
 				}
 				List<String> policyItemNames = new ArrayList<String>();
@@ -118,13 +116,13 @@ public class UploadPolicyChecker {
 						JSONObject jsonObject = (JSONObject) policyItem;
 						if(!exactMatch(jsonObject, formFields, policyItemNames)) {
                             LOG.warn("Denying POST upload because Policy verification failed due to mismatch of conditions");
-                            throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy conditions not met: " + jsonObject.toString());
+                            throw new InvalidPolicyDocumentException(jsonObject.toString(), "Policy conditions not met");
 						}
 					} else if(policyItem instanceof  JSONArray) {
 						JSONArray jsonArray = (JSONArray) policyItem;
 						if(!partialMatch(jsonArray, formFields, policyItemNames)) {
                             LOG.warn("Denying POST upload because Policy verification failed due to mismatch of conditions");
-                            throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy conditions not met: " + jsonArray.toString());
+                            throw new InvalidPolicyDocumentException(jsonArray.toString(), "Policy conditions not met");
 						}
 					}
 				}
@@ -144,8 +142,14 @@ public class UploadPolicyChecker {
 						continue;
 					if(policyItemNames.contains(formKey))
 						continue;
+
+                    if(ObjectStorageProperties.FormField.isHttpField(formKey)) {
+                        //Allow the http header fields if in the form but not in policy conditions. The S3 spec is ambiguous on this
+                        // but the behavior indicates content-type, in particular, is not required in the policy conditions.
+                        continue;
+                    }
 					LOG.warn("Denying POST upload due to: All fields except those marked with x-ignore- should be in policy. Form Key: " + formKey);
-					throw new InvalidPolicyDocumentException(httpRequest.getUri(), "All fields except those marked with x-ignore- should be in policy.");
+					throw new InvalidPolicyDocumentException(formKey, "All fields except those marked with x-ignore- should be in policy.");
 				}
             } catch(S3Exception e) {
                 //pass thru
@@ -153,24 +157,12 @@ public class UploadPolicyChecker {
 			} catch(Exception ex) {
 				//rethrow
 				LOG.error("Denying POST upload due to: Unexpected exception during POST policy checks", ex);
-				throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Error processing the policy");
+				throw new InvalidPolicyDocumentException(policy, "Error processing the policy");
 			}
-
-			//all form uploads without a policy are anonymous
-			if(formFields.containsKey(ObjectStorageProperties.FormField.AWSAccessKeyId.toString())) {
-				String accessKeyId = formFields.remove(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
-				authenticationHeader += "AWS" + " " + accessKeyId + ":";
-			}
-			if(formFields.containsKey(ObjectStorageProperties.FormField.signature.toString())) {
-				String signature = formFields.remove(ObjectStorageProperties.FormField.signature.toString());
-				authenticationHeader += signature;
-				httpRequest.addHeader(ObjectStorageFormPOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
-			}
-			httpRequest.addHeader(ObjectStorageProperties.FormField.FormUploadPolicyData.toString(), policyData);
-		}
+        }
 	}
 
-	private static boolean exactMatch(JSONObject jsonObject, Map<String, String> formFields, List<String> policyItemNames) {
+	private static boolean exactMatch(JSONObject jsonObject, Map<String, String> formFields, List<String> policyItemNames) throws S3Exception {
 		Iterator<String> iterator = jsonObject.keys();
 		String key = null;
 		boolean returnValue = false;
@@ -193,7 +185,7 @@ public class UploadPolicyChecker {
 		return returnValue;
 	}
 
-	private static boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
+	private static boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) throws S3Exception {
 		boolean returnValue = false;
 		String key;
 		if(jsonArray.size() != 3)
@@ -212,7 +204,17 @@ public class UploadPolicyChecker {
 					return false;
 				if(formFields.get(key).trim().startsWith(value))
 					returnValue = true;
-			}
+			} else if(condition.equals("content-length-range")) {
+                long lower, upper, size;
+                String[] rangeValues = value.split(",");
+                if(rangeValues.length != 2) {
+                    throw new InvalidPolicyDocumentException(value, "content-length-range value could not be parsed properly");
+                }
+                lower = Long.valueOf(rangeValues[0]);
+                upper = Long.valueOf(rangeValues[1]);
+                size = Long.valueOf(formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
+                returnValue = (lower <= size && size <= upper);
+            }
 		} catch(Exception ex) {
 			LOG.error("Unexpected error evaluating the policy for a partial match", ex);
 			return false;

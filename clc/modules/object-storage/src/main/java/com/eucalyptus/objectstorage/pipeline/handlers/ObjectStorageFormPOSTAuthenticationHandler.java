@@ -75,6 +75,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.InvalidPolicyDocumentException
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
@@ -95,22 +96,9 @@ import javax.security.auth.login.LoginException;
 public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHandler {
     private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTAuthenticationHandler.class);
 
-    public enum SecurityParameter {
-        AWSAccessKeyId,
-        Timestamp,
-        Expires,
-        Signature,
-        Authorization,
-        Date,
-        Content_MD5,
-        Content_Type,
-        SecurityToken,
-        Policy
-    }
-
     @Override
     public void handleUpstream(final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent) throws Exception {
-        LOG.debug(this.getClass().getSimpleName() + "[incoming]: " + channelEvent);
+        LOG.trace(this.getClass().getSimpleName() + "[incoming]: " + channelEvent);
         try {
             if (channelEvent instanceof MessageEvent) {
                 final MessageEvent msgEvent = (MessageEvent) channelEvent;
@@ -129,7 +117,7 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
             MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
 
             //Validate the policy as well-formed
-            UploadPolicyChecker.checkPolicy(httpRequest);
+            UploadPolicyChecker.checkPolicy(httpRequest.getFormFields());
 
             //Authenticate the request
             handle(httpRequest);
@@ -142,10 +130,10 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
      * @throws S3Exception
      */
     public void handle(MappingHttpRequest httpRequest) throws S3Exception {
-        String accessKey = (String)httpRequest.getFormFields().get(SecurityParameter.AWSAccessKeyId.toString());
-        String signature = (String)httpRequest.getFormFields().get(SecurityParameter.Signature.toString());
-        String policy = (String)httpRequest.getFormFields().get(SecurityParameter.Policy.toString());
-        String securityToken = (String)httpRequest.getFormFields().get(SecurityParameter.SecurityToken.toString());
+        String accessKey = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
+        String signature = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Signature.toString());
+        String policy = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Policy.toString());
+        String securityToken = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.x_amz_security_token.toString());
 
         if (!Strings.isNullOrEmpty(policy)) {
             if (Strings.isNullOrEmpty(signature)) {
@@ -173,7 +161,7 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
                 Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
                 ctx.setUser(Principals.nobodyUser());
             } catch (NoSuchContextException e) {
-                LOG.error("Could not find context for anonymous request", e);
+                LOG.error("Could not find context for anonymous request. Returning internal error.", e);
                 throw new InternalErrorException(httpRequest.getUri(), e);
             }
         }

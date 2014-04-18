@@ -67,7 +67,6 @@ import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -193,7 +192,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 if(expect != null) {
                     if(expect.toLowerCase().equals("100-continue")) {
                         ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
-                        request.setExpectHeader(true);                     }
+                        request.setExpectHeader(true);
+                    }
                 }
 
                 //handle the content.
@@ -400,13 +400,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     }
 
                     //Get the content-type of the upload content, not the form itself
-                    if(formFields.containsKey(HttpHeaders.Names.CONTENT_TYPE)) {
-                        operationParams.put("ContentType", formFields.get(HttpHeaders.Names.CONTENT_TYPE));
+                    if(formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()) != null) {
+                        operationParams.put("ContentType", formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()));
                     }
 
 
-                    if(formFields.get(ObjectStorageProperties.UPLOAD_LENGTH_FIELD) != null) {
-                        operationParams.put("ContentLength", (long)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FileContentLength"));
+                    if(formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
+                        operationParams.put("ContentLength", (long)formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
                     } else {
                         throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
                         //if(contentLengthString != null) {
@@ -415,20 +415,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     }
                     key = target[0] + "." + objectKey;
 
-                    //Set the message content to the first-data chunk if found. This is used later for processing the message like a PUT request
-                    ChannelBuffer buffer = (ChannelBuffer)formFields.get(ObjectStorageProperties.FIRST_CHUNK_FIELD);
+                    //Verify the message content is found.
+                    ChannelBuffer buffer = (ChannelBuffer)formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
                     if(buffer == null) {
                         //No content found.
                         LOG.trace("No data content found for POST upload");
                         throw new MalformedPOSTRequestException("No upload content found");
                     }
-                    /*
-                    POST is handled by the POST binding subclass, can ignore here
-                    else {
-                        //This will cause failure because an HttpRequest cannot
-                        // have isChunked == true && content.length > 0
-                        httpRequest.setContent(buffer);
-                    }*/
                 } else if(ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {
                     if(params.containsKey(ObjectStorageProperties.BucketParameter.logging.toString())) {
                         //read logging params
