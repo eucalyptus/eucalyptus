@@ -130,13 +130,6 @@ class NetworkConfigurationsTest {
         macPrefix: 'ab:cd',
         publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
         privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
-        subnets: [
-            new Subnet(
-                subnet: "10.111.0.0",
-                netmask: "255.255.0.0",
-                gateway: "10.111.0.1"
-            )
-        ],
         clusters: [
             new Cluster(
                 name: 'cluster1',
@@ -173,13 +166,6 @@ class NetworkConfigurationsTest {
 
     NetworkConfiguration expected = new NetworkConfiguration(
         publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
-        subnets: [
-            new Subnet(
-                subnet: "10.111.0.0",
-                netmask: "255.255.0.0",
-                gateway: "10.111.0.1"
-            )
-        ],
         clusters: [
             new Cluster(
                 name: 'cluster1',
