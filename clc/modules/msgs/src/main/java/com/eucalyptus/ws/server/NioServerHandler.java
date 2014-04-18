@@ -196,9 +196,10 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     } else if ( cause instanceof LoginException ) {
       this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
     } else if ( e.getCause( ) instanceof WebServicesException ) {
-      LOG.error( "Internal Error: " + cause.getMessage( ) );
+      final WebServicesException webEx = (WebServicesException) e.getCause( );
+      if ( webEx.getStatus( ).getCode( ) != 403 ) LOG.error( "Internal Error: " + cause.getMessage( ) );
       Logs.extreme( ).error( cause, cause );
-      this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
+      this.sendError( ctx, webEx.getStatus( ), cause );
     } else {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
     }
