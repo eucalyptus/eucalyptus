@@ -350,11 +350,11 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
         final ObjectEntity deleteMarker = currentObject.generateNewDeleteMarkerFrom();
 
         try (TransactionResource trans = Entities.transactionFor(ObjectEntity.class)){
-            deleteMarker.setAcl(acp);
             deleteMarker.setOwnerCanonicalId(owningUser.getAccount().getCanonicalId());
             deleteMarker.setOwnerDisplayName(owningUser.getAccount().getName());
             deleteMarker.setOwnerIamUserDisplayName(owningUser.getName());
             deleteMarker.setOwnerIamUserId(owningUser.getUserId());
+            deleteMarker.setAcl(acp);
             ObjectEntity persistedDeleteMarker = Entities.persist(deleteMarker);
             currentObject.setIsLatest(Boolean.FALSE);
             Entities.mergeDirect(currentObject);

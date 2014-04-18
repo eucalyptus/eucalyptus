@@ -1,4 +1,24 @@
-package com.eucalyptus.objectstorage;
+/*
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ */
+
+package com.eucalyptus.objectstorage.util;
 
 import static org.junit.Assert.*;
 
@@ -7,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.objectstorage.UnitTestSupport;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.storage.msgs.s3.*;
 import com.google.common.base.Strings;
@@ -77,16 +98,6 @@ public class AclTests {
         account2ReadAcp = new Grant(account2, Permission.READ_ACP.toString());
         account2WriteAcp = new Grant(account2, Permission.WRITE_ACP.toString());
     }
-
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-    }
-
-	@Before
-	public void setUp() throws Exception { }
-
-	@After
-	public void tearDown() throws Exception { }
 
 	@Test
 	public void testCannedAclExpansion() throws Exception {
@@ -411,6 +422,27 @@ public class AclTests {
 
         genAcp = AclUtils.processNewResourcePolicy(user, new AccessControlPolicy(), canonicalId);
         assert(validateAcp(genAcp, canonicalId, Permission.FULL_CONTROL));
+
+    }
+
+    @Test
+    public void testAcpGenerationForDeleteMarkers() throws Exception {
+        String canonicalId = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().iterator().next()).getCanonicalId();
+        User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
+
+        AccessControlList acl = new AccessControlList();
+        AccessControlPolicy acp = new AccessControlPolicy();
+        acp.setAccessControlList(acl);
+
+        AccessControlPolicy genAcp = AclUtils.processNewResourcePolicy(user, null, canonicalId);
+        assert(validateAcp(genAcp, canonicalId, Permission.FULL_CONTROL));
+
+        try {
+            genAcp = AclUtils.processNewResourcePolicy(null, null, null);
+            fail("Should have gotten exception on policy gen with all nulls");
+        } catch(Exception e) {
+            System.out.println("Correctly caught the exception on all nulls for policy gen: " + e.getMessage());
+        }
 
     }
 
