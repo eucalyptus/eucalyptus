@@ -698,7 +698,7 @@ ncInstance *load_instance_struct(const char *instanceId)
 	char * xmlFP;
 	if ((xmlFP = EUCA_ALLOC(sizeof(instance->xmlFilePath), sizeof(char))) == NULL) {
             LOGERROR("out of memory (for temporary string allocation)\n");
-            return (NULL);
+            goto free;
         }
 	euca_strncpy(xmlFP, instance->xmlFilePath, sizeof(instance->xmlFilePath));
         if (read_instance_xml(xmlFP, instance) != EUCA_OK) {
