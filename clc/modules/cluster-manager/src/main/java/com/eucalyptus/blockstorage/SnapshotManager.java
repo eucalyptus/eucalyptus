@@ -269,6 +269,7 @@ public class SnapshotManager {
       } catch ( ExecutionException ex3 ) {
         throw new EucalyptusCloudException( ex3.getCause( ) );
       } catch ( NoSuchElementException ex4 ) {
+        throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
       }
     } catch ( ExecutionException ex1 ) {
       throw new EucalyptusCloudException( ex1.getCause( ) );
