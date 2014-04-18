@@ -146,7 +146,12 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( final CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
     final Context ctx = Contexts.lookup( );
     final String volumeId = normalizeVolumeIdentifier( request.getVolumeId( ) );
-    Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), volumeId ) );
+    final Volume vol;
+    try {
+      vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), volumeId ) );
+    } catch ( NoSuchElementException e ) {
+      throw new ClientComputeException( "InvalidVolume.NotFound", "Volume not found '" + request.getVolumeId( ) + "'" );
+    }
     final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     final Volume volReady = Volumes.checkVolumeReady( vol );
     Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
