@@ -754,7 +754,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         hmac.init(new SecretKeySpec(adminAccessKey.getSecretKey().getBytes("UTF-8"), "HmacSHA1"));
 
         this.importDisk.setUploadPolicySignature(
-            B64.standard.encString(hmac.doFinal(policy.getBytes("UTF-8"))));
+	     B64.standard.encString(hmac.doFinal(B64.standard.encString(policy).getBytes("UTF-8"))));
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
       }
