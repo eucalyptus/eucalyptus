@@ -223,7 +223,7 @@ public class ImageManager {
     	bdmInstanceStoreImageVerifier( ).apply( request );
     	
     	//When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
-    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) , ctx.getUser());
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
     	
       final ImageMetadata.Platform imagePlatform = request.getPlatform()!=null ? ImageMetadata.Platform.valueOf(request.getPlatform())

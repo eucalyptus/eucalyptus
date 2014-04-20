@@ -78,6 +78,7 @@ import javax.xml.xpath.XPathFactory;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -86,6 +87,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
@@ -197,6 +199,7 @@ public class ImageManifests {
     private Function<String, String>               xpathHelper;
     private String                                 encryptedKey;
     private String                                 encryptedIV;
+    private String                                 userId;
     private List<ManifestDeviceMapping>            deviceMappings = Lists.newArrayList( );
     
     ImageManifest( String imageLocation ) throws EucalyptusCloudException {
@@ -263,6 +266,9 @@ public class ImageManifests {
         ? temp
         : "SHA1";
       this.signature = ( ( temp = this.xpathHelper.apply( "//signature" ) ) != null )
+        ? temp
+        : null;
+      this.userId = ( ( temp = this.xpathHelper.apply( "//user" ) ) != null )
         ? temp
         : null;
       String typeInManifest = this.xpathHelper.apply( ImageMetadata.TYPE_MANIFEST_XPATH );
@@ -458,6 +464,10 @@ public class ImageManifests {
       return this.name;
     }
     
+    public String getAccountId( ) {
+      return this.userId;
+    }
+    
     public Long getSize( ) {
       return this.size;
     }
@@ -482,6 +492,18 @@ public class ImageManifests {
   
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
     return new ImageManifest( imageLocation );
+  }
+  
+  public static ImageManifest lookup( String imageLocation , User owner) throws EucalyptusCloudException {
+    final ImageManifest manifest =  new ImageManifest( imageLocation );
+    try{
+      final String ownerAcctId = owner.getAccountNumber();
+      if(ownerAcctId.equals(manifest.getAccountId()))
+        return manifest;
+    }catch(final AuthException ex){
+      throw new ClientComputeException("AuthFailure","Manifest is not accessible");
+    }
+    throw new ClientComputeException("AuthFailure","Manifest is not accessible");
   }
   
   static void checkPrivileges( String diskId ) throws EucalyptusCloudException {
