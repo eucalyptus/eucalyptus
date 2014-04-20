@@ -745,6 +745,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         putObject.setMetaData(request.getMetaData());
         putObject.setStorageClass(request.getStorageClass());
         putObject.setData(request.getData());
+        putObject.setCorrelationId(request.getCorrelationId());
         PutObjectResponseType putObjectResponse = doPutOperation(putObject);
 
         String etag = putObjectResponse.getEtag();
