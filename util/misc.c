@@ -98,6 +98,7 @@
 #include <limits.h>
 #include <sys/mman.h>                  // mmap
 #include <pthread.h>
+#include <sys/select.h>                // pselect
 
 #include "eucalyptus.h"
 
@@ -1967,6 +1968,28 @@ char ** build_argv(const char * first, va_list va)
     return argv;
 }
 
+void log_argv(char ** argv)
+{
+    char cmd[10240];
+    int args = 0;
+
+    for (char ** s = argv; * s != NULL; s++, args++) {
+        char formatted[1024];
+        char * arg = * s;
+        if (args > 0) {
+            if (arg[0]=='-') {
+                snprintf(formatted, sizeof(formatted), " %s", arg);
+            } else {
+                snprintf(formatted, sizeof(formatted), " '%s'", arg);
+            }
+        } else {
+            snprintf(formatted, sizeof(formatted), "%s", arg);
+        }
+        euca_strncat(cmd, formatted, sizeof(cmd));
+    }
+    fprintf(stderr, "child process %d executing: %s\n", getpid(), cmd);
+}
+
 //!
 //! Eucalyptus wrapper function around exec with file-descriptor support and argv[]
 //!
@@ -2062,6 +2085,9 @@ int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, c
                 exit(1);
             }
         }
+
+        // print the command we are about to execute
+        log_argv(argv);
 
         // Run the command. This should never return unless a failure occured
         result = execvp(argv[0], argv);
@@ -2223,6 +2249,146 @@ int euca_execlp(int *pStatus, const char *file, ...)
     return result;
 }
 
+static void log_line (const char * line)
+{
+    LOGDEBUG("%s\n", line); //! @TODO add sophisticated parsing
+}
+
+// to accommodate potentially large JSON-formatted status lines
+#define LINEBUFSIZE 10240
+
+static int log_fds(int nfds, int fds[])
+{
+    assert(nfds<=FD_SETSIZE);
+    char buf[FD_SETSIZE][LINEBUFSIZE]; // carefull making this too big or you'll blow the stack
+    int wpos[FD_SETSIZE];
+    for (int i=0; i<nfds; i++) {
+        wpos[i] = 0;
+    }
+
+    while (TRUE) { // we bail on error on any descriptor or EOF on all
+        struct timeval tv;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+
+        // construct fd_set to poll based on the ones that are still open
+        int fds_to_poll = 0;
+        int highest_fd = 0;
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        for (int i=0; i<nfds; i++) {
+            if (fds[i] > -1) {
+                if (highest_fd < fds[i])
+                    highest_fd = fds[i];
+                FD_SET(fds[i], &rfds);
+                fds_to_poll++;
+            }
+        }
+        if (fds_to_poll < 1) // all have been closed, so bail
+            break;
+
+        int retval = select(highest_fd + 1, &rfds, NULL, NULL, &tv);
+        if (retval == -1) {
+            LOGERROR("output logger failed to poll file descriptors: %s\n", strerror(errno));
+            goto close_fds;
+        }
+
+        if (retval > 0) {
+            for (int i=0; i<nfds; i++) {
+                if ((fds[i] > -1) && FD_ISSET(fds[i], &rfds)) {
+                    char * s = buf[i] + wpos[i];
+                    int read_bytes = read(fds[i], s, LINEBUFSIZE-wpos[i]-1); // reserve 1 byte for '\0'
+                    if (read_bytes == 0) { // EOF, so close and mark as such
+                        close(fds[i]);
+                        fds[i] = -1;
+                    } else if (read_bytes == -1) {
+                        LOGERROR("failed to read a file descriptor: %s\n", strerror(errno));
+                        goto close_fds;
+                    } else { // new bytes were read on the fd
+                        int rpos = 0;
+                        for (int j=0; j<read_bytes; j++) {
+                            if (s[j]=='\n') { // we have a new line to print!
+                                s[j]='\0';
+                                log_line(buf[i] + rpos);
+                                rpos = wpos[i] + j + 1;
+                            }
+                        }
+                        int unprinted = (wpos[i] + read_bytes) - rpos;
+                        if (unprinted == LINEBUFSIZE-1) { // if buffer is full, dump it without waiting for a newline
+                            buf[i][LINEBUFSIZE-1] = '\0';
+                            log_line(buf[i]);
+                            unprinted = 0;
+                        }
+                        if (rpos > 0 && unprinted > 0) { // some bytes were printed
+                            memmove(buf[i], buf[i] + rpos, unprinted); // shift unprinted chars to front
+                        }
+                        wpos[i] = unprinted;
+                    }
+                }
+            }
+        }
+    }
+    return EUCA_OK;
+
+ close_fds:
+    for (int i=0; i<nfds; i++) {
+        if (fds[i] > -1) {
+            close(fds[i]);
+            fds[i] = -1;
+        }
+    }
+    return EUCA_ERROR;
+}
+
+//!
+//! Eucalyptus wrapper function around exec() that waits for the child
+//! and returns status
+//!
+//! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
+//! @param[in] file a constant pointer to the pathname of a file which is to be executed
+//! @param[in] ... the list of string arguments to pass to the program
+//!
+//! @return EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution terminated but failed
+//!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
+//!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
+//!
+//! @pre The file parameter must not be NULL
+//!
+//! @post
+//!
+//! @note
+//!
+int euca_execlp_log(int *pStatus, const char *file, ...)
+{
+    char **argv = NULL;
+    int result;
+
+    // Default the returned status to -1
+    if (pStatus != NULL)
+        (*pStatus) = -1;
+
+    { // turn variable arguments into a array of strings for the execvp()
+        va_list va;
+        va_start(va, file);
+        argv = build_argv(file, va);
+        va_end(va);
+        if (argv == NULL) return EUCA_INVALID_ERROR;
+    }
+
+    pid_t pid;
+    int child_fds[2];
+    result = euca_execvp_fd(&pid, NULL, &child_fds[0], &child_fds[1], argv);
+    if (result == EUCA_OK) {
+        log_fds(sizeof(child_fds)/sizeof(int), child_fds);
+        result = euca_waitpid(pid, pStatus);
+    }
+    free_char_list(argv);
+
+    return result;
+}
+
+
 //!
 //! Returns username of the real user ID of the calling process
 //!
@@ -2274,6 +2440,8 @@ int main(int argc, char **argv)
     char dev_path[32] = "";
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
     struct stat estat = { 0 };
+
+    logfile(NULL, EUCA_LOG_DEBUG, 4); // bump up the log level
 
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
         printf("Failed to retrieve the current working directory information.\n");
@@ -2429,6 +2597,17 @@ int main(int argc, char **argv)
         close(ifd);
         drain_fd("stdout:", ofd);
         waitpid(pid, NULL, 0);
+    }
+
+    {
+        printf("testing euca_execlp_log\n");
+        int status;
+        assert(euca_execlp_log(&status, "/bin/ls", "/", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
+        assert (status!=0);
     }
 
     return (0);

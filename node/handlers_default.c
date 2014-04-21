@@ -1936,13 +1936,13 @@ static void *bundling_thread(void *arg)
                          "--emi", pInstance->imageId,
 
     if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
-        rc = euca_execlp(&status,
+        rc = euca_execlp_log(&status,
                          _COMMON_BUNDLING_PARAMS
                          "--eki", pParams->kernelId,
                          "--eri", pParams->ramdiskId,
                          NULL);
     } else {
-        rc = euca_execlp(&status,
+        rc = euca_execlp_log(&status,
                          _COMMON_BUNDLING_PARAMS
                          NULL);
     }
