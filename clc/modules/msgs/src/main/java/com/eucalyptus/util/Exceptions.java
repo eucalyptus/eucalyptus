@@ -246,7 +246,7 @@ public class Exceptions {
     if ( ex instanceof RuntimeException ) {
       return ( RuntimeException ) ex;
     } else if ( ex instanceof ExecutionException ) {
-      if ( ex.getCause( ) != null && ex.getCause( ).getClass( ).equals( RuntimeException.class ) ) {
+      if ( ex.getCause( ) != null && RuntimeException.class.isAssignableFrom( ex.getCause( ).getClass( ) ) ) {
         return ( RuntimeException ) ex.getCause( );
       } else {
         return new RuntimeException( message, ex.getCause( ) );

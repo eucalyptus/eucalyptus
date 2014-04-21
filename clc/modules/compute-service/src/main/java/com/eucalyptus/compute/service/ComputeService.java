@@ -37,6 +37,7 @@ import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Objects;
@@ -77,14 +78,21 @@ public class ComputeService {
   private static BaseMessage send( final BaseMessage request ) throws Exception {
     try {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), request );
-    } catch ( NoSuchElementException e ) {
+    } catch ( final NoSuchElementException e ) {
       throw new ComputeServiceUnavailableException( "Service Unavailable" );
-    } catch ( ServiceDispatchException e ) {
+    } catch ( final ServiceDispatchException e ) {
       final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
       if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
         throw (Exception) componentException.getCause( );
       }
       throw e;
+    } catch ( final FailedRequestException e ) {
+      if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
+        return e.getRequest( );
+      }
+      throw e.getRequest( ) == null ?
+          e :
+          new ComputeServiceException( "InternalError", "Internal error " + e.getRequest().getClass().getSimpleName() + ":false" );
     }
   }
 

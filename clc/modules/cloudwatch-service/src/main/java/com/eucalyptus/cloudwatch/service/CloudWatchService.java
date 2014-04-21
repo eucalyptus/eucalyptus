@@ -35,6 +35,7 @@ import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
@@ -81,6 +82,13 @@ public class CloudWatchService {
         throw (Exception) componentException.getCause( );
       }
       throw e;
+    } catch ( final FailedRequestException e ) {
+      if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
+        return e.getRequest( );
+      }
+      throw e.getRequest( ) == null ?
+          e :
+          new CloudWatchException( "InternalError", Role.Receiver, "Internal error " + e.getRequest().getClass().getSimpleName() + ":false" );
     }
   }
 
