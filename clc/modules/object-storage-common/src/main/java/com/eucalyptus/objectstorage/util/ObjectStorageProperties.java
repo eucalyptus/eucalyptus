@@ -112,7 +112,15 @@ public class ObjectStorageProperties {
             public String toString() {
                 return "http://acs.amazonaws.com/groups/s3/zateam";
             }
+        }, //Used for the system for vm images
+
+        //This is a made-up group in place of the ec2-bundled-image
+        EC2_BUNDLE_READ {
+            public String toString() {
+                return "http://acs.amazonaws.com/groups/s3/ec2-bundle";
+            }
         } //Used for the system for vm images
+
     }
 
     public static final String IGNORE_PREFIX = "x-ignore-";
@@ -179,6 +187,11 @@ public class ObjectStorageProperties {
         aws_exec_read {
             public String toString() {
                 return "aws-exec-read";
+            }
+        },
+        ec2_bundle_read {
+            public String toString() {
+                return "ec2-bundle-read";
             }
         }
     }

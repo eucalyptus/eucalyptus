@@ -62,6 +62,7 @@ public class AclUtils {
         cannedAclMap.put(ObjectStorageProperties.CannedACL.public_read.toString(), PublicReadGrantBuilder.INSTANCE);
         cannedAclMap.put(ObjectStorageProperties.CannedACL.public_read_write.toString(), PublicReadWriteGrantBuilder.INSTANCE);
         cannedAclMap.put(ObjectStorageProperties.CannedACL.aws_exec_read.toString(), AwsExecReadGrantBuilder.INSTANCE);
+        cannedAclMap.put(ObjectStorageProperties.CannedACL.ec2_bundle_read.toString(), Ec2BundleReadGrantBuilder.INSTANCE);
         cannedAclMap.put(ObjectStorageProperties.CannedACL.bucket_owner_full_control.toString(), BucketOwnerFullControlGrantBuilder.INSTANCE);
         cannedAclMap.put(ObjectStorageProperties.CannedACL.bucket_owner_read.toString(), BucketOwnerReadGrantBuilder.INSTANCE);
         cannedAclMap.put(ObjectStorageProperties.CannedACL.log_delivery_write.toString(), LogDeliveryWriteGrantBuilder.INSTANCE);
@@ -69,6 +70,10 @@ public class AclUtils {
         for (ObjectStorageProperties.S3_GROUP g : ObjectStorageProperties.S3_GROUP.values()) {
             groupUriMap.put(g.toString(), g);
         }
+    }
+
+    public static boolean isValidCannedAcl(String candidateAcl) {
+        return cannedAclMap.containsKey(candidateAcl);
     }
 
     /*
@@ -112,15 +117,27 @@ public class AclUtils {
             return true;
         }
 
-        //System only in the aws-exec-read group (zateam)
-        if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group) &&
-                Principals.systemUser().getUserId().equals(userId)) {
+        boolean isSystemAdmin = false;
+        try {
+            isSystemAdmin = (Principals.systemUser().getUserId().equals(userId) || Accounts.lookupSystemAdmin().getUserId().equals(userId));
+        } catch(AuthException e) {
+            //Fall through
+            LOG.debug("Got auth exception trying to lookup system admin user for group membership check in ec2-bundle-read", e);
+        }
+
+
+        //System only (or euca/admin) in the aws-exec-read group (zateam)
+        if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group) && isSystemAdmin) {
             return true;
         }
 
-        //System only in logging
-        if (ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group) &&
-                Principals.systemUser().getUserId().equals(userId)) {
+        //System only (or euca/admin) in the ec2-bundle-read group
+        if (ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.equals(group) && isSystemAdmin) {
+            return true;
+        }
+
+        //System or euca/admin only in logging
+        if (ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group) && isSystemAdmin) {
             return true;
         }
 
@@ -244,6 +261,10 @@ public class AclUtils {
 
     ;
 
+    /**
+     * This is inconsistent with S3, because we use a group rather than account for the grant.
+     * Makes more sense for euca and can be changed later if needed via upgrade
+     */
     protected enum AwsExecReadGrantBuilder implements Function<OwnerIdPair, List<Grant>> {
         INSTANCE;
 
@@ -257,6 +278,28 @@ public class AclUtils {
             execReadGrant.setGrantee(execReadGroup);
             awsExecRead.add(execReadGrant);
             return awsExecRead;
+        }
+    }
+
+    ;
+
+    /**
+     * This is inconsistent with S3, because we use a group rather than account for the grant.
+     * Makes more sense for euca and can be changed later if needed via upgrade
+     */
+    protected enum Ec2BundleReadGrantBuilder implements Function<OwnerIdPair, List<Grant>> {
+        INSTANCE;
+
+        @Override
+        public List<Grant> apply(OwnerIdPair ownerIds) {
+            List<Grant> grants = PrivateOnlyGrantBuilder.INSTANCE.apply(ownerIds);
+            Grantee grantee = new Grantee();
+            grantee.setGroup(new Group(ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.toString()));
+            Grant grant = new Grant();
+            grant.setPermission(ObjectStorageProperties.Permission.READ.toString());
+            grant.setGrantee(grantee);
+            grants.add(grant);
+            return grants;
         }
     }
 

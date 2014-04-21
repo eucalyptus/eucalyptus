@@ -150,15 +150,6 @@ public interface BucketMetadataManager {
 	 * @return
 	 */	
 	public long countBucketsByAccount(String canonicalId) throws Exception;
-	
-	/**
-	 * Update the ACP
-	 * @param bucketEntity
-	 * @param acl
-	 * @return
-	 * @throws Exception
-	 */
-	public Bucket setAcp(Bucket bucketEntity, String acl)  throws Exception;
 
     /**
      * Update the ACP

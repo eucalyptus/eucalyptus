@@ -1807,6 +1807,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 //TODO: need to add the necesary logic to hold the connection open by sending ' ' on the channel periodically
                 //The backend operation could take a while.
                 ObjectEntity completedEntity = OsgObjectFactory.getFactory().completeMultipartUpload(ospClient, objectEntity, request.getParts(), requestUser);
+                try {
+                    fireObjectCreationEvent(bucket.getBucketName(), completedEntity.getObjectKey(),
+                            completedEntity.getVersionId(),
+                            requestUser.getUserId(), completedEntity.getSize(), null);
+                } catch (Exception ex) {
+                    LOG.debug("Failed to fire reporting event for OSG object creation while completing multipart upload", ex);
+                }
                 CompleteMultipartUploadResponseType response = request.getReply();
                 response.setSize(completedEntity.getSize());
                 response.setEtag(completedEntity.geteTag());

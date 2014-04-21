@@ -20,15 +20,29 @@
 
 package com.eucalyptus.objectstorage.entities
 
+import com.eucalyptus.auth.Accounts
 import com.eucalyptus.objectstorage.BucketState
+import com.eucalyptus.objectstorage.UnitTestSupport
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.BucketListEntry
 import groovy.transform.CompileStatic
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Test
 
 @CompileStatic
 class BucketTest  {
 
+    @BeforeClass
+    static void setUp() {
+        UnitTestSupport.setupAuthPersistenceContext();
+        Accounts.addSystemAccount().addUser("admin", "/", true, null);
+    }
+
+    @AfterClass
+    static void tearDown() {
+        UnitTestSupport.tearDownAuthPersistenceContext();
+    }
     @Test
     void testGetInitializedBucket() {
         Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')

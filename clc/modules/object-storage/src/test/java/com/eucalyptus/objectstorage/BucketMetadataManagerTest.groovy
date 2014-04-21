@@ -351,23 +351,6 @@ public class BucketMetadataManagerTest {
     }
 
     @Test
-    public void testSetAcpString() {
-        def bucketName = 'testbucket1'
-        Bucket b = TestUtils.createTestBucket(mgr, bucketName)
-        assert (b != null)
-        assert (b.getAccessControlPolicy() != null)
-        int logDeliveryBitmap = S3AccessControlledEntity.BitmapGrant.add(ObjectStorageProperties.Permission.WRITE, S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.READ_ACP))
-        int fullControlBitmap = S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.FULL_CONTROL)
-        def aclString = '{"' + b.getOwnerCanonicalId() + '":' + fullControlBitmap + ',"http://acs.amazonaws.com/groups/s3/LogDelivery":' + logDeliveryBitmap + '}'
-        mgr.setAcp(b, aclString)
-        Bucket updatedB = mgr.lookupBucket(bucketName)
-        assert (updatedB.getAccessControlPolicy() != null)
-        String genAclString = S3AccessControlledEntity.marshallAcpToString(updatedB.getAccessControlPolicy())
-        //TODO: use unordered comparison
-        //assert(S3AccessControlledEntity.genAclString == aclString)
-    }
-
-    @Test
     public void testSetAcp() {
         def bucketName = 'testbucket1'
         Bucket b = TestUtils.createTestBucket(mgr, bucketName)
