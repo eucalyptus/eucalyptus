@@ -136,9 +136,12 @@ public abstract class AbstractTaskScheduler {
             final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
             final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket, key),
                 BundleImageManifest.INSTANCE);
+            String manifestName = String.format("%s-%s-%s", imagingTask.getDisplayName(),
+                conversionTask.getImportDisk().getConvertedImage().getPrefix(),
+                image.getFormat());
             final String downloadManifest = 
                 DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
-                    conversionTask.getImportDisk().getConvertedImage().getPrefix() + "-" + image.getFormat(), 5);
+                    manifestName, 5);
             image.setDownloadManifestUrl(downloadManifest);
           }
         }catch(final Exception ex){
@@ -197,10 +200,11 @@ public abstract class AbstractTaskScheduler {
             manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
             if(manifestLocation == null){
               try{
+                String manifestName = String.format("%s-%s", nextTask.getDisplayName(), volume.getVolume().getId());
                 manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                     new ImageManifestFile(importManifestUrl,
                         ImportImageManifest.INSTANCE ),
-                        null, nextTask.getDisplayName(), 1);
+                        null, manifestName, 1);
                 ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
               }catch(final InvalidBaseManifestException ex){
                 ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
