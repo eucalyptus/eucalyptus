@@ -138,8 +138,8 @@ class Euca2ools(object):
     def bundle_and_upload(self,
                           image_path,
                           destination_dir,
-                          acl=DEFAULT_UPLOAD_ACL,
                           args,
+                          acl=DEFAULT_UPLOAD_ACL,
                           fd_r=None):
         op_args = [PATHS['euca-bundle-and-upload-image'],
                    '--no-progress',
@@ -314,8 +314,8 @@ class WF_ReadRaw_UpBundle(WF_base):
             euca2ools.bundle_and_upload(
                 image_path=args.input_path,
                 destination_dir=bundle_dir,
-                acl=Euca2ools.BUNDLE_INSTANCE_ACL,
-                args=args # the rest of the arguments are inherited from run-workflow's command-line
+                args=args, # the rest of the arguments are inherited from run-workflow's command-line
+                acl=Euca2ools.BUNDLE_INSTANCE_ACL
             ).wait() # bundle and upload the disk
 
         finally: # cleanup
@@ -351,8 +351,8 @@ class WF_DownVMDK_UpBundle(WF_base):
             bundle_ps = euca2ools.bundle_and_upload(
                 image_path=args.input_path,
                 destination_dir=bundle_dir,
-                acl=euca2ools.BUNDLE_INSTANCE_ACL,
                 args=args, # the rest of the arguments are inherited from run-workflow's command-line
+                acl=euca2ools.BUNDLE_INSTANCE_ACL,
                 fd_r=fd_r
             ) # bundle and upload the disk
             fd_r.close()
