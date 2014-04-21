@@ -129,18 +129,23 @@ class EucaImager():
         return op_ps
 
 class Euca2ools(object):
+    DEFAULT_UPLOAD_ACL = "aws-exec-read" # default canned ACL on AWS for policy-based uploads
+    BUNDLE_INSTANCE_ACL = "ec2-bundle-read" # the canned ACL on AWS required for bundle-instance
+
     def __init__(self):
         self.debug = True
 
     def bundle_and_upload(self,
                           image_path,
                           destination_dir,
+                          acl=DEFAULT_UPLOAD_ACL,
                           args,
                           fd_r=None):
         op_args = [PATHS['euca-bundle-and-upload-image'],
                    '--no-progress',
                    '--image', image_path,
                    '--destination', destination_dir,
+                   '--acl', acl,
                    '--prefix', args.prefix,
                    '--arch', args.arch,
                    '--user', args.account,
@@ -309,6 +314,7 @@ class WF_ReadRaw_UpBundle(WF_base):
             euca2ools.bundle_and_upload(
                 image_path=args.input_path,
                 destination_dir=bundle_dir,
+                acl=Euca2ools.BUNDLE_INSTANCE_ACL,
                 args=args # the rest of the arguments are inherited from run-workflow's command-line
             ).wait() # bundle and upload the disk
 
@@ -345,6 +351,7 @@ class WF_DownVMDK_UpBundle(WF_base):
             bundle_ps = euca2ools.bundle_and_upload(
                 image_path=args.input_path,
                 destination_dir=bundle_dir,
+                acl=euca2ools.BUNDLE_INSTANCE_ACL,
                 args=args, # the rest of the arguments are inherited from run-workflow's command-line
                 fd_r=fd_r
             ) # bundle and upload the disk
