@@ -2260,7 +2260,12 @@ static void log_line (const char * line)
 static int log_fds(int nfds, int fds[])
 {
     assert(nfds<=FD_SETSIZE);
-    char buf[FD_SETSIZE][LINEBUFSIZE]; // carefull making this too big or you'll blow the stack
+
+    char * buf = malloc(FD_SETSIZE * LINEBUFSIZE); // do not use array to avoid blowing the stack
+    if (buf == NULL) {
+        LOGERROR("output logger failed to allocate memory: %s\n", strerror(errno));
+        goto close_fds;
+    }
     int wpos[FD_SETSIZE];
     for (int i=0; i<nfds; i++) {
         wpos[i] = 0;
@@ -2296,8 +2301,9 @@ static int log_fds(int nfds, int fds[])
         if (retval > 0) {
             for (int i=0; i<nfds; i++) {
                 if ((fds[i] > -1) && FD_ISSET(fds[i], &rfds)) {
-                    char * s = buf[i] + wpos[i];
-                    int read_bytes = read(fds[i], s, LINEBUFSIZE-wpos[i]-1); // reserve 1 byte for '\0'
+                    char * linebuf = buf + i * LINEBUFSIZE;
+                    char * wptr = linebuf + wpos[i];
+                    int read_bytes = read(fds[i], wptr, LINEBUFSIZE-wpos[i]-1); // reserve 1 byte for '\0'
                     if (read_bytes == 0) { // EOF, so close and mark as such
                         close(fds[i]);
                         fds[i] = -1;
@@ -2307,20 +2313,20 @@ static int log_fds(int nfds, int fds[])
                     } else { // new bytes were read on the fd
                         int rpos = 0;
                         for (int j=0; j<read_bytes; j++) {
-                            if (s[j]=='\n') { // we have a new line to print!
-                                s[j]='\0';
-                                log_line(buf[i] + rpos);
+                            if (wptr[j]=='\n') { // we have a new line to print!
+                                wptr[j]='\0';
+                                log_line(linebuf + rpos);
                                 rpos = wpos[i] + j + 1;
                             }
                         }
                         int unprinted = (wpos[i] + read_bytes) - rpos;
                         if (unprinted == LINEBUFSIZE-1) { // if buffer is full, dump it without waiting for a newline
-                            buf[i][LINEBUFSIZE-1] = '\0';
-                            log_line(buf[i]);
+                            linebuf[LINEBUFSIZE-1] = '\0';
+                            log_line(linebuf);
                             unprinted = 0;
                         }
                         if (rpos > 0 && unprinted > 0) { // some bytes were printed
-                            memmove(buf[i], buf[i] + rpos, unprinted); // shift unprinted chars to front
+                            memmove(linebuf, linebuf + rpos, unprinted); // shift unprinted chars to front
                         }
                         wpos[i] = unprinted;
                     }
@@ -2380,7 +2386,7 @@ int euca_execlp_log(int *pStatus, const char *file, ...)
     int child_fds[2];
     result = euca_execvp_fd(&pid, NULL, &child_fds[0], &child_fds[1], argv);
     if (result == EUCA_OK) {
-        log_fds(sizeof(child_fds)/sizeof(int), child_fds);
+        log_fds(2, child_fds);
         result = euca_waitpid(pid, pStatus);
     }
     free_char_list(argv);
@@ -2407,7 +2413,7 @@ char *get_username(void)
 //! Helper function to read from a file descriptor until EOF,
 //! printing characters preceded by 'prefix'
 //!
-void drain_fd(const char * prefix, int fd)
+static void drain_fd(const char * prefix, int fd)
 {
     char buf;
 
@@ -2417,6 +2423,31 @@ void drain_fd(const char * prefix, int fd)
     }
     printf("\n");
     close(fd);
+}
+
+#define COMPETITOR_ITERATIONS 10
+#define COMPETITIVE_PARTICIPANTS 5
+#define TEST_LOG "./test_misc.log"
+
+static void *competitor_function(void *arg)
+{
+    int status;
+    for (int i=0; i<COMPETITOR_ITERATIONS; i++) {
+        assert(euca_execlp_log(&status, "/bin/ls", "/", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
+        assert (status!=0);
+        assert(euca_execlp_log(&status, "/bin/cat", "/etc/passwd", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/cat", "/etc/mime.types", NULL)==EUCA_OK);
+        assert (status==0);
+        assert(euca_execlp_log(&status, "/bin/cat", "/etc/mime.types", "/foo", "/etc/mime.types", NULL)==EUCA_ERROR);
+        assert (status!=0);
+    }
+
+    return NULL;
 }
 
 //!
@@ -2441,7 +2472,13 @@ int main(int argc, char **argv)
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
     struct stat estat = { 0 };
 
-    logfile(NULL, EUCA_LOG_DEBUG, 4); // bump up the log level
+    logfile(TEST_LOG, EUCA_LOG_DEBUG, 4); // bump up the log level
+    sem *log_sem = NULL;
+    log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    if (log_sem_set(log_sem) != 0) {
+        LOGFATAL("failed to set logging semaphore\n");
+        return (EUCA_FATAL_ERROR);
+    }
 
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
         printf("Failed to retrieve the current working directory information.\n");
@@ -2601,13 +2638,15 @@ int main(int argc, char **argv)
 
     {
         printf("testing euca_execlp_log\n");
-        int status;
-        assert(euca_execlp_log(&status, "/bin/ls", "/", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
-        assert (status!=0);
+        printf("spawning %d competing threads that will write to %s\n", COMPETITIVE_PARTICIPANTS, TEST_LOG);
+        pthread_t threads[COMPETITIVE_PARTICIPANTS];
+        for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_create(&threads[j], NULL, competitor_function, (void *)NULL);
+        }
+        for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_join(threads[j], NULL);
+        }
+        printf("waited for all competing threads\n");
     }
 
     return (0);
