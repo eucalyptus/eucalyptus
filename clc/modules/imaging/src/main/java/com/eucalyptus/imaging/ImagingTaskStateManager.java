@@ -19,15 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -36,12 +46,16 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.imaging.manifest.ImageManifestFile;
+import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.Dates;
+import com.eucalyptus.util.XMLParser;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
@@ -525,13 +539,43 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       bucket = uri.getHost();
       bucket = bucket.substring(0, bucket.indexOf("."));
     }
-    
+
     try{
-      final S3Object obj = s3c.getObject(bucket, key);
-      return obj!=null;
+      final ObjectListing listing = s3c.listObjects(bucket);
+      final List<S3ObjectSummary> objects = listing.getObjectSummaries();
+      final Set<String> keySet = Sets.newHashSet();
+      for(final S3ObjectSummary object : objects){
+        keySet.add(object.getKey());
+      }
+      final ImageManifestFile manifestFile = 
+          new ImageManifestFile(manifestUrl, ImportImageManifest.INSTANCE);
+      final String manifest = manifestFile.getManifest();
+      final List<String> partsKey = getPartsKey(manifest);
+      for(final String keyName : partsKey){
+        if(! keySet.contains(keyName)){
+          return false;
+        }
+      }
+      return true;
     }catch(final Exception ex){
+      LOG.warn("Failed to check parts of the import manifest", ex);
       return false;
     }
+  }
+  
+  private List<String> getPartsKey(final String manifest) throws Exception{
+    final XPath xpath = XPathFactory.newInstance( ).newXPath();
+    final DocumentBuilder builder = XMLParser.getDocBuilder( );
+    final Document inputSource = builder.parse( new ByteArrayInputStream( manifest.getBytes( ) ) );
+   
+    final List<String> parts = Lists.newArrayList();
+    final NodeList nodes = 
+        (NodeList) xpath.evaluate( ImportImageManifest.INSTANCE.getPartsPath()+"/key", 
+            inputSource, XPathConstants.NODESET );
+    for (int i = 0; i < nodes.getLength(); i++) {
+      parts.add(nodes.item(i).getTextContent());
+    }
+    return parts;
   }
 }
 
