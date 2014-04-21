@@ -422,7 +422,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           }else{
            Images.setImageFormat(machineImage.getDisplayName(), ImageMetadata.ImageFormat.fulldisk);
            /// the service and the backend (NC) rely on virtualizationType=HVM when they prepare full-disk type instances
-           Images.setImageVirtualizationType(machineImage.getDisplayName(), ImageMetadata.VirtualizationType.hvm);
            Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.available);
            try{
              generateDownloadManifests(machineImage.getDisplayName());

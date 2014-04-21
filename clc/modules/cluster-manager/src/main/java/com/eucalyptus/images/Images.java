@@ -1018,7 +1018,7 @@ public class Images {
                                                      String eri,
                                                      ImageManifest manifest ) throws Exception {
     PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, 
-        ImageMetadata.VirtualizationType.hvm, platform, imgFormat, eki, eri, manifest );
+        virtType, platform, imgFormat, eki, eri, manifest );
     ret.setState( ImageMetadata.State.pending_available );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
