@@ -265,12 +265,19 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 			throw new MetadataOperationFailureException(e);
 		}
 	}
-	
-	@Override
-	public Bucket setAcp(@Nonnull Bucket bucketEntity, @Nonnull String acl)  throws MetadataOperationFailureException, NoSuchEntityException {
+
+    /**
+     * For internal use only (copying, etc)
+     * @param bucketEntity
+     * @param jsonMarshalledAcl
+     * @return
+     * @throws MetadataOperationFailureException
+     * @throws NoSuchEntityException
+     */
+	protected Bucket setAcp(@Nonnull Bucket bucketEntity, @Nonnull String jsonMarshalledAcl)  throws MetadataOperationFailureException, NoSuchEntityException {
 		try (TransactionResource trans = Entities.transactionFor(Bucket.class)) {
             Bucket bucket = Entities.merge(bucketEntity);
-			bucket.setAcl(acl);
+			bucket.setAcl(jsonMarshalledAcl);
 			trans.commit();
 			return bucket;
 		} catch(NoSuchElementException e) {

@@ -62,10 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -76,14 +73,19 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
 import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
+import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -112,8 +114,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -241,7 +241,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     @Override
     public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
-        String servicePath = httpRequest.getServicePath();
         Map bindingArguments = new HashMap();
         final String operationName = getOperation(httpRequest, bindingArguments);
         if(operationName == null)
@@ -697,7 +696,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
     protected void getTargetBucketParams(Map operationParams,
-                                         MappingHttpRequest httpRequest) throws BindingException {
+                                         MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         String message = getMessageString(httpRequest);
         if(message.length() > 0) {
             try {
@@ -710,11 +709,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
                 List<String> permissions = xmlParser.getValues("//TargetGrants/Grant/Permission");
                 if(permissions == null)
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/TargetGrants/Grant/Permission");
 
                 DTMNodeList grantees = xmlParser.getNodes("//TargetGrants/Grant/Grantee");
                 if(grantees == null)
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//TargetGrants/Grant/Grantee");
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
                     String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -729,7 +728,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0)
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("ACL group URI");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setGroup(new Group(groupUri));
@@ -741,14 +740,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 TargetGrants targetGrants = new TargetGrants(grants);
                 LoggingEnabled loggingEnabled = new LoggingEnabled(targetBucket, targetPrefix, new TargetGrants(grants));
                 operationParams.put("LoggingEnabled", loggingEnabled);
+            } catch(S3Exception e) {
+                throw e;
             } catch(Exception ex) {
-                LOG.warn(ex);
-                throw new BindingException("Unable to parse logging configuration " + ex.getMessage());
+                LOG.warn("Unexpected error binding bucket logging target config", ex);
+                MalformedXMLException malEx = new MalformedXMLException("//TargetBucket");
+                malEx.initCause(ex);
+                throw malEx;
             }
         }
     }
 
-    protected void getVersioningStatus(Map operationParams, MappingHttpRequest httpRequest) throws BindingException {
+    protected void getVersioningStatus(Map operationParams, MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         String message = getMessageString(httpRequest);
         if(message.length() > 0) {
             try {
@@ -758,8 +761,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     return;
                 operationParams.put("VersioningStatus", status);
             } catch(Exception ex) {
-                LOG.warn(ex);
-                throw new BindingException("Unable to parse versioning status " + ex.getMessage());
+                LOG.warn("Failed parsing versioning status for binding", ex);
+                MalformedXMLException malEx = new MalformedXMLException(message);
+                malEx.initCause(ex);
+                throw malEx;
             }
         }
     }
@@ -799,12 +804,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
     }
 
-    protected AccessControlPolicy getAccessControlPolicy(MappingHttpRequest httpRequest) throws BindingException {
+    protected AccessControlPolicy getAccessControlPolicy(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         AccessControlPolicy accessControlPolicy = new AccessControlPolicy();
         AccessControlList accessControlList = new AccessControlList();
         ArrayList<Grant> grants = new ArrayList<Grant>();
+        String aclString = "";
         try {
-            String aclString = getMessageString(httpRequest);
+            aclString = getMessageString(httpRequest);
             if(aclString.length() > 0) {
                 XMLParser xmlParser = new XMLParser(aclString);
                 String ownerId = xmlParser.getValue("//Owner/ID");
@@ -815,11 +821,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
                 List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
                 if(permissions == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//AccessControlList/Grant/Permission");
                 }
                 DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
                 if(grantees == null){
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//AccessControlList/Grant/Grantee");
                 }
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
                     String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -843,7 +849,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0) {
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("Group-URI");
                         }
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
@@ -854,9 +860,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     }
                 }
             }
+        } catch(S3Exception e) {
+            //pass it up
+            throw e;
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException("Unable to parse access control policy " + ex.getMessage());
+            LOG.warn("Unexpected error parsing user's requested acl", ex);
+            throw new MalformedACLErrorException(aclString);
         }
         accessControlList.setGrants(grants);
         accessControlPolicy.setAccessControlList(accessControlList);
@@ -864,11 +873,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
 
-    protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws BindingException {
+    protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         AccessControlList accessControlList = new AccessControlList();
         ArrayList<Grant> grants = new ArrayList<Grant>();
+        String aclString = "";
         try {
-            String aclString = getMessageString(httpRequest);
+            aclString = getMessageString(httpRequest);
             if(aclString.length() > 0) {
                 XMLParser xmlParser = new XMLParser(aclString);
                 String ownerId = xmlParser.getValue("//Owner/ID");
@@ -876,11 +886,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
                 List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
                 if(permissions == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/AccessControlList/Grant/Permission");
                 }
                 DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
                 if(grantees == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/AccessControlList/Grant/Grantee");
                 }
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
@@ -896,7 +906,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0)
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("Group-URI");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setGroup(new Group(groupUri));
@@ -906,9 +916,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     }
                 }
             }
+        } catch(S3Exception e) {
+            throw e;
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException("Unable to parse access control list " + ex.getMessage());
+            LOG.warn("Unexpected error parsing ACL in incoming request", ex);
+            throw new MalformedACLErrorException("Unable to parse access control list: " + aclString);
         }
         accessControlList.setGrants(grants);
         return accessControlList;
@@ -960,7 +972,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
 
-    protected String getLocationConstraint(MappingHttpRequest httpRequest) throws BindingException {
+    protected String getLocationConstraint(MappingHttpRequest httpRequest) throws S3Exception {
         String locationConstraint = null;
         try {
             String bucketConfiguration = getMessageString(httpRequest);
@@ -969,8 +981,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 locationConstraint = xmlParser.getValue("/CreateBucketConfiguration/LocationConstraint");
             }
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException(ex.getMessage());
+            LOG.warn("Error parsing bucket location constraint", ex);
+            MalformedXMLException malEx = new MalformedXMLException("/CreateBucketConfiguration/LocationConstraint");
+            malEx.initCause(ex);
+            throw malEx;
+
         }
         return locationConstraint;
     }
@@ -990,7 +1005,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         return failedMappings;
     }
 
-    protected void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws BindingException
+    protected void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws S3Exception, BindingException
     {
         //process headers
         String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
@@ -1108,7 +1123,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         return fieldMap;
     }
 
-    protected static void addAccessControlList (final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) {
+    protected static void validateCannedAcl(String cannedAcl) throws InvalidArgumentException {
+        if(!AclUtils.isValidCannedAcl(cannedAcl)) {
+            throw new InvalidArgumentException(cannedAcl);
+        }
+    }
+
+    protected static void addAccessControlList (final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) throws S3Exception {
 
         AccessControlList accessControlList;
         ArrayList<Grant> grants;
@@ -1122,6 +1143,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             grants = new ArrayList<Grant>();
         }
 
+        validateCannedAcl(cannedACLString);
 
         CanonicalUser aws = new CanonicalUser();
         aws.setDisplayName("");
@@ -1140,52 +1162,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         return string.substring(0, 1).toUpperCase().concat(string.substring(1));
     }
 
-    protected boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
-        Iterator<String> iterator = jsonObject.keys();
-        boolean returnValue = false;
-        while(iterator.hasNext()) {
-            String key = iterator.next();
-            key = key.replaceAll("\\$", "");
-            policyItemNames.add(key);
-            try {
-                if(jsonObject.get(key).equals(formFields.get(key)))
-                    returnValue = true;
-                else
-                    returnValue = false;
-            } catch(Exception ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-        return returnValue;
-    }
-
-    protected boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
-        boolean returnValue = false;
-        if(jsonArray.size() != 3)
-            return false;
-        try {
-            String condition = (String) jsonArray.get(0);
-            String key = (String) jsonArray.get(1);
-            key = key.replaceAll("\\$", "");
-            policyItemNames.add(key);
-            String value = (String) jsonArray.get(2);
-            if(condition.contains("eq")) {
-                if(value.equals(formFields.get(key)))
-                    returnValue = true;
-            } else if(condition.contains("starts-with")) {
-                if(!formFields.containsKey(key))
-                    return false;
-                if(formFields.get(key).startsWith(value))
-                    returnValue = true;
-            }
-        } catch(Exception ex) {
-            ex.printStackTrace();
-            return false;
-        }
-        return returnValue;
-    }
-
     protected String getMessageString(MappingHttpRequest httpRequest) {
         ChannelBuffer buffer = httpRequest.getContent( );
         buffer.markReaderIndex( );
@@ -1194,7 +1170,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         return new String( read );
     }
 
-    private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws BindingException {
+    private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws S3Exception {
         LifecycleConfiguration lifecycleConfigurationType = new LifecycleConfiguration();
         lifecycleConfigurationType.setRules( new ArrayList<LifecycleRule>() );
         String message = getMessageString(httpRequest);
@@ -1203,21 +1179,26 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 XMLParser xmlParser = new XMLParser(message);
                 DTMNodeList rules = xmlParser.getNodes("//LifecycleConfiguration/Rule");
                 if (rules == null) {
-                    throw new BindingException("malformed lifecycle configuration");
+                    throw new MalformedXMLException("/LifecycleConfiguration/Rule");
                 }
                 for (int idx = 0; idx < rules.getLength(); idx++) {
                     lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, rules.item(idx) ) );
                 }
             }
+            catch (S3Exception e) {
+                throw e;
+            }
             catch (Exception ex) {
                 LOG.warn(ex);
-                throw new BindingException("Unable to parse lifecycle " + ex.getMessage());
+                MalformedXMLException e = new MalformedXMLException("/LifecycleConfiguration");
+                ex.initCause(ex);
+                throw e;
             }
         }
         return lifecycleConfigurationType;
     }
 
-    private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws BindingException{
+    private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws S3Exception{
         LifecycleRule lifecycleRule = new LifecycleRule();
         String id = parser.getValue(node, "ID");
         String prefix = parser.getValue(node, "Prefix");
@@ -1273,10 +1254,14 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             }
         }
         catch (ParseException e) {
-            throw new BindingException("caught a parsing exception while translating the transition or expiration date - " + e.getMessage());
+            MalformedXMLException ex = new MalformedXMLException("Expiration|Transition Date");
+            ex.initCause(e);
+            throw ex;
         }
         catch (Exception ex) {
-            throw new BindingException("caught general exception while parsing lifecycle input - " + ex.getMessage());
+            MalformedXMLException e = new MalformedXMLException("LifecycleRule");
+            ex.initCause(ex);
+            throw e;
         }
 
         return lifecycleRule;

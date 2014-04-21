@@ -25,12 +25,16 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.objectstorage.UnitTestSupport;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.storage.msgs.s3.*;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -97,6 +101,9 @@ public class AclTests {
         account2FullControl = new Grant(account2, Permission.FULL_CONTROL.toString());
         account2ReadAcp = new Grant(account2, Permission.READ_ACP.toString());
         account2WriteAcp = new Grant(account2, Permission.WRITE_ACP.toString());
+
+        //Accounts.addSystemAccountWithAdmin(Account.SYSTEM_ACCOUNT_PREFIX);
+        Accounts.addSystemAccount().addUser(User.ACCOUNT_ADMIN, "/", true, null);
     }
 
 	@Test
@@ -203,22 +210,39 @@ public class AclTests {
 	}
 	
 	@Test	
-	public void testACLGroupMembership() {
-		User anonymous = Principals.nobodyUser();
-		User admin = Principals.systemUser();
-		
-		Assert.assertTrue("Anonymous should be in AllUsers", AclUtils.isUserMember(anonymous.getUserId(), ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
-		Assert.assertTrue("Anonymous should not be in AuthenticatedUsers", !AclUtils.isUserMember(anonymous.getUserId(), ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
-		Assert.assertTrue("System should be in AllUsers", AclUtils.isUserMember(admin.getUserId(), ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
-		Assert.assertTrue("System should be in AuthenticatedUsers", AclUtils.isUserMember(admin.getUserId(), ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
-		
-		Assert.assertTrue("System should be in AWS-Exec", AclUtils.isUserMember(admin.getUserId(), ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
-		Assert.assertTrue("System should be in Logging-group", AclUtils.isUserMember(admin.getUserId(), ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
-		
-		Assert.assertTrue("Random should NOT be in AWS-Exec", !AclUtils.isUserMember("01231295135", ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
-		Assert.assertTrue("Random should NOT be in Logging-group", !AclUtils.isUserMember("12523957135", ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
+	public void testACLGroupMembership() throws Exception {
+		String anonymous = Principals.nobodyUser().getUserId();
+		String admin = Principals.systemUser().getUserId();
+        String eucaAdmin = Accounts.lookupSystemAdmin().getUserId();
+        String random = "01231295135";
 
-	}
+
+        Assert.assertTrue("Anonymous should be in AllUsers", AclUtils.isUserMember(anonymous, ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
+        Assert.assertTrue("Anonymous should NOT be in AuthenticatedUsers", !AclUtils.isUserMember(anonymous, ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
+        Assert.assertTrue("Anonymous should NOT be in AWS-Exec", !AclUtils.isUserMember(anonymous, ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
+        Assert.assertTrue("Anonymous should NOT be in EC2-Bundle-Read", !AclUtils.isUserMember(anonymous, ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ));
+        Assert.assertTrue("Anonymous should NOT be in Logging-group", !AclUtils.isUserMember(anonymous, ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
+
+
+        Assert.assertTrue("System should be in AllUsers", AclUtils.isUserMember(admin, ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
+        Assert.assertTrue("System should be in AuthenticatedUsers", AclUtils.isUserMember(admin, ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
+        Assert.assertTrue("System should be in AWS-Exec", AclUtils.isUserMember(admin, ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
+        Assert.assertTrue("System should be in EC2-Bundle-Read", AclUtils.isUserMember(admin, ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ));
+		Assert.assertTrue("System should be in Logging-group", AclUtils.isUserMember(admin, ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
+
+        Assert.assertTrue("Euca/Admin should be in AllUsers", AclUtils.isUserMember(eucaAdmin, ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
+        Assert.assertTrue("Euca/Admin should be in AuthenticatedUsers", AclUtils.isUserMember(eucaAdmin, ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
+        Assert.assertTrue("Euca/Admin should be in AWS-Exec", AclUtils.isUserMember(eucaAdmin, ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
+        Assert.assertTrue("Euca/Admin should be in EC2-Bundle-Read", AclUtils.isUserMember(eucaAdmin, ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ));
+        Assert.assertTrue("Euca/Admin should be in Logging-group", AclUtils.isUserMember(eucaAdmin, ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
+
+        Assert.assertTrue("Random should be in AllUsers", AclUtils.isUserMember(random, ObjectStorageProperties.S3_GROUP.ALL_USERS_GROUP));
+        Assert.assertTrue("Random should be in AuthenticatedUsers", AclUtils.isUserMember(random, ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP));
+        Assert.assertTrue("Random should NOT be in AWS-Exec", !AclUtils.isUserMember(random, ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ));
+        Assert.assertTrue("Random should NOT be in EC2-Bundle-Read", !AclUtils.isUserMember(random, ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ));
+        Assert.assertTrue("Random should NOT be in Logging-group", !AclUtils.isUserMember(random, ObjectStorageProperties.S3_GROUP.LOGGING_GROUP));
+
+    }
 	
 	private S3AccessControlledEntity getACLEntity(final String name) {
 		S3AccessControlledEntity testEntity = new S3AccessControlledEntity() {
