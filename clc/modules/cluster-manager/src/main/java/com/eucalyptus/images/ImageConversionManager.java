@@ -746,7 +746,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         final String expiration = sdf.format(c.getTime());
         // based on http://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-BundleInstance.html
         final String policy = String.format("{\"expiration\":\"%s\",\"conditions\":[{\"bucket\": \"%s\"},"
-            + "[\"starts-with\", \"$key\", \"%s\"],{\"acl\":\"ec2-bundle-read\"}]}",
+            + "[\"starts-with\", \"$key\", \"%s\"],{\"acl\":\"aws-exec-read\"}]}",
             expiration, bucket, prefix);
         this.importDisk.setUploadPolicy(B64.standard.encString(policy));
 
