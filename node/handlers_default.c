@@ -1928,7 +1928,7 @@ static void *bundling_thread(void *arg)
                          "--bucket", pParams->bucketName,\
                          "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
                          "--arch", "x86_64", /* @TODO: obtain arch from instance*/ \
-                         "--account", "123456789012", /* @TODO: obtain account for real*/ \
+                         "--account", pParams->accountId, \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
                          "--upload-policy", pParams->S3Policy,\
@@ -2042,6 +2042,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     if ((pParams = EUCA_ZALLOC(1, sizeof(struct bundling_params_t))) == NULL)
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
 
+    pParams->accountId = strdup(pInstance->accountId); //! @TODO propagate requestor's accountId through the stack
     pParams->instance = pInstance;
     pParams->bucketName = strdup(bucketName);
     pParams->filePrefix = strdup(filePrefix);
