@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
@@ -171,6 +172,15 @@ public class CollectionUtils {
     };
   }
 
+  public static <T> Function<T,Optional<T>> optionalUnit( ) {
+    return new Function<T,Optional<T>>() {
+      @Override
+      public Optional<T> apply( final T t ) {
+        return Optional.fromNullable( t );
+      }
+    };
+  }
+
   /**
    * Unchecked cast function.
    *
@@ -276,6 +286,30 @@ public class CollectionUtils {
           @Override
           public Integer apply( final I item ) {
             return sum + evaluator.apply( item );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Flip parameter order for curried function.
+   *
+   * @param curried The function to flip
+   * @param <F1> The first parameter type
+   * @param <F2> The second parameter type
+   * @param <T> The result type
+   * @return The flipped function
+   */
+  public static <F1,F2,T> Function<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
+    return new Function<F2,Function<F1,T>>( ){
+      @Override
+      public Function<F1, T> apply( @Nullable final F2 f2 ) {
+        return new Function<F1, T>( ){
+          @Override
+          public T apply( @Nullable final F1 f1 ) {
+            //noinspection ConstantConditions
+            return curried.apply( f1 ).apply( f2 );
           }
         };
       }
