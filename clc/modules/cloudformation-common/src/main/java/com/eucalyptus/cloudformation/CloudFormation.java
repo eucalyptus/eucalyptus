@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -34,6 +35,7 @@ import com.eucalyptus.util.techpreview.TechPreview;
 @Partition( value = CloudFormation.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @TechPreview
+@Description( "Cloudformation API service" )
 public class CloudFormation extends ComponentId {
   private static final long serialVersionUID = 1L;
 

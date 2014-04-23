@@ -20,6 +20,7 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
@@ -27,4 +28,5 @@ import com.eucalyptus.component.annotation.PublicService;
 @Partition( Eucalyptus.class )
 @PublicService
 @FaultLogPrefix( "services" )
+@Description( "SNS API service" )
 public class Notifications extends ComponentId {}
