@@ -66,9 +66,16 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.eucalyptus.component.ServiceOrderings;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.Component;
@@ -491,12 +498,15 @@ public class EmpyreanService {
             ? Filters.componentType( ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) ) )
             : Predicates.alwaysTrue( ) );
       final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
-      
+
+
+      final Collection<ServiceConfiguration> replyConfigs = Lists.newArrayList();
       for ( final Component comp : Iterables.filter( Components.list( ), componentFilter ) ) {
-        for ( final ServiceConfiguration config : Iterables.filter( comp.services( ), configPredicate ) ) {
-          reply.getServiceStatuses( ).add( ServiceConfigurations.asServiceStatus( false, false ).apply( config ) );
-        }
+        replyConfigs.addAll( Collections2.filter( comp.services( ), configPredicate ) );
       }
+      final ImmutableList<ServiceConfiguration> sortedReplyConfigs = ServiceOrderings.defaultOrdering().immutableSortedCopy( replyConfigs );
+      final Collection<ServiceStatusType> replyStatuses = Collections2.transform( sortedReplyConfigs, ServiceConfigurations.asServiceStatus( false, false ) );
+      reply.getServiceStatuses().addAll( replyStatuses );
       return reply;
     }
     
@@ -534,15 +544,16 @@ public class EmpyreanService {
       final Predicate<Component> componentFilter = Filters.componentType( compId );
       final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
       
+      List<ServiceConfiguration> replyConfigs = Lists.newArrayList();
       for ( final Component comp : Components.list( ) ) {
         if ( componentFilter.apply( comp ) ) {
-          for ( final ServiceConfiguration config : comp.services( ) ) {
-            if ( configPredicate.apply( config ) ) {
-              reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
-            }
-          }
+          Collection<ServiceConfiguration> acceptedConfigs = Collections2.filter( comp.services(), configPredicate );
+          replyConfigs.addAll( acceptedConfigs );
         }
       }
+      ImmutableList<ServiceConfiguration> sortedReplyConfigs = ServiceOrderings.defaultOrdering().immutableSortedCopy( replyConfigs );
+      final Collection<ServiceStatusType> transformedReplyConfigs = Collections2.transform( sortedReplyConfigs, transformToStatus );
+      reply.getServiceStatuses( ).addAll( transformedReplyConfigs );
     } else {
       for ( ServiceId s : request.getServices( ) ) {
         reply.getServiceStatuses( ).add( TypeMappers.transform( s, ServiceStatusType.class ) );
