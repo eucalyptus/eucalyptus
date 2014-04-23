@@ -30,7 +30,7 @@ import eucadmin
 
 class DeregisterRequest(AWSQueryRequest):
     ServiceName = ''
-    ServicePath = '/services/Configuration'
+    ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
 
     @property

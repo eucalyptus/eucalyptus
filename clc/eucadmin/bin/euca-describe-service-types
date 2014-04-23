@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2011-2014 Eucalyptus Systems, Inc.
+# Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -25,8 +25,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from eucadmin.registeruserservices import RegisterUserServices
+import eucadmin.serviceregistration
 
 if __name__ == "__main__":
-    r = RegisterUserServices()
+    r = eucadmin.serviceregistration.DescribeAvailableServiceTypes()
     r.main_cli()
