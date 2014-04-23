@@ -66,6 +66,8 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
+import com.eucalyptus.component.events.ServiceEvents;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -810,7 +812,7 @@ public class ServiceTransitions {
         if ( Hosts.isCoordinator( ) && !config.isVmLocal( )
              && config.getComponentId( ).isRegisterable( )
              && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
-          ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
+          ServiceEvents.fire( config, config.getStateMachine().getState() );
         }
       }
     },
