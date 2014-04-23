@@ -19,12 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.dns.resolvers;
 
-import java.net.InetAddress;
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
@@ -40,8 +39,9 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
  */
 public class GenericDnsResolver implements DnsResolver {
   @Override
-  public boolean checkAccepts(Record query, InetAddress source) {
-    Name name = query.getName( );
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final Name name = query.getName( );
     if ( RequestType.SOA.apply( query ) ) {
       if (DomainNames.externalSubdomain().equals(name)) // zone apex
         return true;
@@ -51,8 +51,9 @@ public class GenericDnsResolver implements DnsResolver {
   }
 
   @Override
-  public DnsResponse lookupRecords(Record query) {
-    Name name = query.getName( );
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final Name name = query.getName( );
     if( RequestType.SOA.apply(query)){
       if(DomainNames.externalSubdomain().equals(name)){
         final Record soaRec = DomainNameRecords.sourceOfAuthorityStaticSerial(name);

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,15 +64,13 @@
 
 package com.eucalyptus.util.dns;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -85,10 +83,8 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.google.common.base.Objects;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Primitives;
 
 @ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )
@@ -97,7 +93,8 @@ public class NameserverResolver implements DnsResolver {
   public static Boolean enabled = Boolean.TRUE;
   
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
     Name name = query.getName( );
     if ( !Bootstrap.isOperational( ) || !enabled || !DomainNames.isSystemSubdomain( name ) ) {
       return false;
@@ -112,7 +109,8 @@ public class NameserverResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     Name name = query.getName( );
     if ( RequestType.A.apply( query ) && DomainNames.isSystemSubdomain( name ) ) {
       String label0 = name.getLabelString( 0 );
@@ -150,12 +148,14 @@ public class NameserverResolver implements DnsResolver {
   public static class NameserverReverseResolver implements DnsResolver {
     
     @Override
-    public boolean checkAccepts( Record query, InetAddress source ) {
+    public boolean checkAccepts( DnsRequest request ) {
+      final Record query = request.getQuery( );
       return RequestType.PTR.apply( query ) && Subnets.isSystemHostAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) );
     }
     
     @Override
-    public DnsResponse lookupRecords( Record query ) {
+    public DnsResponse lookupRecords( DnsRequest request ) {
+      final Record query = request.getQuery( );
       final InetAddress hostAddr = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
       final String hostAddress = hostAddr.getHostAddress( );
       if ( Hosts.contains( hostAddress ) ) {

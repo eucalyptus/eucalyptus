@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,11 +64,10 @@
 
 package com.eucalyptus.compute.metadata;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -80,7 +79,6 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.dns.InstanceDomainNames;
-import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "dns.instancedata",
                     description = "Options controlling DNS name resolution for the instance metadata service." )
@@ -95,7 +93,9 @@ public class InstanceDataDnsResolver implements DnsResolver {
   private static final Record      ADDRESS_RECORD         = DomainNameRecords.addressRecord( INSTANCE_DATA, METADATA_ADDR );
   
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final InetAddress source = request.getRemoteAddress( );
     final Name name = query.getName( );
     if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source ) ) {
       return false;
@@ -119,7 +119,8 @@ public class InstanceDataDnsResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     final Name name = query.getName( );
     if ( RequestType.A.apply( query ) ) {
       final String label0 = name.getLabelString( 0 );

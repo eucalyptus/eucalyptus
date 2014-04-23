@@ -181,6 +181,18 @@ public class CollectionUtils {
     };
   }
 
+  public static <T> Function<Optional<T>,T> optionalOrNull() {
+    return new Function<Optional<T>,T>( ) {
+      @Nullable
+      @Override
+      public T apply( final Optional<T> optional ) {
+        return optional == null ?
+            null :
+            optional.orNull( );
+      }
+    };
+  }
+
   /**
    * Unchecked cast function.
    *
@@ -232,6 +244,36 @@ public class CollectionUtils {
                                               final Function<? super I, V> valueFunction ) {
     if ( iterable != null ) for ( final I item : iterable ) {
       targetMap.put( keyFunction.apply( item ), valueFunction.apply( item ) );
+    }
+    return targetMap;
+  }
+
+  /**
+   * Transform the given map, ignoring mapped entries with null keys or values.
+   *
+   * <p>WARNING! if the transform produces duplicate keys entries will be
+   * overwritten.</p>
+   *
+   * @param map The map to transform
+   * @param targetMap The result map
+   * @param keyFunction The key transform
+   * @param valueFunction The value transform
+   * @param <K1> The source key type
+   * @param <V1> The source value type
+   * @param <K2> The target key type
+   * @param <V2> The target value type
+   * @return The supplied target map
+   */
+  public static <K1,V1,K2,V2> Map<K2,V2> transform( final Map<K1,V1> map,
+                                                    final Map<K2,V2> targetMap,
+                                                    final Function<? super K1, K2> keyFunction,
+                                                    final Function<? super V1, V2> valueFunction ) {
+    if ( map != null ) for ( final Map.Entry<K1,V1> entry : map.entrySet( ) ) {
+      final K2 targetKey = keyFunction.apply( entry.getKey( ) );
+      final V2 targetValue = valueFunction.apply( entry.getValue( ) );
+      if ( targetKey != null && targetValue != null ) {
+        targetMap.put( targetKey, targetValue );
+      }
     }
     return targetMap;
   }

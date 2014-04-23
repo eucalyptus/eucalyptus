@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,6 +86,7 @@ import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.TopologyDnsResolver;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.compute.common.Compute;
@@ -147,44 +148,45 @@ public class ServiceZone extends Zone {
 	 * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
 	 */
 	@Override
-	public SetResponse findRecords(Name name, int type) {
+	public SetResponse findRecords(Name name, int type, InetAddress listenerAddress ) {
 		if (type == Type.AAAA)
 			return (SetResponse.ofType(SetResponse.SUCCESSFUL));
 
 		final String nameString = name.toString( );
 		if ( nameString.startsWith("autoscaling.") ) {
-			return buildResponseForComponent( name, type, AutoScaling.class );
+			return buildResponseForComponent( name, type, listenerAddress, AutoScaling.class );
 		} else if ( nameString.startsWith("cloudwatch.") ) {
-			return buildResponseForComponent( name, type, CloudWatch.class );
+			return buildResponseForComponent( name, type, listenerAddress, CloudWatch.class );
 		} else if ( nameString.startsWith("compute.") || nameString.startsWith("eucalyptus.") ) {
-			return buildResponseForComponent( name, type, Compute.class );
+			return buildResponseForComponent( name, type, listenerAddress, Compute.class );
 		} else if ( nameString.startsWith("euare.") ) {
-			return buildResponseForComponent( name, type, Euare.class );
+			return buildResponseForComponent( name, type, listenerAddress, Euare.class );
 		} else if ( nameString.startsWith("loadbalancing.") ) {
-			return buildResponseForComponent( name, type, LoadBalancing.class );
+			return buildResponseForComponent( name, type, listenerAddress, LoadBalancing.class );
 		} else if ( nameString.startsWith("objectstorage.") || nameString.matches(".*\\.objectstorage\\..*") || nameString.startsWith("walrus.") || nameString.matches(".*\\.walrus\\..*")) {
 			//map walrus to objectstorage for legacy support
-            SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
 			try {
 				List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
 				for (InetAddress osgIp : osgIps) {
-					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, osgIp)));
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, TopologyDnsResolver.maphost( listenerAddress, osgIp ))));
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
-				return super.findRecords(name, type);
+				return super.findRecords(name, type, listenerAddress);
 			}
 			return resp;
 		} else if ( nameString.startsWith("tokens.") ) {
-			return buildResponseForComponent( name, type, Tokens.class );
+			return buildResponseForComponent( name, type, listenerAddress, Tokens.class );
 		} else {
-			return super.findRecords( name, type );
+			return super.findRecords( name, type, listenerAddress );
 		}
 	}
 
 	private SetResponse buildResponseForComponent(
 			final Name name,
 			final int type,
+			final InetAddress listenerAddress,
 			final Class<? extends ComponentId> componentClass
 	) {
 		try {
@@ -192,11 +194,11 @@ public class ServiceZone extends Zone {
 			final List<ServiceConfiguration> configurations = Lists.newArrayList( Topology.lookupMany( componentClass ) );
 			Collections.shuffle( configurations );
 			for ( final ServiceConfiguration configuration : configurations ) {
-				resp.addRRset( new RRset( new ARecord( name, 1, 20/* ttl */, configuration.getInetAddress( ) ) ) );
+				resp.addRRset( new RRset( new ARecord( name, 1, 20/* ttl */, TopologyDnsResolver.maphost( listenerAddress, configuration.getInetAddress( ) ) ) ) );
 			}
 			return resp;
 		} catch ( Exception e ) {
-			return super.findRecords(name, type);
+			return super.findRecords(name, type, listenerAddress);
 		}
 	}
 

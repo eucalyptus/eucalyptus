@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.dns;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
@@ -91,7 +92,7 @@ public class TransientPtrZone extends Zone {
  * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
  */
 @Override
-  public SetResponse findRecords( Name name, int type ) {
+  public SetResponse findRecords( Name name, int type, InetAddress listenerAddress ) {
     if (StackConfiguration.USE_INSTANCE_DNS && name.toString().endsWith(".in-addr.arpa.")) {
   	  int index = name.toString().indexOf(".in-addr.arpa.");
   	  Name target;
@@ -106,7 +107,7 @@ public class TransientPtrZone extends Zone {
 	          .append(parts[1]).append(".")
 	          .append(parts[0]).toString( );		  	
 		} else {
-		  return super.findRecords( name, type );
+		  return super.findRecords( name, type, listenerAddress );
 		}
 		try {
 	      VmInstance instance = VmInstances.lookupByPublicIp( ipCandidate );
@@ -116,17 +117,17 @@ public class TransientPtrZone extends Zone {
 	        VmInstance instance = VmInstances.lookupByPrivateIp( ipCandidate );
 	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
-	        return super.findRecords( name, type );
+	        return super.findRecords( name, type, listenerAddress );
 	      }
 	    }
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
         resp.addRRset( new RRset( new PTRRecord( name, DClass.IN, ttl, target ) ) );
         return resp;
 	  } else {
-	    return super.findRecords( name, type );
+	    return super.findRecords( name, type, listenerAddress );
 	  }
 	} else {
-      return super.findRecords( name, type );
+      return super.findRecords( name, type, listenerAddress );
     }
   }
 

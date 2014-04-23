@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1196,6 +1196,19 @@ public class Hosts {
       } );
     }
     return null;
+  }
+
+  public static Host lookup( final InetAddress address ) {
+    if ( hostMap.containsKey( address.getHostAddress( ) ) ) {
+      return hostMap.get( address.getHostAddress( ) );
+    } else {
+      return Iterables.tryFind( Hosts.list( ), new Predicate<Host>( ) {
+        @Override
+        public boolean apply( Host input ) {
+          return input.getHostAddresses( ).contains( address );
+        }
+      } ).orNull( );
+    }
   }
 
   public static boolean contains( final String hostDisplayName ) {

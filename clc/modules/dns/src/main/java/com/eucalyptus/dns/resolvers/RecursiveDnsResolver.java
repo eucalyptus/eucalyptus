@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.dns.resolvers;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -139,7 +140,8 @@ public class RecursiveDnsResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( final Record query ) {
+  public DnsResponse lookupRecords( final DnsRequest request ) {
+    final Record query = request.getQuery( );
     final Name name = query.getName( );
     final int type = query.getType( );
     final Cache cache = new Cache( );
@@ -206,11 +208,12 @@ public class RecursiveDnsResolver implements DnsResolver {
    * 2. The query is absolute
    * 3. The name/address is not in a Eucalyptus controlled subdomain
    * 
-   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(Record, org.xbill.DNS.Name,
-   *      InetAddress)
+   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(DnsRequest)
    */
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( final DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final InetAddress source = request.getRemoteAddress( );
     if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source )) {
       return false;
     } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )
