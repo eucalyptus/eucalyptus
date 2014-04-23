@@ -2260,6 +2260,7 @@ static void log_line (const char * line)
 static int log_fds(int nfds, int fds[])
 {
     assert(nfds<=FD_SETSIZE);
+    int ret = EUCA_ERROR;
 
     char * buf = malloc(FD_SETSIZE * LINEBUFSIZE); // do not use array to avoid blowing the stack
     if (buf == NULL) {
@@ -2334,7 +2335,7 @@ static int log_fds(int nfds, int fds[])
             }
         }
     }
-    return EUCA_OK;
+    ret = EUCA_OK;
 
  close_fds:
     for (int i=0; i<nfds; i++) {
@@ -2343,7 +2344,11 @@ static int log_fds(int nfds, int fds[])
             fds[i] = -1;
         }
     }
-    return EUCA_ERROR;
+    if (buf) {
+        free(buf);
+    }
+
+    return ret;
 }
 
 //!
