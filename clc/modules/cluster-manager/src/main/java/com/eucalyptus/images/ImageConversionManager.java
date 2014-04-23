@@ -610,19 +610,25 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   final static String TAG_KEY_MESSAGE = "euca:image-conversion-status";
   final static Map<String, String> tagState = Maps.newHashMap();
   final static Map<String, String> tagMessage = Maps.newHashMap();
+  
   private void tagResources(final String imageId, final String state, String statusMessage) throws Exception{
-    final List<String> instances = this.lookupInstanceIds(imageId);
+    final ImageInfo image = Images.lookupImage(imageId);
+    final String imageOwnerId = image.getOwnerUserId();
+    
+    final List<VmInstance> instances = this.lookupInstances(imageId);
     if(tagState.containsKey(imageId) && state.equals(tagState.get(imageId))){
       ;
     }else{
-      resetTag(imageId, TAG_KEY_STATE, state);
+      resetTag(imageOwnerId, imageId, TAG_KEY_STATE, state);
       tagState.put(imageId, state);
     }
-    for(final String instanceId : instances){
+    for(final VmInstance instance : instances){
+      final String instanceId = instance.getInstanceId();
+      final String instanceOwnerId = instance.getOwnerUserId();
       if(tagState.containsKey(instanceId) && state.equals(tagState.get(instanceId))){
         ;
       }else{
-        resetTag(instanceId, TAG_KEY_STATE, state);
+        resetTag(instanceOwnerId, instanceId, TAG_KEY_STATE, state);
         tagState.put(instanceId, state);
       }
     }
@@ -633,23 +639,25 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     if(tagMessage.containsKey(imageId) && statusMessage.equals(tagMessage.get(imageId))){
       ;
     }else{
-      resetTag(imageId, TAG_KEY_MESSAGE, statusMessage);
+      resetTag(imageOwnerId, imageId, TAG_KEY_MESSAGE, statusMessage);
       tagMessage.put(imageId, statusMessage);
     }
-    for(final String instanceId : instances){
+    for(final VmInstance instance : instances){
+      final String instanceId = instance.getInstanceId();
+      final String instanceOwnerId = instance.getOwnerUserId();
       if(tagMessage.containsKey(instanceId) && statusMessage.endsWith(tagMessage.get(instanceId))){
         ;
       }else{
-        resetTag(instanceId, TAG_KEY_MESSAGE, statusMessage);
+        resetTag(instanceOwnerId, instanceId, TAG_KEY_MESSAGE, statusMessage);
         tagMessage.put(instanceId, statusMessage);
       }
     }
   }
   
-  private void resetTag(final String resourceId, final String tagKey, final String tagValue) throws Exception{
+  private void resetTag(final String userId, final String resourceId, final String tagKey, final String tagValue) throws Exception{
     /// try deleting tags
     try{
-      final DeleteTagsTask task = new DeleteTagsTask(Lists.newArrayList(resourceId), Lists.newArrayList(tagKey));
+      final DeleteTagsTask task = new DeleteTagsTask(userId, Lists.newArrayList(resourceId), Lists.newArrayList(tagKey));
       final CheckedListenableFuture<Boolean> result = task.dispatch();
       if(result.get()){
         ;
@@ -660,7 +668,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     // create tag
     final Map<String,String> tag = Maps.newHashMap();
     tag.put(tagKey, tagValue);
-    final CreateTagsTask task = new CreateTagsTask(Lists.newArrayList(resourceId), tag);
+    final CreateTagsTask task = new CreateTagsTask(userId, Lists.newArrayList(resourceId), tag);
     final CheckedListenableFuture<Boolean> result = task.dispatch();
     if(result.get()){
       ;
@@ -669,18 +677,33 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   }
   
   private void removeTags(final String imageId) throws Exception{
-    final List<String> resources = Lists.newArrayList(imageId);
-    resources.addAll(this.lookupInstanceIds(imageId));
+    final ImageInfo image = Images.lookupImage(imageId);
+    final String imageOwnerId = image.getOwnerUserId();
     
-    final DeleteTagsTask task = new DeleteTagsTask(resources, 
+    DeleteTagsTask task = new DeleteTagsTask(imageOwnerId, Lists.newArrayList(image.getDisplayName()), 
         Lists.newArrayList(TAG_KEY_STATE, TAG_KEY_MESSAGE));
-    final CheckedListenableFuture<Boolean> result = task.dispatch();
+    CheckedListenableFuture<Boolean> result = task.dispatch();
     if(result.get()){
       ;
     }
+    final List<VmInstance> instances = this.lookupInstances(imageId);
+    for(final VmInstance instance : instances){
+      final String instanceId = instance.getInstanceId();
+      final String instanceOwnerId = instance.getOwnerUserId();
+      try{
+        task = new DeleteTagsTask(instanceOwnerId, Lists.newArrayList(instanceId), 
+            Lists.newArrayList(TAG_KEY_STATE, TAG_KEY_MESSAGE));
+        result = task.dispatch();
+        if(result.get()){
+          ;
+        }
+      }catch(final Exception ex){
+        ;
+      }
+    }
   }
   
-  private List<String> lookupInstanceIds(final String imageId){
+  private List<VmInstance> lookupInstances(final String imageId){
     try{
       final List<VmInstance> instances = VmInstances.list(new Predicate<VmInstance>(){
         @Override
@@ -688,12 +711,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           return imageId.equals(arg0.getBootRecord().getMachineImageId());
         }
       });
-      return Lists.transform(instances, new Function<VmInstance, String>(){
-        @Override
-        public String apply(VmInstance arg0) {
-          return arg0.getInstanceId();
-        }
-      });
+      return instances;
     }catch(final Exception ex){
       return Lists.newArrayList();
     }
@@ -986,10 +1004,12 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private class CreateTagsTask extends EucalyptusActivityTask {
+  
+  private static class CreateTagsTask extends EucalyptusUserActivityTask {
     private List<String> resourceIds = null;
     private Map<String,String> tags = null;
-    private CreateTagsTask(final List<String> resourceIds, final Map<String,String> tags){
+    private CreateTagsTask(final String userId, final List<String> resourceIds, final Map<String,String> tags){
+      super(userId);
       this.resourceIds = resourceIds;
       this.tags = tags;
     }
@@ -1020,10 +1040,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private class DeleteTagsTask extends EucalyptusActivityTask {
+  private static class DeleteTagsTask extends EucalyptusUserActivityTask {
     private List<String> resourceIds = null;
     private List<String> tagKeys = null;
-    private DeleteTagsTask(final List<String> resourceIds, final List<String> tagKeys){
+    private DeleteTagsTask(final String userId, final List<String> resourceIds, final List<String> tagKeys){
+      super(userId);
       this.resourceIds = resourceIds;
       this.tagKeys = tagKeys;
     }
@@ -1072,6 +1093,24 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       try{
         final DispatchingClient<ImagingMessage, Imaging> client =
             new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , Imaging.class );
+            client.init();
+            return client;
+      }catch(Exception e){
+        throw Exceptions.toUndeclared(e);
+      }
+    }
+  }
+  
+  private static abstract class EucalyptusUserActivityTask extends ActivityTask<EucalyptusMessage, Eucalyptus> {
+    private String userId = null;
+    private EucalyptusUserActivityTask(final String userId){
+      this.userId = userId;
+    }
+    @Override
+    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+      try{
+        final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+            new DispatchingClient<>( userId, Eucalyptus.class );
             client.init();
             return client;
       }catch(Exception e){
