@@ -4,12 +4,10 @@ import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
 import java.util.List;
@@ -87,14 +85,22 @@ public class FunctionEvaluation {
     // If not an object or array, nothing to validate
   }
 
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
+  public enum TemplateSection {
+    CONDITION,
+    OUTPUT,
+    RESOURCE_PROPERTY,
+    RESOURCE_METADATA,
+    RESOURCE_UPDATE_POLICY
+  }
+
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, TemplateSection templateSection) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
     ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
       ArrayNode arrayCopy = objectMapper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
-        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap);
+        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap, templateSection);
         arrayCopy.add(arrayElement);
       }
       return arrayCopy;
@@ -103,17 +109,31 @@ public class FunctionEvaluation {
     // Some functions require literal values for arguments, so don't recursively evaluate functions on
     // values.  (Will do so within functions where appropriate)
     for (IntrinsicFunction intrinsicFunction: IntrinsicFunctions.values()) {
+
+      // Per AWS: You define all conditions in the Conditions section of a template except for Fn::If conditions.
+      // You can use the Fn::If condition in the metadata attribute, update policy attribute, and property values in the
+      // Resources section of a template.
+     if ((intrinsicFunction == IntrinsicFunctions.CONDITION || intrinsicFunction == IntrinsicFunctions.AND
+       || intrinsicFunction == IntrinsicFunctions.EQUALS || intrinsicFunction == IntrinsicFunctions.NOT ||
+       intrinsicFunction == IntrinsicFunctions.OR) && templateSection != TemplateSection.CONDITION) {
+        continue; // skip this function evaluation
+      }
+      if (intrinsicFunction == IntrinsicFunctions.IF &&
+        !(templateSection == TemplateSection.RESOURCE_METADATA || templateSection == TemplateSection.RESOURCE_PROPERTY
+          || templateSection == TemplateSection.RESOURCE_UPDATE_POLICY)) {
+        continue; // skip this function evaluation
+      }
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
-        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap);
+        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap, templateSection);
       }
     }
     // Otherwise, not a function, so evaluate functions of values
     ObjectNode objectCopy = objectMapper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
-      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap);
+      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap, templateSection);
       objectCopy.put(key, objectElement);
     }
     return objectCopy;

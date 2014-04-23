@@ -82,12 +82,12 @@ public class StackActivityImpl implements StackActivity{
       LOG.debug("Resource " + resourceId + " not allowed by condition, skipping");
       return JsonHelper.getStringFromJsonNode(returnNode);
     };
-    // Finally evaluate all properties
+    // Evaluate all properties
     if (resourceInfo.getPropertiesJson() != null) {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
       for (String propertyKey: propertyKeys) {
-        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_PROPERTY);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
         } else {
@@ -96,6 +96,36 @@ public class StackActivityImpl implements StackActivity{
       }
       resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
     }
+    // Update metadata: 
+    if (resourceInfo.getMetadataJson() != null) {
+      JsonNode metadataJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson());
+      List<String> metadataKeys = Lists.newArrayList(metadataJsonNode.fieldNames());
+      for (String metadataKey: metadataKeys) {
+        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_METADATA);
+        if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedMetadataNode).isMatch()) {
+          ((ObjectNode) metadataJsonNode).remove(metadataKey);
+        } else {
+          ((ObjectNode) metadataJsonNode).put(metadataKey, evaluatedMetadataNode);
+        }
+      }
+      resourceInfo.setMetadataJson(JsonHelper.getStringFromJsonNode(metadataJsonNode));
+    }
+    // Update update policy: 
+    if (resourceInfo.getUpdatePolicyJson() != null) {
+      JsonNode updatePolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getUpdatePolicyJson());
+      List<String> updatePolicyKeys = Lists.newArrayList(updatePolicyJsonNode.fieldNames());
+      for (String updatePolicyKey: updatePolicyKeys) {
+        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_UPDATE_POLICY);
+        if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedUpdatePolicyNode).isMatch()) {
+          ((ObjectNode) updatePolicyJsonNode).remove(updatePolicyKey);
+        } else {
+          ((ObjectNode) updatePolicyJsonNode).put(updatePolicyKey, evaluatedUpdatePolicyNode);
+        }
+      }
+      resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyJsonNode));
+    }
+
+
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
@@ -270,7 +300,7 @@ public class StackActivityImpl implements StackActivity{
       List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
       for (StackEntity.Output output: outputs) {
         output.setReady(true);
-        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap).textValue());
+        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.OUTPUT).textValue());
       }
       stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
       stackEntity.setStackStatus(StackEntity.Status.CREATE_COMPLETE);

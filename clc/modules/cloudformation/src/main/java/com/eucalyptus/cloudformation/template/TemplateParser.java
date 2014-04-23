@@ -20,14 +20,9 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.CreateStackResult;
 import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
 import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.Parameters;
 import com.eucalyptus.cloudformation.ResourceList;
-import com.eucalyptus.cloudformation.Stack;
-import com.eucalyptus.cloudformation.StackCreator;
-import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.TemplateParameters;
 import com.eucalyptus.cloudformation.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.ValidationErrorException;
@@ -748,11 +743,11 @@ public class TemplateParser {
         JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
         // Don't like to have to roll/unroll condition map like this but evaluateFunctions is used post-map a lot
         Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
-        // just put a placeholder in if evaluating11111111111111111111111
+        // just put a placeholder in if evaluating
         if (onlyEvaluateTemplate) {
           conditionMap.put(conditionName, Boolean.FALSE);
         } else {
-          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template.getStackEntity(), template.getResourceInfoMap())));
+          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template.getStackEntity(), template.getResourceInfoMap(), FunctionEvaluation.TemplateSection.CONDITION)));
         }
         template.getStackEntity().setConditionMapJson(StackEntityHelper.conditionMapToJson(conditionMap));
       }
