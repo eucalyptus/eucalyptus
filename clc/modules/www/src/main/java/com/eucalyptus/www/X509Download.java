@@ -64,6 +64,8 @@ package com.eucalyptus.www;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
@@ -73,6 +75,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.eucalyptus.auth.AuthenticationProperties;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloudformation.CloudFormation;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -102,9 +107,12 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
+import com.google.common.net.InetAddresses;
 
 public class X509Download extends HttpServlet {
   
@@ -328,11 +336,28 @@ public class X509Download extends HttpServlet {
   private static Optional<String> remotePublicify( final Class<? extends ComponentId> componentClass ) {
     Optional<String> url = Optional.absent( );
     if ( Topology.isEnabled( componentClass ) ) try {
-      url = Optional.of( ServiceUris.remotePublicify( Topology.lookup( componentClass ) ).toString( ) );
+      url = Optional.of( hostMap( ServiceUris.remotePublicify( Topology.lookup( componentClass ) ) ).toString() );
     } catch ( final Exception e ) {
       LOG.error( "Failed to get URL for service " + componentClass.getSimpleName( ), e );
     }
     return url;
+  }
+
+  @SuppressWarnings( "ConstantConditions" )
+  private static URI hostMap( final URI uri ) {
+    final Optional<Cidr> hostMatcher = InetAddresses.isInetAddress( uri.getHost( ) ) ?
+        Cidr.parse( ).apply( AuthenticationProperties.CREDENTIAL_DOWNLOAD_HOST_MATCH ) :
+        Optional.<Cidr>absent( );
+    if ( hostMatcher.isPresent( ) ) {
+      final Host host = Hosts.lookup( InetAddresses.forString( uri.getHost( ) ) );
+      if ( host != null ) {
+        final Optional<InetAddress> mappedHost = Iterables.tryFind( host.getHostAddresses( ), hostMatcher.get( ) );
+        if ( mappedHost.isPresent( ) ) {
+          return URI.create( uri.toString( ).replaceFirst( uri.getHost( ), mappedHost.get( ).getHostAddress( ) ) );
+        }
+      }
+    }
+    return uri;
   }
 
   private static String entryFor( final String variable,
