@@ -39,7 +39,6 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Lists;
@@ -679,10 +678,10 @@ public class CloudFormationService {
     throw exception;
   }
   private void checkActionPermission(final String actionType, final Context ctx)
-    throws EucalyptusCloudException {
+    throws AccessDeniedException {
     if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
-      throw new EucalyptusCloudException("User does not have permission");
+      throw new AccessDeniedException("User does not have permission");
     }
   }
 
