@@ -89,7 +89,8 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.Principals
+import org.jboss.netty.handler.stream.ChunkedInput;
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusResponseType extends BaseMessage {
@@ -396,6 +397,9 @@ public class WalrusDataGetRequestType extends WalrusDataRequestType {
 }
 
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
+    List<ChunkedInput> dataInputStream;
+    Long byteRangeStart;
+    Long byteRangeEnd;
 
 	def WalrusDataGetResponseType() {}
 }
@@ -610,7 +614,7 @@ public class GetObjectExtendedType extends WalrusDataGetRequestType {
 	Boolean returnCompleteObjectOnConditionFailure;
 }
 
-public class GetObjectExtendedResponseType extends WalrusDataResponseType {
+public class GetObjectExtendedResponseType extends WalrusDataGetResponseType {
 	Status status;
 }
 
