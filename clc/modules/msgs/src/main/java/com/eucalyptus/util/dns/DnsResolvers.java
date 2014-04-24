@@ -446,7 +446,6 @@ public class DnsResolvers extends ServiceJarDiscovery {
     final int type = query.getType( );
     response.getHeader( ).setFlag( Flags.RA );// always mark the response w/ the recursion available
 // bit
-    LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
     for ( final DnsResolver r : DnsResolvers.resolversFor( request ) ) {
       try {
         final DnsResponse reply = r.lookupRecords( request );
