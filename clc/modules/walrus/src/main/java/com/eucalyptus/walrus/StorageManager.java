@@ -66,7 +66,9 @@ import java.io.IOException;
 import java.util.List;
 
 import com.eucalyptus.walrus.entities.PartInfo;
+import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.GetObjectType;
+import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 
 import com.eucalyptus.storage.common.fs.FileIO;
@@ -111,18 +113,13 @@ public interface StorageManager {
 
     public String getObjectPath(String bucket, String object);
 
-    public long getObjectSize(String bucket, String object);
+    public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long size, Boolean isCompressed) throws WalrusException;
 
-    public void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
-			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
+    public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException;
 
-    public void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
-			long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
+    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException;
 
-    public void sendHeaders(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, Long size, String etag,
-			String lastModified, String contentType, String contentDisposition, String versionId, BucketLogData logData);
-	
-	public void disable() throws EucalyptusCloudException ;
+    public void disable() throws EucalyptusCloudException ;
 
 	public void enable() throws EucalyptusCloudException;
 
@@ -131,6 +128,4 @@ public interface StorageManager {
 	public void check() throws EucalyptusCloudException;
 
 	public void start() throws EucalyptusCloudException;
-
-    void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, List<PartInfo> parts, Long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId);
 }
