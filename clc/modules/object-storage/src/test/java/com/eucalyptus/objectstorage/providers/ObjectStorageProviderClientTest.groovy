@@ -1,5 +1,6 @@
 package com.eucalyptus.objectstorage.providers
 
+import com.eucalyptus.objectstorage.UnitTestSupport
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType
@@ -66,6 +67,9 @@ class ObjectStorageProviderClientTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        UnitTestSupport.setupOsgPersistenceContext()
+        UnitTestSupport.setupAuthPersistenceContext()
+        UnitTestSupport.initializeAuth(2, 2)
         configValue = System.getProperty("provider", "mem")
         println 'Using provider ' + configValue
 
