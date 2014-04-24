@@ -1099,11 +1099,12 @@ public class TemplateParser {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(outputsJsonNode.get(outputKey));
         StackEntity.Output output = new StackEntity.Output();
         output.setKey(outputKey);
-
         JsonNode outputValueNode = outputJsonNode.get(OutputKey.Value.toString());
+        boolean match = false;
         for (IntrinsicFunction intrinsicFunction: IntrinsicFunctions.values()) {
           IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(outputValueNode);
           if (matchResult.isMatch()) {
+            match = true;
             intrinsicFunction.validateArgTypesWherePossible(matchResult);
             if (intrinsicFunction == IntrinsicFunctions.IF) {
               // don't allow if... (strange, other functions are ok).  Note: This is only at the top level.  Ifs are allowed within other functions. (AWS?!!)
@@ -1111,13 +1112,14 @@ public class TemplateParser {
             }
           }
         }
+        if (!match) {
+          if (outputValueNode.isObject()) {
+            throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a Map.");
+          }
 
-        if (outputValueNode.isObject()) {
-          throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a Map.");
-        }
-
-        if (outputValueNode.isArray()) {
-          throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a List.");
+          if (outputValueNode.isArray()) {
+            throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a List.");
+          }
         }
 
 
