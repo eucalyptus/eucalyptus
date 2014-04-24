@@ -186,7 +186,7 @@ public class StackResourceEntityManager {
           Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
           Restrictions.eq("stackId", stackNameOrId))
         )
-        .add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED.toString())); // placeholder, AWS doesn't return these
+        .add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
       List<StackResourceEntity> result = criteria.list();
       if (result == null || result.isEmpty()) {
         // TODO: in theory the stack may exist but with no resources.  Either way though there is an error, so this is ok.
@@ -235,7 +235,7 @@ public class StackResourceEntityManager {
       if (physicalResourceId != null) {
         criteria.add(Restrictions.eq("physicalResourceId", logicalResourceId));
       }
-      criteria.add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED.toString())); // placeholder, AWS doesn't return these
+      criteria.add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
       returnValue = criteria.list();
       db.commit( );
     }
