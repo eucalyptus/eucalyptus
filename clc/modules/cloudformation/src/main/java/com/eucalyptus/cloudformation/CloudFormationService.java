@@ -255,7 +255,7 @@ public class CloudFormationService {
     for (Date date: dates) {
       if (date == null) continue;
       if (date != null && latestDate == null) {
-        latestDate = null;
+        latestDate = date;
         continue;
       }
       if (date.after(latestDate)) {
