@@ -69,8 +69,7 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        LOG.trace( LogUtil.dumpObject(event));
-        LOG.trace("Filter pipe got event: " + event.getMessage().hashCode());
+        Logs.extreme().debug( LogUtil.dumpObject(event));
         if (event.getMessage() instanceof MappingHttpRequest) {
             MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
             byte[] boundary = (byte[])(httpRequest.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_formboundary.toString()));
@@ -94,17 +93,14 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
      * @return
      */
     protected ChannelBuffer scanForFormBoundary(final ChannelBuffer data) throws Exception {
-        LOG.trace("Scanning data for boundary data buffer: " + data.toString());
         if(this.truncateRemaining) {
             this.trailingBytesFound += data.readableBytes();
-            LOG.trace("Truncating remaining chunks. Returning zero-length buffer. Data offered length: " + data.readableBytes());
             return ChannelBuffers.wrappedBuffer(new byte[0]);
         }
 
         ChannelBuffer dataToScan = data;
         if(this.lastBufferedChunk != null) {
             dataToScan = ChannelBuffers.wrappedBuffer(this.lastBufferedChunk, data);
-            LOG.trace("Found previously buffered data, appending it with length: " + this.lastBufferedChunk.readableBytes() + " to get data of size " + dataToScan.readableBytes());
         }
 
         int lfIndex = 0;
@@ -120,8 +116,6 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
                 if(lfIndex + this.boundaryBytes.length > bufferSize) {
                     //Can't be found here not enough space to check, save the slice in the last chunk
                     this.lastBufferedChunk = dataToScan.copy(lfIndex, bufferSize - lfIndex);
-                    LOG.trace("Buffering last " + (bufferSize - lfIndex) + " bytes for next chunk");
-                    LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
                     //Return what we know is okay.
                     endOffset = lfIndex;
                 } else {
@@ -150,15 +144,10 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
         } while(endOffset < 0);
 
         if(endOffset == 0) {
-            LOG.trace("No bytes to send. Delivering zero-length buffer");
             return ChannelBuffers.wrappedBuffer(new byte[0]);
         } else if(endOffset == -1 || endOffset == dataToScan.readableBytes()) {
-            LOG.trace("Delivering full chunk: " + dataToScan.readableBytes());
-            LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
             return dataToScan;
         } else {
-            LOG.trace("Delivering subset of bytes: 0 - " + endOffset);
-            LOG.trace("Indexes now " + dataToScan.readerIndex() + " - " + dataToScan.writerIndex());
             return ChannelBuffers.copiedBuffer(dataToScan.slice(0, endOffset));
         }
     }
@@ -166,9 +155,7 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
     @Override
     protected void appendChunk(ChannelBuffer input, Channel channel) throws Exception {
         ChannelBuffer data = scanForFormBoundary(input);
-        LOG.trace("Appending Chunk. Original: " + input.toString() + " scanned: " + data.toString());
         this.bytesSent += data.readableBytes();
-        LOG.trace("Filtered POST content. Input buffer length: " + input.readableBytes() + " Filtered buffer length: " + data.readableBytes() + " Total sent upstream: " + this.bytesSent);
         super.appendChunk(data, channel);
     }
 }
