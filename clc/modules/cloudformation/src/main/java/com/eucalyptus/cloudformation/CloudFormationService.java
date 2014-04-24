@@ -26,6 +26,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
+import com.eucalyptus.cloudformation.entity.StackEventEntity;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
@@ -207,6 +208,26 @@ public class CloudFormationService {
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
       if (stackEntity != null) {
+        if (stackEntity.getStackStatus() == StackEntity.Status.CREATE_IN_PROGRESS || stackEntity.getStackStatus() == StackEntity.Status.ROLLBACK_IN_PROGRESS ||
+          stackEntity.getStackStatus() == StackEntity.Status.DELETE_IN_PROGRESS) {
+          Date mostRecentActionDate = getLatestDate(stackEntity);
+          List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackEntity.getStackId(), accountId); 
+          if (stackResourceEntityList != null) {
+            for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
+              mostRecentActionDate = newestDate(mostRecentActionDate, getLatestDate(stackResourceEntity));
+            }
+          }
+          List<StackEventEntity> stackEventEntityList = StackEventEntityManager.getStackEventEntitiesById(stackEntity.getStackId(), accountId);
+          if (stackEventEntityList != null) {
+            for (StackEventEntity stackEventEntity: stackEventEntityList) {
+              mostRecentActionDate = newestDate(mostRecentActionDate, getLatestDate(stackEventEntity));
+            }
+          }
+          // TODO: make this a property
+          if (mostRecentActionDate != null && (System.currentTimeMillis() - mostRecentActionDate.getTime() < 60 * 60 * 1000L)) { // been less than an hour since we tried to delete the stack?
+            throw new StackOperationInProgressException("A stack operation is ongoing (" + stackEntity.getStackStatus() + "), please try again later.");
+          }
+        }
         new StackDeletor(stackEntity, userId).start();
       }
     } catch (Exception ex) {
@@ -215,6 +236,35 @@ public class CloudFormationService {
     }
     return reply;
   }
+
+  private Date getLatestDate(StackEntity stackEntity) {
+    return newestDate(stackEntity.getCreateOperationTimestamp(), stackEntity.getDeleteOperationTimestamp(), stackEntity.getLastUpdateOperationTimestamp(), stackEntity.getCreationTimestamp(), stackEntity.getLastUpdateTimestamp());
+  }
+
+  private Date getLatestDate(StackResourceEntity stackResourceEntity) {
+    return newestDate(stackResourceEntity.getCreationTimestamp(), stackResourceEntity.getLastUpdateTimestamp());
+  }
+
+  private Date getLatestDate(StackEventEntity stackEventEntity) {
+    return newestDate(stackEventEntity.getTimestamp(), stackEventEntity.getCreationTimestamp(), stackEventEntity.getLastUpdateTimestamp());
+  }
+
+
+  private Date newestDate(Date... dates) {
+    Date latestDate = null;
+    for (Date date: dates) {
+      if (date == null) continue;
+      if (date != null && latestDate == null) {
+        latestDate = null;
+        continue;
+      }
+      if (date.after(latestDate)) {
+        latestDate = date;
+      }
+    }
+    return latestDate;
+  }
+
 
   public DescribeStackEventsResponseType describeStackEvents(DescribeStackEventsType request)
       throws CloudFormationException {
