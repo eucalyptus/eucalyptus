@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +94,7 @@
 package com.eucalyptus.dns;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.util.*;
 
 import org.xbill.DNS.Master;
@@ -101,9 +102,7 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
-import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Name;
-import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
 import org.xbill.DNS.ZoneTransferException;
@@ -532,8 +531,7 @@ public class Zone {
 	 * @return A SetResponse object
 	 * @see SetResponse
 	 */ 
-	public SetResponse
-	findRecords(Name name, int type) {
+	public SetResponse findRecords(Name name, int type, InetAddress listenerAddress ) {
 		return lookup(name, type);
 	}
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -405,29 +405,32 @@ public class DnsResolvers extends ServiceJarDiscovery {
       return this.recursive;
     }
   }
-  
-  public abstract interface DnsResolver {
-    public abstract boolean checkAccepts( Record query, InetAddress source );
+
+  public interface DnsRequest {
+    Record getQuery();
+
+    InetAddress getRemoteAddress( );
+
+    InetAddress getLocalAddress( );
+  }
+
+  public interface DnsResolver {
+    boolean checkAccepts( DnsRequest request );
     
-    public abstract DnsResponse lookupRecords( Record query );
+    DnsResponse lookupRecords( DnsRequest request );
     
-    public abstract String toString( );
+    String toString( );
   }
   
   /**
    * Returns the list of resolvers which accept the name from the given source address.
-   * 
-   * @param name
-   * @param source
-   * @return
    */
-  private static Iterable<DnsResolver> resolversFor( final Record query, final InetAddress source ) {
+  private static Iterable<DnsResolver> resolversFor( final DnsRequest request ) {
     return Iterables.filter( resolvers.values( ), new Predicate<DnsResolver>( ) {
-      
       @Override
       public boolean apply( final DnsResolver input ) {
         try {
-          return input.checkAccepts( query, source );
+          return input.checkAccepts( request );
         } catch ( final Exception ex ) {
           return false;
         }
@@ -436,16 +439,17 @@ public class DnsResolvers extends ServiceJarDiscovery {
   }
   
   private static SetResponse lookupRecords( final Message response,
-                                            final Record query,
-                                            final InetAddress source ) {
+                                            final DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final InetAddress source = request.getRemoteAddress( );
     final Name name = query.getName( );
     final int type = query.getType( );
     response.getHeader( ).setFlag( Flags.RA );// always mark the response w/ the recursion available
 // bit
     LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
-    for ( final DnsResolver r : DnsResolvers.resolversFor( query, source ) ) {
+    for ( final DnsResolver r : DnsResolvers.resolversFor( request ) ) {
       try {
-        final DnsResponse reply = r.lookupRecords( query );
+        final DnsResponse reply = r.lookupRecords( request );
         if ( reply == null ) {
           LOG.debug( "DnsResolver: returned null " + name + " using " + r );
           continue;
@@ -498,19 +502,16 @@ public class DnsResolvers extends ServiceJarDiscovery {
   }
   
   public static SetResponse findRecords( final Message response,
-                                         final Record queryRecord,
-                                         final InetAddress source ) {
-    final Name name = queryRecord.getName( );
-    final int type = queryRecord.getType( );
+                                         final DnsRequest request ) {
     try {
       if ( !enabled || !Bootstrap.isOperational( ) ) {
         return SetResponse.ofType( SetResponse.UNKNOWN );
       } else {
-        final Iterable<DnsResolver> resolverList = DnsResolvers.resolversFor( queryRecord, source );
+        final Iterable<DnsResolver> resolverList = DnsResolvers.resolversFor( request );
         if ( Iterables.isEmpty( resolverList ) ) {
           return SetResponse.ofType( SetResponse.UNKNOWN );
         } else {
-          return DnsResolvers.lookupRecords( response, queryRecord, source );
+          return DnsResolvers.lookupRecords( response, request );
         }
       }
     } catch ( final Exception ex ) {

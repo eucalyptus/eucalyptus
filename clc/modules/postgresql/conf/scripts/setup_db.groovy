@@ -108,9 +108,10 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   private static String PG_STATUS = "status"
   private static String PG_MODE = "-mf"
   private static String PG_PORT = 8777
+  private static String PG_HOST = "0.0.0.0" // or "127.0.0.1,${Internets.localHostAddress( )}"
   private static String PG_CLI_HOME = "-h${SubDirectory.DB.getChildPath(EUCA_DB_DIR)}"
   private static String PG_CLI_PORT = "-p${PG_PORT}"
-  private static String PG_PORT_OPTS2 = "-o -h0.0.0.0/0 -p${PG_PORT} -i"
+  private static String PG_PORT_OPTS2 = "-o -h${PG_HOST} -p${PG_PORT}"
   private static String PG_DB_OPT = "-D"
   private static String PG_INITDB = "/bin/initdb"
   private static String PG_X_OPT = "-X"
@@ -133,7 +134,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   private static long   MIN_SEMMNI = 1536L
   private static long   MIN_SEMMNS = 32000L
   private static long   MIN_SHMMAX = 536870912L //512MB
-  
+
   private int runProcessWithReturn( List<String> args ) {
     LOG.debug("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
     try {
@@ -528,8 +529,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public boolean load( ) throws Exception {
-    
-    if (!startResource( ) ) {
+
+    if ( !startResource( ) ) {
       throw new Exception("Unable to start postgresql")
     }
     

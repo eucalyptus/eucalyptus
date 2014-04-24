@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,7 +159,7 @@ public class UDPHandler extends Thread {
 	    byte [] response = null;
 	    try {
 	      query = new Message(in);
-	      ConnectionHandler.setRemoteInetAddress( this.packet.getAddress( ) );
+	      ConnectionHandler.setLocalAndRemoteInetAddresses( this.socket.getLocalAddress( ), this.packet.getAddress( ) );
 	      try {
 	        response = generateReply( query, in,
 	            this.packet.getLength( ),
@@ -168,7 +168,7 @@ public class UDPHandler extends Thread {
 	        response = errorMessage(query, Rcode.SERVFAIL);
 	        throw ex;
 	      } finally {
-	        ConnectionHandler.removeRemoteInetAddress( );
+	        ConnectionHandler.clearInetAddresses( );
 	      }
 	      if (response == null)
 	        return false;

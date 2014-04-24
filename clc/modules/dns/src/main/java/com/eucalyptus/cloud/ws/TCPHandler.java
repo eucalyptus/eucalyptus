@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,14 +112,14 @@ public class TCPHandler extends ConnectionHandler {
       byte [] response = null;
       try {
         final Message query = new Message(inBytes);
-        ConnectionHandler.setRemoteInetAddress( socket.getInetAddress( ) );
+        ConnectionHandler.setLocalAndRemoteInetAddresses( socket.getLocalAddress( ), socket.getInetAddress( ) );
         try {
           response = generateReply(query, inBytes, inBytes.length, socket);
         } catch ( RuntimeException ex ) {
           response = errorMessage(query, Rcode.SERVFAIL);
           throw ex;
         } finally {
-          ConnectionHandler.removeRemoteInetAddress( );
+          ConnectionHandler.clearInetAddresses( );
         }
         if (response == null)
           return;
