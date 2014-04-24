@@ -103,16 +103,16 @@ public class BucketFactoryTest {
         configValue = System.getProperty("provider", "mem")
         println 'Using provider ' + configValue
 
-        S3ProviderConfiguration.S3AccessKey = System.getProperty("accessKey")
-        S3ProviderConfiguration.S3SecretKey = System.getProperty("secretKey")
-        S3ProviderConfiguration.S3Endpoint = System.getProperty("endpoint")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey = System.getProperty("accessKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey = System.getProperty("secretKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint = System.getProperty("endpoint")
 
         switch (configValue) {
             case 's3':
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3Endpoint))
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3AccessKey))
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3SecretKey))
-                println 'Using endpoint ' + S3ProviderConfiguration.S3Endpoint
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey))
+                println 'Using endpoint ' + S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint
                 provider = new S3ProviderClient()
                 break
             case 'walrus':
