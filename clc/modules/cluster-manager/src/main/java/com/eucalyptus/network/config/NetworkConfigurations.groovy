@@ -134,9 +134,9 @@ class NetworkConfigurations {
 
           Subnet defaultSubnet = null
           if ( subnet && subnet.name ) {
-            defaultSubnet = networkConfiguration.subnets.find{ Subnet s -> s.name?:s.subnet == subnet.name }
+            defaultSubnet = networkConfiguration.subnets?.find{ Subnet s -> s.name?:s.subnet == subnet.name }
           } else if ( !subnet ) {
-            defaultSubnet = networkConfiguration.subnets.getAt(0) // must be only one
+            defaultSubnet = networkConfiguration.subnets?.getAt(0) // must be only one
           }
 
           clusterConfiguration.vnetSubnet = subnet?.subnet?:defaultSubnet?.subnet
