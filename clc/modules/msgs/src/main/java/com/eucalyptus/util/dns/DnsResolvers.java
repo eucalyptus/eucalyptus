@@ -457,7 +457,11 @@ public class DnsResolvers extends ServiceJarDiscovery {
           response.getHeader( ).setFlag( Flags.AA );
         }
         if ( reply.isNxdomain( ) ) {
-          addRRset( name, response, new Record[] { DomainNameRecords.sourceOfAuthority( name ) }, type );
+          try{
+            addRRset( name, response, new Record[] { DomainNameRecords.sourceOfAuthority( name ) }, type );
+          }catch(final Exception ex){
+            ;
+          }
           response.getHeader( ).setRcode( Rcode.NXDOMAIN );
           return SetResponse.ofType( SetResponse.NXDOMAIN );
         } else if ( reply.hasAnswer( ) ) {

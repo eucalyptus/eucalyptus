@@ -201,19 +201,28 @@ public class RecursiveDnsResolver implements DnsResolver {
       }
     }
     
-    if((aLookup.getResult() == Lookup.SUCCESSFUL || aLookup.getResult() == Lookup.TYPE_NOT_FOUND) 
+    if((aLookup.getResult() == Lookup.SUCCESSFUL 
+        || aLookup.getResult() == Lookup.TYPE_NOT_FOUND ) 
         && queriedrrs.size()==0){
       List<Record> nsRecs = lookupNSRecords( name, cache );
       for ( Record nsRec : nsRecs ) {
         authority.add( nsRec );
       }
     }
+
+    DnsResponse response = DnsResponse.forName( query.getName( ) )
+        .recursive( )
+        .withAuthority( Lists.newArrayList( authority ) )
+        .withAdditional( Lists.newArrayList( additional ) )
+        .answer( Lists.newArrayList( answer ) );
     
-    return DnsResponse.forName( query.getName( ) )
-                      .recursive( )
-                      .withAuthority( Lists.newArrayList( authority ) )
-                      .withAdditional( Lists.newArrayList( additional ) )
-                      .answer( Lists.newArrayList( answer ) );
+    if(aLookup.getResult() == Lookup.HOST_NOT_FOUND && queriedrrs.size()==0){
+        response = DnsResponse.forName( query.getName( ) )
+          .recursive( )
+          .withAuthority( Lists.newArrayList( authority ) )
+          .nxdomain();
+    }
+    return response;
   }
   
   /**
