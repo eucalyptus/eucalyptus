@@ -38,7 +38,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       return validateResult.getJsonNode();
     }
@@ -68,7 +68,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Already known to be string from validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.REF_STR);
@@ -114,7 +114,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       return new ValidateResult(matchResult.getJsonNode(), this);
     }
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Already known to be string from validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.CONDITION_STR);
@@ -154,7 +154,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // We know from validate this is an array of 3 elements
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_IF);
@@ -163,7 +163,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       // Note: We are not evaluating both conditions because AWS does not for dependency purposes.  Don't want
       // to get a non-ready reference if we choose the wrong path
       // But evaluate (as it could be a function) the one we are returning
-      return FunctionEvaluation.evaluateFunctions(keyJsonNode.get(booleanValue ? 1 : 2), stackEntity, resourceInfoMap, templateSection);
+      return FunctionEvaluation.evaluateFunctions(keyJsonNode.get(booleanValue ? 1 : 2), stackEntity, resourceInfoMap);
     }
     @Override
     public boolean isBooleanFunction() {
@@ -191,13 +191,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Array verified by validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_EQUALS);
       // On the other hand, the arguments can be functions
-      JsonNode evaluatedArg0 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(0), stackEntity, resourceInfoMap, templateSection);
-      JsonNode evaluatedArg1 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(1), stackEntity, resourceInfoMap, templateSection);
+      JsonNode evaluatedArg0 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(0), stackEntity, resourceInfoMap);
+      JsonNode evaluatedArg1 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(1), stackEntity, resourceInfoMap);
       // TODO: not sure if this is true
       if (evaluatedArg0 == null || evaluatedArg1 == null) return new TextNode("false");
       return new TextNode(String.valueOf(evaluatedArg0.equals(evaluatedArg1)));
@@ -235,7 +235,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_AND);
@@ -243,7 +243,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       for (int i = 0;i < keyJsonNode.size(); i++) {
         // Evaluate the argument
         JsonNode argNode = keyJsonNode.get(i);
-        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, stackEntity, resourceInfoMap, templateSection);
+        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, stackEntity, resourceInfoMap);
         boolean boolValueArgNode = FunctionEvaluation.evaluateBoolean(evaluatedArgNode);
         returnValue = returnValue && boolValueArgNode;
       }
@@ -282,7 +282,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_OR);
@@ -290,7 +290,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       for (int i = 0;i < keyJsonNode.size(); i++) {
         // Evaluate the argument
         JsonNode argNode = keyJsonNode.get(i);
-        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, stackEntity, resourceInfoMap, templateSection);
+        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, stackEntity, resourceInfoMap);
         boolean boolValueArgNode = FunctionEvaluation.evaluateBoolean(evaluatedArgNode);
         returnValue = returnValue || boolValueArgNode;
       }
@@ -327,13 +327,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_NOT);
       // Evaluate the argument
       JsonNode arg0Node = keyJsonNode.get(0);
-      JsonNode evaluatedArg0Node = FunctionEvaluation.evaluateFunctions(arg0Node, stackEntity, resourceInfoMap, templateSection);
+      JsonNode evaluatedArg0Node = FunctionEvaluation.evaluateFunctions(arg0Node, stackEntity, resourceInfoMap);
       boolean boolValueArg0Node = FunctionEvaluation.evaluateBoolean(evaluatedArg0Node);
       return new TextNode(String.valueOf(!boolValueArg0Node));
     }
@@ -363,14 +363,14 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Size 3 array verified in validate
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_FIND_IN_MAP);
       // Array elements might be functions so evaluate them
-      JsonNode arg0Node = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap, templateSection);
-      JsonNode arg1Node = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap, templateSection);
-      JsonNode arg2Node = FunctionEvaluation.evaluateFunctions(key.get(2), stackEntity, resourceInfoMap, templateSection);
+      JsonNode arg0Node = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap);
+      JsonNode arg1Node = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap);
+      JsonNode arg2Node = FunctionEvaluation.evaluateFunctions(key.get(2), stackEntity, resourceInfoMap);
       // Make sure types ok
       if (arg0Node == null || arg1Node == null || arg2Node == null
         || !arg0Node.isTextual() || !arg1Node.isTextual() || !arg2Node.isTextual()
@@ -414,10 +414,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // This one could evaluate from a function
-      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_BASE64), stackEntity, resourceInfoMap, templateSection);
+      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_BASE64), stackEntity, resourceInfoMap);
       if (keyJsonNode == null || !keyJsonNode.isTextual()) {
         throw new ValidationErrorException("Template error: every Fn::Base64 object must have a String-typed value.");
       }
@@ -453,13 +453,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Top level array validated already
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_SELECT);
       // on the other hand, both fields within this function can be functions (including the second array) so
       // let's evaluate
-      JsonNode evaluatedIndex = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap, templateSection);
+      JsonNode evaluatedIndex = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap);
       if (evaluatedIndex == null || !evaluatedIndex.isTextual() || evaluatedIndex.textValue() == null) {
         throw new ValidationErrorException("Template error: Fn::Select requires a list " +
           "argument with a valid index value as its first element");
@@ -474,7 +474,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
         throw new ValidationErrorException("Template error: Fn::Select requires a list argument with two elements: an integer index and a list");
       }
       // Second argument must be an array but can be one as the result of a function
-      JsonNode argArray = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap, templateSection);
+      JsonNode argArray = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap);
       if (argArray == null || !argArray.isArray()) {
         throw new ValidationErrorException("Template error: Fn::Select requires a list argument with two elements: an integer index and a list");
       }
@@ -509,13 +509,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // Top level array validated already
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_JOIN);
       // On the other hand, the delimiter and the list of strings can be functions
-      JsonNode delimiterNode = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap, templateSection);
-      JsonNode arrayOfStrings = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap, templateSection);
+      JsonNode delimiterNode = FunctionEvaluation.evaluateFunctions(key.get(0), stackEntity, resourceInfoMap);
+      JsonNode arrayOfStrings = FunctionEvaluation.evaluateFunctions(key.get(1), stackEntity, resourceInfoMap);
       if (delimiterNode == null || !delimiterNode.isTextual() || delimiterNode.textValue() == null ||
         arrayOfStrings == null || !arrayOfStrings.isArray()) {
         throw new ValidationErrorException("Template error: every Fn::Join object requires two parameters, "
@@ -556,10 +556,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       // This one could evaluate from a function
-      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_AZS), stackEntity, resourceInfoMap, templateSection);
+      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_AZS), stackEntity, resourceInfoMap);
       if (keyJsonNode == null || !keyJsonNode.isTextual()) {
         throw new ValidationErrorException("Template error: every Fn::GetAZs object must have a String-typed value.");
       }
@@ -606,7 +606,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_ATT);
       String resourceName = key.get(0).textValue();
@@ -650,7 +650,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, FunctionEvaluation.TemplateSection templateSection) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
       checkState(validateResult, this);
       throw new ValidationErrorException("Template Error: Encountered unsupported function: " +
         validateResult.getJsonNode().fieldNames().next()+" Supported functions are: [Fn::Base64, Fn::GetAtt, " +

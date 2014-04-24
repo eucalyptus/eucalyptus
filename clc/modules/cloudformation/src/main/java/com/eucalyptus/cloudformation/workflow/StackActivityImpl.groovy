@@ -87,7 +87,7 @@ public class StackActivityImpl implements StackActivity{
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
       for (String propertyKey: propertyKeys) {
-        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_PROPERTY);
+        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
         } else {
@@ -101,7 +101,7 @@ public class StackActivityImpl implements StackActivity{
       JsonNode metadataJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson());
       List<String> metadataKeys = Lists.newArrayList(metadataJsonNode.fieldNames());
       for (String metadataKey: metadataKeys) {
-        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_METADATA);
+        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedMetadataNode).isMatch()) {
           ((ObjectNode) metadataJsonNode).remove(metadataKey);
         } else {
@@ -115,7 +115,7 @@ public class StackActivityImpl implements StackActivity{
       JsonNode updatePolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getUpdatePolicyJson());
       List<String> updatePolicyKeys = Lists.newArrayList(updatePolicyJsonNode.fieldNames());
       for (String updatePolicyKey: updatePolicyKeys) {
-        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.RESOURCE_UPDATE_POLICY);
+        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedUpdatePolicyNode).isMatch()) {
           ((ObjectNode) updatePolicyJsonNode).remove(updatePolicyKey);
         } else {
@@ -300,7 +300,7 @@ public class StackActivityImpl implements StackActivity{
       List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
       for (StackEntity.Output output: outputs) {
         output.setReady(true);
-        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, com.eucalyptus.cloudformation.template.FunctionEvaluation.TemplateSection.OUTPUT).textValue());
+        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap).textValue());
       }
       stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
       stackEntity.setStackStatus(StackEntity.Status.CREATE_COMPLETE);

@@ -154,7 +154,7 @@ public class CloudFormationService {
           onFailure = request.getOnFailure();
         }
       } else {
-        onFailure = (request.getDisableRollback() == Boolean.FALSE) ? "DO_NOTHING" : "ROLLBACK";
+        onFailure = (request.getDisableRollback() == Boolean.TRUE) ? "DO_NOTHING" : "ROLLBACK";
       }
       StackEntityManager.addStack(template.getStackEntity());
       for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {

@@ -85,22 +85,14 @@ public class FunctionEvaluation {
     // If not an object or array, nothing to validate
   }
 
-  public enum TemplateSection {
-    CONDITION,
-    OUTPUT,
-    RESOURCE_PROPERTY,
-    RESOURCE_METADATA,
-    RESOURCE_UPDATE_POLICY
-  }
-
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, TemplateSection templateSection) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
     ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
       ArrayNode arrayCopy = objectMapper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
-        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap, templateSection);
+        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap);
         arrayCopy.add(arrayElement);
       }
       return arrayCopy;
@@ -110,30 +102,17 @@ public class FunctionEvaluation {
     // values.  (Will do so within functions where appropriate)
     for (IntrinsicFunction intrinsicFunction: IntrinsicFunctions.values()) {
 
-      // Per AWS: You define all conditions in the Conditions section of a template except for Fn::If conditions.
-      // You can use the Fn::If condition in the metadata attribute, update policy attribute, and property values in the
-      // Resources section of a template.
-     if ((intrinsicFunction == IntrinsicFunctions.CONDITION || intrinsicFunction == IntrinsicFunctions.AND
-       || intrinsicFunction == IntrinsicFunctions.EQUALS || intrinsicFunction == IntrinsicFunctions.NOT ||
-       intrinsicFunction == IntrinsicFunctions.OR) && templateSection != TemplateSection.CONDITION) {
-        continue; // skip this function evaluation
-      }
-      if (intrinsicFunction == IntrinsicFunctions.IF &&
-        !(templateSection == TemplateSection.RESOURCE_METADATA || templateSection == TemplateSection.RESOURCE_PROPERTY
-          || templateSection == TemplateSection.RESOURCE_UPDATE_POLICY)) {
-        continue; // skip this function evaluation
-      }
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
-        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap, templateSection);
+        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap);
       }
     }
     // Otherwise, not a function, so evaluate functions of values
     ObjectNode objectCopy = objectMapper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
-      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap, templateSection);
+      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap);
       objectCopy.put(key, objectElement);
     }
     return objectCopy;
