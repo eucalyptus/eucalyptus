@@ -253,8 +253,8 @@ public class X509Download extends HttpServlet {
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
       }
       
-      sb.append( entryFor( "S3_URL", "A valid OSG is not configured. S3_URL is not set. " +
-          "Please register/configure an OSG and download credentials again. " +
+      sb.append( entryFor( "S3_URL", "An OSG is either not registered or not configured. S3_URL is not set. " +
+          "Please register an OSG and/or set a valid s3 endpoint and download credentials again. " +
           "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
           remotePublicify( ObjectStorage.class ) ) );
       sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
