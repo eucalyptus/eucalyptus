@@ -197,7 +197,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
         }
       }
     } catch ( Exception e1 ) {
-      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e );
+      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
     }
     ctx.sendUpstream( e );
   }
@@ -218,12 +218,12 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
           final List<Throwable> causalChain = Throwables.getCausalChain( reply );
           extra = ( String[] ) Collections2.transform( causalChain, Functions.toStringFunction() ).toArray();
         } catch ( Exception e1 ) {
-          Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e );
+          Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
         }
         createLogEntry( ctx, reply, extra );
       }
     } catch ( Exception e1 ) {
-      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e );
+      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
     }
     ctx.sendDownstream( e );
   }
