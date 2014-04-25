@@ -35,6 +35,7 @@ import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.entities.ScheduledJob;
 import com.eucalyptus.objectstorage.entities.TorrentInfo;
+import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -74,7 +75,8 @@ public class UnitTestSupport {
                         .addAnnotatedClass(LifecycleRule.class)
                         .addAnnotatedClass(ScheduledJob.class)
                         .addAnnotatedClass(ObjectStorageGlobalConfiguration.class)
-                        .addAnnotatedClass(S3AccessControlledEntity.class);
+                        .addAnnotatedClass(S3AccessControlledEntity.class)
+                        .addAnnotatedClass(S3ProviderConfiguration.class);
 
         PersistenceContexts.registerPersistenceContext("eucalyptus_osg", config);
     }

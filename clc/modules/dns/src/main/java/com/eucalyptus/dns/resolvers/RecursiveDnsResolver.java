@@ -63,11 +63,14 @@
 package com.eucalyptus.dns.resolvers;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
 import org.xbill.DNS.Cache;
 import org.xbill.DNS.Credibility;
 import org.xbill.DNS.Lookup;
@@ -77,6 +80,7 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -108,6 +112,7 @@ import com.google.common.collect.Sets;
 @ConfigurableClass( root = "dns.recursive",
                     description = "Options controlling recursive DNS resolution and caching." )
 public class RecursiveDnsResolver implements DnsResolver {
+  private static Logger LOG = Logger.getLogger( RecursiveDnsResolver.class );
   @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
@@ -195,11 +200,29 @@ public class RecursiveDnsResolver implements DnsResolver {
         }
       }
     }
-    return DnsResponse.forName( query.getName( ) )
-                      .recursive( )
-                      .withAuthority( Lists.newArrayList( authority ) )
-                      .withAdditional( Lists.newArrayList( additional ) )
-                      .answer( Lists.newArrayList( answer ) );
+    
+    if((aLookup.getResult() == Lookup.SUCCESSFUL 
+        || aLookup.getResult() == Lookup.TYPE_NOT_FOUND ) 
+        && queriedrrs.size()==0){
+      List<Record> nsRecs = lookupNSRecords( name, cache );
+      for ( Record nsRec : nsRecs ) {
+        authority.add( nsRec );
+      }
+    }
+
+    DnsResponse response = DnsResponse.forName( query.getName( ) )
+        .recursive( )
+        .withAuthority( Lists.newArrayList( authority ) )
+        .withAdditional( Lists.newArrayList( additional ) )
+        .answer( Lists.newArrayList( answer ) );
+    
+    if(aLookup.getResult() == Lookup.HOST_NOT_FOUND && queriedrrs.size()==0){
+        response = DnsResponse.forName( query.getName( ) )
+          .recursive( )
+          .withAuthority( Lists.newArrayList( authority ) )
+          .nxdomain();
+    }
+    return response;
   }
   
   /**

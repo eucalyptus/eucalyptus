@@ -446,7 +446,6 @@ public class DnsResolvers extends ServiceJarDiscovery {
     final int type = query.getType( );
     response.getHeader( ).setFlag( Flags.RA );// always mark the response w/ the recursion available
 // bit
-    LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
     for ( final DnsResolver r : DnsResolvers.resolversFor( request ) ) {
       try {
         final DnsResponse reply = r.lookupRecords( request );
@@ -458,7 +457,11 @@ public class DnsResolvers extends ServiceJarDiscovery {
           response.getHeader( ).setFlag( Flags.AA );
         }
         if ( reply.isNxdomain( ) ) {
-          addRRset( name, response, new Record[] { DomainNameRecords.sourceOfAuthority( name ) }, type );
+          try{
+            addRRset( name, response, new Record[] { DomainNameRecords.sourceOfAuthority( name ) }, type );
+          }catch(final Exception ex){
+            ;
+          }
           response.getHeader( ).setRcode( Rcode.NXDOMAIN );
           return SetResponse.ofType( SetResponse.NXDOMAIN );
         } else if ( reply.hasAnswer( ) ) {
