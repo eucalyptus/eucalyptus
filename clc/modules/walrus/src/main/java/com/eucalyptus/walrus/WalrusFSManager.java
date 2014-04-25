@@ -573,12 +573,8 @@ public class WalrusFSManager extends WalrusManager {
 
                 db.delete(bucketFound);
                 // Actually remove the bucket from the backing store
-                try {
-                    storageManager.deleteBucket(bucketName);
-                } catch (Exception ex) {
-                    // set exception code in reply
-                    LOG.error(ex);
-                }
+                //share threadpool with object deleter
+                Threads.lookup(WalrusBackend.class, WalrusFSManager.ObjectDeleter.class).limitTo(10).submit(new BucketDeleter(bucketName));
 
                 if (logData != null) {
                     updateLogData(bucketFound, logData);
@@ -1824,14 +1820,33 @@ public class WalrusFSManager extends WalrusManager {
                         firePartsCleanupTask(bucketName, objectKey, uploadId);
                     }
 
-                } else {
-                    try {
-                        storageManager.deleteObject(bucketName, objectName);
-                    } catch (Exception ex) {
-                        LOG.error(ex, ex);
-                        return;
-                    }
                 }
+            } else {
+                try {
+                    storageManager.deleteObject(bucketName, objectName);
+                } catch (Exception ex) {
+                    LOG.error(ex, ex);
+                    return;
+                }
+            }
+        }
+    }
+
+    private class BucketDeleter implements Runnable {
+        final String bucketName;
+
+        public BucketDeleter(String bucketName) {
+            this.bucketName = bucketName;
+        }
+
+
+        @Override
+        public void run() {
+            try {
+                storageManager.deleteBucket(bucketName);
+            } catch (Exception ex) {
+                // set exception code in reply
+                LOG.error(ex);
             }
         }
     }
@@ -3557,12 +3572,7 @@ public class WalrusFSManager extends WalrusManager {
             if (objectInfos.size() == 0) {
                 db.delete(bucketFound);
                 // Actually remove the bucket from the backing store
-                try {
-                    storageManager.deleteBucket(bucketName);
-                } catch (IOException ex) {
-                    // set exception code in reply
-                    LOG.error(ex);
-                }
+                Threads.lookup(WalrusBackend.class, WalrusFSManager.ObjectDeleter.class).limitTo(10).submit(new BucketDeleter(bucketName));
             } else {
                 db.rollback();
                 throw new BucketNotEmptyException(bucketName);
