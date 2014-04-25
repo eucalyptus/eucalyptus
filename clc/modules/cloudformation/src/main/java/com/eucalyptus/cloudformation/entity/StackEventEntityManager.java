@@ -107,6 +107,23 @@ public class StackEventEntityManager {
     }
     return returnValue;
   }
+
+  public static ArrayList<StackEventEntity> getStackEventEntitiesById(String stackId, String accountId) {
+    ArrayList<StackEventEntity> returnValue = Lists.newArrayList();
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEventEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEventEntity.class)
+        .add(Restrictions.eq( "accountId" , accountId))
+        .add(Restrictions.eq( "stackId" , stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEventEntity> entityList = criteria.list();
+      if (entityList != null) {
+        returnValue.addAll(entityList);
+      }
+      db.commit( );
+    }
+    return returnValue;
+  }
 }
 
 

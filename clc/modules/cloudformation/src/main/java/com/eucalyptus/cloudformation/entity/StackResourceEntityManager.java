@@ -235,6 +235,7 @@ public class StackResourceEntityManager {
       if (physicalResourceId != null) {
         criteria.add(Restrictions.eq("physicalResourceId", logicalResourceId));
       }
+      criteria.add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
       returnValue = criteria.list();
       db.commit( );
     }
