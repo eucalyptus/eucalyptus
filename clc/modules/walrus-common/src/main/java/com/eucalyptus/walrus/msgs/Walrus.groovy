@@ -198,41 +198,6 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
 
-public class LifecycleTransition extends EucalyptusData {
-    String storageClass;
-    Integer days;
-    Date date;
-}
-
-public class LifecycleExpiration extends EucalyptusData {
-    Integer days;
-    Date date;
-}
-
-public class LifecycleRule extends EucalyptusData {
-    String ID;
-    String prefix;
-    String status;
-    LifecycleTransition transition;
-    LifecycleExpiration expiration;
-}
-
-public class LifecycleConfigurationType extends EucalyptusData {
-    List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-}
-
-public class GetLifecycleType extends WalrusRequestType { }
-
-public class GetLifecycleResponseType extends WalrusResponseType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleType extends WalrusRequestType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleResponseType extends WalrusResponseType { }
-
 public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
 	String code;
