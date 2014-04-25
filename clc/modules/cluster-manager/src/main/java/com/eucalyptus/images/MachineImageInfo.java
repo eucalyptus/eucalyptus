@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
@@ -230,5 +231,39 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 				  db.rollback();
 		  }
 	  } 
+  }
+  
+  @EntityUpgrade( entities = { MachineImageInfo.class }, since = Version.v4_0_0, value = Eucalyptus.class )
+  public enum MachineImageInfo400Upgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( MachineImageInfo.MachineImageInfo400Upgrade.class );
+
+    @Override
+    public boolean apply(Class arg0) {
+      try ( final TransactionResource db =
+          Entities.transactionFor( MachineImageInfo.class )) {
+        try{
+          List<MachineImageInfo> images = Entities.query( new MachineImageInfo( ) );
+          for(MachineImageInfo image : images) {
+            LOG.info("Upgrading MachineImageInfo: " + image.toString());
+            // Set all PV image's state to "PENDING_AVAILABLE"
+            if(ImageMetadata.VirtualizationType.paravirtualized.equals(image.virtType)){
+              image.setState(ImageMetadata.State.pending_available);
+              image.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
+            }else{
+              image.setImageFormat(ImageMetadata.ImageFormat.fulldisk.name());
+              image.setRunManifestLocation(image.getManifestLocation());
+            }
+            Entities.persist(image);
+          }
+          db.commit();
+          return true;
+        }catch(final Exception ex) {
+          LOG.error("Error upgrading MachineImageInfo: ", ex);
+          db.rollback();
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
   }
 }

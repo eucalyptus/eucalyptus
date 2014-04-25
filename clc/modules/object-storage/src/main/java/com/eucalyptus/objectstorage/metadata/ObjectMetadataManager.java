@@ -142,11 +142,11 @@ public interface ObjectMetadataManager {
 	 * @param delimiter
 	 * @param startKey
 	 * @param startVersionId
-	 * @param includeDeleteMarkers
+	 * @param latestOnly
 	 * @return
 	 * @throws TransactionException
 	 */
-	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean includeDeleteMarkers) throws Exception;
+	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean latestOnly) throws Exception;
 	
 	/**
 	 * Delete the object entity

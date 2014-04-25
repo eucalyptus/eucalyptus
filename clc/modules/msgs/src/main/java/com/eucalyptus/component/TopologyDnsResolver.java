@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,27 +62,42 @@
 
 package com.eucalyptus.component;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * DNS Resolver which bases replies on the current system topology.
@@ -114,7 +129,17 @@ import com.google.common.collect.Lists;
 public class TopologyDnsResolver implements DnsResolver {
   @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
-  
+
+  @ConfigurableField(
+      description = "",
+      initial = "",
+      changeListener = HostMappingPropertyChangeListener.class
+  )
+  public static String hostMapping = "";
+
+  private static final Function<String,Map<Cidr,Cidr>> hostMappings = // A function memoizing the last invocation
+      CacheBuilder.newBuilder().maximumSize( 1 ).build( CacheLoader.from( CidrMapTransform.INSTANCE ) );
+
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {
       
@@ -230,7 +255,8 @@ public class TopologyDnsResolver implements DnsResolver {
                                                                                              .build( CacheLoader.from( ResolverSupport.SERVICE_FUNCTION ) );
   
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
     if ( enabled && ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) ) ) {
       if ( DomainNames.isSystemSubdomain( query.getName( ) ) ) {
         return ( ResolverSupport.COMPONENT.apply( query.getName( ) )
@@ -245,7 +271,8 @@ public class TopologyDnsResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     final Name name = query.getName( );
     if ( ResolverSupport.COMPONENT.apply( name ) ) {
       Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
@@ -276,7 +303,9 @@ public class TopologyDnsResolver implements DnsResolver {
       }
       List<Record> answers = Lists.newArrayList( );
       for ( ServiceConfiguration config : configs ) {
-        Record aRecord = DomainNameRecords.addressRecord( name, config.getInetAddress( ) );
+        Record aRecord = DomainNameRecords.addressRecord(
+            name,
+            maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
         answers.add( aRecord );
       }
       return DnsResponse.forName( query.getName( ) )
@@ -286,7 +315,9 @@ public class TopologyDnsResolver implements DnsResolver {
       return DnsResponse.forName( query.getName( ) )
                         .answer( RequestType.AAAA.apply( query ) ? 
                             null : 
-                            DomainNameRecords.addressRecord( name, config.getInetAddress( ) ) );
+                            DomainNameRecords.addressRecord(
+                                name,
+                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) ) );
     } else {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }
@@ -297,5 +328,54 @@ public class TopologyDnsResolver implements DnsResolver {
     return this.getClass( ).getSimpleName( );
   }
 
+  @SuppressWarnings( "ConstantConditions" )
+  public static InetAddress maphost( final InetAddress listenerAddress,
+                                     final InetAddress hostAddress ) {
+    final Map<Cidr,Cidr> mappings = hostMappings.apply( hostMapping );
 
+    InetAddress result = hostAddress;
+    for ( final Map.Entry<Cidr,Cidr> mapping : mappings.entrySet( ) ) {
+      if ( mapping.getKey( ).apply( listenerAddress ) ) {
+        final Host host = Hosts.lookup( hostAddress );
+        if ( host != null ) {
+          result = Iterables.tryFind( host.getHostAddresses( ), mapping.getValue( ) ).or( result );
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private static Map<Cidr,Cidr> parse( final Function<String,Cidr> cidrTransform,
+                                       final String cidrMappingList ) {
+    final Map<String,String> cidrMappingText =
+        Splitter.on( CharMatcher.anyOf( ",;:" ) ).omitEmptyStrings().trimResults( ).withKeyValueSeparator(
+            Splitter.on( Pattern.compile( "-?>" ) ).omitEmptyStrings( ).trimResults( ).limit( 2 )
+        ).split( Objects.toString( cidrMappingList, "" ) );
+    return CollectionUtils.transform(
+        cidrMappingText,
+        Maps.<Cidr,Cidr>newHashMap( ),
+        cidrTransform,
+        cidrTransform );
+  }
+
+  public static final class HostMappingPropertyChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        parse( Cidr.parseUnsafe(), Objects.toString( newValue, "" ) );
+      } catch ( Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
+  private static enum CidrMapTransform implements Function<String,Map<Cidr,Cidr>> {
+    INSTANCE;
+
+    @Override
+    public Map<Cidr, Cidr> apply( final String cidrMappingList ) {
+      return parse( Functions.compose( CollectionUtils.<Cidr>optionalOrNull( ), Cidr.parse( ) ), cidrMappingList );
+    }
+  }
 }

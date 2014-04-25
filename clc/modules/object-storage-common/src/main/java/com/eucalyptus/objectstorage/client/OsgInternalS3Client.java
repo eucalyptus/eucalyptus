@@ -6,6 +6,8 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 
+import java.util.Date;
+
 /**
  * A convenience wrapper for an AWS Java SDK S3 Client that sets default
  * timeouts etc, options, etc
@@ -19,6 +21,7 @@ public class OsgInternalS3Client {
 
     private S3ClientOptions ops;
     private AmazonS3Client s3Client;
+    private final Date instantiated;
 
     public OsgInternalS3Client(AWSCredentials credentials, boolean https) {
         ClientConfiguration config = new ClientConfiguration();
@@ -31,6 +34,7 @@ public class OsgInternalS3Client {
         s3Client = new AmazonS3Client(credentials, config);
         ops = new S3ClientOptions();
         s3Client.setS3ClientOptions(ops);
+        instantiated = new Date();
     }
 
     public void setUsePathStyle(boolean usePathStyle) {
@@ -46,4 +50,7 @@ public class OsgInternalS3Client {
         s3Client.setEndpoint(s3Endpoint);
     }
 
+    public Date getInstantiated() {
+        return instantiated;
+    }
 }

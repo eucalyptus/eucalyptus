@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,11 +62,15 @@
 
 package com.eucalyptus.dns.resolvers;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
 import org.xbill.DNS.Cache;
 import org.xbill.DNS.Credibility;
 import org.xbill.DNS.Lookup;
@@ -76,6 +80,7 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -107,6 +112,7 @@ import com.google.common.collect.Sets;
 @ConfigurableClass( root = "dns.recursive",
                     description = "Options controlling recursive DNS resolution and caching." )
 public class RecursiveDnsResolver implements DnsResolver {
+  private static Logger LOG = Logger.getLogger( RecursiveDnsResolver.class );
   @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
@@ -139,7 +145,8 @@ public class RecursiveDnsResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( final Record query ) {
+  public DnsResponse lookupRecords( final DnsRequest request ) {
+    final Record query = request.getQuery( );
     final Name name = query.getName( );
     final int type = query.getType( );
     final Cache cache = new Cache( );
@@ -193,11 +200,29 @@ public class RecursiveDnsResolver implements DnsResolver {
         }
       }
     }
-    return DnsResponse.forName( query.getName( ) )
-                      .recursive( )
-                      .withAuthority( Lists.newArrayList( authority ) )
-                      .withAdditional( Lists.newArrayList( additional ) )
-                      .answer( Lists.newArrayList( answer ) );
+    
+    if((aLookup.getResult() == Lookup.SUCCESSFUL 
+        || aLookup.getResult() == Lookup.TYPE_NOT_FOUND ) 
+        && queriedrrs.size()==0){
+      List<Record> nsRecs = lookupNSRecords( name, cache );
+      for ( Record nsRec : nsRecs ) {
+        authority.add( nsRec );
+      }
+    }
+
+    DnsResponse response = DnsResponse.forName( query.getName( ) )
+        .recursive( )
+        .withAuthority( Lists.newArrayList( authority ) )
+        .withAdditional( Lists.newArrayList( additional ) )
+        .answer( Lists.newArrayList( answer ) );
+    
+    if(aLookup.getResult() == Lookup.HOST_NOT_FOUND && queriedrrs.size()==0){
+        response = DnsResponse.forName( query.getName( ) )
+          .recursive( )
+          .withAuthority( Lists.newArrayList( authority ) )
+          .nxdomain();
+    }
+    return response;
   }
   
   /**
@@ -206,11 +231,12 @@ public class RecursiveDnsResolver implements DnsResolver {
    * 2. The query is absolute
    * 3. The name/address is not in a Eucalyptus controlled subdomain
    * 
-   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(Record, org.xbill.DNS.Name,
-   *      InetAddress)
+   * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(DnsRequest)
    */
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( final DnsRequest request ) {
+    final Record query = request.getQuery( );
+    final InetAddress source = request.getRemoteAddress( );
     if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source )) {
       return false;
     } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )

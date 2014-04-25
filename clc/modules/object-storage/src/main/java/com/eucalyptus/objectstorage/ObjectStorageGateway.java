@@ -1014,38 +1014,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
     }
 
-	/**
-	 * Common lookupBucket routine used by simple and extended GETs.
-	 */
-	protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) {
-		DefaultHttpResponse httpResponse = new DefaultHttpResponse(
-				HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		long contentLength = reply.getSize();
-		String contentType = reply.getContentType();
-		String etag = reply.getEtag();
-		Date lastModified = reply.getLastModified();
-		String contentDisposition = reply.getContentDisposition();
-		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-		if(etag != null)
-			httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + etag + "\""); //etag in quotes, per s3-spec.
-		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
-		if(contentDisposition != null) {
-			httpResponse.addHeader("Content-Disposition", contentDisposition);
-		}
-		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
-		String versionId = reply.getVersionId();
-		if(versionId != null) {
-			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
-		}
-		httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
-		
-		//write extra headers
-		if(reply.getByteRangeEnd() != null) {
-			httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
-		}
-		return httpResponse;
-	}
-
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObject(com.eucalyptus.objectstorage.msgs.GetObjectType)
 	 */

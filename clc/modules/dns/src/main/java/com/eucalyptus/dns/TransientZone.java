@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -157,14 +157,14 @@ public class TransientZone extends Zone {
  * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
  */
 @Override
-  public SetResponse findRecords( Name name, int type ) {
+  public SetResponse findRecords( Name name, int type, InetAddress listenerAddress ) {
 	if(type == Type.AAAA)
 		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
 
 	if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
         String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll(VmInstances.INSTANCE_SUBDOMAIN + ".*", "").split("-");
-        if( tryIp.length < 4 ) return super.findRecords( name, type );
+        if( tryIp.length < 4 ) return super.findRecords( name, type, listenerAddress );
         String ipCandidate = new StringBuffer()
           .append(tryIp[0]).append(".")
           .append(tryIp[1]).append(".")
@@ -176,7 +176,7 @@ public class TransientZone extends Zone {
           try {
             VmInstances.lookupByPrivateIp( ipCandidate );
           } catch ( Exception e1 ) {
-            return super.findRecords( name, type );
+            return super.findRecords( name, type, listenerAddress );
           }
         }
         InetAddress ip = InetAddress.getByName( ipCandidate );
@@ -184,7 +184,7 @@ public class TransientZone extends Zone {
         resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
         return resp;
       } catch ( Exception e ) {
-        return super.findRecords( name, type );
+        return super.findRecords( name, type, listenerAddress );
       }
     } else if (StackConfiguration.USE_INSTANCE_DNS && name.toString().endsWith(".in-addr.arpa.")) {
       int index = name.toString().indexOf(".in-addr.arpa.");
@@ -200,7 +200,7 @@ public class TransientZone extends Zone {
 	          .append(parts[1]).append(".")
 	          .append(parts[0]).toString( );		  	
 		} else {
-		  return super.findRecords( name, type );
+		  return super.findRecords( name, type, listenerAddress );
 		}
 		try {
 	      VmInstance instance = VmInstances.lookupByPublicIp( ipCandidate );
@@ -210,17 +210,17 @@ public class TransientZone extends Zone {
 	        VmInstance instance = VmInstances.lookupByPrivateIp( ipCandidate );
 	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
-	        return super.findRecords( name, type );
+	        return super.findRecords( name, type, listenerAddress );
 	      }
 	    }
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
         resp.addRRset( new RRset( new PTRRecord( name, DClass.IN, ttl, target ) ) );
         return resp;
 	  } else {
-	    return super.findRecords( name, type );
+	    return super.findRecords( name, type, listenerAddress );
 	  }
     } else {
-      return super.findRecords( name, type );
+      return super.findRecords( name, type, listenerAddress );
     }
   }
 

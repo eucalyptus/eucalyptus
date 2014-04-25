@@ -204,7 +204,11 @@ public class Internets {
       return localHostInetAddress( );
     }
   }
-  
+
+  public static InetAddress any( ) {
+    return InetAddresses.fromInteger( 0 );
+  }
+
   public static InetAddress localHostInetAddress( ) {
     return localHostAddr;
   }

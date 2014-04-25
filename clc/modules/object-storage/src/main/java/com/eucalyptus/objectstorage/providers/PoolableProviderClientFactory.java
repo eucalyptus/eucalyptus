@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,14 +60,69 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.objectstorage.providers;
 
-/*
- *
+import com.amazonaws.auth.AWSCredentials;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
+import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
+import org.apache.commons.pool.PoolableObjectFactory;
+
+import java.util.Date;
+
+/**
+ * see @org.apache.commons.pool.PoolableObjectFactory&lt;T&gt;
  */
-public enum LifecycleStatus {
-    ALIVE,
-    REAPED_FOR_EXPIRE,
-    EXPIRED,
-    REAPED_FOR_TRANSITION
+public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgInternalS3Client> {
+
+    private AWSCredentials requestUser;
+    private String upstreamEndpoint;
+    private boolean usePathStyle;
+
+    private long checkIntervalInMs = S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChangeCheckInterval().intValue() * 1000l;
+
+    public PoolableProviderClientFactory(AWSCredentials requestUser, String upstreamEndpoint, boolean usePathStyle) {
+        this.requestUser = requestUser;
+        this.upstreamEndpoint = upstreamEndpoint;
+        this.usePathStyle = usePathStyle;
+    }
+
+    @Override
+    public OsgInternalS3Client makeObject() throws Exception {
+        boolean useHttps = false;
+        if(S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps() != null && S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps()) {
+            useHttps = true;
+        }
+
+        OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, useHttps);
+        osgInternalS3Client.setS3Endpoint(upstreamEndpoint);
+        osgInternalS3Client.setUsePathStyle(usePathStyle);
+        return osgInternalS3Client;
+    }
+
+    @Override
+    public void destroyObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        amazonS3Client.getS3Client().shutdown();
+    }
+
+    @Override
+    public boolean validateObject(OsgInternalS3Client amazonS3Client) {
+        long now = new Date().getTime();
+        long instantiated = amazonS3Client.getInstantiated().getTime();
+        if (now - instantiated > checkIntervalInMs) {
+            if (S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChange().getTime() - instantiated > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void activateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        // no-op
+    }
+
+    @Override
+    public void passivateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        // no-op
+    }
 }

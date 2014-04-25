@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth;
 
+import java.util.Objects;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
 import com.eucalyptus.auth.ldap.LdapSync;
@@ -71,6 +72,9 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.util.Cidr;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 
 @ConfigurableClass( root = "authentication", description = "Parameters for authentication." )
 public class AuthenticationProperties {
@@ -80,10 +84,12 @@ public class AuthenticationProperties {
   private static final String LDAP_SYNC_DISABLED = "{ 'sync': { 'enable':'false' } }";
   
   @ConfigurableField( description = "LDAP integration configuration, in JSON", initial = LDAP_SYNC_DISABLED, changeListener = LicChangeListener.class, displayName = "lic" )
-  public static String LDAP_INTEGRATION_CONFIGURATION;
-  
-  public static class LicChangeListener implements PropertyChangeListener {
+  public static volatile String LDAP_INTEGRATION_CONFIGURATION;
 
+  @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
+  public static volatile String CREDENTIAL_DOWNLOAD_HOST_MATCH = "";
+
+  public static class LicChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.debug( "LDAP integration configuration changed to " + newValue );
@@ -98,10 +104,17 @@ public class AuthenticationProperties {
       }
       
     }
-    
   }
-  
-  @ConfigurableField( description = "Web session lifetime in minutes", initial = "1440", displayName = "sessionlife" )
-  public static Long WEBSESSION_LIFE_IN_MINUTES = 24 * 60L;// 24 hours in minutes
+
+  public static final class CidrChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        Optional.fromNullable( Strings.emptyToNull( Objects.toString( newValue, null ) ) ).transform( Cidr.parseUnsafe( ) );
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
   
 }

@@ -990,19 +990,27 @@ public class Upgrades {
     final String context = Ats.inClassHierarchy( entityClass ).get( PersistenceContext.class ).name();
     final EntityManagerFactory entityManagerFactory = PersistenceContexts.getEntityManagerFactory( context );
     final EntityManager entityManager = entityManagerFactory.createEntityManager( );
-    final EntityTransaction transaction = entityManager.getTransaction( );
-    transaction.begin();
-    boolean success = false;
     try {
-      success = callback.apply( entityManager );
+      final EntityTransaction transaction = entityManager.getTransaction( );
+      transaction.begin();
+      boolean success = false;
+      try {
+        success = callback.apply( entityManager );
+      } finally {
+        if ( success && !transaction.getRollbackOnly( ) ) {
+          transaction.commit();
+        } else {
+          transaction.rollback();
+        }
+      }
+      return success;
     } finally {
-      if ( success && !transaction.getRollbackOnly() ) {
-        transaction.commit();
-      } else {
-        transaction.rollback();
+      if ( entityManager.isOpen( ) ) try {
+        entityManager.close( );
+      } catch ( final Exception e ) {
+        LOG.error( "Error closing entity manager for entity " + entityClass.getSimpleName( ), e );
       }
     }
-    return success;
   }
 
 }

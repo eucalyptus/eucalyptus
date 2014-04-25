@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
@@ -171,6 +172,27 @@ public class CollectionUtils {
     };
   }
 
+  public static <T> Function<T,Optional<T>> optionalUnit( ) {
+    return new Function<T,Optional<T>>() {
+      @Override
+      public Optional<T> apply( final T t ) {
+        return Optional.fromNullable( t );
+      }
+    };
+  }
+
+  public static <T> Function<Optional<T>,T> optionalOrNull() {
+    return new Function<Optional<T>,T>( ) {
+      @Nullable
+      @Override
+      public T apply( final Optional<T> optional ) {
+        return optional == null ?
+            null :
+            optional.orNull( );
+      }
+    };
+  }
+
   /**
    * Unchecked cast function.
    *
@@ -227,6 +249,36 @@ public class CollectionUtils {
   }
 
   /**
+   * Transform the given map, ignoring mapped entries with null keys or values.
+   *
+   * <p>WARNING! if the transform produces duplicate keys entries will be
+   * overwritten.</p>
+   *
+   * @param map The map to transform
+   * @param targetMap The result map
+   * @param keyFunction The key transform
+   * @param valueFunction The value transform
+   * @param <K1> The source key type
+   * @param <V1> The source value type
+   * @param <K2> The target key type
+   * @param <V2> The target value type
+   * @return The supplied target map
+   */
+  public static <K1,V1,K2,V2> Map<K2,V2> transform( final Map<K1,V1> map,
+                                                    final Map<K2,V2> targetMap,
+                                                    final Function<? super K1, K2> keyFunction,
+                                                    final Function<? super V1, V2> valueFunction ) {
+    if ( map != null ) for ( final Map.Entry<K1,V1> entry : map.entrySet( ) ) {
+      final K2 targetKey = keyFunction.apply( entry.getKey( ) );
+      final V2 targetValue = valueFunction.apply( entry.getValue( ) );
+      if ( targetKey != null && targetValue != null ) {
+        targetMap.put( targetKey, targetValue );
+      }
+    }
+    return targetMap;
+  }
+
+  /**
    * Min function suitable for use with reduce.
    *
    * @return The min function.
@@ -276,6 +328,30 @@ public class CollectionUtils {
           @Override
           public Integer apply( final I item ) {
             return sum + evaluator.apply( item );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Flip parameter order for curried function.
+   *
+   * @param curried The function to flip
+   * @param <F1> The first parameter type
+   * @param <F2> The second parameter type
+   * @param <T> The result type
+   * @return The flipped function
+   */
+  public static <F1,F2,T> Function<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
+    return new Function<F2,Function<F1,T>>( ){
+      @Override
+      public Function<F1, T> apply( @Nullable final F2 f2 ) {
+        return new Function<F1, T>( ){
+          @Override
+          public T apply( @Nullable final F1 f1 ) {
+            //noinspection ConstantConditions
+            return curried.apply( f1 ).apply( f2 );
           }
         };
       }

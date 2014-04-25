@@ -62,7 +62,13 @@
 
 package com.eucalyptus.ws;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -101,7 +107,22 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Pair;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.net.InetAddresses;
 
 public class WebServices {
   
@@ -148,20 +169,30 @@ public class WebServices {
     }
   }
 
-  public static class RestartWebServicesListener implements PropertyChangeListener {
-    
-    @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-// Calling this here has issues... A periodic poller was added WebServicePropertiesChangedEventListener
-//      WebServices.restart( );
-    }
-    
+  private static Iterable<Cidr> parse( final Function<String,Optional<Cidr>> cidrTransform,
+                                       final String cidrList ) {
+    return Optional.presentInstances( Iterables.transform(
+        Splitter.on( CharMatcher.anyOf( ", ;:" ) ).trimResults().omitEmptyStrings().split( cidrList ),
+        cidrTransform ) );
   }
 
-  public static class CheckNonNegativeIntegerAndRestartWebServicesListener implements PropertyChangeListener {
+  public static class CheckCidrListPropertyChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      if ( newValue != null ) try {
+        parse(
+            Functions.compose( CollectionUtils.<Cidr>optionalUnit(), Cidr.parseUnsafe( ) ),
+            Objects.toString( newValue ) );
+      } catch ( IllegalArgumentException e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
+  public static class CheckNonNegativeIntegerPropertyChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      int value = -1;
+      int value;
       try {
         value = Integer.parseInt((String) newValue);
       } catch (Exception ex) {
@@ -170,14 +201,13 @@ public class WebServices {
       if (value < 0) {
         throw new ConfigurablePropertyException("Invalid value " + newValue);
       }
-      new RestartWebServicesListener().fireChange(t, newValue);
     }
   }
 
-  public static class CheckNonNegativeLongAndRestartWebServicesListener implements PropertyChangeListener {
+  public static class CheckNonNegativeLongPropertyChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      long value = -1;
+      long value;
       try {
         value = Long.parseLong((String) newValue);
       } catch (Exception ex) {
@@ -186,17 +216,15 @@ public class WebServices {
       if (value < 0) {
         throw new ConfigurablePropertyException("Invalid value " + newValue);
       }
-      new RestartWebServicesListener().fireChange(t, newValue);
     }
   }
 
-  public static class CheckBooleanAndRestartWebServicesListener implements PropertyChangeListener {
+  public static class CheckBooleanPropertyChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       if ((newValue == null) || (!((String) newValue).equalsIgnoreCase("true") && !((String) newValue).equalsIgnoreCase("false"))) {
         throw new ConfigurablePropertyException("Invalid value " + newValue);
       }
-      new RestartWebServicesListener().fireChange(t, newValue);
     }
   }
 
@@ -281,18 +309,37 @@ public class WebServices {
       }
     };
     final ServerBootstrap bootstrap = serverBootstrap( serverChannelFactory, pipelineFactory );
-    if ( !StackConfiguration.INTERNAL_PORT.equals( StackConfiguration.PORT ) ) {
+
+    final List<Pair<InetAddress,Integer>>  internalAddressAndPorts = Arrays.asList(
+        Pair.pair( Internets.localHostInetAddress(), StackConfiguration.INTERNAL_PORT ),
+        Pair.pair( Internets.loopback(), StackConfiguration.INTERNAL_PORT )
+    );
+    final Set<Pair<InetAddress,Integer>> listenerAddressAndPorts = Sets.newLinkedHashSet(  );
+    listenerAddressAndPorts.addAll( internalAddressAndPorts );
+    if ( Bootstrap.isOperational( ) ) { // skip additional listeners until bootstrapped
+      Iterables.addAll(
+          listenerAddressAndPorts,
+          Iterables.transform(
+              Iterables.filter(
+                  Iterables.concat( Collections.singleton( Internets.any() ), Internets.getAllInetAddresses( ) ),
+                  Predicates.or( parse( Cidr.parse( ), StackConfiguration.LISTENER_ADDRESS_MATCH ) ) ),
+              CollectionUtils.flipCurried( Pair.<InetAddress,Integer>pair( ) ).apply( StackConfiguration.PORT ) ) );
+    }
+    if ( listenerAddressAndPorts.contains( Pair.pair( Internets.any( ), StackConfiguration.INTERNAL_PORT  ) ) ) {
+      listenerAddressAndPorts.removeAll( internalAddressAndPorts );     }
+    LOG.info( "Starting web services listeners on " + Joiner.on(',').join( Iterables.transform( listenerAddressAndPorts, Pair.<InetAddress, Integer>left() ) ) );
+    for ( final Pair<InetAddress,Integer> listenerAddressAndPort : listenerAddressAndPorts ) {
+      final InetAddress address = listenerAddressAndPort.getLeft( );
+      final int port = listenerAddressAndPort.getRight( );
       try {
-        final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
+        final Channel serverChannel = bootstrap.bind( new InetSocketAddress( address, port ) );
         serverChannelGroup.add( serverChannel );
-      } catch (ChannelException ex) {
-        LOG.error("Unable to bind to auxiliary port " + StackConfiguration.PORT + " in the web services stack, port may be already in use.  " +
-          "Port " + StackConfiguration.INTERNAL_PORT + " will still be available as the internal web services port, however.");
+      } catch ( ChannelException ex ) {
+        LOG.error( "Unable to bind web services listener " + address + ":" + port + ", port may be already in use." );
+        Logs.extreme( ).error( ex, ex );
       }
     }
     try {
-      final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
-      serverChannelGroup.add( serverChannel );
       serverShutdown = new Runnable( ) {
         AtomicBoolean ranned = new AtomicBoolean( false );
         
@@ -328,6 +375,7 @@ public class WebServices {
     private Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
     private Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
     private Integer       PORT                              = 8773;
+    private String        LISTENER_ADDRESS_MATCH            = "";
     private AtomicBoolean isRunning = new AtomicBoolean(false);
 
     public static void register( ) {
@@ -355,6 +403,7 @@ public class WebServices {
         Long NEW_SERVER_BOSS_POOL_TOTAL_MEM = StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM;
         Long NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS;
         Integer NEW_PORT = StackConfiguration.PORT;
+        String NEW_LISTENER_ADDRESS_MATCH = Bootstrap.isOperational( ) ? StackConfiguration.LISTENER_ADDRESS_MATCH : "";
         if (!CHANNEL_CONNECT_TIMEOUT.equals(NEW_CHANNEL_CONNECT_TIMEOUT)) {
           LOG.info("bootstrap.webservices.channel_connect_timeout has changed: oldValue = " + CHANNEL_CONNECT_TIMEOUT + ", newValue = " + NEW_CHANNEL_CONNECT_TIMEOUT);
           CHANNEL_CONNECT_TIMEOUT = NEW_CHANNEL_CONNECT_TIMEOUT;
@@ -430,13 +479,18 @@ public class WebServices {
           PORT = NEW_PORT;
           different = true;
         }
+        if (!LISTENER_ADDRESS_MATCH.equals( NEW_LISTENER_ADDRESS_MATCH )) {
+          LOG.info("bootstrap.webservices.listener_address_match has changed: oldValue = " + LISTENER_ADDRESS_MATCH + ", newValue = " + NEW_LISTENER_ADDRESS_MATCH);
+          LISTENER_ADDRESS_MATCH = NEW_LISTENER_ADDRESS_MATCH;
+          different = true;
+        }
         if (different) {
-          LOG.info("One or more bootstrap.webservices properties have changed, calling WebServices.restart() [May change ports]");
+          LOG.info("One or more bootstrap.webservices properties have changed, restarting web services listeners [May change ports]");
           new Thread() {
             public void run() {
               try {
                 restart();
-                LOG.info("WebServices.restart() complete");
+                LOG.info("Web services restart complete");
               } catch (Exception ex) {
                 LOG.error(ex, ex);
               } finally {
@@ -446,7 +500,7 @@ public class WebServices {
           }.start();
         } else {
           isRunning.set(false);
-          LOG.trace("No updates found to webserver properties");
+          LOG.trace("No updates found to web services properties");
         }
       }
     }

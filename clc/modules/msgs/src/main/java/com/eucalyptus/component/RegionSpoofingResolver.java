@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetAddress;
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -99,7 +99,8 @@ public class RegionSpoofingResolver implements DnsResolver {
                                                                                  Functions.toStringFunction( ) );
   
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
     if ( !Bootstrap.isOperational( ) || !enabled || !RequestType.A.apply( query ) || !query.getName( ).subdomain( awsDomain ) ) {
       return false;
     } else if ( SPOOF_AWS_REGIONS ) {
@@ -126,7 +127,8 @@ public class RegionSpoofingResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     Name name = query.getName( );
     String label0 = name.getLabelString( 0 );
     String label1 = name.getLabelString( 1 );

@@ -89,7 +89,8 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.Principals
+import org.jboss.netty.handler.stream.ChunkedInput;
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusResponseType extends BaseMessage {
@@ -196,41 +197,6 @@ public class GetObjectAccessControlPolicyResponseType extends WalrusResponseType
 public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
-
-public class LifecycleTransition extends EucalyptusData {
-    String storageClass;
-    Integer days;
-    Date date;
-}
-
-public class LifecycleExpiration extends EucalyptusData {
-    Integer days;
-    Date date;
-}
-
-public class LifecycleRule extends EucalyptusData {
-    String ID;
-    String prefix;
-    String status;
-    LifecycleTransition transition;
-    LifecycleExpiration expiration;
-}
-
-public class LifecycleConfigurationType extends EucalyptusData {
-    List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-}
-
-public class GetLifecycleType extends WalrusRequestType { }
-
-public class GetLifecycleResponseType extends WalrusResponseType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleType extends WalrusRequestType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleResponseType extends WalrusResponseType { }
 
 public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
@@ -396,6 +362,9 @@ public class WalrusDataGetRequestType extends WalrusDataRequestType {
 }
 
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
+    List<ChunkedInput> dataInputStream;
+    Long byteRangeStart;
+    Long byteRangeEnd;
 
 	def WalrusDataGetResponseType() {}
 }
@@ -610,7 +579,7 @@ public class GetObjectExtendedType extends WalrusDataGetRequestType {
 	Boolean returnCompleteObjectOnConditionFailure;
 }
 
-public class GetObjectExtendedResponseType extends WalrusDataResponseType {
+public class GetObjectExtendedResponseType extends WalrusDataGetResponseType {
 	Status status;
 }
 

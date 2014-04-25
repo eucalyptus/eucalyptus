@@ -121,7 +121,7 @@ public class ObjectMetadataManagerTest {
         Bucket bucket = TestUtils.createTestBucket(mgr, "testbucket")
         assert(bucket != null)
         assert(mgr.lookupBucket(bucket.getName()) != null)
-        mgr.setVersioning(bucket, ObjectStorageProperties.VersioningStatus.Enabled);
+        bucket = mgr.setVersioning(bucket, ObjectStorageProperties.VersioningStatus.Enabled);
 
         User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
 
@@ -132,7 +132,7 @@ public class ObjectMetadataManagerTest {
                 objs != null && objs.size() == entityCount)
 
         try {
-            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, null, null, null, null, true);
+            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, null, null, null, null, false);
             println 'Entity list:'
             for(ObjectEntity e : r.getEntityList()) {
                 println e.toString()
