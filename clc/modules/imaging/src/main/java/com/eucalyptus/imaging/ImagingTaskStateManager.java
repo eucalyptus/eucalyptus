@@ -541,8 +541,10 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       bucket = uri.getHost();
       bucket = bucket.substring(0, bucket.indexOf("."));
     }
-
+    
     try{
+      if(!s3c.doesBucketExist(bucket))
+        return false;
       final ObjectListing listing = s3c.listObjects(bucket);
       final List<S3ObjectSummary> objects = listing.getObjectSummaries();
       final Set<String> keySet = Sets.newHashSet();
@@ -551,7 +553,12 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       }
       final ImageManifestFile manifestFile = 
           new ImageManifestFile(manifestUrl, ImportImageManifest.INSTANCE);
-      final String manifest = manifestFile.getManifest();
+      String manifest = null;
+      try{
+        manifest = manifestFile.getManifest();
+      }catch(final Exception ex){
+        return false;
+      }
       final List<String> partsKey = getPartsKey(manifest);
       for(final String keyName : partsKey){
         if(! keySet.contains(keyName)){
