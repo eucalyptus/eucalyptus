@@ -551,7 +551,7 @@ public class Images {
   public static boolean isImageNameValid(final String imgName){
 	if(imgName==null)
 		return false;
-	if (!imgName.matches("[A-Za-z0-9(),/_-]+"))
+	if (!imgName.matches("[A-Za-z0-9()./_-]+"))
 		return false;
 	
 	if (imgName.length() < 3 || imgName.length() > 128)
