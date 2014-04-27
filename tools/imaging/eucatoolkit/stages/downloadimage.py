@@ -355,21 +355,6 @@ class DownloadImage(object):
                         pass
         return bytes
 
-    def _validate_written_image_size(self, expected_size, filepath):
-        '''
-        Attempts to compare an expected file size with the size found on disk.
-        :param expected_size: size in bytes
-        :param filepath: path to local file to read and compare size to
-        :raises ValueError
-        '''
-        self.log.debug('Validating size:"{0}", for file:{1}:'
-                       .format(expected_size, filepath))
-        # Check size raise os.error if file is not accessible...
-        file_size = os.path.getsize(filepath)
-        if file_size != expected_size:
-            raise ValueError('Written Image size:{0} does not equal expected '
-                             'size:{1}'.format(file_size, expected_size))
-
     def main(self):
         manifest = self.args.manifest
         #Dump manifest obj to screen and exit, if debug arg given.
@@ -412,10 +397,10 @@ class DownloadImage(object):
                        + str(manifest.download_image_size))
             self.log.debug('manifest unbundled size:'
                        + str(manifest.unbundled_image_size))
-            #If destination was not stdout or pipe, check dest file size.
+            if bytes != expected_size:
+                raise ValueError('Bytes written:"{0}" does not equal '
+                                 'expected:"{1}"'.format(bytes, expected_size))
             if dest_file != "-" and not self.args.destispipe:
-                self._validate_written_image_size(expected_size=expected_size,
-                                              filepath=dest_file)
                 self.log.info('Download Image wrote "{0}" bytes to: {1}'
                           .format(str(bytes), str(dest_file_name)))
             else:
