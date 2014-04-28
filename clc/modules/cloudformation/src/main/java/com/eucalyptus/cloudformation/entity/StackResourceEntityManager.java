@@ -140,7 +140,7 @@ public class StackResourceEntityManager {
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
         .add(Restrictions.eq( "accountId" , accountId))
-        .add(Restrictions.eq( "stackName" , stackId))
+        .add(Restrictions.eq( "stackId" , stackId))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       for (StackResourceEntity stackResourceEntity: (List<StackResourceEntity>) criteria.list()) {
         stackResourceEntity.setRecordDeleted(Boolean.TRUE);
