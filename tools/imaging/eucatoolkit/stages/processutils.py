@@ -55,7 +55,7 @@ def close_all_fds(except_fds=None):
     next_range_min = 0
     for except_fileno in sorted(except_filenos):
         if except_fileno > next_range_min:
-            fileno_ranges.append((next_range_min, except_fileno - 1))
+            fileno_ranges.append((next_range_min, except_fileno))
         next_range_min = max(next_range_min, except_fileno + 1)
     fileno_ranges.append((next_range_min, 1024))
 
