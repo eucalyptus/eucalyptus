@@ -109,7 +109,8 @@ public abstract class AbstractTaskScheduler {
     }
   }
 
-  public WorkerTask getTask() throws Exception{
+  static X509Certificate cloudCert =  null;
+  public synchronized WorkerTask getTask() throws Exception{
     final ImagingTask nextTask = this.getNext();
     if(nextTask==null)
       return null;
@@ -120,8 +121,9 @@ public abstract class AbstractTaskScheduler {
     }
     
     WorkerTask newTask = null;
-    //TODO: cache cloudCert since it should not change
-    final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+    if(cloudCert == null)
+      cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+    
     try{
       if (nextTask instanceof DiskImagingTask){
         final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
