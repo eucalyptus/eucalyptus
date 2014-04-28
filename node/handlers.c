@@ -302,6 +302,7 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     int rc = 0;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
     char command[EUCA_MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
@@ -311,20 +312,21 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base), NP(euca_base));
-    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s'\n", SP(instanceId), command, NP(options), NP(host), NP(credentials));
+    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
+    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials));
     if (lock_hyp_sem == TRUE) {
         sem_p(hyp_sem);
     }
 
-    rc = euca_execlp(NULL, command, NP(options), NP(host), NP(credentials), NULL);
+    rc = euca_execlp(NULL, euca_rootwrap, command, NP(options), NP(host), NP(credentials), NULL);
 
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
     }
 
     if (rc != EUCA_OK) {
-        LOGERROR("[%s] '%s %s %s %s' failed. rc=%d\n", SP(instanceId), command, NP(options), NP(host), NP(credentials), rc);
+        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials), rc);
         return (EUCA_SYSTEM_ERROR);
     } else {
         LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
