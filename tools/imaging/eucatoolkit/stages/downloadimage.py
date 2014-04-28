@@ -35,7 +35,7 @@ from io import BytesIO
 from downloadmanifest import DownloadManifest
 from processutils import close_all_fds, open_pipe_fileobjs, spawn_process
 from processutils import monitor_subprocess_io, wait_process_in_thread
-from eucatoolkit import stages
+from    eucatoolkit import stages
 
 
 class DownloadImage(object):
