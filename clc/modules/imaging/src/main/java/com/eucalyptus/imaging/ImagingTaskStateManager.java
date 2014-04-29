@@ -21,13 +21,10 @@ package com.eucalyptus.imaging;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -40,32 +37,20 @@ import org.apache.commons.httpclient.methods.HeadMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
-import com.eucalyptus.objectstorage.client.EucaS3Client;
-import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.Dates;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
@@ -130,9 +115,16 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private void processPendingTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
+      if(! ImportTaskState.STATE_MSG_PENDING_CONVERSION.equals(task.getStateReason())) {
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.PENDING, ImportTaskState.PENDING, ImportTaskState.STATE_MSG_PENDING_CONVERSION);
+        }catch(final Exception ex){
+          ;
+        }
+      }
       if(isExpired(task)){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.PENDING, ImportTaskState.CANCELLING, "Task expired");
+          ImagingTasks.transitState(task, ImportTaskState.PENDING, ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_TASK_EXPIRED);
         }catch(final Exception ex){
           ;
         }
@@ -142,9 +134,16 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private void processConvertingTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
+      if(! ImportTaskState.STATE_MSG_IN_CONVERSION.equals(task.getStateReason())) {
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.CONVERTING, ImportTaskState.CONVERTING, ImportTaskState.STATE_MSG_IN_CONVERSION);
+        }catch(final Exception ex){
+          ;
+        }
+      }
       if(isExpired(task)){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.CONVERTING, ImportTaskState.CANCELLING, "Task expired");
+          ImagingTasks.transitState(task, ImportTaskState.CONVERTING, ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_TASK_EXPIRED);
         }catch(final Exception ex){
           ;
         }
@@ -156,7 +155,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     for(final ImagingTask task : tasks){
       if(!(task instanceof ImportInstanceImagingTask)){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING, ImportTaskState.COMPLETED, null);
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING, ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
         }catch(final Exception ex){
           ;
         }
@@ -172,7 +171,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       String instanceId = conversionTask.getImportInstance().getInstanceId();
       if(instanceId!=null && instanceId.length() > 0){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING , ImportTaskState.COMPLETED, "");
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING , ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
         }catch(final Exception ex){
           LOG.error("Failed to update task's state to completed", ex);
         }
@@ -216,7 +215,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
                 ImportTaskState.COMPLETED, String.format("Image registered: %s, but failed to run instance", imageId));
             // this will set the task state to completed in the next timer run
           }catch(final Exception ex1){
-            ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to run instances");
+            ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_RUN_FAILURE);
           }
         }
         continue;
@@ -237,7 +236,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               numError++;
           }
           if(numError>0){
-           ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to create a snapshot");
+           ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_SNAPSHOT_FAILURE);
           }else if(numCompleted == snapshotIds.size()){
             // TODO : multiple snapshots (i.e., multiple images from import-instance). what to do?
             // register the image
@@ -260,11 +259,11 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
                 throw new Exception("Null image id");
               ImagingTasks.setImageId(instanceTask, imageId);
             }catch(final Exception ex){
-              ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to register the image for "+snapshotId);
+              ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_REGISTER_FAILURE);
             }
           }
         }catch(final Exception ex){
-          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to register the image");
+          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_REGISTER_FAILURE);
         }
         continue;
       }
@@ -272,7 +271,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       /// snapshot volumes
       final List<ImportInstanceVolumeDetail> volumes = conversionTask.getImportInstance().getVolumes();
       if(volumes==null || volumes.size()<=0){
-        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "No volume is found");
+        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_TASK_INSUFFICIENT_PARAMETERS +":volume");
       }
       final List<String> volumeIds = Lists.newArrayList();
       for(final ImportInstanceVolumeDetail volume : volumes){
@@ -281,7 +280,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         volumeIds.add(volume.getVolume().getId());
       }
       if(volumeIds.size()<=0){
-        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "No volume is found");
+        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_TASK_INSUFFICIENT_PARAMETERS +":volume");
       }
       for(final String volumeId : volumeIds){
         try{
@@ -289,7 +288,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               EucalyptusActivityTasks.getInstance().createSnapshotAsUser(instanceTask.getOwnerUserId(), volumeId);
           ImagingTasks.addSnapshotId(instanceTask, snapshotId);
         }catch(final Exception ex){
-          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to create a snapshot");
+          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_SNAPSHOT_FAILURE);
           break;
         }
       }
@@ -383,7 +382,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       try{
         if(isExpired(task)){
           try{
-            ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.CANCELLING, "Task expired");
+            ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_TASK_EXPIRED);
           }catch(final Exception ex){
             ;
           }
@@ -400,7 +399,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
          throw new Exception("Invalid ImagingTask");
       }catch(final Exception ex){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.FAILED, "Failed to create the volume");
+          ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
         }catch(final Exception ex2){
           ;
         }
@@ -420,6 +419,13 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       if(volume.getImage().getImportManifestUrl()!=null)
         try{
           if(! doesManifestExist(volume.getImage().getImportManifestUrl())) {
+            if(! ImportTaskState.STATE_MSG_PENDING_UPLOAD.equals(instanceTask.getStateReason())){
+              try{
+                ImagingTasks.transitState(instanceTask, ImportTaskState.NEW, ImportTaskState.NEW, ImportTaskState.STATE_MSG_PENDING_UPLOAD);
+              }catch(final Exception ex){
+                ;
+              }
+            }
             return;
           }
         }catch(final Exception ex){
@@ -427,6 +433,11 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         }
     }
 
+    try{
+      ImagingTasks.transitState(instanceTask, ImportTaskState.NEW, ImportTaskState.NEW, ImportTaskState.STATE_MSG_CREATING_VOLUME);
+    }catch(final Exception ex){
+      ;
+    }
     try{
       int numVolumeCreated = 0;
       for(final ImportInstanceVolumeDetail volume : volumes){
@@ -469,7 +480,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       }
       if(numVolumeCreated == volumes.size()){
         try{
-          ImagingTasks.transitState(instanceTask, ImportTaskState.NEW, ImportTaskState.PENDING, null);
+          ImagingTasks.transitState(instanceTask, ImportTaskState.NEW, ImportTaskState.PENDING, "");
         }catch(final Exception ex){
           ;
         }
@@ -485,6 +496,13 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     if(volumeTask.getImportManifestUrl() !=null){
       try{
         if(! doesManifestExist(volumeTask.getImportManifestUrl())) {
+          if(! ImportTaskState.STATE_MSG_PENDING_UPLOAD.equals(volumeTask.getStateReason())){
+            try{
+              ImagingTasks.transitState(volumeTask, ImportTaskState.NEW, ImportTaskState.NEW, ImportTaskState.STATE_MSG_PENDING_UPLOAD);
+            }catch(final Exception ex){
+              ;
+            }
+          }
           return;
         }
       }catch(final Exception ex){
@@ -492,6 +510,11 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       }
     }
     
+    try{
+      ImagingTasks.transitState(volumeTask, ImportTaskState.NEW, ImportTaskState.NEW, ImportTaskState.STATE_MSG_CREATING_VOLUME);
+    }catch(final Exception ex){
+      ;
+    }
     if(volumeTask.getVolumeId()==null || volumeTask.getVolumeId().length()<=0){
       final String zone = volumeTask.getAvailabilityZone();
       final int size = volumeTask.getVolumeSize();
@@ -511,7 +534,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         final ConversionTask conversionTask = volumeTask.getTask();
         if(conversionTask.getImportVolume() != null){
           try{
-            ImagingTasks.transitState(volumeTask, ImportTaskState.NEW, ImportTaskState.PENDING, null);
+            ImagingTasks.transitState(volumeTask, ImportTaskState.NEW, ImportTaskState.PENDING, "");
           }catch(final Exception ex){
             ;
           }
