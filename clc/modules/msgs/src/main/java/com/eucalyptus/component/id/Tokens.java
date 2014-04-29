@@ -22,6 +22,7 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -32,6 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( PolicySpec.VENDOR_STS )
 @Partition( value = Tokens.class, manyToOne=true )
 @FaultLogPrefix( "services" )
+@Description( "STS API service" )
 public class Tokens extends ComponentId {
   private static final long serialVersionUID = 1L;
 }

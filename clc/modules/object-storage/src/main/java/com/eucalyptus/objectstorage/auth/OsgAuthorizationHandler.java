@@ -25,7 +25,6 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -124,7 +123,6 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		
 		//Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
 		User requestUser = null;
-		String securityToken = null;
 		Account requestAccount = null;
 		AuthContextSupplier authContext = null;
 		try {
@@ -132,12 +130,10 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			try {
 				Context ctx = Contexts.lookup(request.getCorrelationId());
 				requestUser = ctx.getUser();
-				securityToken = ctx.getSecurityToken();
 				requestAccount = requestUser.getAccount();
 				authContext = ctx.getAuthContext();
 			} catch(NoSuchContextException e) {
 				requestUser = null;
-				securityToken = null;
 				requestAccount = null;
 				authContext = null;
 			}

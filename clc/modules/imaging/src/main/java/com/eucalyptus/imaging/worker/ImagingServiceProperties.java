@@ -22,7 +22,11 @@ package com.eucalyptus.imaging.worker;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults.CheckException;
+import com.eucalyptus.component.ServiceConfiguration;
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
@@ -155,7 +159,7 @@ public class ImagingServiceProperties {
   public static class ImagingServicePropertyBootstrapper extends Bootstrapper.Simple {
 
     private static ImagingServicePropertyBootstrapper singleton;
-    private static final Runnable imageNotConfiguredFaultRunnable =
+    private static final Callable<String> imageNotConfiguredFaultRunnable =
         Faults.forComponent( Imaging.class ).havingId( 1015 ).logOnFirstRun();
 
     public static Bootstrapper getInstance() {
@@ -191,7 +195,14 @@ public class ImagingServiceProperties {
           CheckCounter++;
         return EmiCheckResult;
       } else {
-        imageNotConfiguredFaultRunnable.run( );
+        try {
+          //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
+          final ServiceConfiguration localService = Components.lookup( Imaging.class ).getLocalServiceConfiguration( );
+          final CheckException ex = Faults.failure( localService, imageNotConfiguredFaultRunnable.call( ).split("\n")[1] );
+          Faults.submit( localService, localService.lookupStateMachine().getTransitionRecord(), ex );
+        } catch ( Exception e ) {
+          LOG.debug( e );
+        }
         return false;
       }
     }

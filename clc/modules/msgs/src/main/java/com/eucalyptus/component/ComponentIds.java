@@ -76,7 +76,11 @@ public class ComponentIds {
   private static Logger                                          LOG        = Logger.getLogger( ComponentIds.class );
   private static final ClassToInstanceMap<ComponentId>           compIdMap  = MutableClassToInstanceMap.create( );
   private static final Map<String, Class<? extends ComponentId>> compIdName = Maps.newHashMap( );
-  
+
+  public static List<Class<? extends ComponentId>> listTypes( ) {
+    return Lists.newArrayList( compIdMap.keySet( ) );
+  }
+
   public static List<ComponentId> list( ) {
     return Lists.newArrayList( compIdMap.values( ) );
   }

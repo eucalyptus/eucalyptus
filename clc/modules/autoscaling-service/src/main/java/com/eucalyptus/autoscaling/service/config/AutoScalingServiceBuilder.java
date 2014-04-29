@@ -53,7 +53,7 @@ public class AutoScalingServiceBuilder extends AbstractServiceBuilder<AutoScalin
 
   @Override
   public AutoScalingConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new AutoScalingConfiguration( name, host, port );
+    return new AutoScalingConfiguration( partition, name, host, port );
   }
 
   @Override

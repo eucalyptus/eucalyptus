@@ -62,6 +62,7 @@
 package com.eucalyptus.component.fault;
 
 import java.util.ArrayList;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
@@ -103,42 +104,53 @@ public class FaultBuilderImpl implements FaultBuilder {
 	}
 
 	@Override
-	public FaultBuilder havingId(int faultId) {
+	public FaultBuilder havingId( int faultId ) {
 		this.faultId = faultId;
 		return this;
 	}
 
+  /**
+   * GRZE: with displeasure I force the return of the fault string for use elsewhere in the name of consistency and dryness.
+   */
 	@Override
-	public void log() {
+	public String log() {
+    String faultMessage = "";
 		try {
 			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentIdClass);
 			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
 			if (fault == FaultRegistry.SUPPRESSED_FAULT) {
-				LOG.debug("Fault " + faultId + " detected, will not be logged because it has been configured to be suppressed.");
+				LOG.debug( faultMessage = "Fault " + faultId + " detected, will not be logged because it has been configured to be suppressed.");
 			} else if (fault == null) {
-				LOG.error( "Fault " + faultId + " detected, could not find fault id in registry.");
+				LOG.error( faultMessage = "Fault " + faultId + " detected, could not find fault id in registry.");
 			} else {
 				for (NameValuePair nameValuePair: vars) {
 					fault = fault.withVar(nameValuePair.getName(), nameValuePair.getValue());
 				}
 				faultLogger.log(fault);
+        faultMessage = fault.toString();
 			}
 		} catch (Exception ex) {
-			LOG.error("Error writing fault with id " + faultId + "  for component " + componentIdClass.getName());
+			LOG.error( faultMessage = "Error writing fault with id " + faultId + "  for component " + componentIdClass.getName());
 			ex.printStackTrace();
 		}
+    return faultMessage;
 	}
 
-	@Override
-	public Runnable logOnFirstRun( ) {
-		return new Runnable( ) {
+  /**
+   * GRZE: with displeasure I force the return of the fault string for use elsewhere in the name of consistency and dryness.
+   */
+  @Override
+	public Callable<String> logOnFirstRun() {
+		return new Callable<String>( ) {
 			private final AtomicBoolean logged = new AtomicBoolean( false );
+      private String faultMessage;
 
-			@Override
-			public void run( ) {
+      @Override
+			public String call( ) {
 				if ( logged.compareAndSet( false, true ) ) {
-					log( );
+					this.faultMessage = log( );
 				}
+        return this.faultMessage;
 			}
 		};
 	}

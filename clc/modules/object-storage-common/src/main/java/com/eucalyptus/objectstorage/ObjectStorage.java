@@ -64,6 +64,7 @@ package com.eucalyptus.objectstorage;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
@@ -83,6 +84,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor("s3")
 @Partition(value = {ObjectStorage.class}, manyToOne = true)
 @FaultLogPrefix("services")
+@Description( "S3 API service" )
 public class ObjectStorage extends ComponentId {
 
     @Override

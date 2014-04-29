@@ -90,8 +90,8 @@ public class ObjectStorageConfiguration extends ComponentConfiguration implement
 	
 	public ObjectStorageConfiguration( ) { }
 	
-	public ObjectStorageConfiguration ( String name, String hostName, Integer port ) {
-		super( "objectstorage", name, hostName, port, DEFAULT_SERVICE_PATH );
+	public ObjectStorageConfiguration ( String partition, String name, String hostName, Integer port ) {
+		super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
 	}
 
 	public String getAvailableClients() {

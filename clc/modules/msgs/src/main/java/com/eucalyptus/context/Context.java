@@ -111,7 +111,6 @@ public class Context {
   private final boolean                channelManaged;
   private WeakReference<MuleEvent>     muleEvent = new WeakReference<>( null );
   private User                         user      = null;
-  private String                       securityToken = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
   private Boolean isSystemAdmin;
@@ -194,15 +193,7 @@ public class Context {
     }
   }
 
-  public String getSecurityToken() {
-    return securityToken;
-  }
-
-  public void setSecurityToken(String securityToken) {
-    this.securityToken = securityToken;
-  }
-
-    public UserFullName getUserFullName( ) {
+  public UserFullName getUserFullName( ) {
     return UserFullName.getInstance( this.getUser( ) );
   }
 
@@ -430,11 +421,6 @@ public class Context {
       @Override
       public void setSubject( final Subject subject ) {
         this.subject = subject;
-      }
-
-      @Override
-      public String getSecurityToken( ) {
-        return null;
       }
 
       @Override

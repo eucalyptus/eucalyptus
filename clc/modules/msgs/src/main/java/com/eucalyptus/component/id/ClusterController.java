@@ -64,6 +64,8 @@ package com.eucalyptus.component.id;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.eucalyptus.component.annotation.Description;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -74,6 +76,7 @@ import com.eucalyptus.util.Internets;
 
 @Partition( value = { Eucalyptus.class } )
 @FaultLogPrefix( "cloud" ) // stub for cc, but in clc
+@Description( "The Cluster Controller service" )
 public class ClusterController extends ComponentId {
   
   private static final long       serialVersionUID = 1L;

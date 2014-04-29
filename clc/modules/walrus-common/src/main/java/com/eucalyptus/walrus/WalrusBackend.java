@@ -63,6 +63,7 @@
 package com.eucalyptus.walrus;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
@@ -72,6 +73,7 @@ import com.eucalyptus.component.annotation.PolicyVendor;
 @PolicyVendor( "s3" )
 @Partition( WalrusBackend.class )
 @FaultLogPrefix
+@Description( "The legacy Walrus Backend service" )
 public class WalrusBackend extends ComponentId {
 
     @Override

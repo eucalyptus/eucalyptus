@@ -44,7 +44,7 @@ public class TokensServiceBuilder extends AbstractServiceBuilder<TokensConfigura
 
   @Override
   public TokensConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new TokensConfiguration( name, host, port );
+    return new TokensConfiguration( partition, name, host, port );
   }
 
   @Override

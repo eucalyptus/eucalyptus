@@ -35,7 +35,6 @@ import urlparse
 
 __version__ = '@EUCA_VERSION@'
 
-
 class EucAdmin(AWSQueryService):
 
     Name = 'eucadmin'
@@ -125,3 +124,18 @@ def print_version_if_necessary():
     if '--version' in sys.argv:
         print 'eucalyptus', __version__
         sys.exit()
+
+
+class EucaFormat():
+    SERVICE_TYPE = ['%-18s']
+    PARTITION = ['%-10s']
+    SERVICE_NAME = ['%-21s']
+    PREFIX = ['%s']
+    PREFIX_LINE = PREFIX + SERVICE_TYPE + PARTITION + SERVICE_NAME
+    STATE = ['%-8s']
+    URI = ['%-35s']
+    FULLNAME = ['%-35s']
+
+    def __init__(self):
+        pass
+
