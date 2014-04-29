@@ -23,6 +23,10 @@ class Cidr implements Predicate<InetAddress> {
   int ip;
   int prefix;
 
+  static Cidr of( int address, int prefix ) {
+    new Cidr( address, prefix )
+  }
+
   /**
    * Parse the given CIDR notation.
    *
@@ -30,7 +34,7 @@ class Cidr implements Predicate<InetAddress> {
    * @return The Cidr representation
    * @throws IllegalArgumentException If the CIDR text is invalid
    */
-  static Cidr parse( String cidr ) {
+  static Cidr parse( final String cidr ) {
     Parameters.checkParam( "cidr", cidr, notNullValue( ) )
     final Iterable<String> parts = Splitter.on('/').trimResults().omitEmptyStrings().limit(2).split( cidr )
     final String ipPart = parts.getAt( 0 )
@@ -61,6 +65,21 @@ class Cidr implements Predicate<InetAddress> {
       }
     }
     new Cidr( ip, prefix )
+  }
+
+  /**
+   * Create a CIDR from the given address / prefix length
+   *
+   * @param address The address to use
+   * @param prefix The network prefix length
+   * @return The CIDR
+   */
+  static Cidr fromAddress( final InetAddress address, final int prefix ) {
+    BigInteger addressBigInteger = new BigInteger( address.address )
+    for ( int i=0; i < 32 - prefix; i++ ) {
+      addressBigInteger = addressBigInteger.clearBit( i )
+    }
+    new Cidr( addressBigInteger.intValue( ), prefix )
   }
 
   String getIpAsText() {
