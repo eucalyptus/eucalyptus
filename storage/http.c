@@ -543,7 +543,7 @@ char *url_decode(const char *encoded)
 //!
 //! @note the caller must free the returned memory when done.
 //!
-char *http_get2str(const char *url)
+char *http_get2str(const char *url, boolean *bail_flag)
 {
     char *http_reply_str = NULL;
     char *http_reply_path = strdup("/tmp/http-reply-XXXXXX");
@@ -560,7 +560,7 @@ char *http_get2str(const char *url)
         close(tmp_fd);                 // objectstorage_ routine will reopen the file
 
         // download a fresh http_reply
-        if (http_get(url, http_reply_path) != 0) {
+        if (http_get(url, http_reply_path, bail_flag) != 0) {
             LOGERROR("failed to download http reply to %s\n", http_reply_path);
         } else {
             http_reply_str = file2strn(http_reply_path, 2000000);
@@ -581,9 +581,9 @@ char *http_get2str(const char *url)
 //!
 //! @see http_get_timeout()
 //!
-int http_get(const char *url, const char *outfile)
+int http_get(const char *url, const char *outfile, boolean *bail_flag)
 {
-    return (http_get_timeout(url, outfile, TOTAL_RETRIES, FIRST_TIMEOUT, 0, 0));
+    return (http_get_timeout(url, outfile, TOTAL_RETRIES, FIRST_TIMEOUT, 0, 0, bail_flag));
 }
 
 //!
@@ -607,7 +607,7 @@ int http_get(const char *url, const char *outfile)
 //!
 //! @post On success, the get request has been processed successfully
 //!
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout)
+int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout, boolean *bail_flag)
 {
     int code = EUCA_ERROR;
     int retries = 0;
@@ -704,7 +704,14 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
 
         if ((code != EUCA_OK) && (retries > 0)) {
             LOGERROR("download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
-            sleep(timeout);
+            for (int i=0; i<timeout; i++) {
+                sleep(timeout);
+                if (bail_flag != NULL && *bail_flag == TRUE) {
+                    LOGWARN("bailing on the download for %s\n", url);
+                    retries = 0;
+                    break;
+                }
+            }
             timeout <<= 1;
             if (timeout > MAX_TIMEOUT)
                 timeout = MAX_TIMEOUT;

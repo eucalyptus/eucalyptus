@@ -444,6 +444,11 @@ typedef struct ncInstance_t {
     char instancePubkey[KEY_STRING_SIZE];   //!<instance's public key
     char instanceToken[BIG_CHAR_BUFFER_SIZE];   //!< token from Euare service that proves the instances' authorization
     char instancePk[KEY_STRING_SIZE];  //!<instance's private key
+
+    //! @{
+    //! @name field added in 4.0 for faster termination
+    boolean bail_flag; //!< instance termination was requested
+    //! @}
 } ncInstance;
 
 //! Structure defining NC resource information
