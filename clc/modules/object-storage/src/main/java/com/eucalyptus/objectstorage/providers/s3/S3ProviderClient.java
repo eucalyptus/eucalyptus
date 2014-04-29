@@ -64,6 +64,7 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
