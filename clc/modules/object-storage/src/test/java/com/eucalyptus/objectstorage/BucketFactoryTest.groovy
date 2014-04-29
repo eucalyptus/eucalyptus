@@ -31,7 +31,7 @@ import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType
 import com.eucalyptus.objectstorage.providers.InMemoryProvider
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.AclUtils
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties

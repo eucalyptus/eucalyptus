@@ -64,7 +64,7 @@ package com.eucalyptus.objectstorage.providers;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import org.apache.commons.pool.PoolableObjectFactory;
 
 import java.util.Date;
