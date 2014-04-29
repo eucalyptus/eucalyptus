@@ -20,6 +20,7 @@
 package com.eucalyptus.imaging;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.Date;
@@ -32,7 +33,14 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.HeadMethod;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
@@ -52,6 +60,7 @@ import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.Dates;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -410,7 +419,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     for(final ImportInstanceVolumeDetail volume: volumes){
       if(volume.getImage().getImportManifestUrl()!=null)
         try{
-          if(! doesManifestExist(instanceTask.getOwnerUserId(), volume.getImage().getImportManifestUrl())) {
+          if(! doesManifestExist(volume.getImage().getImportManifestUrl())) {
             return;
           }
         }catch(final Exception ex){
@@ -475,7 +484,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   private void processNewImportVolumeImagingTask(final ImportVolumeImagingTask volumeTask) throws Exception{
     if(volumeTask.getImportManifestUrl() !=null){
       try{
-        if(! doesManifestExist(volumeTask.getOwnerUserId(), volumeTask.getImportManifestUrl())) {
+        if(! doesManifestExist(volumeTask.getImportManifestUrl())) {
           return;
         }
       }catch(final Exception ex){
@@ -517,69 +526,41 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     }  
   }
   
-  private boolean doesManifestExist(final String userId, final String manifestUrl) throws Exception {
-    final User user = Accounts.lookupUserById(userId);
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    //http://euca010.objectstorage.thinkpad:8773/e3a03ce6-211b-44af-9984-5a2cebc4af18/disk-little-image.imgmanifest.xml?AWSAccessKeyId=AKIHK4NNTU53RYHGHUZX&Expires=1400054576&Signature=j6%2FVi2dOHMr5MdBEoFn1EY5ZwZs%3D
-    final URI uri = new URI(manifestUrl);
-    String path = uri.getPath();
-    if(path.startsWith("/"))
-      path = path.substring(1);
-    if(path.toLowerCase().startsWith("services/objectstorage/"))
-      path = path.substring("services/objectstorage/".length());
-    final String[] tokens = path.split("/");
-    
-    String keyObj = tokens[tokens.length-1];
-    final String keyDir = tokens[tokens.length-2];
-    keyObj = keyObj.substring(0, keyObj.lastIndexOf("manifest.xml"))+"manifest.xml";
-    
-    final String key = String.format("%s/%s", keyDir, keyObj);
-    String bucket = null;
-    if(tokens.length>2){ // bucket is in the path
-      bucket = tokens[0];
-    }else{ // bucket is virtually hosted
-      bucket = uri.getHost();
-      bucket = bucket.substring(0, bucket.indexOf("."));
-    }
-    
-    try{
-      if(!s3c.doesBucketExist(bucket))
-        return false;
-      final ObjectListing listing = s3c.listObjects(bucket);
-      final List<S3ObjectSummary> objects = listing.getObjectSummaries();
-      final Set<String> keySet = Sets.newHashSet();
-      for(final S3ObjectSummary object : objects){
-        keySet.add(object.getKey());
-      }
-      final ImageManifestFile manifestFile = 
-          new ImageManifestFile(manifestUrl, ImportImageManifest.INSTANCE);
-      String manifest = null;
-      try{
-        manifest = manifestFile.getManifest();
-      }catch(final Exception ex){
+  private boolean doesManifestExist(final String manifestUrl) throws Exception {
+    HttpClient client = new HttpClient();
+    client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
+    GetMethod method = new GetMethod(manifestUrl);
+    String manifest = null;
+    try {
+      client.executeMethod(method);
+      manifest = method.getResponseBodyAsString();
+      if (manifest == null) {
         return false;
       }
-      final List<String> partsKey = getPartsKey(manifest);
-      for(final String keyName : partsKey){
-        if(! keySet.contains(keyName)){
-          return false;
-        }
-      }
-      return true;
-    }catch(final Exception ex){
-      LOG.warn("Failed to check parts of the import manifest", ex);
+    } catch(IOException ex) {
       return false;
+    } finally {
+      method.releaseConnection();
     }
+    final List<String> partsUrls = getPartsHeadUrl(manifest);
+    for(final String url : partsUrls){
+      HeadMethod partCheck = new HeadMethod(url);
+      int res = client.executeMethod(partCheck);
+      if ( res != HttpStatus.SC_OK){
+        return false;
+      }
+    }
+    return true;
   }
   
-  private List<String> getPartsKey(final String manifest) throws Exception{
+  private List<String> getPartsHeadUrl(final String manifest) throws Exception{
     final XPath xpath = XPathFactory.newInstance( ).newXPath();
     final DocumentBuilder builder = XMLParser.getDocBuilder( );
     final Document inputSource = builder.parse( new ByteArrayInputStream( manifest.getBytes( ) ) );
    
     final List<String> parts = Lists.newArrayList();
     final NodeList nodes = 
-        (NodeList) xpath.evaluate( ImportImageManifest.INSTANCE.getPartsPath()+"/key", 
+        (NodeList) xpath.evaluate( ImportImageManifest.INSTANCE.getPartsPath()+"/head-url",
             inputSource, XPathConstants.NODESET );
     for (int i = 0; i < nodes.getLength(); i++) {
       parts.add(nodes.item(i).getTextContent());
