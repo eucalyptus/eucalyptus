@@ -527,6 +527,10 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   }
   
   private boolean doesManifestExist(final String manifestUrl) throws Exception {
+    // validate urls per EUCA-9144
+    UrlValidator urlValidator = new UrlValidator();
+    if (!urlValidator.isEucalyptusUrl(manifestUrl))
+      throw new RuntimeException("Manifest is not stored in the OS. It's location is outside Eucalyptus: " + manifestUrl);
     HttpClient client = new HttpClient();
     client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
     GetMethod method = new GetMethod(manifestUrl);
@@ -544,6 +548,8 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     }
     final List<String> partsUrls = getPartsHeadUrl(manifest);
     for(final String url : partsUrls){
+      if (!urlValidator.isEucalyptusUrl(url))
+        throw new RuntimeException("Manifest's part is not stored in the OS. Its location is outside Eucalyptus: " + url);
       HeadMethod partCheck = new HeadMethod(url);
       int res = client.executeMethod(partCheck);
       if ( res != HttpStatus.SC_OK){
