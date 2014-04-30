@@ -22,7 +22,6 @@ package com.eucalyptus.auth;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.google.common.collect.Maps;
 
@@ -40,12 +39,11 @@ public class AuthContext {
   private Map<AuthEvaluationContextKey,AuthEvaluationContext> contexts = Maps.newHashMap();
 
   AuthContext( final User requestUser, final Map<String, String> evaluatedKeys ) throws AuthException {
-    final Account account = requestUser.getAccount( );
     this.userId = requestUser.getUserId( );
-    this.accountNumber = account.getAccountNumber( );
     this.systemAdmin = requestUser.isSystemAdmin( );
     this.systemUser = requestUser.isSystemUser( );
     this.accountAdmin = requestUser.isAccountAdmin( );
+    this.accountNumber = requestUser.getAccountNumber( );
     this.user = requestUser;
     this.evaluatedKeys = evaluatedKeys;
   }

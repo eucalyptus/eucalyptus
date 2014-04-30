@@ -174,13 +174,6 @@ public class Context {
     return this.creationTime;
   }
   
-  public void setRequest( BaseMessage msg ) {
-    if ( msg != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.toSimpleString( ) ).debug( );
-      this.request = msg;
-    }
-  }
-  
   public BaseMessage getRequest( ) {
     initRequest();
     return check( this.request );
