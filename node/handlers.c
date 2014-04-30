@@ -531,17 +531,27 @@ int get_value(char *s, const char *name, long long *valp)
 //!
 void libvirt_err_handler(void *userData, virErrorPtr error)
 {
-    int log_level = EUCA_LOG_ERROR;
+    boolean ignore_error = FALSE;
 
     if (error == NULL) {
         LOGERROR("libvirt error handler was given a NULL pointer\n");
-    } else {
-        if (error->code == VIR_ERR_NO_DOMAIN) {
-            // report "domain not found" errors as warnings, since they are expected when instance is being terminated
-            log_level = EUCA_LOG_WARN;
-        }
+        return;
+    }
 
-        EUCALOG(log_level, "libvirt: %s (code=%d)\n", error->message, error->code);
+    if (error->code == VIR_ERR_NO_DOMAIN) {
+        char * instanceId = euca_strestr(error->message, "'", "'"); // try to find instance ID in the message
+        if (instanceId) {
+            // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
+            ncInstance *instance = find_instance(&global_instances, instanceId);
+            if (instance && instance->terminationRequestedTime) { // termination of this instance was requested
+                ignore_error = TRUE;
+            }
+            free(instanceId);
+        }
+    }
+
+    if (! ignore_error) {
+        EUCALOG(EUCA_LOG_ERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
     }
 }
 
@@ -1006,6 +1016,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 // most likely the user has shut it down from the inside
                 if (instance->stop_requested) {
                     LOGDEBUG("[%s] ignoring domain in stopped state\n", instance->instanceId);
+                } else if (instance->terminationRequestedTime) {
+                    LOGDEBUG("[%s] hypervisor not finding the terminating domain\n", instance->instanceId);
                 } else if (instance->retries) {
                     LOGWARN("[%s] hypervisor failed to find domain, will retry %d more time(s)\n", instance->instanceId, instance->retries);
                     instance->retries--;
@@ -2752,7 +2764,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     for (i = 0; i < (*outInstsLen); i++) {
         char vols_str[128] = "";
         char vol_str[16] = "";
-        char mig_str[128] = "not migrating";
+        char status_str[128] = "not migrating";
         ncInstance *instance = (*outInsts)[i];
 
         // construct a string summarizing the volumes attached to the instance
@@ -2793,10 +2805,14 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
                 peer = instance->migration_src;
                 dir = '<';
             }
-            snprintf(mig_str, sizeof(mig_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
+            snprintf(status_str, sizeof(status_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
+        } else if (instance->terminationTime) {
+            strncpy(status_str, "terminated", sizeof(status_str));
+        } else if (instance->terminationRequestedTime) {
+            strncpy(status_str, "terminating", sizeof(status_str));
         }
 
-        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, mig_str, instance->ncnet.publicIp, vols_str);
+        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
     }
 
     // allocate enough memory
