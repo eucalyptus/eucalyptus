@@ -2334,6 +2334,10 @@ static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long ti
     if (read_blockblob_metadata_path(BLOCKBLOB_PATH_DEPS, bs, bb_id, path, sizeof(path)) > 0) {
         in_use |= BLOCKBLOB_STATUS_BACKED;
     }
+
+    if (read_blockblob_metadata_path(BLOCKBLOB_PATH_DM, bs, bb_id, path, sizeof(path)) > 0) {
+        in_use |= BLOCKBLOB_STATUS_BACKED;
+    }
     _err_on();
 
     return in_use;
@@ -5215,7 +5219,7 @@ static int do_metadata_test(const char *base, const char *name)
     int ret;
     int errors = 0;
 
-    printf("\nrunning do_metadata_test()\n");
+    printf("\nTEST: running do_metadata_test(%s)\n", name);
 
     blobstore *bs = create_teststore(BS_SIZE, base, name, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
     if (bs == NULL) {
@@ -5271,7 +5275,7 @@ static int do_metadata_test(const char *base, const char *name)
         return errors;
     }
 
-    printf("\ntesting metadata manipulation\n");
+    printf("\nTEST: testing metadata manipulation\n");
 
     blockblob *bb1;
     _OPENBB(bb1, B1, BB_SIZE, NULL, _CBB, 0, 0);    // bs size: 10
@@ -5329,7 +5333,7 @@ static int do_metadata_test(const char *base, const char *name)
     _CLOSBB(bb1, B1);
 
     blobstore_close(bs);
-    printf("completed metadata test\n");
+    printf("TEST: completed metadata test (%s)\n", name);
 done:
     return errors;
 }
@@ -5353,7 +5357,7 @@ static int do_blobstore_test(const char *base, const char *name, blobstore_forma
     int ret;
     int errors = 0;
 
-    printf("\ntesting blockblob creation (name=%s, format=%d, revocation=%d)\n", name, format, revocation);
+    printf("\nTEST: testing blockblob creation (name=%s, format=%d, revocation=%d)\n", name, format, revocation);
 
     blobstore *bs = create_teststore(BS_SIZE, base, name, format, revocation, BLOBSTORE_SNAPSHOT_ANY);
     if (bs == NULL) {
@@ -5419,7 +5423,7 @@ static int do_blobstore_test(const char *base, const char *name, blobstore_forma
 
     blobstore_close(bs);
 
-    printf("completed blobstore test (name=%s)\n", name);
+    printf("TEST: completed blobstore test (name=%s, errors=%d)\n", name, errors);
 done:
     return errors;
 }
@@ -5538,7 +5542,7 @@ int do_file_lock_test(void)
     int fd1, fd2, fd3;
 
     for (int lc = 0; lc < LOCK_CYCLES; lc++) {
-        printf("\nintra-process locks cycle=%d\n", lc);
+        printf("\nTEST: intra-process locks cycle=%d\n", lc);
 
         _OPEN(fd1, F1, _W, 300, -1);
         _OPEN(fd1, F1, _R, 300, -1);
@@ -5604,7 +5608,7 @@ int do_file_lock_test(void)
     }
 
     for (int lc = 0; lc < LOCK_CYCLES; lc++) {
-        printf("\ninter-process locks cycle=%d\n", lc);
+        printf("\nTEST: inter-process locks cycle=%d\n", lc);
         _OPEN(fd1, F1, _W, 300, -1);
         _OPEN(fd1, F1, _R, 300, -1);
         _OPEN(fd1, F1, _C, 0, 0);
@@ -5702,11 +5706,11 @@ int do_file_lock_test(void)
             }
             fflush(stdout);
             fflush(stderr);
-            printf("waited for all competing processes (returned sum=%d) timeout=%lld\n", proc_ret_sum, t);
             remove(F1);
             remove(F2);
             remove(F3);
             errors += proc_ret_sum;
+            printf("TEST: waited for all competing processes (returned sum=%d) timeout=%lld errors=%d\n", proc_ret_sum, t, errors);
         }
     }
     return errors;
@@ -5783,7 +5787,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    printf("testing blobstore.c\n");
+    printf("TEST: testing blobstore.c\n");
 
     errors += do_file_lock_test();
     if (errors)

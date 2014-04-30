@@ -1138,7 +1138,16 @@ static int partition_creator(artifact * a)
         LOGINFO("[%s] skipping formatting of %s\n", a->instanceId, a->id);
         return (EUCA_OK);
     }
-    LOGINFO("[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, a->size_bytes, vbr->formatName, a->id);
+
+    LOGDEBUG("[%s] mapping euca-zero device into partition %s\n", a->instanceId, a->id);
+    blockmap map = { BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, a->size_bytes / 512};
+    if (blockblob_clone(a->bb, &map, 1) == -1) {
+        int ret = blobstore_get_error();
+        LOGERROR("[%s] failed to clone euca-zero device into partition: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
+        return EUCA_ERROR;
+    }
+
+    LOGINFO("[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, a->size_bytes, vbr->formatName, a->id);    
     int format = EUCA_ERROR;
     switch (vbr->format) {
     case NC_FORMAT_NONE:
