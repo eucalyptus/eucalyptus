@@ -147,7 +147,7 @@ public abstract class AbstractTaskScheduler {
             image.setDownloadManifestUrl(downloadManifest);
           }
         }catch(final Exception ex){
-          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
           throw new EucalyptusCloudException("Failed to generate download manifest", ex);
         }
 
@@ -176,7 +176,7 @@ public abstract class AbstractTaskScheduler {
                     ImportImageManifest.INSTANCE ),
                     null, volumeTask.getDisplayName(), 1);
           }catch(final InvalidBaseManifestException ex){
-            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
             throw new EucalyptusCloudException("Failed to generate download manifest", ex);
           }
 
@@ -209,7 +209,7 @@ public abstract class AbstractTaskScheduler {
                         null, manifestName, 1);
                 ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
               }catch(final InvalidBaseManifestException ex){
-                ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+                ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
                 throw new EucalyptusCloudException("Failed to generate download manifest", ex);
               }       
             }
@@ -229,11 +229,11 @@ public abstract class AbstractTaskScheduler {
     }catch(final EucalyptusCloudException ex){
       throw new Exception("failed to prepare worker task", ex);
     }catch(final Exception ex){
-      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, "Internal error");
+      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
       throw new Exception("failed to prepare worker task", ex);
     }
     try{
-      ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, null);
+      ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, "");
     }catch(final Exception ex){
       ;
     }

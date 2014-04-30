@@ -34,7 +34,7 @@ import com.eucalyptus.objectstorage.msgs.PutObjectType
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType
 import com.eucalyptus.objectstorage.msgs.UploadPartType
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.BucketListEntry

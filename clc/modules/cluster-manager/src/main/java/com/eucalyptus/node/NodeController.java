@@ -98,7 +98,12 @@ public class NodeController extends ComponentId {
   public String getInternalServicePath( final String... pathParts ) {
     return this.getServicePath( pathParts );
   }
-  
+
+  @Override
+  public boolean isPartitioned() {
+    return true;
+  }
+
   @Override
   public boolean isRegisterable( ) {
     return false;

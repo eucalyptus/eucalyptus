@@ -38,7 +38,7 @@ public class TokensConfiguration extends ComponentConfiguration implements Seria
   public TokensConfiguration( ) {
   }
 
-  public TokensConfiguration( String name, String hostName, Integer port ) {
-    super( "tokens", name, hostName, port, "/services/Tokens" );
+  public TokensConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, "/services/Tokens" );
   }
 }

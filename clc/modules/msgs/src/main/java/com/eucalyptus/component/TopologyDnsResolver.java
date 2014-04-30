@@ -270,6 +270,15 @@ public class TopologyDnsResolver implements DnsResolver {
     return false;
   }
   
+  private Predicate<ServiceConfiguration> RESOLVABLE_STATE = new Predicate<ServiceConfiguration>(){
+    @Override
+    public boolean apply(ServiceConfiguration arg0) {
+      if ( Component.State.ENABLED.equals(arg0.lookupState()) || Component.State.DISABLED.equals(arg0.lookupState()))
+          return true;
+      return false;
+    }
+  };
+  
   @Override
   public DnsResponse lookupRecords( DnsRequest request ) {
     final Record query = request.getQuery( );
@@ -303,10 +312,12 @@ public class TopologyDnsResolver implements DnsResolver {
       }
       List<Record> answers = Lists.newArrayList( );
       for ( ServiceConfiguration config : configs ) {
-        Record aRecord = DomainNameRecords.addressRecord(
-            name,
-            maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
-        answers.add( aRecord );
+        if(RESOLVABLE_STATE.apply(config)){
+          Record aRecord = DomainNameRecords.addressRecord(
+              name,
+              maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
+          answers.add( aRecord );
+        }
       }
       return DnsResponse.forName( query.getName( ) )
                         .answer( RequestType.AAAA.apply( query ) ? null : answers );

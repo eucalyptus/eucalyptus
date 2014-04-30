@@ -62,7 +62,6 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import com.amazonaws.http.HttpResponse;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
@@ -80,16 +79,13 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
@@ -135,7 +131,6 @@ import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient;
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SynchronousClient;
 import com.eucalyptus.util.SynchronousClient.SynchronousClientException;

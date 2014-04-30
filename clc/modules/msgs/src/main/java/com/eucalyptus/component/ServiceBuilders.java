@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
@@ -71,6 +72,7 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -135,7 +137,7 @@ public class ServiceBuilders {
     return builders.get( handlesType );
   }
   
-  public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
+  public static <T extends ServiceBuilder<? extends ServiceConfiguration>> T lookup( ComponentId componentId ) {
     try {
       return lookup( componentId.getClass( ) );
     } catch ( Exception ex ) {
@@ -144,11 +146,15 @@ public class ServiceBuilders {
     }
   }
   
-  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentId ) {
+  public static <T extends ServiceBuilder<? extends ServiceConfiguration>> T lookup( Class<? extends ComponentId> componentId ) {
     if ( !componentBuilders.containsKey( componentId ) ) {
       Component comp = Components.lookup( componentId );
       componentBuilders.put( componentId, new DummyServiceBuilder( comp.getComponentId( ) ) );
     }
-    return componentBuilders.get( componentId );
+    return ( T ) componentBuilders.get( componentId );
+  }
+
+  public static List<Class<? extends ComponentId>> listRegisterableComponents( ) {
+    return Lists.newArrayList( componentBuilders.keySet() );
   }
 }

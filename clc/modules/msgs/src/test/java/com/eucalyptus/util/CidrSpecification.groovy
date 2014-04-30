@@ -21,7 +21,10 @@ package com.eucalyptus.util
 
 import com.eucalyptus.scripting.Groovyness
 import com.google.common.collect.Maps
+import com.google.common.net.InetAddresses
 import spock.lang.Specification
+
+import static com.eucalyptus.util.Cidr.fromAddress
 import static com.eucalyptus.util.Cidr.parse
 
 /**
@@ -119,7 +122,25 @@ class CidrSpecification extends Specification {
     '10.0.0.0 / 8'      | 'value'
   }
 
+  def 'should be able to create CIDR for an address and prefix'(){
+    expect: 'parsed cidr containment check has expected result'
+    fromAddress( InetAddresses.forString( address ), prefix ) == parse( result )
+
+    where:
+    address           | prefix    | result
+    '1.2.3.4'         | 0         | '0.0.0.0/0'
+    '1.2.3.4'         | 8         | '1.0.0.0/8'
+    '1.2.3.4'         | 16        | '1.2.0.0/16'
+    '1.2.3.4'         | 24        | '1.2.3.0/24'
+    '1.2.3.4'         | 32        | '1.2.3.4/32'
+    '255.255.255.255' | 1         | '128.0.0.0/1'
+    '255.255.255.255' | 31        | '255.255.255.254/31'
+    '0.0.0.0'         | 32        | '0.0.0.0/32'
+    '0.0.0.0'         | 0         | '0.0.0.0/0'
+    '0.0.0.0'         | 1         | '0.0.0.0/1'
+  }
+
   private static Cidr cidr( int ip, int prefix ) {
-    new Cidr( ip, prefix )
+    Cidr.of( ip, prefix )
   }
 }

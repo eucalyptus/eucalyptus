@@ -47,7 +47,7 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
 
   @Override
   public CloudFormationConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new CloudFormationConfiguration( name, host, port );
+    return new CloudFormationConfiguration( partition, name, host, port );
   }
 
   @Override

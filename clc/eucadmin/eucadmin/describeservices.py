@@ -22,10 +22,12 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import re
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
-from . import EucadminRequest
+from . import EucadminRequest, EucaFormat
 from boto.roboto.param import Param
+import sys
 import eucadmin
 import os
 
@@ -104,8 +106,8 @@ class DescribeServices(EucadminRequest):
 
     def __init__(self, **args):
       AWSQueryRequest.__init__(self, **args)
-      self.list_markers = ['euca:serviceStatuses']
-      self.item_markers = ['euca:item']
+      self.list_markers = ['euca:serviceStatuses', 'euca:statusDetails']
+      self.item_markers = ['euca:item', 'euca:item']
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -118,32 +120,39 @@ class DescribeServices(EucadminRequest):
 
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
-        fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%-40s\t%s'
+        fmt = '\t'.join(EucaFormat.PREFIX_LINE + EucaFormat.STATE + ['%-4s'] + EucaFormat.URI + EucaFormat.FULLNAME)
+
         detail_fmt = 'SERVICEEVENT\t%-36.36s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
-            print fmt % (service_id.get('euca:type'),
+            print fmt % ('SERVICE',
+                         service_id.get('euca:type'),
                          service_id.get('euca:partition'),
                          service_id.get('euca:name'),
                          s.get('euca:localState'),
                          s.get('euca:localEpoch'),
                          service_id.get('euca:uri'),
                          service_id.get('euca:fullName'))
-            details = s.get('euca:statusDetails')
-            if details:
-                detail_item = details.get('euca:item')
-                if detail_item:
-                    print detail_fmt % (detail_item.get('euca:uuid'),
-                                        detail_item.get('euca:serviceFullName'))
-                    print detail_fmt % (detail_item.get('euca:uuid'),
-                                        detail_item.get('euca:severity'))
-                    print detail_fmt % (detail_item.get('euca:uuid'),
-                                        detail_item.get('euca:timestamp'))
-                    print detail_fmt % (detail_item.get('euca:uuid'),
-                                        detail_item.get('euca:message'))
-                    if detail_item.get('euca:stackTrace'):
-                        print detail_item['euca:stackTrace']
-                    print
+            for detail_item in s.get('euca:statusDetails', []):
+                fullname = detail_item.get('euca:serviceFullName').replace('/', '')
+                [arn, ns, parent, partition, servicetype, servicename] = re.split(':', fullname)
+                dfmt = '\t'.join(EucaFormat.PREFIX_LINE + ['%s'])
+                print >> sys.stderr, dfmt % (detail_item.get('euca:severity'),
+                                            servicetype,
+                                            partition if (len(partition) > 1) else service_id.get('euca:partition'),
+                                            servicename,
+                                            detail_item.get('euca:message', ''))
+                # GRZE: Would be nice to get rid of this output
+                print detail_fmt % (detail_item.get('euca:uuid'),
+                                    detail_item.get('euca:serviceFullName'))
+                print detail_fmt % (detail_item.get('euca:uuid'),
+                                    detail_item.get('euca:severity'))
+                print detail_fmt % (detail_item.get('euca:uuid'),
+                                    detail_item.get('euca:timestamp'))
+                print detail_fmt % (detail_item.get('euca:uuid'),
+                                    detail_item.get('euca:message'))
+                if detail_item.get('euca:stackTrace'):
+                    print detail_item['euca:stackTrace']
 
     def main(self, **args):
         return self.send(**args)

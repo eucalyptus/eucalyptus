@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -34,6 +35,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( "autoscaling" )
 @Partition( value = AutoScaling.class, manyToOne = true )
 @FaultLogPrefix( "services" )
+@Description( "Auto Scaling API service" )
 public class AutoScaling extends ComponentId {
   private static final long serialVersionUID = 1L;
 

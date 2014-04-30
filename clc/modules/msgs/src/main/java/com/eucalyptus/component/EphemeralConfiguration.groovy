@@ -117,7 +117,11 @@ class EphemeralConfiguration extends ComponentConfiguration {
   
   @Override
   public boolean equals( Object that ) {
-    return super.equals( that );
+    return super.equals(that) &&
+    that instanceof ServiceConfiguration &&
+    this.getComponentId().equals(((ServiceConfiguration) that).getComponentId());
+    //NOTE: these additional tests are necessary as the super.equals method
+    // expects Class type differences between different components
   }
   
   @Override
@@ -170,4 +174,5 @@ class EphemeralConfiguration extends ComponentConfiguration {
   }
 
   public void setSourceHostName( String aliasHostName ) {}
+
 }

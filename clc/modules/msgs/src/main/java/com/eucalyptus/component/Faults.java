@@ -92,6 +92,13 @@ import javax.persistence.Transient;
 import javax.persistence.Version;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -374,7 +381,7 @@ public class Faults {
       return this.stackString;
     }
     
-    private String getServiceFullName( ) {
+    public String getServiceFullName( ) {
       return this.serviceFullName;
     }
     
@@ -546,13 +553,14 @@ public class Faults {
     @Override
     public CheckException apply( final ServiceStatusDetail input ) {
       ServiceConfiguration config = null;
-      final String serviceName = Strings.emptyToNull( input.getServiceName() );
+      final String serviceFullName = Strings.nullToEmpty( input.getServiceFullName() );
       try {
+        final String serviceName = Strings.nullToEmpty( input.getServiceName() );
         config = ServiceConfigurations.lookupByName( serviceName );
       } catch ( RuntimeException e ) {
         for ( Component c : Components.list( ) ) {
           for ( ServiceConfiguration s : c.services() ) {
-            if ( serviceName.equals( s.getName() ) ) {
+            if ( serviceFullName.equals( s.getFullName().toString() ) ) {
               config = s;
               break;
             }
@@ -600,8 +608,9 @@ public class Faults {
     return StatusToCheckException.INSTANCE;
   }
   
-  private static final ConcurrentMap<ServiceConfiguration, FaultRecord> serviceExceptions = Maps.newConcurrentMap( );
-  private static final BlockingQueue<FaultRecord>                       errorQueue        = new LinkedTransferQueue<FaultRecord>( );
+  private static final SetMultimap<ServiceConfiguration, FaultRecord>
+    serviceExceptions = Multimaps.synchronizedSetMultimap( HashMultimap.<ServiceConfiguration, FaultRecord>create() );
+  private static final BlockingQueue<FaultRecord>                      errorQueue        = new LinkedTransferQueue<FaultRecord>( );
   
   private static class FaultRecord {
     private final ServiceConfiguration                                      serviceConfiguration;
@@ -633,22 +642,45 @@ public class Faults {
     private Component.State getFinalState( ) {
       return this.finalState;
     }
-    
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode( this.serviceConfiguration, this.error.getMessage(), this.finalState );
+    }
+
+    @Override
+    public boolean equals( Object obj ) {
+      if ( this == obj ) {
+        return true;
+      }
+      if ( obj == null || getClass() != obj.getClass() ) {
+        return false;
+      }
+      final FaultRecord that = ( FaultRecord ) obj;
+      return Objects.equal( this.serviceConfiguration.getFullName().toString(), that.serviceConfiguration.getFullName().toString() )
+             && Objects.equal( this.error.getMessage(), that.error.getMessage() )
+             && Objects.equal( this.finalState, that.finalState );
+    }
   }
   
   public static void flush( final ServiceConfiguration config ) {
-    serviceExceptions.remove( config );
+    serviceExceptions.removeAll( config );
   }
   
   public static Collection<CheckException> lookup( final ServiceConfiguration config ) {
-    FaultRecord record = serviceExceptions.get( config );
-    if ( record != null ) {
-      return Lists.newArrayList( record.getError( ) );
+    Collection<CheckException> records = Collections2.transform( serviceExceptions.get( config ), new Function<FaultRecord, CheckException>() {
+      @Override
+      public CheckException apply( FaultRecord input ) {
+        return input.getError();
+      }
+    } );
+    if ( records != null && !records.isEmpty() ) {
+      return Lists.newArrayList( records );
     } else {
       return Lists.newArrayList( );
     }
   }
-  
+
   public static void submit( final ServiceConfiguration parent, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord, final CheckException errors ) {
     FaultRecord record = new FaultRecord( parent, transitionRecord, errors );
     serviceExceptions.put( parent, record );
@@ -818,13 +850,15 @@ public class Faults {
      * and call whenever the fault occurs. Invocations after the first will be
      * ignored.</p>
      *
+     * @note GRZE: with displeasure I force the return of the fault string for use elsewhere in the name of consistency and dryness.
      * @return A Runnable to be called to log the fault.
      */
-    Runnable logOnFirstRun( );
+    Callable<String> logOnFirstRun();
 
     /**
      * Log a fault message with the provided details.
+     * @note GRZE: with displeasure I force the return of the fault string for use elsewhere in the name of consistency and dryness.
      */
-    void log();
+    String log();
 	}
 }
