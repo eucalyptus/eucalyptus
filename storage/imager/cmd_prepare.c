@@ -277,6 +277,7 @@ artifact *prepare_requirements(imager_request * req, artifact * prev_art)
                               state->work,  // TRUE when disk will be used by hypervisor on this host
                               ! (state->action & ACTION_DOWNLOAD),   // migration destination => do not bother with download
                               state->sshkey,    // the SSH key
+                              NULL, // bail flag
                               state->id);   // ID is for logging
     if (sentinel == NULL)
         err("failed to prepare image %s", state->id);
