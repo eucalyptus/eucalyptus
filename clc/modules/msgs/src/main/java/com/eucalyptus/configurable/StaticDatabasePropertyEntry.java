@@ -307,7 +307,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         } catch ( NoSuchElementException e ) {
           LOG.info( "Creating resource identifier canonicalizer property with value 'upper' for upgraded system." );
           Entities.persist( new StaticDatabasePropertyEntry(
-              "com.eucalyptus.compute.identifier.ResourceIdentifers.identifier_canonicalizer",
+              "com.eucalyptus.compute.identifier.ResourceIdentifiers.identifier_canonicalizer",
               "cloud.identifier_canonicalizer",
               "upper"
           ) );

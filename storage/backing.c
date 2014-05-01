@@ -790,6 +790,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
                               TRUE,    // make working copy of runtime-modifiable files
                               is_migration_dest,    // tree of an instance on the migration destination
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
+                              &(instance->bail_flag),   // flag indicating that provisioning should bail
                               instance->instanceId);    // ID is for logging
     if (sentinel == NULL) {
         LOGERROR("[%s] failed to prepare extended backing for instance\n", instance->instanceId);

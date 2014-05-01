@@ -104,7 +104,6 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
     final Cluster cluster = this.getSubject();
     cluster.getNodeState().update( reply.getResources( ) );
     LOG.debug( "Adding node service tags: " + Joiner.on( ", " ).join( reply.getNodes() ) );
-    if( !reply.getNodes( ).isEmpty( ) ) {
       Callable<Boolean> updateNodes = new Callable<Boolean>() {
         @Override
         public Boolean call() throws Exception {
@@ -120,7 +119,6 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
       };
       //GRZE: submit the node controller state updates in a separate thread to ensure it doesn't interfere with the Cluster state machine.
       Threads.enqueue( NodeController.class, ResourceStateCallback.class, updateNodes );
-    }
   }
   
   /**

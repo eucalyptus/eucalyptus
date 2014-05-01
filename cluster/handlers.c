@@ -7300,7 +7300,7 @@ int reconfigureNetworkFromCLC(void)
 
     // clcnet populate
     snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
-    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
+    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15, NULL);
     EUCA_FREE(cloudIp);
     if (rc) {
         LOGWARN("cannot get latest network topology from cloud controller\n");
