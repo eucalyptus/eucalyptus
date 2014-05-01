@@ -65,9 +65,18 @@ package com.eucalyptus.event;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.eucalyptus.event.Event.Periodic;
+import com.eucalyptus.system.Ats;
+import com.google.common.base.Function;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -75,7 +84,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.records.Record;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
@@ -228,73 +236,62 @@ public class ListenerRegistry {
   
   public static class ReentrantListenerRegistry<T> {
     private Multimap<T, EventListener> listenerMap;
-    private Lock                       modificationLock;
-    
-    public ReentrantListenerRegistry( ) {
-      super( );
-      this.listenerMap = ArrayListMultimap.create( );
-      this.modificationLock = new ReentrantLock( );
+    private Lock modificationLock;
+
+    public ReentrantListenerRegistry() {
+      super();
+      this.listenerMap = ArrayListMultimap.create();
+      this.modificationLock = new ReentrantLock();
     }
-    
+
     public void register( T type, EventListener listener ) {
       if ( type instanceof Enum ) {
-        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), ( ( Enum ) type ).name( ),
-                            listener.getClass( ).getSimpleName( ) ).trace( );
+        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass().getSimpleName(), ( ( Enum ) type ).name(),
+                            listener.getClass().getSimpleName() ).trace();
       } else {
-        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ),
-                            listener.getClass( ).getSimpleName( ) ).trace( );
+        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass().getSimpleName(),
+                            listener.getClass().getSimpleName() ).trace();
       }
-      this.modificationLock.lock( );
+      this.modificationLock.lock();
       try {
         if ( !this.listenerMap.containsEntry( type, listener ) ) {
           this.listenerMap.put( type, listener );
         }
       } finally {
-        this.modificationLock.unlock( );
+        this.modificationLock.unlock();
       }
     }
-    
+
     public void deregister( T type, EventListener listener ) {
       if ( type instanceof Enum ) {
-        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), ( ( Enum ) type ).name( ),
-                            listener.getClass( ).getSimpleName( ) ).trace( );
+        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass().getSimpleName(), ( ( Enum ) type ).name(),
+                            listener.getClass().getSimpleName() ).trace();
       } else {
-        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ),
-                            listener.getClass( ).getSimpleName( ) ).trace( );
+        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass().getSimpleName(),
+                            listener.getClass().getSimpleName() ).trace();
       }
-      this.modificationLock.lock( );
+      this.modificationLock.lock();
       try {
         this.listenerMap.remove( type, listener );
       } finally {
-        this.modificationLock.unlock( );
+        this.modificationLock.unlock();
       }
     }
-    
+
     public void destroy( T type ) {
-     
-      this.modificationLock.lock( );
-      try{
+
+      this.modificationLock.lock();
+      try {
         for ( EventListener e : this.listenerMap.get( type ) ) {
-          EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ),
-                              e.getClass( ).getCanonicalName( ) ).trace( );
-        }     
+          EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass().getSimpleName(),
+                              e.getClass().getCanonicalName() ).trace();
+        }
         this.listenerMap.removeAll( type );
       } finally {
-        this.modificationLock.unlock( );
+        this.modificationLock.unlock();
       }
     }
-    
-    public void fireEvent( T type, Event e ) throws EventFailedException {
-      List<EventListener> listeners;
-      this.modificationLock.lock( );
-      try {
-        listeners = Lists.newArrayList( this.listenerMap.get( type ) );
-      } finally {
-        this.modificationLock.unlock( );
-      }
-      this.fireEvent( e, listeners, false );
-    }
-    
+
     public void fireThrowableEvent(T type, Event e) throws EventFailedException {
     	 List<EventListener> listeners;
          this.modificationLock.lock( );
@@ -303,29 +300,83 @@ public class ListenerRegistry {
          } finally {
            this.modificationLock.unlock( );
          }
-         this.fireEvent( e, listeners, true );
-    }
-    
-    private void fireEvent( Event e, List<EventListener> listeners, boolean throwException) throws EventFailedException {
+      /**
+       * Inline the madness that is going on here. Async execution is mutually exclusive with
+       * direct result propagation to the caller.
+       */
       List<Throwable> errors = Lists.newArrayList( );
       for ( EventListener ce : listeners ) {
-        EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ) ).trace( );
+        EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass().getSimpleName(), e.toString() ).trace();
         try {
           ce.fireEvent( e );
         } catch ( Exception ex ) {
           EventFailedException eventEx = new EventFailedException( "Failed to fire event: listener=" + ce.getClass( ).getCanonicalName( ) + " event="
-                                                                   + e.toString( ) + " because of: "
+                                                                   + e.toString() + " because of: "
                                                                    + ex.getMessage( ), Exceptions.filterStackTrace( ex ) );
-          if(throwException)
-        	  throw eventEx;
-          errors.add( eventEx );
+          throw eventEx;
         }
       }
-      for ( Throwable ex : errors ) {
-        Logs.extreme( ).error( ex, ex );
-        LOG.error( ex );
+    }
+
+    /**
+     * This execution case is system critical and must run very quickly. The key system tasks run on
+     * the order of 10ms at the worst case. To ensure that compliant tasks are not disrupted by less
+     * discriminating commoner tasks, everyone must execute asynchronously while enforcing a single
+     * thread of execution for any particular event listener.
+     */
+    public void fireEvent( T type, Event e ) {
+      List<EventListener> listeners;
+      this.modificationLock.lock( );
+      try {
+        listeners = Lists.newArrayList( this.listenerMap.get( type ) );
+      } finally {
+        this.modificationLock.unlock( );
+      }
+      for ( EventListener ce : listeners ) {
+        Threads.lookup( Empyrean.class, ListenerRegistry.class, "listenerTasks" )
+               .submit( listenerTasks.getUnchecked( ce ).apply( e ) );
       }
     }
-    
+
+
+    /**
+     * A wrapper for event listeners which produces callables that can only be executed one at a
+     * time, otherwise returning immediately (by way of the atomic boolean).
+     */
+    private static final LoadingCache<EventListener, Function<Event, Callable<Object>>> listenerTasks = CacheBuilder.newBuilder().build( getListenerWrapper() );
+    private static final CacheLoader<EventListener, Function<Event, Callable<Object>>> getListenerWrapper() {
+      return new CacheLoader<EventListener, Function<Event, Callable<Object>>>() {
+        @Override
+        public Function<Event, Callable<Object>> load( final EventListener key ) throws Exception {
+          return new Function<Event, Callable<Object>>() {
+            final AtomicBoolean busy = new AtomicBoolean( false );
+
+            @Override
+            public Callable<Object> apply( final Event input ) {
+              return new Callable<Object>() {
+                @Override
+                public Object call() throws Exception {
+                  if ( Ats.inClassHierarchy(input).has( Periodic.class ) && busy.compareAndSet( false, true ) ) {
+                    try {
+                      key.fireEvent( input );
+                    } catch ( Exception ex ) {
+                      EventFailedException eventEx = new EventFailedException( "Failed to fire event: listener=" + key.getClass( ).getCanonicalName( ) + " event="
+                                                                               + ex.toString( ) + " because of: "
+                                                                               + ex.getMessage( ), Exceptions.filterStackTrace( ex ) );
+                      Logs.extreme( ).error( eventEx, eventEx );
+                      LOG.error( eventEx );
+
+                    } finally {
+                      busy.set( false );
+                    }
+                  }
+                  return input;
+                }
+              };
+            }
+          };
+        }
+      };
+    }
   }
 }
