@@ -141,7 +141,8 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                            */
                           Future<DescribeSensorsResponse> ret = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig );
                           try {
-                            msgCallback.fire( ret.get( ) );
+                            new DescribeSensorCallback( HISTORY_SIZE,
+                                                        COLLECTION_INTERVAL_TIME_MS, instanceIds ).fire( ret.get( ) );
         //                  LOG.info("DecribeSensorCallback has been successfully executed");
                           } catch ( Exception e ) {
                             Exceptions.maybeInterrupted( e );
