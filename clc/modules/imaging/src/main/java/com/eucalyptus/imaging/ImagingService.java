@@ -292,6 +292,9 @@ public class ImagingService {
     }catch(final Exception ex){
       LOG.warn("Failed to update the task's state", ex);
     }
+    if(reply.getCancelled()!=null && reply.getCancelled().booleanValue()){
+      LOG.warn(String.format("Imaging task %s has been cancelled", request.getImportTaskId()));
+    }
     return reply;
   }
 

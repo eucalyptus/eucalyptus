@@ -239,6 +239,8 @@ public abstract class AbstractTaskScheduler {
       }catch(final Exception ex){
         ;
       }
+    }else{
+      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
     }
     
     return newTask;

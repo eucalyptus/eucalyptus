@@ -552,7 +552,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   
   private static final LoadingCache<String, Optional<DiskImageConversionTask>> conversionTaskCache =
       CacheBuilder
-          .from( CacheBuilderSpec.parse( "maximumSize=250, expireAfterWrite=30s" ) )
+          .from( CacheBuilderSpec.parse( "maximumSize=250, expireAfterAccess=30s" ) )
           .build( CacheLoader.from( resolveConversionTask() ) );
 
   private static Set<String> taggedImages = Sets.newHashSet();
