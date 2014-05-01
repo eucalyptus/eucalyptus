@@ -705,7 +705,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         if ((code != EUCA_OK) && (retries > 0)) {
             LOGERROR("download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
             for (int i=0; i<timeout; i++) {
-                sleep(timeout);
+                sleep(1);
                 if (bail_flag != NULL && *bail_flag == TRUE) {
                     LOGWARN("bailing on the download for %s\n", url);
                     retries = 0;
