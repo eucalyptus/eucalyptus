@@ -75,6 +75,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -98,6 +99,7 @@ import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.walrus.entities.BucketInfo;
 import com.eucalyptus.walrus.entities.GrantInfo;
 import com.eucalyptus.walrus.entities.ImageCacheInfo;
@@ -127,6 +129,7 @@ public class ObjectStorage400Upgrade {
 	private static Set<String> deletedAccountIds = Sets.newHashSet(); // Cache deleted account IDs
 	private static Set<String> deletedUserIds = Sets.newHashSet(); // Cache deleted user IDs
 	private static Set<String> deletedAdminAccountIds = Sets.newHashSet(); // Cache account IDs whose admin is deleted
+	private static Set<String> noCanonicalIdAccountIds = Sets.newHashSet(); // Cache account IDs without any canonical IDs
 	private static Map<String, Bucket> bucketMap = Maps.newHashMap(); // Cache bucket name -> bucket object
 	private static Set<String> walrusSnapshotBuckets = Sets.newHashSet(); // Cache all snapshot buckets
 	private static Set<String> walrusSnapshotObjects = Sets.newHashSet(); // Cache all snapshot objects
@@ -159,8 +162,9 @@ public class ObjectStorage400Upgrade {
 						task.apply();
 						return true;
 					} catch (Exception e) {
-						LOG.warn("Upgrade task failed: " + task.getClass().getSimpleName(), e);
-						return false;
+						LOG.error("Upgrade task failed: " + task.getClass().getSimpleName());
+						// Returning false does not seem to halt the upgrade and cause a rollback, must throw an exception
+						throw Exceptions.toUndeclared("Upgrade task failed: " + task.getClass().getSimpleName(), e);
 					}
 				}
 
@@ -231,10 +235,11 @@ public class ObjectStorage400Upgrade {
 									try {
 										Entities.persist(osgBucket);
 									} catch (Exception e) {
-										LOG.warn("Failed to persist bucket " + osgBucket.getBucketName() + " to osg", e);
+										LOG.error("Failed to persist bucket " + osgBucket.getBucketName() + " to objectstorage", e);
+										throw e;
 									}
 								} else {
-									throw new Exception("Failed to convert Walrus bucket to OSG bucket");
+									throw new Exception("Error transforming Walrus bucket to objectstorage bucket");
 								}
 							}
 						} else {
@@ -292,10 +297,11 @@ public class ObjectStorage400Upgrade {
 									try {
 										Entities.persist(osgObject);
 									} catch (Exception e) {
-										LOG.warn("Failed to persist object " + osgObject.getObjectKey() + " to osg", e);
+										LOG.error("Failed to persist object " + osgObject.getObjectKey() + " to objectstorage", e);
+										throw e;
 									}
 								} else {
-									throw new Exception("Failed to convert Walrus object to OSG object");
+									throw new Exception("Error transforming Walrus object to objectstorage object");
 								}
 							}
 						} else {
@@ -364,7 +370,8 @@ public class ObjectStorage400Upgrade {
 								walrusBucket.setVersioning(WalrusProperties.VersioningStatus.Disabled.toString());
 							}
 						} catch (Exception e) {
-							LOG.warn("Cannot modify walrus bucket " + walrusBucket.getBucketName(), e);
+							LOG.error("Failed to modify Walrus bucket " + walrusBucket.getBucketName(), e);
+							throw e;
 						}
 					}
 				} else {
@@ -436,7 +443,8 @@ public class ObjectStorage400Upgrade {
 							GrantInfo.setFullControl(walrusObject.getOwnerId(), grantInfos); // TODO Does this need to be initialized every single time?
 							walrusObject.setGrants(grantInfos);
 						} catch (Exception e) {
-							LOG.warn("Cannot modify walrus object " + walrusObject.getObjectKey(), e);
+							LOG.error("Failed to modify Walrus object " + walrusObject.getObjectKey(), e);
+							throw e;
 						}
 					}
 				} else {
@@ -483,7 +491,7 @@ public class ObjectStorage400Upgrade {
 								Entities.persist(osgObject);
 								Entities.persist(walrusObject);
 							} catch (Exception e) {
-								LOG.warn("Failed to persist cached image object" + e);
+								LOG.warn("Failed to persist cached image " + image.getManifestName() + " as an object in Walrus and or objectstorage", e);
 								continue;
 							}
 
@@ -598,12 +606,21 @@ public class ObjectStorage400Upgrade {
 				} else if (deletedAccountIds.contains(grantInfo.getUserId())) {// In case the account is deleted, skip the grant
 					LOG.warn("Account ID " + grantInfo.getUserId() + " does not not exist. Skipping this grant");
 					continue;
+				} else if (noCanonicalIdAccountIds.contains(grantInfo.getUserId())) { // If canonical ID is missing, use the eucalyptus admin account
+					LOG.warn("Account ID " + grantInfo.getUserId() + " does not not have a canonical ID. Skipping this grant");
+					continue;
 				} else {
 					try {
 						// Lookup owning account
 						account = Accounts.lookupAccountById(grantInfo.getUserId());
-						// Add it to the map
-						accountIdAccountMap.put(grantInfo.getUserId(), account);
+						if (StringUtils.isBlank(grantInfo.getUserId())) { // If canonical ID is missing, use the eucalyptus admin account
+							LOG.warn("Account ID " + grantInfo.getUserId() + " does not not have a canonical ID. Skipping this grant");
+							noCanonicalIdAccountIds.add(grantInfo.getUserId());
+							continue;
+						} else {
+							// Add it to the map
+							accountIdAccountMap.put(grantInfo.getUserId(), account);
+						}
 					} catch (Exception e) { // In case the account is deleted, skip the grant
 						LOG.warn("Account ID " + grantInfo.getUserId() + " does not not exist. Skipping this grant");
 						deletedAccountIds.add(grantInfo.getUserId());
@@ -679,10 +696,23 @@ public class ObjectStorage400Upgrade {
 								+ walrusBucket.getBucketName() + " to eucalyptus admin account");
 						owningAccount = getEucalyptusAccount();
 						owningUser = getEucalyptusAdmin();
+					} else if (noCanonicalIdAccountIds.contains(walrusBucket.getOwnerId())) { // If canonical ID is missing, use eucalyptus admin account
+						LOG.warn("Account ID " + walrusBucket.getOwnerId() + " does not have a canonical ID. Changing the ownership of bucket "
+								+ walrusBucket.getBucketName() + " to eucalyptus admin account");
+						owningAccount = getEucalyptusAccount();
+						owningUser = getEucalyptusAdmin();
 					} else { // If none of the above conditions match, lookup for the account
 						try {
 							owningAccount = Accounts.lookupAccountById(walrusBucket.getOwnerId());
-							accountIdAccountMap.put(walrusBucket.getOwnerId(), owningAccount);
+							if (StringUtils.isBlank(owningAccount.getCanonicalId())) { // If canonical ID is missing, use eucalyptus admin account
+								LOG.warn("Account ID " + walrusBucket.getOwnerId() + " does not have a canonical ID. Changing the ownership of bucket "
+										+ walrusBucket.getBucketName() + " to eucalyptus admin account");
+								owningAccount = getEucalyptusAccount();
+								owningUser = getEucalyptusAdmin();
+								noCanonicalIdAccountIds.add(walrusBucket.getOwnerId());
+							} else {
+								accountIdAccountMap.put(walrusBucket.getOwnerId(), owningAccount);
+							}
 						} catch (AuthException e) { // In case the account is deleted, transfer the ownership to eucalyptus admin
 							LOG.warn("Account ID " + walrusBucket.getOwnerId() + " does not not exist. Changing the ownership of bucket "
 									+ walrusBucket.getBucketName() + " to eucalyptus admin account");
@@ -781,7 +811,7 @@ public class ObjectStorage400Upgrade {
 
 					return osgBucket;
 				} catch (Exception e) {
-					LOG.warn("Cannot transform walrus bucket " + walrusBucket.getBucketName() + " to osg bucket", e);
+					LOG.error("Failed to transform Walrus bucket " + walrusBucket.getBucketName() + " to objectstorage bucket", e);
 					return null;
 				}
 			}
@@ -863,10 +893,23 @@ public class ObjectStorage400Upgrade {
 									+ walrusObject.getObjectKey() + " in bucket " + walrusObject.getBucketName() + " to eucalyptus admin account");
 							owningAccount = getEucalyptusAccount();
 							adminUser = getEucalyptusAdmin();
+						} else if (noCanonicalIdAccountIds.contains(walrusObject.getOwnerId())) { // If canonical ID is missing, use eucalyptus admin account
+							LOG.warn("Account ID " + walrusObject.getOwnerId() + " does not have a canonical ID. Changing the ownership of object "
+									+ walrusObject.getObjectKey() + " in bucket " + walrusObject.getBucketName() + " to eucalyptus admin account");
+							owningAccount = getEucalyptusAccount();
+							adminUser = getEucalyptusAdmin();
 						} else { // If none of the above conditions match, lookup for the account
 							try {
 								owningAccount = Accounts.lookupAccountById(walrusObject.getOwnerId());
-								accountIdAccountMap.put(walrusObject.getOwnerId(), owningAccount);
+								if (StringUtils.isBlank(owningAccount.getCanonicalId())) {
+									LOG.warn("Account ID " + walrusObject.getOwnerId() + " does not have a canonical ID. Changing the ownership of object "
+											+ walrusObject.getObjectKey() + " in bucket " + walrusObject.getBucketName() + " to eucalyptus admin account");
+									owningAccount = getEucalyptusAccount();
+									adminUser = getEucalyptusAdmin();
+									noCanonicalIdAccountIds.add(walrusObject.getOwnerId());
+								} else {
+									accountIdAccountMap.put(walrusObject.getOwnerId(), owningAccount);
+								}
 							} catch (AuthException e) { // In case the account is deleted, transfer the ownership to eucalyptus admin
 								LOG.warn("Account ID " + walrusObject.getOwnerId() + " does not not exist. Changing the ownership of object "
 										+ walrusObject.getObjectKey() + " in bucket " + walrusObject.getBucketName() + " to eucalyptus admin account");
@@ -928,7 +971,7 @@ public class ObjectStorage400Upgrade {
 
 					return osgObject;
 				} catch (Exception e) {
-					LOG.warn("Cannot transform walrus object " + walrusObject.getObjectKey() + " to osg object", e);
+					LOG.error("Failed to transform Walrus object " + walrusObject.getObjectKey() + " to objectstorage object", e);
 					return null;
 				}
 			}
@@ -975,7 +1018,7 @@ public class ObjectStorage400Upgrade {
 
 					return osgObject;
 				} catch (Exception e) {
-					LOG.warn("Cannot transform walrus cached image " + image.getManifestName() + " to osg object", e);
+					LOG.error("Failed to create objectstorage object for cached image " + image.getManifestName(), e);
 					return null;
 				}
 			}
@@ -1008,7 +1051,7 @@ public class ObjectStorage400Upgrade {
 
 					return walrusObject;
 				} catch (Exception e) {
-					LOG.warn("Cannot transform walrus cached image " + image.getManifestName() + " to walrus object", e);
+					LOG.error("Failed to create Walrus object for cached image " + image.getManifestName(), e);
 					return null;
 				}
 			}
