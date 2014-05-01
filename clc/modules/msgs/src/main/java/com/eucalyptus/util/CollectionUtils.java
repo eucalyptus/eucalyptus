@@ -193,6 +193,18 @@ public class CollectionUtils {
     };
   }
 
+  public static <T> Function<Optional<T>,T> optionalOr( final T value ) {
+    return new Function<Optional<T>,T>( ) {
+      @Nullable
+      @Override
+      public T apply( final Optional<T> optional ) {
+        return optional == null ?
+            null :
+            optional.or( value );
+      }
+    };
+  }
+
   /**
    * Unchecked cast function.
    *

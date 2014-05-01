@@ -63,13 +63,21 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CollectionUtils;
 import com.google.common.base.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts;
@@ -86,6 +94,8 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -317,9 +327,16 @@ public class ServiceConfigurations {
   @TypeMapper
   public enum ServiceConfigurationToServiceId implements Function<ServiceConfiguration, ServiceId> {
     INSTANCE;
-    
+
+    private static final Function<InetAddress,Cidr> cidrLookup = CacheBuilder.newBuilder()
+        .maximumSize( 64 )
+        .expireAfterWrite( 1, TimeUnit.MINUTES )
+        .build( CacheLoader.from( Functions.compose(
+            CollectionUtils.optionalOr( Cidr.of( 0, 0 ) ),
+            Internets.interfaceCidr() ) ) );
+
     @Override
-    public ServiceId apply( final ServiceConfiguration arg0 ) {
+    public ServiceId apply( final ServiceConfiguration config ) {
       return new ServiceId( ) {
         /**
          * 
@@ -327,19 +344,39 @@ public class ServiceConfigurations {
         private static final long serialVersionUID = 1L;
         
         {
-          this.setPartition( arg0.getPartition( ) );
-          this.setName( arg0.getName( ) );
-          this.setType( arg0.getComponentId( ).name( ) );
-          this.setFullName( arg0.getFullName( ).toString( ) );
-          if ( arg0.isVmLocal( ) ) {
-            this.setUri( ServiceUris.remote( arg0.getComponentId( ) ).toASCIIString( ) );
+          this.setPartition( config.getPartition() );
+          this.setName( config.getName() );
+          this.setType( config.getComponentId( ).name( ) );
+          this.setFullName( config.getFullName().toString() );
+          if ( config.isVmLocal( ) ) {
+            this.setUri( ServiceUris.remote( config.getComponentId( ), maphost( Internets.localHostInetAddress( ) ) ).toASCIIString( ) );
           } else {
-            this.setUri( ServiceUris.remote( arg0 ).toASCIIString( ) );
+            this.setUri( ServiceUris.remote( config.getComponentId( ), maphost( config.getInetAddress( ) ), config.getPort( ) ).toASCIIString() );
           }
         }
       };
     }
-    
+
+    @SuppressWarnings( "ConstantConditions" )
+    private static InetAddress maphost( final InetAddress hostAddress ) {
+      InetAddress result = hostAddress;
+
+      try {
+        final SocketAddress address = Contexts.lookup( ).getChannel( ).getLocalAddress( );
+        if ( address instanceof InetSocketAddress ) {
+          final Cidr cidr = cidrLookup.apply( ((InetSocketAddress)address).getAddress( ) );
+          if ( !cidr.apply( result ) ) {
+            final Host host = Hosts.lookup( hostAddress );
+            if ( host != null ) {
+              result = Iterables.tryFind( host.getHostAddresses( ), cidr ).or( result );
+            }
+          }
+        }
+      } catch ( IllegalContextAccessException e ) {
+        // do not map
+      }
+      return result;
+    }
   }
   
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final String partition, final String name, final URI remoteUri ) {
