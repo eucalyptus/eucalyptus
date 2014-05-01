@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.cluster;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;

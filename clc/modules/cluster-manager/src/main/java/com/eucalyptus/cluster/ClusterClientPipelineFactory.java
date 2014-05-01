@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.cluster;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -108,11 +108,17 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
   };
 
   private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  public static final Integer                               CLUSTER_CLIENT_PERMITS = 8;
+  public static final Supplier<Integer>                     CLUSTER_CLIENT_PERMITS = new Supplier<Integer>( ) {
+                                                                                     @Override
+                                                                                     public Integer get( ) {
+                                                                                       return Clusters.getConfiguration( )
+                                                                                                      .getRequestWorkers( );
+                                                                                     }
+                                                                                   };
   private static final CacheLoader<InetAddress, Semaphore>  loader                 = new CacheLoader<InetAddress, Semaphore>( ) {
                                                                                      @Override
                                                                                      public Semaphore load( InetAddress key ) throws Exception {
-                                                                                       return new Semaphore( CLUSTER_CLIENT_PERMITS, true );
+                                                                                       return new Semaphore( CLUSTER_CLIENT_PERMITS.get(), true );
                                                                                      }
                                                                                    };
   private static final LoadingCache<InetAddress, Semaphore> counters               = CacheBuilder.newBuilder( ).build( loader );
@@ -161,7 +167,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
             public void operationComplete( ChannelFuture future ) throws Exception {
               try {
                 final long end = System.nanoTime();
-                LOG.debug( Joiner.on( " " ).join( uuid, remoteAddress,
+                LOG.trace( Joiner.on( " " ).join( uuid, remoteAddress,
                                                   String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS, semQueued ),
                                                   String.format( "%d+%d=%d-msec",
                                                                  TimeUnit.NANOSECONDS.toMillis( waitTime - start ),
@@ -169,7 +175,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
                                                                  TimeUnit.NANOSECONDS.toMillis( end - start ) )
                 ) );
               } catch ( Exception e1 ) {
-                LOG.debug( e1 );
+                LOG.trace( e1 );
               } finally {
                 /**
                  * Ensure we release the permits for the semaphore for this remote address
@@ -179,7 +185,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
             }
           } );
         } catch ( Exception e1 ) {
-          LOG.debug( e1 );
+          LOG.trace( e1 );
         }
         super.connectRequested( ctx, e );
       }

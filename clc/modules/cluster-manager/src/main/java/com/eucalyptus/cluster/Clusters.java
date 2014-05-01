@@ -133,7 +133,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     private static final long serialVersionUID = 1L;
     @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller." )
     @Column( name = "config_cluster_workers", nullable = false )
-    private Integer requestWorkers     = 16;
+    private Integer requestWorkers     = 8;
     @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING." )
     @Column( name = "config_cluster_interval_pending", nullable = false )
     private Long    pendingInterval    = 3l;
