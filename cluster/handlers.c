@@ -4014,9 +4014,16 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
                     while (rc && ((time(NULL) - startRun) < ncRunTimeout)) {
 
-                        // if we're running windows, and are an NC, create the pw/floppy locally
-                        if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
-                            //if (strstr(platform, "windows")) {
+                        boolean is_windows = (strstr(platform, "windows") != NULL) ? TRUE : FALSE;
+                        boolean has_creds = (credential != NULL && strlen(credential)>0) ? TRUE : FALSE;
+                        boolean is_res_node = (strstr(res->ncURL, "EucalyptusNC") != NULL) ? TRUE : FALSE;
+
+                        // if this resource is not a node (but a co-located Broker)
+                        // and the guest is either Windows or Linux needing credentials,
+                        // then we'll have to create a floppy to pass to the instance
+                        if (! is_res_node && (is_windows || has_creds)) {
+
+                            //! @TODO: remove the 'windows' subdir or change something more generic
                             char cdir[EUCA_MAX_PATH];
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
                             if (check_directory(cdir)) {
@@ -4033,10 +4040,15 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             if (check_directory(cdir)) {
                                 LOGERROR("could not create console/floppy cache directory '%s'\n", cdir);
                             } else {
-                                // drop encrypted windows password and floppy on filesystem
-                                rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                if (is_windows) {
+                                    // drop encrypted windows password and floppy on filesystem
+                                    rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                } else if (has_creds) {
+                                    // decode the credential and place it into floppy on filesystem
+                                    rc = make_credential_floppy(config->eucahome, cdir, credential);
+                                }
                                 if (rc) {
-                                    LOGERROR("could not create console/floppy cache\n");
+                                    LOGERROR("could not create console/floppy cache/file\n");
                                 }
                             }
                         }
