@@ -202,17 +202,20 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               instanceTask.getLaunchSpecAvailabilityZone().length()>0){
             availabilityZone = instanceTask.getLaunchSpecAvailabilityZone();
           }
-          boolean monitoring = instanceTask.getLaunchSpecMonitoringEnabled();
+          Boolean monitoringEnabled = instanceTask.getLaunchSpecMonitoringEnabled();
+          boolean monitoring = false;
+          if(monitoringEnabled!=null && monitoringEnabled.booleanValue())
+            monitoring = true;
           instanceId = 
               EucalyptusActivityTasks.getInstance().runInstancesAsUser(instanceTask.getOwnerUserId(),
               imageId, groupName, userData, instanceType, availabilityZone, monitoring);
           conversionTask.getImportInstance().setInstanceId(instanceId);
           ImagingTasks.updateTaskInJson(instanceTask);
         }catch(final Exception ex){
-          LOG.warn("Failed to run instances after conversion task");
+          LOG.error("Failed to run instances after conversion task", ex);
           try{
             ImagingTasks.transitState(instanceTask, ImportTaskState.INSTANTIATING , 
-                ImportTaskState.COMPLETED, String.format("Image registered: %s, but failed to run instance", imageId));
+                ImportTaskState.COMPLETED, String.format("Image registered: %s, but run instance failed", imageId));
             // this will set the task state to completed in the next timer run
           }catch(final Exception ex1){
             ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_RUN_FAILURE);

@@ -94,7 +94,7 @@ public abstract class AbstractTaskScheduler {
     }
   }
 
-  protected abstract ImagingTask getNext();
+  protected abstract ImagingTask getNext(String availabilityZone);
   
   private void loadImagingServiceKey() throws Exception{
     try{
@@ -110,8 +110,8 @@ public abstract class AbstractTaskScheduler {
   }
 
   static X509Certificate cloudCert =  null;
-  public synchronized WorkerTask getTask() throws Exception{
-    final ImagingTask nextTask = this.getNext();
+  public synchronized WorkerTask getTask(final String availabilityZone) throws Exception{
+    final ImagingTask nextTask = this.getNext(availabilityZone);
     if(nextTask==null)
       return null;
     if(this.imagingServiceKey==null){
@@ -179,7 +179,6 @@ public abstract class AbstractTaskScheduler {
             ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
             throw new EucalyptusCloudException("Failed to generate download manifest", ex);
           }
-
           ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
         }else
           manifestLocation = volumeTask.getDownloadManifestUrl().get(0).getDownloadManifestUrl();
@@ -196,8 +195,9 @@ public abstract class AbstractTaskScheduler {
         final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
         for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
           final String importManifestUrl = volume.getImage().getImportManifestUrl();
-          if(! instanceTask.hasDownloadManifestUrl(importManifestUrl)){
-            // meaning that this task has not been fully processed by worker
+          // that this task has not been fully processed by worker and the zone matches
+          if(! instanceTask.hasDownloadManifestUrl(importManifestUrl) && 
+              availabilityZone.equals(volume.getAvailabilityZone())){
             String manifestLocation = null;
             manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
             if(manifestLocation == null){
@@ -232,10 +232,13 @@ public abstract class AbstractTaskScheduler {
       ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
       throw new Exception("failed to prepare worker task", ex);
     }
-    try{
-      ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, "");
-    }catch(final Exception ex){
-      ;
+    
+    if(newTask!=null){
+      try{
+        ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, "");
+      }catch(final Exception ex){
+        ;
+      }
     }
     
     return newTask;

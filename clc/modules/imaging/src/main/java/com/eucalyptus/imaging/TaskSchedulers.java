@@ -26,6 +26,8 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
+
 /**
  * @author Sang-Min Park
  *
@@ -36,7 +38,7 @@ public class TaskSchedulers {
   // first-come, first-served order, but give higher priority for import-image (partition to disk conversion) task
   public static class ImportImageFirstTaskScheduler extends AbstractTaskScheduler {
     @Override
-    protected ImagingTask getNext() {
+    protected ImagingTask getNext(final String availabilityZone) {
       List<ImagingTask> allTasks = null;
       List<ImagingTask> imagePendingTasks = Lists.newArrayList();
       List<ImagingTask> pendingTasks = Lists.newArrayList();
@@ -66,6 +68,23 @@ public class TaskSchedulers {
           return oldestTask;
         
         for(final ImagingTask task : pendingTasks){
+          if(task instanceof ImportVolumeImagingTask){
+            if(! availabilityZone.equals(((ImportVolumeImagingTask)task).getAvailabilityZone()))
+              continue;
+          }else if(task instanceof ImportInstanceImagingTask){
+            boolean clusterFound = false;
+            for(final ImportInstanceVolumeDetail volume : ((ImportInstanceImagingTask)task).getVolumes()){
+              final String importManifestUrl = volume.getImage().getImportManifestUrl();
+              /// this volume is not yet converted and the zone matches
+              if(! ((ImportInstanceImagingTask)task).hasDownloadManifestUrl(importManifestUrl) &&
+                  availabilityZone.equals(volume.getAvailabilityZone())){
+                clusterFound = true;
+                break;
+              }
+            }   
+            if(!clusterFound)
+              continue;
+          }
           if (oldest.after(task.getCreationTimestamp())){
             oldest = task.getCreationTimestamp();
             oldestTask = task;
@@ -81,7 +100,7 @@ public class TaskSchedulers {
   
   public static class FCFSTaskScheduler extends AbstractTaskScheduler {
     @Override
-    public ImagingTask getNext() {
+    public ImagingTask getNext(final String availabilityZone) {
       List<ImagingTask> allTasks = null;
       List<ImagingTask> pendingTasks = Lists.newArrayList();
       // pick a pending task whose timestamp is the oldest
@@ -97,6 +116,24 @@ public class TaskSchedulers {
         ImagingTask oldestTask = null;
         Date oldest = new Date(Long.MAX_VALUE) ;
         for(final ImagingTask task : pendingTasks){
+          if(task instanceof ImportVolumeImagingTask){
+            if(! availabilityZone.equals(((ImportVolumeImagingTask)task).getAvailabilityZone()))
+              continue;
+          }else if(task instanceof ImportInstanceImagingTask){
+            boolean clusterFound = false;
+            for(final ImportInstanceVolumeDetail volume : ((ImportInstanceImagingTask)task).getVolumes()){
+              final String importManifestUrl = volume.getImage().getImportManifestUrl();
+              /// this volume is not yet converted and the zone matches
+              if(! ((ImportInstanceImagingTask)task).hasDownloadManifestUrl(importManifestUrl) &&
+                  availabilityZone.equals(volume.getAvailabilityZone())){
+                clusterFound = true;
+                break;
+              }
+            }   
+            if(!clusterFound)
+              continue;
+          }
+          
           if (oldest.after(task.getCreationTimestamp())){
             oldest = task.getCreationTimestamp();
             oldestTask = task;

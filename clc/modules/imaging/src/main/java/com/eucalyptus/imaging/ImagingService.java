@@ -324,25 +324,25 @@ public class ImagingService {
     }
     
     try{
-      if(request.getInstanceId()!=null){
-        if(ImagingWorkers.hasWorker(request.getInstanceId())) {
-          ImagingWorkers.markUpdate(request.getInstanceId());
-          if(!ImagingWorkers.canAllocate(request.getInstanceId())){
-            LOG.warn(String.format("The worker (%s) is marked invalid", request.getInstanceId()));
-            return reply;
-          }
-        }else
-          ImagingWorkers.createWorker(request.getInstanceId());
-
-        final ImagingTask prevTask = ImagingTasks.getConvertingTaskByWorkerId(request.getInstanceId());
-        if(prevTask!=null){
-          /// this should NOT happen; if it does, it's worker script's bug
-          ImagingTasks.killAndRerunTask(prevTask.getDisplayName());
-          LOG.warn(String.format("A task (%s:%s) is gone missing [BUG in worker script]", 
-              prevTask.getDisplayName(), request.getInstanceId()));
+      ImagingWorker worker = ImagingWorkers.getWorker(request.getInstanceId());
+      if(worker!=null) {
+        ImagingWorkers.markUpdate(request.getInstanceId());
+        if(!ImagingWorkers.canAllocate(request.getInstanceId())){
+          LOG.warn(String.format("The worker (%s) is marked invalid", request.getInstanceId()));
+          return reply;
         }
+      }else
+        worker = ImagingWorkers.createWorker(request.getInstanceId());
+
+      final ImagingTask prevTask = ImagingTasks.getConvertingTaskByWorkerId(request.getInstanceId());
+      if(prevTask!=null){
+        /// this should NOT happen; if it does, it's worker script's bug
+        ImagingTasks.killAndRerunTask(prevTask.getDisplayName());
+        LOG.warn(String.format("A task (%s:%s) is gone missing [BUG in worker script]", 
+            prevTask.getDisplayName(), request.getInstanceId()));
       }
-      final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
+
+      final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask(worker.getAvailabilityZone());
       if(task!=null){
         reply.setImportTaskId(task.getImportTaskId());
         reply.setImportTaskType(task.getImportTaskType().toString());

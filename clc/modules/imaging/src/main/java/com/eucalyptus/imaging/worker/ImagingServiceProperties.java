@@ -21,12 +21,14 @@ package com.eucalyptus.imaging.worker;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
+
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
@@ -54,6 +56,7 @@ import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
@@ -588,5 +591,38 @@ public class ImagingServiceProperties {
         throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
       }
     }
+  }
+  
+  static final Set<String> configuredZones = Sets.newHashSet();
+  public static List<String> listConfiguredZones() throws Exception{
+    if(configuredZones.size()<=0){
+      List<String> allZones = Lists.newArrayList();
+      try{
+        final List<ClusterInfoType> clusters = 
+            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+        for(final ClusterInfoType c : clusters)
+          allZones.add(c.getZoneName());
+      }catch(final Exception ex){
+        throw new Exception("failed to lookup availability zones", ex);
+      }
+
+      if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES!= null &&
+          ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.length()>0){
+        if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.contains(",")){
+          final String[] tokens = ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.split(",");
+          for(final String zone : tokens){
+            if(allZones.contains(zone))
+              configuredZones.add(zone);
+          } 
+        }else{
+          if(allZones.contains(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES))
+            configuredZones.add(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES);
+        }
+      }else{
+        configuredZones.addAll(allZones);
+      }
+    }
+    
+    return Lists.newArrayList(configuredZones);
   }
 }

@@ -195,6 +195,10 @@ public class VolumeImagingTask extends ImagingTask {
     return null;
   }
   
+  public void clearDownloadManifesturl(){
+    this.downloadManifestUrl.clear();
+  }
+  
   @Override
   @PostLoad
   protected void onLoad(){

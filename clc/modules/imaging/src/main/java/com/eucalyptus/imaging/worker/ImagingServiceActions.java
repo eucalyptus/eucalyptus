@@ -674,27 +674,15 @@ public class ImagingServiceActions {
           throw new ImagingServiceActionException("failed to find the launch configuration name", ex);
         }
         
-        List<String> availabilityZones = Lists.newArrayList();
-        if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES!= null &&
-            ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.length()>0){
-          if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.contains(",")){
-            final String[] tokens = ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.split(",");
-            for(final String zone : tokens)
-              availabilityZones.add(zone);
-          }else{
-            availabilityZones.add(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES);
-          }
-        }else{
-          try{
-            final List<ClusterInfoType> clusters = 
-                EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-            for(final ClusterInfoType c : clusters)
-              availabilityZones.add(c.getZoneName());
-          }catch(final Exception ex){
-            throw new ImagingServiceActionException("failed to lookup availability zones", ex);
-          }
+        List<String> availabilityZones = null;
+        try{
+          availabilityZones = ImagingServiceProperties.listConfiguredZones();
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("Failed to lookup configured availability zones for imaging workers", ex);
         }
-        final int capacity = NUM_INSTANCES;
+        if(availabilityZones.size()<=0)
+          throw new ImagingServiceActionException("No availability zone is found for deploying imaging workers");
+        final int capacity = NUM_INSTANCES * availabilityZones.size();
         try{
           EucalyptusActivityTasks.getInstance().createAutoScalingGroup(asgName, availabilityZones, 
               capacity, launchConfigName);
