@@ -441,10 +441,7 @@ typedef struct ncInstance_t {
     //! @}
     //
 
-    char euareKey[KEY_STRING_SIZE];    //!<public key of Euare service that authorizes the instance
-    char instancePubkey[KEY_STRING_SIZE];   //!<instance's public key
-    char instanceToken[BIG_CHAR_BUFFER_SIZE];   //!< token from Euare service that proves the instances' authorization
-    char instancePk[KEY_STRING_SIZE];  //!<instance's private key
+    char credential[BIG_CHAR_BUFFER_SIZE];   //!< credential string to be passed into the instance via floppy
 
     //! @{
     //! @name field added in 4.0 for faster termination

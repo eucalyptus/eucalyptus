@@ -352,6 +352,9 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     if (ramdiskId)
         euca_strncpy(instance->ramdiskId, ramdiskId, sizeof(instance->ramdiskId));
 
+    if (credential)
+        euca_strncpy(instance->credential, credential, sizeof(instance->credential));
+
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
@@ -363,44 +366,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_ERROR;
         goto error;
     }
-    // prepare instance credential
-    if (credential && strlen(credential)) {
-        char symm_key[512];
-        char enc_key[KEY_STRING_SIZE];
-        char enc_tok[KEY_STRING_SIZE];
-        char *ptr[5];
-        int i = 0;
-        char *pch = strtok(credential, "\n");
-        while (i < 5 && pch != NULL) {
-            ptr[i++] = pch;
-            pch = strtok(NULL, "\n");
-        }
-        if (i < 5) {
-            LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
-        } else {
-            euca_strncpy(instance->euareKey, ptr[0], sizeof(instance->euareKey));
-            euca_strncpy(instance->instancePubkey, ptr[1], sizeof(instance->instancePubkey));
-            euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
-            euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
-            euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
-
-            char *pk = NULL;
-            int out_len = -1;
-            if (decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
-                LOGERROR("failed to decrypt the instance credential\n");
-            } else {
-                memcpy(instance->instancePk, pk, strlen(pk));
-                EUCA_FREE(pk);
-                if (decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
-                    LOGERROR("failed to decrypt the instance token\n");
-                } else {
-                    memcpy(instance->instanceToken, pk, strlen(pk));
-                    EUCA_FREE(pk);
-                }
-            }
-        }
-    }
-
     change_state(instance, STAGING);
 
     sem_p(inst_sem);

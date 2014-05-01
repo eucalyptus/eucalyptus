@@ -320,6 +320,13 @@ int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer
         goto cleanup;
     }
 
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
+
     if (decrypt_string_with_node(key_buffer, &symm_key) != EUCA_OK) {
         LOGERROR("Failed to decrypt the symmetric key\n");
         ret = EUCA_ERROR;
@@ -408,6 +415,13 @@ int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     char *dec64_in = NULL;
     char encrypted[MAX_ENCRYPTED_STRING_LEN] = "";
     EVP_CIPHER_CTX ctx = { 0 };
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
 
     dec64_key = base64_dec2((unsigned char *)key_buffer, strlen(key_buffer), &len);
     if (dec64_key == NULL || len <= 0) {
@@ -501,6 +515,14 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
+
     //Base64 decode the string inbuffer, null terminator deducted from buffer size
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &in_len);
     if (dec64_in == NULL) {
@@ -608,6 +630,13 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
         return (EUCA_ERROR);
     }
 
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
+
     in_buffer_str_size = (int)strlen(in_buffer);    //! the length of the string, not including the null-terminator
 
     // Open the private key file in read mode
@@ -693,6 +722,13 @@ int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
         LOGERROR("Invalid input\n");
         ret = EUCA_ERROR;
         goto cleanup;
+    }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
     }
 
     in_buffer_str_size = (int)strlen(in_buffer);
@@ -1120,6 +1156,12 @@ char *calc_fingerprint(const char *cert_filename)
     X509 *x509_cert = NULL;
     struct stat cert_file_stats = { 0 };    // file stat structure for getting the size of the file
     const EVP_MD *digest_function = NULL;   // digest of the cert
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            return (NULL);
+        }
+    }
 
     if (cert_filename == NULL) {
         LOGERROR("got a null filename, returning null");

@@ -103,6 +103,7 @@
 #include <storage-windows.h>
 #include <euca_auth.h>
 #include <misc.h>
+#include "data.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -490,4 +491,151 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     EUCA_FREE(newpass);
     EUCA_FREE(newInstName);
     return (EUCA_ERROR);
+}
+
+typedef struct _instance_creds {
+    char euareKey[KEY_STRING_SIZE];    //!<public key of Euare service that authorizes the instance
+    char instancePubkey[KEY_STRING_SIZE];   //!<instance's public key
+    char instanceToken[BIG_CHAR_BUFFER_SIZE];   //!< token from Euare service that proves the instances' authorization
+    char instancePk[KEY_STRING_SIZE];  //!<instance's private key
+} instance_creds;
+
+static int decode_credential(const char *credential, instance_creds *creds)
+{
+    char symm_key[512];
+    char enc_key[KEY_STRING_SIZE];
+    char enc_tok[KEY_STRING_SIZE];
+    char *ptr[5];
+    int i = 0;
+    char *pch = strtok(credential, "\n");
+    while (i < 5 && pch != NULL) {
+        ptr[i++] = pch;
+        pch = strtok(NULL, "\n");
+    }
+
+    if (i < 5) {
+        LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
+        return 1;
+    }
+    euca_strncpy(creds->euareKey, ptr[0], sizeof(creds->euareKey));
+    euca_strncpy(creds->instancePubkey, ptr[1], sizeof(creds->instancePubkey));
+    euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
+    euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
+    euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
+
+    char *pk = NULL;
+    int out_len = -1;
+    if (decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
+        LOGERROR("failed to decrypt the instance credential\n");
+        return 1;
+    }
+    memcpy(creds->instancePk, pk, strlen(pk));
+    EUCA_FREE(pk);
+    if (decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
+        LOGERROR("failed to decrypt the instance token\n");
+        return 1;
+    }
+    memcpy(creds->instanceToken, pk, strlen(pk));
+    EUCA_FREE(pk);
+
+    return 0;
+}
+
+//!
+//!
+//!
+//! @param[in] euca_home
+//! @param[in] rundir_path
+//! @param[in] instName
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_IO_ERROR and EUCA_MEMORY_ERROR.
+//!
+int make_credential_floppy(char *euca_home, char *rundir_path, char *credential)
+{
+    int fd = 0;
+    int rc = 0;
+    int rbytes = 0;
+    int count = 0;
+    int ret = EUCA_ERROR;
+    char dest_path[1024] = "";
+    char source_path[1024] = "";
+    char *ptr = NULL;
+    char *buf = NULL;
+    char *tmp = NULL;
+    instance_creds creds;
+
+    if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path) || !credential || !strlen(credential)) {
+        return (EUCA_ERROR);
+    }
+
+    if (decode_credential(credential, &creds)) {
+        return (EUCA_ERROR);
+    }
+
+    snprintf(source_path, 1024, EUCALYPTUS_HELPER_DIR "/floppy", euca_home);
+    snprintf(dest_path, 1024, "%s/floppy", rundir_path);
+
+    if ((buf = EUCA_ALLOC(1024 * 2048, sizeof(char))) == NULL) {
+        ret = EUCA_MEMORY_ERROR;
+        goto cleanup;
+    }
+
+    if ((fd = open(source_path, O_RDONLY)) < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    rbytes = read(fd, buf, 1024 * 2048);
+    close(fd);
+    if (rbytes < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    tmp = EUCA_ZALLOC(KEY_STRING_SIZE, sizeof(char));
+    if (!tmp) {
+        ret = EUCA_MEMORY_ERROR;
+        goto cleanup;
+    }
+
+    ptr = buf;
+    count = 0;
+    while (count < rbytes) {
+        memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER"));
+        if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER")) {
+            memcpy(ptr, creds.instancePubkey, strlen(creds.instancePubkey));
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
+            memcpy(ptr, creds.euareKey, strlen(creds.euareKey));
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
+            memcpy(ptr, creds.instanceToken, strlen(creds.instanceToken));
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
+            memcpy(ptr, creds.instancePk, strlen(creds.instancePk));
+        }
+
+        ptr++;
+        count++;
+    }
+
+    if ((fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700)) < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    rc = write(fd, buf, rbytes);
+    close(fd);
+
+    if (rc != rbytes) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    ret = EUCA_OK;
+
+cleanup:
+    if (buf != NULL)
+        EUCA_FREE(buf);
+    if (tmp != NULL)
+        EUCA_FREE(tmp);
+    return ret;
 }
