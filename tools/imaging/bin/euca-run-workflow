@@ -22,19 +22,28 @@
 import json
 import os
 from pprint import pprint
+import random
 import shutil
 import subprocess
 import tempfile
+import urllib2
+import time
 import argparse
 import sys
 from eucatoolkit.stages.downloadimage import DownloadImage
 from eucatoolkit import get_euca_home
 
+TOTAL_RETRIES=40 # download is retried in case of connection problems (2.5hrs+)
+FIRST_TIMEOUT=4  # in seconds, goes in powers of two afterwards
+MAX_TIMEOUT=300  # in seconds, the cap for growing timeout values
+
 class WF_InsufficientArguments(RuntimeError):
     pass
 
-
 class WF_InsufficientDependencies(RuntimeError):
+    pass
+
+class WF_ManifestError(IOError):
     pass
 
 # base workflow class
@@ -173,7 +182,6 @@ class Euca2ools(object):
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
             op_args.extend(['--debug'])
-        pprint(op_args)
         op_ps = subprocess.Popen(op_args,
                                  stdin=fd_r,
                                  bufsize=-1)
@@ -234,6 +242,7 @@ class WF_DownBundle_WriteRaw(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
+
         download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
         download.main()
 
@@ -271,6 +280,7 @@ class WF_DownBundle_UpVMDK(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
 
+        _wait_for_manifest(args.image_manifest_url)
         cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
         imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
@@ -434,6 +444,31 @@ def _download_image(work_dir, name, url, key):
     download.main()
     return dest
 
+# TODO: this logic is similar to retry logic in http.c:http_get_timeout()
+# and should be unified
+def _wait_for_manifest(image_manifest_url):
+    timeout = FIRST_TIMEOUT
+    manifest = None
+    for retry in range(0, TOTAL_RETRIES):
+        try:
+            print "checking download manifest at " + image_manifest_url
+            manifest = urllib2.urlopen(image_manifest_url)
+            break
+        except urllib2.HTTPError as detail:
+            if detail.code != 404 and detail.code != 408:
+                print "error: " + str(detail)
+                raise WF_ManifestError
+        print "manifest not accessible, will retry in " + \
+              str(timeout) + " seconds (retry " + \
+              str(retry+1) + " of " + str(TOTAL_RETRIES) + ")"
+        time.sleep(timeout + random.random()) # randomize retries within a second
+        timeout <<= 1
+        if timeout > MAX_TIMEOUT:
+            timeout = MAX_TIMEOUT
+    if manifest == None:
+        raise WF_ManifestError
+    return manifest
+
 def _run(op_args):
     op_ps = subprocess.Popen(op_args)
     op_ps.wait()
@@ -478,3 +513,6 @@ except WF_InsufficientDependencies, e:
     for problem in e.args[0]:
         print "\t - " + problem
     sys.exit(3)
+except WF_ManifestError:
+    print "failed to download components from object store"
+    sys.exit(4)
