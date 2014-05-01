@@ -1,3 +1,23 @@
+/*
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ */
+
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
@@ -11,7 +31,7 @@ import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType
 import com.eucalyptus.objectstorage.providers.InMemoryProvider
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.AclUtils
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
@@ -83,16 +103,16 @@ public class BucketFactoryTest {
         configValue = System.getProperty("provider", "mem")
         println 'Using provider ' + configValue
 
-        S3ProviderConfiguration.S3AccessKey = System.getProperty("accessKey")
-        S3ProviderConfiguration.S3SecretKey = System.getProperty("secretKey")
-        S3ProviderConfiguration.S3Endpoint = System.getProperty("endpoint")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey = System.getProperty("accessKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey = System.getProperty("secretKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint = System.getProperty("endpoint")
 
         switch (configValue) {
             case 's3':
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3Endpoint))
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3AccessKey))
-                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.S3SecretKey))
-                println 'Using endpoint ' + S3ProviderConfiguration.S3Endpoint
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey))
+                println 'Using endpoint ' + S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint
                 provider = new S3ProviderClient()
                 break
             case 'walrus':

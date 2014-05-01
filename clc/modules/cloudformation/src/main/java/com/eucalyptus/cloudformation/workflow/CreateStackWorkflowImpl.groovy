@@ -118,7 +118,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             if (!failedResources.isEmpty()) {
               errorMessage = "The following resource(s) failed to create: " + failedResources + ".";
             }
-            if (onFailure == "DO_NOTHING") {
+            if ("DO_NOTHING".equals(onFailure)) {
               return promiseFor(activities.createGlobalStackEvent(
                 stackId,
                 accountId,
@@ -130,10 +130,10 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                   activities.createGlobalStackEvent(
                     stackId,
                     accountId,
-                    onFailure == "ROLLBACK" ?
+                    "ROLLBACK".equals(onFailure) ?
                       StackResourceEntity.Status.ROLLBACK_IN_PROGRESS.toString() :
                       StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
-                    errorMessage + (onFailure == "ROLLBACK" ? "Rollback" : "Delete") + " requested by user."
+                    errorMessage + ("ROLLBACK".equals(onFailure) ? "Rollback" : "Delete") + " requested by user."
                   )
                 );
                 waitFor(deleteOrRollbackEvent) {

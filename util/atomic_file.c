@@ -236,7 +236,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     snprintf(path, EUCA_MAX_PATH, "/%s", tmppath);
 
     if (!strcmp(type, "http")) {
-        rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15);
+        rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15, NULL);
         if (rc) {
             LOGERROR("http client failed to fetch file URL=%s: check http server status\n", file->source);
             ret = 1;

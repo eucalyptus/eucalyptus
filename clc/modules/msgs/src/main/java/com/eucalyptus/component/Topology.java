@@ -424,8 +424,20 @@ public class Topology {
       Logs.extreme( ).debug( ex, ex );
     }
     try {
-      Component comp = Components.lookup( config.getComponentId( ) );
-      comp.destroy( config );
+      Queue.INTERNAL.enqueue( new Callable<Boolean>(){
+        @Override
+        public Boolean call() throws Exception {
+          try {
+            Component comp = Components.lookup( config.getComponentId( ) );
+            comp.destroy( config );
+          } catch ( Exception ex ) {
+            Exceptions.maybeInterrupted( ex );
+            LOG.error( ex );
+            Logs.extreme( ).debug( ex, ex );
+          }
+          return true;
+        }
+      } ).get();
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
       LOG.error( ex );

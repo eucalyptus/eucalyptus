@@ -72,6 +72,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Date;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.vm.VmInstance;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -120,11 +122,11 @@ public class Volumes {
   private static Logger     LOG                   = Logger.getLogger( Volumes.class );
   private static final long VOLUME_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
   private static final long VOLUME_DELETE_TIMEOUT = 30 * 60 * 1000L;
-  
+
   @QuantityMetricFunction( VolumeMetadata.class )
   public enum CountVolumes implements Function<OwnerFullName, Long> {
     INSTANCE;
-    
+
     @Override
     public Long apply( final OwnerFullName input ) {
       final EntityTransaction db = Entities.get( Volume.class );
@@ -135,16 +137,16 @@ public class Volumes {
       }
     }
   }
-  
+
   @UsageMetricFunction( VolumeMetadata.class )
   public enum MeasureVolumes implements Function<OwnerFullName, Long> {
     INSTANCE;
-    
+
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( final OwnerFullName input ) {
       Long size = 0l;
-      final EntityTransaction db = Entities.get( Volume.class );      
+      final EntityTransaction db = Entities.get( Volume.class );
       try {
         final List<Volume> vols = Entities.createCriteria( Volume.class )
                                           .add( Example.create( Volume.named( input, null ) ) )
@@ -159,16 +161,16 @@ public class Volumes {
       }
       return size;
     }
-    
+
   }
-  
+
   public static class VolumeUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
-    
+
     public static void register( ) {
       Listeners.register( ClockTick.class, new VolumeUpdateEvent( ) );
     }
-    
+
     @Override
     public void fireEvent( final ClockTick event ) {
       if ( Topology.isEnabledLocally( Eucalyptus.class ) && ready.compareAndSet( true, false ) ) {
@@ -179,7 +181,7 @@ public class Volumes {
         }
       }
     }
-    
+
     @Override
     public Boolean call( ) throws Exception {
       try {
@@ -189,7 +191,7 @@ public class Volumes {
       }
       return true;
     }
-    
+
     static void update( ) {
       final Multimap<String, String> partitionVolumeMap = HashMultimap.create( );
       final EntityTransaction db = Entities.get( Volume.class );
@@ -203,26 +205,36 @@ public class Volumes {
         db.rollback( );
       }
       Logs.extreme( ).debug( "Volume state update: " + Joiner.on( "\n" ).join( partitionVolumeMap.entries( ) ) );
-      for ( final String partition : partitionVolumeMap.keySet( ) ) {
+      final EntityTransaction dbInstance = Entities.get( VmInstance.class );
+      try {
+        final List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+        dbInstance.rollback();
+        for ( final String partition : partitionVolumeMap.keySet( ) ) {
         try {
-          final Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partition );//TODO:GRZE: restoring volume state
-          for ( final String v : partitionVolumeMap.get( partition ) ) {
-            try {
-              final StorageVolume storageVolume = idStorageVolumeMap.get( v );
-              volumeStateUpdate( v, storageVolume );
-            } catch ( final Exception ex ) {
-              LOG.error( ex );
-              Logs.extreme( ).error( ex, ex );
+            final Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partition );//TODO:GRZE: restoring volume state
+            for ( final String v : partitionVolumeMap.get( partition ) ) {
+              try {
+                final StorageVolume storageVolume = idStorageVolumeMap.get( v );
+                volumeStateUpdate( v, storageVolume, vms );
+              } catch ( final Exception ex ) {
+                LOG.error( ex );
+                Logs.extreme( ).error( ex, ex );
+              }
             }
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
-        } catch ( final Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
         }
+      } catch (Exception ex) {
+        Logs.extreme( ).error( ex , ex );
+        throw ex;
+      } finally {
+        if ( dbInstance.isActive() ) dbInstance.rollback();
       }
     }
-    
-    static void volumeStateUpdate( final String volumeId, final StorageVolume storageVolume ) {
+
+    static void volumeStateUpdate( final String volumeId, final StorageVolume storageVolume, final List<VmInstance> vms ) {
       final Function<String, Volume> updateVolume = new Function<String, Volume>( ) {
         @Override
         public Volume apply( final String input ) {
@@ -233,12 +245,12 @@ public class Volumes {
             boolean maybeBusy = false;
             String vmId = null;
             try {
-              vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
+              vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ), vms );
               maybeBusy = true;
               vmId = vmAttachedVol.getVmInstance( ).getInstanceId( );
             } catch ( final NoSuchElementException ex ) {
             }
-          
+
           State initialState = v.getState( );
           if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
             initialState = State.BUSY;
@@ -253,7 +265,7 @@ public class Volumes {
                .append( vmId ).append( " " )
                .append( vmAttachedVol.getAttachmentState( ) );
           }
-          
+
           String status = null;
           Integer size = 0;
           String actualDeviceName = "unknown";
@@ -268,7 +280,7 @@ public class Volumes {
             //       && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
             	//
             	//volumeState = State.GENERATING;
-            //} else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) { 
+            //} else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
             if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
               volumeState = State.ANNIHILATED;
             } else {
@@ -317,9 +329,9 @@ public class Volumes {
       };
       Entities.asTransaction( Volume.class, updateVolume ).apply( volumeId );
     }
-    
+
     static Map<String, StorageVolume> updateVolumesInPartition( final String partition ) {
-      final Map<String, StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
+      final Map<String, StorageVolume> idStorageVolumeMap = Maps.newHashMap();
       final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
       try {
         final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, new DescribeStorageVolumesType( ) );
@@ -372,7 +384,7 @@ public class Volumes {
   }
   
   public static Volume lookup( final OwnerFullName ownerFullName, final String volumeId ) {
-    final EntityTransaction db = Entities.get( Volume.class );
+    final EntityTransaction db = Entities.get(Volume.class);
     try {
       Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
       db.commit( );

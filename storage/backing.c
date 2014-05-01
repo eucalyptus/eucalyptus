@@ -784,101 +784,13 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
 
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
 
-    // if this looks like a partition m1.small image, make it a bootable disk
-    virtualMachine *vm2 = NULL;
-    LOGDEBUG("vm->virtualBootRecordLen=%d\n", vm->virtualBootRecordLen);
-    if (vm->virtualBootRecordLen == 5) {    // TODO: make this check more robust
-
-        // as an experiment, construct a new VBR, without swap and ephemeral
-        virtualMachine vm_copy;
-        vm2 = &vm_copy;
-        memcpy(vm2, vm, sizeof(virtualMachine));
-        bzero(vm2->virtualBootRecord, EUCA_MAX_VBRS * sizeof(virtualBootRecord));
-        vm2->virtualBootRecordLen = 0;
-
-        virtualBootRecord *emi_vbr = NULL;
-        for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
-            virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
-            if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK && vbr->type != NC_RESOURCE_IMAGE)
-                continue;
-            if (vbr->type == NC_RESOURCE_IMAGE)
-                emi_vbr = vbr;
-            memcpy(vm2->virtualBootRecord + (vm2->virtualBootRecordLen++), vbr, sizeof(virtualBootRecord));
-        }
-
-        if (emi_vbr == NULL) {
-            LOGERROR("[%s] failed to find EMI among VBR entries\n", instance->instanceId);
-            goto out;
-        }
-
-        if (vbr_add_ascii("boot:none:104857600:ext3:sda2:none", vm2) != EUCA_OK) {
-            LOGERROR("[%s] could not add a boot partition VBR entry\n", instance->instanceId);
-            goto out;
-        }
-        if (vbr_parse(vm2, NULL) != EUCA_OK) {
-            LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
-            goto out;
-        }
-        // compute tree of dependencies
-        sentinel = vbr_alloc_tree(vm2, // the struct containing the VBR
-                                  TRUE, // we always make the disk bootable, for consistency
-                                  TRUE, // make working copy of runtime-modifiable files
-                                  is_migration_dest,    // tree of an instance on the migration destination
-                                  (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
-                                  instance->instanceId);    // ID is for logging
-        if (sentinel == NULL) {
-            LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
-            goto out;
-        }
-
-        LOGDEBUG("disk size prior to tree implementation is = %lld\n", sentinel->deps[0]->size_bytes);
-        long long right_disk_size = sentinel->deps[0]->size_bytes;
-
-        sem_p(disk_sem);
-        {
-            // download/create/combine the dependencies
-            rc = art_implement_tree(sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
-        }
-        sem_v(disk_sem);
-
-        if (rc != EUCA_OK) {
-            LOGERROR("[%s] failed to implement backing for instance\n", instance->instanceId);
-            goto out;
-        }
-
-        LOGDEBUG("[%s] created the initial bootable disk\n", instance->instanceId);
-
-        /* option A starts */
-        assert(emi_vbr);
-        assert(sentinel->deps[0]);
-        strcpy(emi_vbr->guestDeviceName, "sda");    // switch 'sda1' to 'sda' now that we've built the disk
-        //emi_vbr->sizeBytes = sentinel->deps[0]->size_bytes; // update the size to match the disk
-        emi_vbr->sizeBytes = right_disk_size;   // this is bad...
-        LOGDEBUG("at boot disk creation time emi_vbr->sizeBytes = %lld\n", emi_vbr->sizeBytes);
-        euca_strncpy(emi_vbr->id, sentinel->deps[0]->id, SMALL_CHAR_BUFFER_SIZE);   // change to the ID of the disk
-        if (vbr_parse(vm, NULL) != EUCA_OK) {
-            LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
-            goto out;
-        }
-        emi_vbr->locationType = NC_LOCATION_NONE;   // i.e., it should already exist
-
-        art_free(sentinel);
-        /* option A end */
-
-        /* option B starts *
-           memcpy(vm, vm2, sizeof(virtualMachine));
-           if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
-           goto out;
-           ret = EUCA_OK;
-           goto out;
-           * option B ends */
-    }
     // compute tree of dependencies
     sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
                               FALSE,   // if image had to be made bootable, that was done above
                               TRUE,    // make working copy of runtime-modifiable files
                               is_migration_dest,    // tree of an instance on the migration destination
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
+                              &(instance->bail_flag),   // flag indicating that provisioning should bail
                               instance->instanceId);    // ID is for logging
     if (sentinel == NULL) {
         LOGERROR("[%s] failed to prepare extended backing for instance\n", instance->instanceId);

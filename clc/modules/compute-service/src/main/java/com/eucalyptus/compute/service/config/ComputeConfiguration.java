@@ -42,7 +42,7 @@ public class ComputeConfiguration extends ComponentConfiguration implements Seri
 
   public ComputeConfiguration( ) { }
 
-  public ComputeConfiguration ( String name, String hostName, Integer port ) {
-    super( "compute", name, hostName, port, SERVICE_PATH );
+  public ComputeConfiguration ( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, SERVICE_PATH );
   }
 }

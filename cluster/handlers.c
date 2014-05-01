@@ -1631,15 +1631,27 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i = 0; i < gni->max_instances; i++) {
                     char *strptra = NULL, *strptrb = NULL;
+                    ccInstance *myInstance = NULL;
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
                     if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
                         LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                        // here, we should decide if we need to send the mapping, or not?
-                        rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                        // here, we should decide if we need to send the mapping, or not
+                        rc = find_instanceCacheIP(strptrb, &myInstance);
+                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
+                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                            } else {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                            }
+                        }
+                        if (myInstance) {
+                            EUCA_FREE(myInstance);
+                        }
 
-                        LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
+                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
                     } else {
                         LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                     }
@@ -7300,7 +7312,7 @@ int reconfigureNetworkFromCLC(void)
 
     // clcnet populate
     snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
-    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
+    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15, NULL);
     EUCA_FREE(cloudIp);
     if (rc) {
         LOGWARN("cannot get latest network topology from cloud controller\n");

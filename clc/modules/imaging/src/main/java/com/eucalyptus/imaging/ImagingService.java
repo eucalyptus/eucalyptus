@@ -25,10 +25,8 @@ import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 
 import java.net.InetSocketAddress;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -41,7 +39,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
@@ -158,7 +155,7 @@ public class ImagingService {
           state.equals(ImportTaskState.CONVERTING) ||
           state.equals(ImportTaskState.INSTANTIATING) ) {
         ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
-          ImportTaskState.CANCELLING, null);
+          ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_USER_CANCELLATION);
       }
       reply.set_return(true);
     }catch(final NoSuchElementException ex){
@@ -242,11 +239,11 @@ public class ImagingService {
                 ImagingTasks.killAndRerunTask(taskId);
               }else{
                 LOG.warn(String.format("Imaging import task %s has timed out and failed", imagingTask.getDisplayName()));
-                ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Task timed out during conversion");
+                ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_CONVERSION_TIMEOUT);
               }
             }catch(final Exception ex){
               LOG.error("Failed to handle timed-out task", ex);
-              ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Task timed out during conversion");
+              ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_CONVERSION_TIMEOUT);
             }finally{
               reply.setCancelled(true);
             }
@@ -259,7 +256,7 @@ public class ImagingService {
               ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
             }catch(final Exception ex){
               ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                  ImportTaskState.FAILED, "Failed to update volume's state");
+                  ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
               LOG.error("Failed to update volume's state", ex);
               break;
             }
@@ -267,22 +264,26 @@ public class ImagingService {
             try{
               if(imagingTask instanceof ImportVolumeImagingTask){
                 ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                    ImportTaskState.COMPLETED, null);
+                    ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
               }else if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
                   ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                      ImportTaskState.INSTANTIATING, null);
+                      ImportTaskState.INSTANTIATING, ImportTaskState.STATE_MSG_LAUNCHING_INSTANCE);
               }
             }catch(final Exception ex){
               LOG.error("Failed to update imaging task's state to completed", ex);
             }
           }else if(imagingTask instanceof DiskImagingTask){
             ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                ImportTaskState.COMPLETED, null);
+                ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
           }
           break;
 
         case FAILED:
-          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
+          String stateMsg = ImportTaskState.STATE_MSG_CONVERSION_FAILED;
+          if(request.getStatusMessage()!=null)
+            stateMsg = request.getStatusMessage();
+          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, stateMsg);
+          LOG.warn(String.format("Worker reported failed conversion: %s", stateMsg));
           break;
         }
       }else{ // state other than "CONVERTING" is not valid and worker should stop working

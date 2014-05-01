@@ -126,10 +126,11 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
-  <appender name="cloud-request-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-request-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-requests.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <param name="Permissions" value="rw-------" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %m%n" />
     </layout>

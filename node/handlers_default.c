@@ -733,6 +733,9 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
         instance = find_instance(&global_instances, instanceId);
+        instance->bail_flag = TRUE; // request any pending download retries to bail
+        instance->terminationRequestedTime = time(NULL);
+        save_instance_struct(instance);
         sem_v(inst_sem);
     }
 
@@ -1868,8 +1871,7 @@ static void *bundling_thread(void *arg)
     }
 
     char backing_dev[PATH_MAX] = "";
-    if (realpath(pInstance->params.root->backingPath, backing_dev)==NULL
-        || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
+    if (realpath(pInstance->params.root->backingPath, backing_dev) == NULL || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
         LOGERROR("[%s] failed to resolve backing path (%s) or to chown it\n", pInstance->instanceId, backing_dev);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         return NULL;

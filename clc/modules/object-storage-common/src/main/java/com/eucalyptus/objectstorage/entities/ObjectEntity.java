@@ -260,7 +260,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     }
 
     private static String generateInternalKey(@Nonnull String key) {
-        return UUID.randomUUID().toString() + "-" + key;
+        return UUID.randomUUID().toString(); //Use only uuid to ensure key length max met
     }
 
     public String geteTag() {

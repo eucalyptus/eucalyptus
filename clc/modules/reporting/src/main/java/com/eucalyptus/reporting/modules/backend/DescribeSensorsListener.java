@@ -103,12 +103,12 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
                   ArrayList<String> instanceIds = Lists.newArrayList(instIds);
                   Iterables.removeIf(instanceIds, Predicates.isNull());
-
+		  //                  LOG.info("DecribeSensorCallback about to be sent");
                   AsyncRequests.newRequest(
                       new DescribeSensorCallback(HISTORY_SIZE,
                           COLLECTION_INTERVAL_TIME_MS, instanceIds))
-                      .dispatch(ccConfig);
-                  LOG.debug("DecribeSensorCallback has been successfully executed");
+                      .sendSync(ccConfig);
+		  //                  LOG.info("DecribeSensorCallback has been successfully executed");
                 }
               }
             }

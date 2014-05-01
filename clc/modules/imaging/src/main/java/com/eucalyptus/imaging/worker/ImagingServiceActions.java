@@ -41,11 +41,13 @@ import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -534,12 +536,12 @@ public class ImagingServiceActions {
         kvMap.put("log_server", logServer);
       if(logServerPort != null)
         kvMap.put("log_server_port", logServerPort);
-
-      ServiceConfiguration service = Topology.lookup( Eucalyptus.class );
-      kvMap.put("eucalyptus_port", Integer.toString( service.getPort() ) );
-      kvMap.put("ec2_path", service.getServicePath());
-      service = Topology.lookup( Imaging.class );
-      kvMap.put("imaging_path", service.getServicePath());
+      
+      kvMap.put("imaging_service_url", String.format("imaging.%s",DNSProperties.DOMAIN));
+      kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+      kvMap.put("compute_service_url",String.format("compute.%s", DNSProperties.DOMAIN));
+      final ServiceConfiguration dns = Topology.lookup(Dns.class);
+      kvMap.put("dns_server", dns.getInetAddress().getHostAddress());
 
       final StringBuilder sb = new StringBuilder();
       for (String key : kvMap.keySet()){

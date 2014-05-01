@@ -67,6 +67,9 @@ import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import javax.persistence.PersistenceException;
+
+import com.eucalyptus.component.groups.ServiceGroups;
+import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.Logs;
@@ -77,20 +80,47 @@ import com.google.common.util.concurrent.JdkFutureAdapters;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
-  
-  public static boolean register( final ComponentId compId,
-                                  final String partitionName,
-                                  final String name,
-                                  final String hostName,
-                                  final Integer port ) throws ServiceRegistrationException {
+
+  enum HostNamePredicate implements Predicate<String> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( String hostName ) {
+      InetAddress addr;
+      try {
+        addr = InetAddress.getByName( hostName );
+        return true;
+      } catch ( UnknownHostException ex1 ) {
+        LOG.error( "Invalid hostname: " + hostName
+                   + " failure: "
+                   + ex1.getMessage(), ex1 );
+        throw Exceptions.toUndeclared( "Registration failed because the hostname "
+                                       + hostName
+                                       + " is invalid: "
+                                       + ex1.getMessage(), ex1 );
+      }
+    }
+
+    public static Predicate<String> current = INSTANCE;
+    public static Predicate<String> get() { return current; };
+  }
+
+  public static ServiceConfiguration register( final ComponentId compId,
+                                               final String partitionName,
+                                               final String name,
+                                               final String hostName,
+                                               final Integer port ) throws ServiceRegistrationException {
+    ServiceConfiguration returnConfig = null;
     if ( !compId.isRegisterable( ) ) {
       throw new ServiceRegistrationException( "Failed to register component: " + compId.getFullName( )
                                               + " does not support registration." );
     }
     final ServiceBuilder builder = ServiceBuilders.lookup( compId );
     String partition = partitionName;
-    
-    if ( !compId.isPartitioned( ) ) {
+
+    if ( !ServiceGroups.listMembership( compId ).isEmpty( ) ) {
+      partition = partitionName;
+    } else if ( !compId.isPartitioned( ) ) {
       partition = name;
     } else if ( !compId.isPartitioned( ) && compId.isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
@@ -98,18 +128,7 @@ public class ComponentRegistrationHandler {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
-    InetAddress addr;
-    try {
-      addr = InetAddress.getByName( hostName );
-    } catch ( UnknownHostException ex1 ) {
-      LOG.error( "Invalid hostname: " + hostName
-                 + " failure: "
-                 + ex1.getMessage( ), ex1 );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname "
-                                              + hostName
-                                              + " is invalid: "
-                                              + ex1.getMessage( ), ex1 );
-    }
+    HostNamePredicate.get().apply( hostName );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( )
               + " for: "
               + partition
@@ -130,7 +149,7 @@ public class ComponentRegistrationHandler {
           , name
           , hostName
           , port ) );
-      return true;
+      return configuration;
     }
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( "Returning existing registration information for: "
@@ -141,7 +160,7 @@ public class ComponentRegistrationHandler {
                 + hostName
                 + ":"
                 + port );
-      return true;
+      return ServiceConfigurations.lookupByName( builder.getComponentId( ).getClass( ), name );
     }
     
     try {
@@ -153,7 +172,7 @@ public class ComponentRegistrationHandler {
         Logs.extreme( ).info( p.getCertificate( ) );
         Logs.extreme( ).info( p.getNodeCertificate( ) );
       }
-      ServiceConfigurations.store( newComponent );
+      returnConfig = ServiceConfigurations.store( newComponent );
       try {
         Components.lookup( newComponent ).setup( newComponent );
         Future<ServiceConfiguration> res = Topology.start( newComponent );
@@ -173,7 +192,7 @@ public class ComponentRegistrationHandler {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": load failed because of: "
                   + ex.getMessage( ) );
       }
-      return true;
+      return returnConfig;
     } catch ( Exception e ) {
       e = Exceptions.filterStackTrace( e );
       LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: "
@@ -183,8 +202,8 @@ public class ComponentRegistrationHandler {
                                               + e.getMessage( ), e );
     }
   }
-  
-  public static boolean deregister( final ComponentId compId, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
+
+  public static ServiceConfiguration deregister( final ComponentId compId, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
     final ServiceBuilder<?> builder = ServiceBuilders.lookup( compId );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     boolean proceedOnError = false;
@@ -203,8 +222,8 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: "
                                               + e.getMessage( ), e );
     }
+    ServiceConfiguration conf = null;
     try {
-      ServiceConfiguration conf;
       try {
         conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
       } catch ( NoSuchElementException ex1 ) {
@@ -225,13 +244,13 @@ public class ComponentRegistrationHandler {
     } catch ( Exception e ) {
       if ( proceedOnError ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": deregistration error, but proceeding since config has been removed: " + e.getMessage( ) );
-        return true;
+        return conf;
       } else {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": deregistration failed because of" + e.getMessage( ) );
         throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": deregistration failed because of: " + e.getMessage( ), e );
       }
     }
-    return true;
+    return conf;
   }
   
   /**

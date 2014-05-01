@@ -62,12 +62,16 @@
 
 package com.eucalyptus.cloud.ws;
 
+import java.io.IOException;
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.persistence.EntityTransaction;
 
@@ -91,10 +95,19 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LockResource;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.entities.ARecordAddressInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
@@ -128,73 +141,104 @@ import edu.ucsb.eucalyptus.msgs.UpdateCNAMERecordType;
 public class DNSControl {
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
-	static UDPListener udpListener;
-	static TCPListener tcpListener;
+	private static final AtomicReference<Collection<Cidr>> addressMatchers =
+			new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
 
-	static final String EMPTY = "";
+	private static final AtomicReference<Collection<UDPListener>> udpListenerRef =
+			new AtomicReference<Collection<UDPListener>>( Collections.<UDPListener>emptySet( ) );
 
-	@ConfigurableField( displayName = "dns_listener_address",
-			description = "Parameter controlling which address is used for dns listeners",
-			initial = EMPTY,
+	private static final AtomicReference<Collection<TCPListener>> tcpListenerRef =
+			new AtomicReference<Collection<TCPListener>>( Collections.<TCPListener>emptySet( ) );
+
+	private static final Lock listenerLock = new ReentrantLock( );
+
+	@ConfigurableField( displayName = "dns_listener_address_match",
+			description = "Additional address patterns to listen on for DNS requests.",
+			initial = "",
 			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = DnsAddressChangeListener.class)
-	public static String dns_listener_address = EMPTY;
-	
+	public static volatile String dns_listener_address_match = "";
 
 	public static class DnsAddressChangeListener implements PropertyChangeListener {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			try {
-				if ( newValue instanceof String  ) {
-					if(t.getValue()!=null && ! t.getValue().equals(newValue)){
-						onPropertyChange((String)newValue);
-						dns_listener_address = newValue.toString();
-						restart();
+			if ( newValue instanceof String  ) {
+				if( t.getValue( ) == null || !t.getValue( ).equals( newValue ) ){
+					updateAddressMatchers( (String) newValue );
+					try {
+						restart( );
+					} catch ( final Exception e ) {
+						throw new ConfigurablePropertyException( e.getMessage( ) );
 					}
 				}
-			} catch ( final Exception e ) {
-				throw new ConfigurablePropertyException(e.getMessage());
 			}
 		}
 	}
 
-	private static void onPropertyChange(final String keyname) throws EucalyptusCloudException {
-		if (!EMPTY.equals(keyname))
-			if(!Internets.testReachability(keyname))
-				throw new EucalyptusCloudException(" address " + keyname + " is not reachable");
-	}
-
-	private static void initializeUDP() throws Exception {
+	private static void updateAddressMatchers( final String addressCidrs ) throws ConfigurablePropertyException {
 		try {
-			if (udpListener == null) {
-			  if(EMPTY.equals(dns_listener_address))
-			    udpListener = new UDPListener( InetAddress.getByName( Internets.localHostAddress() ), DNSProperties.PORT);
-			  else
-			    udpListener = new UDPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
-				udpListener.start();
-			}
-		} catch(SocketException ex) {
-			LOG.error(ex);
-			throw ex;
+			addressMatchers.set( ImmutableList.copyOf( Iterables.transform(
+					Splitter.on( CharMatcher.anyOf(", ;:") ).trimResults( ).omitEmptyStrings( ).split( addressCidrs ),
+					Cidr.parseUnsafe( )
+			) ) );
+		} catch ( IllegalArgumentException e ) {
+			throw new ConfigurablePropertyException( e.getMessage( ) );
 		}
 	}
 
-	private static void initializeTCP() throws Exception {
-		try {
-			if (tcpListener == null) {
-			  if(EMPTY.equals(dns_listener_address))
-			    tcpListener = new TCPListener( InetAddress.getByName( Internets.localHostAddress() ), DNSProperties.PORT);
-			  else
-			    tcpListener = new TCPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
-				tcpListener.start();
+	private static void initializeUDP( ) {
+		initializeListeners( udpListenerRef, "UDP", new ListenerBuilder<UDPListener>() {
+			@Override
+			public UDPListener build( final InetAddress address, final int port ) throws IOException {
+				return new UDPListener( address, port );
 			}
-		} catch(UnknownHostException ex) {
-			LOG.error(ex);
-			throw ex;
+		});
+	}
+
+	private static void initializeTCP( ) {
+		initializeListeners( tcpListenerRef, "TCP", new ListenerBuilder<TCPListener>() {
+			@Override
+			public TCPListener build( final InetAddress address, final int port ) throws IOException {
+				return new TCPListener( address, port );
+			}
+		});
+	}
+
+	private static <T extends Thread> void initializeListeners(
+			final AtomicReference<Collection<T>> listenerRef,
+			final String description,
+			final ListenerBuilder<T> builder
+	) {
+		try ( final LockResource lock = LockResource.lock( listenerLock ) ) {
+			if ( listenerRef.get( ).isEmpty( ) ) {
+				final int listenPort = DNSProperties.PORT;
+				final Set<InetAddress> listenAddresses = Sets.newLinkedHashSet( );
+				listenAddresses.add( Internets.localHostInetAddress( ) );
+				Iterables.addAll(
+						listenAddresses,
+						Iterables.filter( Internets.getAllInetAddresses( ), Predicates.or( addressMatchers.get( ) ) ) );
+				LOG.info( "Starting DNS " + description + " listeners on " + listenAddresses + ":" + listenPort );
+
+				// Configured listeners
+				final List<T> listeners = Lists.newArrayList( );
+				for ( final InetAddress listenAddress : listenAddresses ) {
+					try {
+						final T listener = builder.build( listenAddress, listenPort );
+						listener.start( );
+						listeners.add( listener );
+					} catch( final Exception ex ) {
+						LOG.error( "Error starting DNS "+description+" listener on "+listenAddress+":"+listenPort, ex );
+					}
+				}
+				listenerRef.set( ImmutableList.copyOf( listeners ) );
+			}
 		}
 	}
-	
+
+	private interface ListenerBuilder<T> {
+		T build( InetAddress address, int port ) throws IOException;
+	}
+
 	public static class DnsPopulateTimer implements EventListener<ClockTick> {
 	  public static void register( ) {
 	      Listeners.register( ClockTick.class, new DnsPopulateTimer() );
@@ -281,19 +325,14 @@ public class DNSControl {
 	}
 
 	public static void stop() throws Exception {
-		if (udpListener != null) {
-			udpListener.close();
-			udpListener = null;
-		}
-		if (tcpListener != null) {
-			tcpListener.close();
-			tcpListener = null;
+		try ( final LockResource lock = LockResource.lock( listenerLock ) ) {
+			IO.close( udpListenerRef.getAndSet( Collections.<UDPListener>emptySet( ) ) );
+			IO.close( tcpListenerRef.getAndSet( Collections.<TCPListener>emptySet( ) ) );
 		}
 	}
 
 	public static void restart()  throws Exception {
 		stop();
-		LOG.info("restarting dns listeners with address " + dns_listener_address);
 		initialize();
 	}
 	

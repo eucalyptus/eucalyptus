@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage.pipeline.handlers
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception
 import com.google.common.primitives.Bytes
+import groovy.transform.CompileStatic
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import org.junit.Test
@@ -31,10 +32,37 @@ import static org.junit.Assert.fail
 /**
  * Created by zhill on 4/2/14.
  */
+@CompileStatic
 class FormPOSTFilteringAggregatorTest {
-    static byte[] crlf = ['\r','\n']
+    static byte[] crlf = [(char)'\r',(char)'\n']
     static byte[] boundaryBytes = '--boundary'.getBytes('UTF-8')
     static byte[] boundaryFinalBytes = '--boundary--\r\n'.getBytes('UTF-8')
+
+    /**
+     * @param aggregator
+     * @param inputContent the buffer to filter, assumes the data starts at the set readerIndex in the buffer
+     * @param data the original file content to validate against the inputContent should include this data
+     * @return
+     */
+    static int checkFilteredOutput(FormPOSTFilteringAggregator aggregator, ChannelBuffer inputContent, int lastBufferedSize, ChannelBuffer aggregatedOutputBuffer) {
+        int startReadIndex = inputContent.readerIndex()
+        //println 'Start index: ' + startReadIndex + ' Last buffered: ' + lastBufferedSize
+        int inputSize = inputContent.readableBytes()
+        //println 'Input size: ' + inputSize
+        int processingSize = inputSize + lastBufferedSize //total size processed by the scanner
+        //println 'Processing size: ' + processingSize
+        ChannelBuffer inputToScan = ChannelBuffers.buffer(inputSize)
+        inputContent.readBytes(inputToScan, inputSize)
+        ChannelBuffer result = aggregator.scanForFormBoundary(inputToScan)
+        int chunkSize = result.readableBytes()
+        int bufferedSize = processingSize - chunkSize
+        assert(chunkSize <= processingSize) //To account for any random \r that occur too close to the end and must be buffered
+        aggregatedOutputBuffer.writeBytes(result)
+
+        assert(inputContent.copy(0, startReadIndex - lastBufferedSize + chunkSize).array() == aggregatedOutputBuffer.copy(0,aggregatedOutputBuffer.readableBytes()).array())
+        return bufferedSize
+    }
+
 
     @Test
     void testScanForFormBoundarySimple() {
@@ -43,132 +71,25 @@ class FormPOSTFilteringAggregatorTest {
         aggregator.setupBoundary(boundaryBytes)
         byte[] initial = POSTRequestGenerator.getRandomData(dataSize)
         //Add some cr lf chars to test handling those mid-stream
-        initial[dataSize / 2] = 0x0D; //cr
-        initial[dataSize / 2 + 1 ] = 0x0A; //lf
-        ChannelBuffer buffer = ChannelBuffers.copiedBuffer(initial, crlf, boundaryFinalBytes)
-        ChannelBuffer result = aggregator.scanForFormBoundary(buffer)
-        byte[] out = new byte[dataSize]
-        result.getBytes(0, out)
-        assert(out == initial)
-
+        initial[(int)(dataSize / 2)] = 0x0D; //cr
+        initial[(int)(dataSize / 2 + 1) ] = 0x0A; //lf
+        ChannelBuffer buffer = ChannelBuffers.dynamicBuffer()
+        buffer.writeBytes(Bytes.concat(initial, crlf, boundaryFinalBytes))
+        ChannelBuffer outputBuffer = ChannelBuffers.dynamicBuffer()
+        int buffered = checkFilteredOutput(aggregator, buffer, 0, outputBuffer)
+        assert(buffered == boundaryFinalBytes.length + 2)
 
         aggregator.setupBoundary(boundaryBytes)
-        buffer = ChannelBuffers.copiedBuffer(initial, crlf, boundaryBytes , crlf , POSTRequestGenerator.getRandomData(dataSize), crlf, boundaryFinalBytes)
+        buffer = ChannelBuffers.dynamicBuffer();
+        buffer.writeBytes(Bytes.concat(initial, crlf, boundaryBytes, crlf, POSTRequestGenerator.getRandomData(dataSize), crlf, boundaryFinalBytes))
+        outputBuffer.clear()
+
         try {
-            result = aggregator.scanForFormBoundary(buffer)
-            out = new byte[result.readableBytes()]
-            result.getBytes(0, out)
-            assert(out == initial)
+            buffered = checkFilteredOutput(aggregator, buffer, 0, outputBuffer)
+            assert(buffered == 0)
             fail('Should have received an exception for trailing content after the boundary')
         } catch(MalformedPOSTRequestException e) {
             println "Correctly caught POST exception due to trailing content after boundary"
-        }
-
-    }
-
-
-    @Test
-    void testScanForFormBoundaryChunkedShort() {
-        FormPOSTFilteringAggregator aggregator = new FormPOSTFilteringAggregator();
-        int dataSize = 128
-        aggregator.setupBoundary(boundaryBytes)
-        byte[] newlineBoundaryBytes = Bytes.concat(MultipartFormPartParser.PART_LINE_DELIMITER_BYTES, boundaryBytes)
-
-        //First chunk has no boundary data, just regular data
-        byte[] data = POSTRequestGenerator.getRandomData(dataSize)
-        println 'Testing content: "' + data.length + '"'
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(data)
-        ChannelBuffer result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == data)
-
-        //2nd chunk has some \r\n as well as the boundary at the end
-        data = POSTRequestGenerator.getRandomData(dataSize * 10)
-        data[dataSize] = '\r'.getBytes('UTF-8')[0]
-        data[dataSize + 1] = '\n'.getBytes('UTF-8')[0]
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes), data.length - newlineBoundaryBytes.length)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == buffer.copy(0, data.length - newlineBoundaryBytes.length).array())
-
-        //Test with boundary split on chunk
-        aggregator.setupBoundary(boundaryBytes)
-        data = POSTRequestGenerator.getRandomData(dataSize)
-        data[dataSize / 2] = 0x0D;
-        data[dataSize / 2 + 1] = 0x0A;
-
-        println 'Testing content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        //only include first boundarySplit bytes of boundary in the buffer... tests the buffering
-        int boundarySplit = 8
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes, 0, boundarySplit), data.length - boundarySplit)
-        result = aggregator.scanForFormBoundary(buffer)
-        int chunkSize = result.readableBytes()
-        int firstChunkSize = data.length
-        assert(chunkSize + boundarySplit <= firstChunkSize) //To account for any random \r that occur too close to the end and must be buffered
-        int bufferedSize = firstChunkSize - chunkSize - boundarySplit
-        println 'Buffered ' + bufferedSize + ' bytes'
-
-        assert(result.array() == buffer.copy(0, chunkSize).array())
-
-        //Rest of the boundary
-        data = POSTRequestGenerator.getRandomData(newlineBoundaryBytes.length - boundarySplit)
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes, boundarySplit, newlineBoundaryBytes.length - boundarySplit), 0)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.readableBytes() == bufferedSize) //Account for any random newlines etc that force buffering at the end
-
-    }
-
-    @Test
-    void testScanForFormBoundaryChunkedTrailing() {
-        FormPOSTFilteringAggregator aggregator = new FormPOSTFilteringAggregator();
-        int dataSize = 128
-        aggregator.setupBoundary(boundaryBytes)
-        byte[] newlineBoundaryBytes = Bytes.concat(MultipartFormPartParser.PART_LINE_DELIMITER_BYTES, boundaryBytes)
-
-        //First chunk has no boundary data, just regular data
-        byte[] data = POSTRequestGenerator.getRandomData(dataSize)
-        println 'Testing content: "' + data.length + '"'
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(data)
-        ChannelBuffer result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == data)
-
-        //2nd chunk has some \r\n as well as the boundary at the end
-        data = POSTRequestGenerator.getRandomData(dataSize * 10)
-        data[dataSize] = '\r'.getBytes('UTF-8')[0]
-        data[dataSize + 1] = '\n'.getBytes('UTF-8')[0]
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes), data.length - newlineBoundaryBytes.length)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == buffer.copy(0, data.length - newlineBoundaryBytes.length).array())
-
-        //Test with trailing after boundary
-        aggregator.setupBoundary(boundaryBytes)
-        data = POSTRequestGenerator.getRandomData(dataSize)
-        data[dataSize / 2] = '\r'.getBytes('UTF-8')[0]
-        data[dataSize / 2 + 1] = '\n'.getBytes('UTF-8')[0]
-
-        println 'Testing content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        //only include first boundarySplit bytes of boundary in the buffer... tests the buffering
-        int boundarySplit = 8
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes, 0, boundarySplit), data.length - boundarySplit)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == buffer.copy(0, data.length - boundarySplit).array())
-
-        //Next chunk contains the rest of the boundary as well as some trailing data
-        data = POSTRequestGenerator.getRandomData(dataSize * 10 + (newlineBoundaryBytes.length - boundarySplit))
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        writeBytesToBuffer(buffer, ChannelBuffers.copiedBuffer(newlineBoundaryBytes, boundarySplit, newlineBoundaryBytes.length - boundarySplit), 0)
-        try {
-            result = aggregator.scanForFormBoundary(buffer)
-            fail('Should have gotten an exception on bad request for trailing POST content')
-        } catch(S3Exception e) {
-            println 'Correctly caught bad request exception on trailing POST content: ' + e.getMessage() + '; ' + e.getCode()
         }
 
     }
@@ -182,43 +103,71 @@ class FormPOSTFilteringAggregatorTest {
     }
 
     @Test
-    void testScanForFormBoundaryChunkedLong() {
-        FormPOSTFilteringAggregator aggregator = new FormPOSTFilteringAggregator();
-        int dataSize = 128
-        aggregator.setupBoundary(boundaryBytes)
-        byte[] newlineBoundaryBytes = Bytes.concat(MultipartFormPartParser.PART_LINE_DELIMITER_BYTES, boundaryBytes)
-        byte[] data = POSTRequestGenerator.getRandomData(dataSize)
-        println 'Testing content: "' + data.length + '"'
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(data)
+    void testMultiChunkScan() {
+        int iterations = 10
+        for(int j = 0; j < iterations; j++) {
+            FormPOSTFilteringAggregator aggregator = new FormPOSTFilteringAggregator();
+            aggregator.setupBoundary(boundaryBytes)
+            byte[] newlineBoundaryBytes = Bytes.concat(crlf, boundaryFinalBytes)
+            ChannelBuffer data = ChannelBuffers.dynamicBuffer()
+            ChannelBuffer outputData = ChannelBuffers.dynamicBuffer()
+            int chunkSize = 1 * 1024
+            int totalDataSize = 128 * chunkSize
 
-        ChannelBuffer result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == data)
+            int bufferedSize = 0
+            int maxBufferSize = boundaryBytes.length + 2 // for the \r\n
+            int chunks = (int)(totalDataSize / chunkSize)
+            for(int i = 0 ; i < chunks ; i++ ) {
+                data.writeBytes(POSTRequestGenerator.getRandomData(chunkSize))
 
-        /* Test 3 chunks */
-        aggregator.setupBoundary(boundaryBytes)
-        data = POSTRequestGenerator.getRandomData(dataSize)
-        println 'Testing content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == data)
+                //If last chunk, write the trailer in
+                if(i == chunks - 1) {
+                    data.writeBytes(newlineBoundaryBytes)
+                    maxBufferSize = newlineBoundaryBytes.length + 2 //for the \r\n
+                }
+                bufferedSize = checkFilteredOutput(aggregator, data, bufferedSize, outputData)
+                assert(bufferedSize <= maxBufferSize)
+            }
 
-        data = POSTRequestGenerator.getRandomData(dataSize)
-        data[dataSize -1] = '\r'.getBytes('UTF-8')[0]
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.array() == ChannelBuffers.copiedBuffer(data, 0, dataSize -1).array())
+            assert(data.copy(0, totalDataSize).array() == outputData.copy(0, outputData.readableBytes()).array())
+            println 'Test iteration complete. Passed: ' + (j + 1) + ' of ' + iterations
+        }
+    }
 
-        data = '\n--bound'.getBytes('UTF-8')
-        println 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.readableBytes() == 0)
+    @Test
+    void testMultiChunkScanWithTrailer() {
+        int iterations = 10
+        for(int j = 0; j < iterations; j++) {
+            FormPOSTFilteringAggregator aggregator = new FormPOSTFilteringAggregator();
+            aggregator.setupBoundary(boundaryBytes)
+            byte[] trailerBytes = Bytes.concat(crlf, 'Content-Disposition: form-data; name="myfield"\r\n\r\nfieldvalue1'.getBytes('UTF-8'))
+            ChannelBuffer data = ChannelBuffers.dynamicBuffer()
+            ChannelBuffer outputData = ChannelBuffers.dynamicBuffer()
+            int chunkSize = 1 * 1024
+            int totalDataSize = 128 * chunkSize
 
-        data = 'ary--\r\n'.getBytes('UTF-8')
-        print 'adding content: "' + data.length + '"'
-        buffer = ChannelBuffers.wrappedBuffer(data)
-        result = aggregator.scanForFormBoundary(buffer)
-        assert(result.readableBytes() == 0)
+            int bufferedSize = 0
+            int maxBufferSize = boundaryBytes.length + 2 // for the \r\n
+            int chunks = (int)(totalDataSize / chunkSize)
+            for(int i = 0 ; i < chunks ; i++ ) {
+                data.writeBytes(POSTRequestGenerator.getRandomData(chunkSize))
+
+                //If last chunk, write the trailer in
+                if(i == chunks - 1) {
+                    data.writeBytes(boundaryBytes)
+                    data.writeBytes(trailerBytes)
+                }
+                try {
+                    bufferedSize = checkFilteredOutput(aggregator, data, bufferedSize, outputData)
+                    assert(bufferedSize <= maxBufferSize)
+                } catch(Exception e) {
+                    if(i == chunks -1) {
+                        printf 'Caught expected error on trailer'
+                    } else {
+                       fail('Unexpected exception caught: ' + e.getMessage())
+                    }
+                }
+            }
+        }
     }
 }

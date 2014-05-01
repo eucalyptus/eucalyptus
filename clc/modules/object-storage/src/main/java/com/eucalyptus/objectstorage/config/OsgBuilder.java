@@ -96,7 +96,7 @@ public class OsgBuilder extends AbstractServiceBuilder<ObjectStorageConfiguratio
 	
 	@Override
 	public ObjectStorageConfiguration newInstance( String partition, String name, String host, Integer port ) {
-		return new ObjectStorageConfiguration( name, host, port );
+		return new ObjectStorageConfiguration( partition, name, host, port );
 	}
 	
 	@Override

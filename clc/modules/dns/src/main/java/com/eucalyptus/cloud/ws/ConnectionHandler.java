@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,6 +93,7 @@
 
 package com.eucalyptus.cloud.ws;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -125,7 +126,10 @@ import org.xbill.DNS.Type;
 
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.dns.Cache;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
 
 public class ConnectionHandler extends Thread {
 
@@ -269,7 +273,7 @@ public class ConnectionHandler extends Thread {
 	}
 
 	byte
-	addAnswer(Message response, Name name, int type, int dclass,
+	addAnswer( final Message response, Name name, int type, int dclass,
 			int iterations, int flags)
 	{
 		SetResponse sr;
@@ -283,18 +287,22 @@ public class ConnectionHandler extends Thread {
 			flags |= FLAG_SIGONLY;
 		}
 
-    try {
-      sr = DnsResolvers.findRecords(response, response.getQuestion( ), ConnectionHandler.getRemoteInetAddress( ) );
-      if ( sr != null ) {
-        if ( sr.isSuccessful( ) ) {
-          return Rcode.NOERROR;
-        } else if ( sr.isNXDOMAIN( ) ) {
-          return Rcode.NXDOMAIN;
-        }
-      }
-    } catch ( Exception ex ) {
-      Logger.getLogger( DnsResolvers.class ).error( ex );
-    }
+		try {
+			sr = DnsResolvers.findRecords( response, new DnsRequest() {
+				@Override public Record getQuery() { return response.getQuestion( ); }
+				@Override public InetAddress getLocalAddress() { return ConnectionHandler.getLocalInetAddress(); }
+				@Override public InetAddress getRemoteAddress() { return ConnectionHandler.getRemoteInetAddress(); }
+			} );
+			if ( sr != null ) {
+				if ( sr.isSuccessful( ) ) {
+					return Rcode.NOERROR;
+				} else if ( sr.isNXDOMAIN( ) ) {
+					return Rcode.NXDOMAIN;
+				}
+			}
+		} catch ( Exception ex ) {
+			Logger.getLogger( DnsResolvers.class ).error( ex );
+		}
 		Zone zone = findBestZone(name);
 		if (zone != null) {
 			if (type == Type.AAAA) {
@@ -302,7 +310,7 @@ public class ConnectionHandler extends Thread {
 				response.getHeader().setFlag(Flags.AA);
 				return (Rcode.NOERROR);
 			}
-			sr = zone.findRecords(name, type);
+			sr = zone.findRecords(name, type, getLocalInetAddress( ));
 		}
 		else {
 			Cache cache = getCache(dclass);
@@ -508,14 +516,21 @@ public class ConnectionHandler extends Thread {
 		}
 		return c;
 	}
-  private static ThreadLocal<InetAddress> remoteInetAddress = new ThreadLocal<InetAddress>();
-  static InetAddress getRemoteInetAddress( ) {
-    return remoteInetAddress.get( );
-  }
-  static void setRemoteInetAddress( InetAddress inetAddress ) {
-    ConnectionHandler.remoteInetAddress.set( inetAddress );
-  }
-  static void removeRemoteInetAddress( ) {
-    ConnectionHandler.remoteInetAddress.remove( );
-  }
+	
+private static final ThreadLocal<Pair<InetAddress,InetAddress>> localAndRemoteInetAddresses = new ThreadLocal<>();
+	private static InetAddress getInetAddress( final Function<Pair<InetAddress,InetAddress>,InetAddress> extractor ) {
+		return Optional.fromNullable( localAndRemoteInetAddresses.get( ) ).transform( extractor ).orNull( );
+	}
+	static InetAddress getLocalInetAddress( ) {
+		return getInetAddress( Pair.<InetAddress,InetAddress>left( ) );
+	}
+	static InetAddress getRemoteInetAddress( ) {
+		return getInetAddress( Pair.<InetAddress, InetAddress>right() );
+	}
+	static void setLocalAndRemoteInetAddresses( InetAddress local, InetAddress remote ) {
+		ConnectionHandler.localAndRemoteInetAddresses.set( Pair.pair( local, remote ) );
+	}
+	static void clearInetAddresses( ) {
+		ConnectionHandler.localAndRemoteInetAddresses.remove( );
+	}
 }

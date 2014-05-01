@@ -566,7 +566,9 @@ public class Threads {
   }
   
   public static StackTraceElement currentStackFrame( final int offset ) {
-    return Thread.currentThread( ).getStackTrace( )[2 + offset];
+    final StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
+    final int len = stack.length;
+    return stack[Ints.min(len-1, 2 + offset)];
   }
   
   public static StackTraceElement currentStackFrame( ) {
@@ -576,8 +578,8 @@ public class Threads {
   public static String currentStackRange( int start, int end ) {
     final StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     final int len = stack.length;
-    start = Ints.min( Ints.max( 1, start ), len - 1 );
-    end = Ints.min( Ints.max( 1, end ), len - 1 );
+    start = Ints.min( Ints.max( 2, start + 2 ), len - 1 );
+    end = Ints.min( Ints.max( 2, end  + 2), len - 1 );
     return Joiner.on( "\t\n" ).join( Arrays.copyOfRange( stack, start, end ) );
   }
   

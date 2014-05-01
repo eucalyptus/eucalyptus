@@ -20,13 +20,11 @@
 package com.eucalyptus.objectstorage;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -35,10 +33,7 @@ import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.entities.ScheduledJob;
 import com.eucalyptus.objectstorage.entities.TorrentInfo;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.google.common.base.Predicates;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import org.hibernate.ejb.Ejb3Configuration;
 
 import com.eucalyptus.auth.entities.*;
@@ -74,7 +69,8 @@ public class UnitTestSupport {
                         .addAnnotatedClass(LifecycleRule.class)
                         .addAnnotatedClass(ScheduledJob.class)
                         .addAnnotatedClass(ObjectStorageGlobalConfiguration.class)
-                        .addAnnotatedClass(S3AccessControlledEntity.class);
+                        .addAnnotatedClass(S3AccessControlledEntity.class)
+                        .addAnnotatedClass(S3ProviderConfiguration.class);
 
         PersistenceContexts.registerPersistenceContext("eucalyptus_osg", config);
     }

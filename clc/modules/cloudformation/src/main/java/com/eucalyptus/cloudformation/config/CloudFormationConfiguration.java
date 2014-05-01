@@ -42,7 +42,7 @@ public class CloudFormationConfiguration extends ComponentConfiguration implemen
 
   public CloudFormationConfiguration( ) { }
 
-  public CloudFormationConfiguration ( String name, String hostName, Integer port ) {
-    super( "cloudformation", name, hostName, port, SERVICE_PATH );
+  public CloudFormationConfiguration ( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, SERVICE_PATH );
   }
 }

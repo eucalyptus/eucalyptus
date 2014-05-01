@@ -103,6 +103,7 @@ public class WalrusProperties {
 	public static final String USAGE_LIMITS_PROPERTY = "euca.walrus.usageLimits";
 	public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
 	public static final String AMZ_ACL = "x-amz-acl";
+    public static final String AMZ_REQUEST_ID = "x-amz-request-id";
 
 	public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
 	public static final String AUTHENTICATED_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";

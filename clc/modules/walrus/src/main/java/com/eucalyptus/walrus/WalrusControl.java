@@ -69,10 +69,6 @@ import java.util.concurrent.ScheduledFuture;
 
 
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
-import com.eucalyptus.walrus.msgs.GetLifecycleType;
-import com.eucalyptus.walrus.msgs.PutLifecycleResponseType;
-import com.eucalyptus.walrus.msgs.PutLifecycleType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentIds;
@@ -420,16 +416,6 @@ public class WalrusControl {
         checkPermissions();
 		return walrusManager.deleteVersion(request);
 	}
-
-    public GetLifecycleResponseType GetLifecycle(GetLifecycleType request) throws EucalyptusCloudException {
-        checkPermissions();
-        return walrusManager.getLifecycle(request);
-    }
-
-    public PutLifecycleResponseType PutLifecycle(PutLifecycleType request) throws EucalyptusCloudException {
-        checkPermissions();
-        return walrusManager.putLifecycle(request);
-    }
 
 	public InitiateMultipartUploadResponseType InitiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
         checkPermissions();

@@ -47,6 +47,28 @@ public class Pair<L,R> {
   }
 
   /**
+   * Curried pair constructor function.
+   *
+   * @param <L> The left type
+   * @param <R> The right type
+   * @return The pair function
+   */
+  @Nonnull
+  public static <L,R> Function<L,Function<R, Pair<L,R>>> pair( ) {
+    return new Function<L,Function<R, Pair<L,R>>>( ){
+      @Override
+      public Function<R, Pair<L, R>> apply( final L left ) {
+        return new Function<R, Pair<L, R>>( ){
+          @Override
+          public Pair<L, R> apply( final R right ) {
+            return pair( left, right );
+          }
+        };
+      }
+    };
+  }
+
+  /**
    * Convenience constructor
    *
    * @param left The left value

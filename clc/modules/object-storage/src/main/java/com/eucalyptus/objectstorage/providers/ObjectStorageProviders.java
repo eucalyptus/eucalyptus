@@ -203,7 +203,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 					  lastClient.set( providerClient );
 				  }
 			  } else {
-				  throw new NoSuchElementException( "OSG object storage provider client not configured. Found empty or unset manager(" + lastClient + ").  Legal values are: " + Joiner.on( "," ).join( clients.keySet( ) ) );
+				  throw new NoSuchElementException( "OSG object storage provider client not configured. Found property 'objectstorage.providerclient' empty or unset manager(" + lastClient + ").  Legal values are: " + Joiner.on( "," ).join( clients.keySet( ) ) );
 			  }
 		  }
 		  return clientInstances.getUnchecked( lastClient.get( ) );
