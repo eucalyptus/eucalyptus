@@ -441,7 +441,7 @@ typedef struct ncInstance_t {
     //! @}
     //
 
-    char credential[BIG_CHAR_BUFFER_SIZE];   //!< credential string to be passed into the instance via floppy
+    char credential[10240];   //!< credential string to be passed into the instance via floppy
 
     //! @{
     //! @name field added in 4.0 for faster termination
