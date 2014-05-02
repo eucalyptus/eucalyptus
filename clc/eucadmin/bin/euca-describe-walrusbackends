@@ -28,5 +28,5 @@
 import eucadmin.describewalrusbackends
 
 if __name__ == "__main__":
-    r = eucadmin.describewalrusbackends.DescribeWalrusesBackends()
+    r = eucadmin.describewalrusbackends.DescribeWalrusBackends()
     r.main_cli()
