@@ -66,9 +66,6 @@ package com.eucalyptus.util.dns;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
@@ -84,11 +81,14 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -105,7 +105,9 @@ public class NameserverResolver implements DnsResolver {
   private static final Function<InetAddress,Cidr> cidrLookup = CacheBuilder.newBuilder( )
       .maximumSize( 64 )
       .expireAfterWrite( 1, TimeUnit.MINUTES )
-      .build( CacheLoader.from( InetAddressToCidr.INSTANCE ) );
+      .build( CacheLoader.from( Functions.compose(
+          CollectionUtils.optionalOr( Cidr.of( 0, 0 ) ),
+          Internets.interfaceCidr( ) ) ) );
 
   @Override
   public boolean checkAccepts( final DnsRequest request ) {
@@ -200,29 +202,5 @@ public class NameserverResolver implements DnsResolver {
       }
     }
     return result;
-  }
-
-  private static Cidr getInterfaceCidr( final InetAddress address ) {
-    try {
-      final NetworkInterface networkInterface = NetworkInterface.getByInetAddress( address );
-      for ( final InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses( ) ) {
-        if ( address.equals( interfaceAddress.getAddress( ) ) ) {
-          final int prefix = interfaceAddress.getNetworkPrefixLength( );
-          return Cidr.fromAddress( address, prefix );
-        }
-      }
-    } catch ( SocketException e ) {
-      // use default
-    }
-    return Cidr.of( 0, 0 );
-  }
-
-  private enum InetAddressToCidr implements Function<InetAddress,Cidr>  {
-    INSTANCE;
-
-    @Override
-    public Cidr apply( final InetAddress address ) {
-      return getInterfaceCidr( address );
-    }
   }
 }
