@@ -317,28 +317,30 @@ do_start() {
         # values cannot be set
         for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables
         do
-            if [ -r "$CHECKVAR" ]; then
+	    if [ -e "$CHECKVAR" ]; then
+		if [ -r "$CHECKVAR" ]; then
                 # first, apply sysctl settings (set in /etc/sysctl*)                                                                                                                                           
-                apply_sysctl
-                VAL=`cat $CHECKVAR`
-
+                    apply_sysctl
+                    VAL=`cat $CHECKVAR`
+		    
                 # if either the value is disabled after a sysctl reset, WARN the user, set it, and continue                                                                                                    
-                if [ "$VAL" = "0" ]; then
-                    echo
-                    echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
-                    if [ -w "$CHECKVAR" ]; then
-                        echo "Setting ${CHECKVAR}=1"
-                        echo -n 1 > ${CHECKVAR}
-                    else
-                        echo "Cannot enable (write to) ${CHECKVAR}: check permissions"
-                        exit 1
+                    if [ "$VAL" = "0" ]; then
+			echo
+			echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
+			if [ -w "$CHECKVAR" ]; then
+                            echo "Setting ${CHECKVAR}=1"
+                            echo -n 1 > ${CHECKVAR}
+			else
+                            echo "Cannot enable (write to) ${CHECKVAR}: check permissions"
+                            exit 1
+			fi
                     fi
-                fi
-            else
-                echo
-                echo "Cannot read required proc value ${CHECKVAR}: check permissions"
-                exit 1
-            fi
+		else
+                    echo
+                    echo "Cannot read required proc value ${CHECKVAR}: check permissions"
+                    exit 1
+		fi
+	    fi
         done
 
 	# let's be sure we have the right port for NC and CC
