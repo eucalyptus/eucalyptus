@@ -124,7 +124,7 @@ class CidrSpecification extends Specification {
 
   def 'should be able to create CIDR for an address and prefix'(){
     expect: 'parsed cidr containment check has expected result'
-    fromAddress( InetAddresses.forString( address ), prefix ) == parse( result )
+    Groovyness.expandoMetaClass( fromAddress( InetAddresses.forString( address ), prefix ) ) == parse( result )
 
     where:
     address           | prefix    | result
