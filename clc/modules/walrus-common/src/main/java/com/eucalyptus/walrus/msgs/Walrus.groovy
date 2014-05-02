@@ -198,6 +198,7 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
 
+@ComponentMessage(WalrusBackend.class)
 public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
 	String code;

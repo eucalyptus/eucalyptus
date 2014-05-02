@@ -172,6 +172,7 @@ public class ObjectStorageDataGetResponseType extends ObjectStorageDataResponseT
     def ObjectStorageDataGetResponseType() {}
 }
 
+@ComponentMessage(ObjectStorage.class)
 public class ObjectStorageErrorMessageType extends BaseMessage {
     protected String message;
     protected String code;
