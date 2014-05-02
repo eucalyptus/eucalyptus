@@ -215,13 +215,15 @@ class WF_DownBundleFS_UpBundle(WF_base):
 
         try:
             disk_path = imager.prepare(args) # download artifacts and convert partition into a disk
-            subprocess.call(["ls", "-l", disk_path]) # sanity check, to ensure the disk exists
-            euca2ools.bundle_and_upload(
+            subprocess.check_call(["ls", "-l", disk_path]) # sanity check, to ensure the disk exists
+            op_ps = euca2ools.bundle_and_upload(
                 image_path=disk_path,
                 destination_dir=bundle_dir,
-                args=args # the rest of the arguments are inherited from run-workflow's command-line
-            ).wait() # bundle and upload the disk
+                args=args) # the rest of the arguments are inherited from run-workflow's command-line
+            op_ps.wait() # bundle and upload the disk
             imager.purge(args) # clean up disk artifacts
+            if op_ps.returncode != 0:
+                raise subprocess.CalledProcessError(op_ps.returncode, "euca-bundle-and-upload-image")
 
         finally: # cleanup
             shutil.rmtree(cache_dir)
@@ -296,6 +298,8 @@ class WF_DownBundle_UpVMDK(WF_base):
             download.main()
             fd_w.close()
             imager_ps.wait()
+            if imager_ps.returncode != 0:
+                raise subprocess.CalledProcessError(imager_ps.returncode, "euca-imager")
         finally: # cleanup
             shutil.rmtree(cache_dir)
             shutil.rmtree(work_dir)
@@ -321,12 +325,14 @@ class WF_ReadRaw_UpBundle(WF_base):
 
         try:
             subprocess.call(["ls", "-l", args.input_path]) # sanity check, to ensure the disk exists
-            euca2ools.bundle_and_upload(
+            op_ps = euca2ools.bundle_and_upload(
                 image_path=args.input_path,
                 destination_dir=bundle_dir,
                 args=args, # the rest of the arguments are inherited from run-workflow's command-line
-                acl=Euca2ools.BUNDLE_INSTANCE_ACL
-            ).wait() # bundle and upload the disk
+                acl=Euca2ools.BUNDLE_INSTANCE_ACL)
+            op_ps.wait() # bundle and upload the disk
+            if op_ps.returncode != 0:
+                raise subprocess.CalledProcessError(op_ps.returncode, "euca-bundle-and-upload-image")
 
         finally: # cleanup
             shutil.rmtree(bundle_dir)
@@ -369,6 +375,10 @@ class WF_DownVMDK_UpBundle(WF_base):
             fd_w.close()
             imager_ps.wait()
             bundle_ps.wait()
+            if imager_ps.returncode != 0:
+                raise subprocess.CalledProcessError(imager_ps.returncode, "euca-imager")
+            if bundle_ps.returncode != 0:
+                raise subprocess.CalledProcessError(imager_ps.returncode, "euca-bundle-and-upload-image")
 
         finally: # cleanup
             shutil.rmtree(cache_dir)
@@ -472,6 +482,8 @@ def _wait_for_manifest(image_manifest_url):
 def _run(op_args):
     op_ps = subprocess.Popen(op_args)
     op_ps.wait()
+    if op_ps.returncode != 0:
+        raise subprocess.CalledProcessError(op_ps.returncode, op_args[0])
 
 WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'down-bundle/write-raw': WF_DownBundle_WriteRaw(),
@@ -516,3 +528,6 @@ except WF_InsufficientDependencies, e:
 except WF_ManifestError:
     print "failed to download components from object store"
     sys.exit(4)
+except subprocess.CalledProcessError, e:
+    print "workflow failed (error in subprocess)"
+    sys.exit(5)
