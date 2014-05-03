@@ -81,6 +81,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.DatabaseAuthProvider;
+import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
@@ -164,7 +165,7 @@ public class ObjectStorage400Upgrade {
 					} catch (Exception e) {
 						LOG.error("Upgrade task failed: " + task.getClass().getSimpleName());
 						// Returning false does not seem to halt the upgrade and cause a rollback, must throw an exception
-						throw Exceptions.toUndeclared("Upgrade task failed: " + task.getClass().getSimpleName(), e);
+						throw Exceptions.toUndeclared("Objectstorage upgrade failed due to an error in upgrade task: " + task.getClass().getSimpleName(), e);
 					}
 				}
 
@@ -173,7 +174,13 @@ public class ObjectStorage400Upgrade {
 	}
 
 	/**
-	 * Initialize the accounts library and setup the IAM resources (such as blockstorage account) that may be required in the following stages of upgrade.
+	 * Setup stage for configuring the prerequisites before performing the upgrade
+	 * 
+	 * <li>Initialize the Accounts library</li>
+	 * 
+	 * <li>Setup a blockstorage account</li>
+	 * 
+	 * <li>Assign canonical IDs to accounts that don't have it</li>
 	 * 
 	 */
 	public enum Setup implements UpgradeTask {
@@ -187,12 +194,15 @@ public class ObjectStorage400Upgrade {
 
 			// Setup the blockstorage account
 			createBlockStorageAccount();
+
+			// Generate canonical IDs for accounts that don't have them
+			generateCanonicaIDs();
 		}
 	}
 
 	/**
-	 * Transform Walrus bucket entities to OSG bucket entities and persist them. The transformation function is used for converting a Walrus bucket entity to
-	 * OSG bucket entity
+	 * Transform Walrus bucket entities to OSG bucket entities and persist them. A transformation function is used for converting a Walrus bucket entity to OSG
+	 * bucket entity
 	 * 
 	 */
 	public enum CopyBucketsToOSG implements UpgradeTask {
@@ -200,78 +210,55 @@ public class ObjectStorage400Upgrade {
 
 		@Override
 		public void apply() throws Exception {
-			EntityTransaction osgdb = Entities.get(Bucket.class);
+			EntityTransaction osgTran = Entities.get(Bucket.class);
 			try {
 
 				List<Bucket> osgBuckets = Entities.query(new Bucket());
 				if (osgBuckets != null && osgBuckets.isEmpty()) { // Perform the upgrade only if osg entities are empty
 
-					EntityTransaction walrusdb = Entities.get(BucketInfo.class);
+					EntityTransaction walrusTran = Entities.get(BucketInfo.class);
 					try {
 
 						List<BucketInfo> walrusBuckets = Entities.query(new BucketInfo(), Boolean.TRUE);
 						if (walrusBuckets != null && !walrusBuckets.isEmpty()) { // Check if there are any walrus objects to upgrade
 
 							// Populate snapshot buckets and objects the snapshot buckets and objects
-							EntityTransaction walrusSnapshotsdb = Entities.get(WalrusSnapshotInfo.class);
-							try {
-								List<WalrusSnapshotInfo> walrusSnapshots = Entities.query(new WalrusSnapshotInfo(), Boolean.TRUE);
-								for (WalrusSnapshotInfo walrusSnapshot : walrusSnapshots) {
-									walrusSnapshotBuckets.add(walrusSnapshot.getSnapshotBucket());
-									walrusSnapshotObjects.add(walrusSnapshot.getSnapshotId());
-								}
-								walrusSnapshotsdb.commit();
-							} catch (Exception e) {
-								walrusSnapshotsdb.rollback();
-								throw e;
-							} finally {
-								if (walrusSnapshotsdb.isActive()) {
-									walrusSnapshotsdb.commit();
-								}
-							}
+							populateSnapshotBucketsAndObjects();
 
+							// Create an OSG bucket for the corresponding walrus Bucket and persist it
 							for (Bucket osgBucket : Lists.transform(walrusBuckets, bucketTransformationFunction())) {
-								if (osgBucket != null) {
-									try {
-										Entities.persist(osgBucket);
-									} catch (Exception e) {
-										LOG.error("Failed to persist bucket " + osgBucket.getBucketName() + " to objectstorage", e);
-										throw e;
-									}
-								} else {
-									throw new Exception("Error transforming Walrus bucket to objectstorage bucket");
-								}
+								Entities.persist(osgBucket);
 							}
 						} else {
 							// no buckets in walrus, nothing to do here
 						}
-						walrusdb.commit();
+						walrusTran.commit();
 					} catch (Exception e) {
-						walrusdb.rollback();
+						walrusTran.rollback();
 						throw e;
 					} finally {
-						if (walrusdb.isActive()) {
-							walrusdb.commit();
+						if (walrusTran.isActive()) {
+							walrusTran.commit();
 						}
 					}
 				} else {
 					// nothing to do here since buckets might already be there
 				}
-				osgdb.commit();
+				osgTran.commit();
 			} catch (Exception e) {
-				osgdb.rollback();
+				osgTran.rollback();
 				throw e;
 			} finally {
-				if (osgdb.isActive()) {
-					osgdb.commit();
+				if (osgTran.isActive()) {
+					osgTran.commit();
 				}
 			}
 		}
 	}
 
 	/**
-	 * Transform Walrus object entities to OSG object entities and persist them. The transformation function is used for converting a Walrus object entity to
-	 * OSG object entity
+	 * Transform Walrus object entities to OSG object entities and persist them. A transformation function is used for converting a Walrus object entity to OSG
+	 * object entity
 	 * 
 	 */
 	public enum CopyObjectsToOSG implements UpgradeTask {
@@ -279,13 +266,13 @@ public class ObjectStorage400Upgrade {
 
 		@Override
 		public void apply() throws Exception {
-			EntityTransaction osgdb = Entities.get(ObjectEntity.class);
+			EntityTransaction osgTran = Entities.get(ObjectEntity.class);
 			try {
 
 				List<ObjectEntity> osgObjects = Entities.query(new ObjectEntity());
 				if (osgObjects != null && osgObjects.isEmpty()) { // Perform the upgrade only if osg entities are empty
 
-					EntityTransaction walrusdb = Entities.get(ObjectInfo.class);
+					EntityTransaction walrusTran = Entities.get(ObjectInfo.class);
 					try {
 
 						List<ObjectInfo> walrusObjects = Entities.query(new ObjectInfo(), Boolean.TRUE);
@@ -293,39 +280,30 @@ public class ObjectStorage400Upgrade {
 
 							// Lists.transform() is a lazy operation, so all elements are iterated through only once
 							for (ObjectEntity osgObject : Lists.transform(walrusObjects, objectTransformationFunction())) {
-								if (osgObject != null) {
-									try {
-										Entities.persist(osgObject);
-									} catch (Exception e) {
-										LOG.error("Failed to persist object " + osgObject.getObjectKey() + " to objectstorage", e);
-										throw e;
-									}
-								} else {
-									throw new Exception("Error transforming Walrus object to objectstorage object");
-								}
+								Entities.persist(osgObject);
 							}
 						} else {
 							// no objects in walrus, nothing to do here
 						}
-						walrusdb.commit();
+						walrusTran.commit();
 					} catch (Exception e) {
-						walrusdb.rollback();
+						walrusTran.rollback();
 						throw e;
 					} finally {
-						if (walrusdb.isActive()) {
-							walrusdb.commit();
+						if (walrusTran.isActive()) {
+							walrusTran.commit();
 						}
 					}
 				} else {
 					// nothing to do here since buckets might already be there
 				}
-				osgdb.commit();
+				osgTran.commit();
 			} catch (Exception e) {
-				osgdb.rollback();
+				osgTran.rollback();
 				throw e;
 			} finally {
-				if (osgdb.isActive()) {
-					osgdb.commit();
+				if (osgTran.isActive()) {
+					osgTran.commit();
 				}
 			}
 		}
@@ -345,7 +323,7 @@ public class ObjectStorage400Upgrade {
 
 		@Override
 		public void apply() throws Exception {
-			EntityTransaction walrusdb = Entities.get(BucketInfo.class);
+			EntityTransaction tran = Entities.get(BucketInfo.class);
 			try {
 
 				List<BucketInfo> walrusBuckets = Entities.query(new BucketInfo());
@@ -360,7 +338,7 @@ public class ObjectStorage400Upgrade {
 							// Reset the ACLs and assign the owner full control
 							walrusBucket.resetGlobalGrants();
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-							GrantInfo.setFullControl(walrusBucket.getOwnerId(), grantInfos); // TODO Does this need to be initialized every single time?
+							GrantInfo.setFullControl(walrusBucket.getOwnerId(), grantInfos);
 							walrusBucket.setGrants(grantInfos);
 
 							// Disable versioning, could probably suspend it but that might not entirely stop walrus from doing versioning related tasks
@@ -377,13 +355,13 @@ public class ObjectStorage400Upgrade {
 				} else {
 					// no buckets in walrus, nothing to do here
 				}
-				walrusdb.commit();
+				tran.commit();
 			} catch (Exception e) {
-				walrusdb.rollback();
+				tran.rollback();
 				throw e;
 			} finally {
-				if (walrusdb.isActive()) {
-					walrusdb.commit();
+				if (tran.isActive()) {
+					tran.commit();
 				}
 			}
 		}
@@ -409,7 +387,7 @@ public class ObjectStorage400Upgrade {
 
 		@Override
 		public void apply() throws Exception {
-			EntityTransaction walrusdb = Entities.get(ObjectInfo.class);
+			EntityTransaction tran = Entities.get(ObjectInfo.class);
 			try {
 
 				List<ObjectInfo> walrusObjects = Entities.query(new ObjectInfo());
@@ -419,8 +397,8 @@ public class ObjectStorage400Upgrade {
 						try {
 							// Check and remove the record if its a delete marker
 							if (walrusObject.getDeleted() != null && walrusObject.getDeleted()) {
-								LOG.info("Removing delete marker from Walrus: bucket=" + walrusObject.getBucketName() + ", object key="
-										+ walrusObject.getObjectKey() + ", version ID=" + walrusObject.getVersionId());
+								LOG.info("Removing delete marker from Walrus for object " + walrusObject.getObjectKey() + " in bucket "
+										+ walrusObject.getBucketName() + " with version ID " + walrusObject.getVersionId());
 								Entities.delete(walrusObject);
 								continue;
 							}
@@ -440,7 +418,7 @@ public class ObjectStorage400Upgrade {
 							// Reset the ACLs and assign the owner full control
 							walrusObject.resetGlobalGrants();
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-							GrantInfo.setFullControl(walrusObject.getOwnerId(), grantInfos); // TODO Does this need to be initialized every single time?
+							GrantInfo.setFullControl(walrusObject.getOwnerId(), grantInfos);
 							walrusObject.setGrants(grantInfos);
 						} catch (Exception e) {
 							LOG.error("Failed to modify Walrus object " + walrusObject.getObjectKey(), e);
@@ -450,13 +428,13 @@ public class ObjectStorage400Upgrade {
 				} else {
 					// no objects in walrus, nothing to do here
 				}
-				walrusdb.commit();
+				tran.commit();
 			} catch (Exception e) {
-				walrusdb.rollback();
+				tran.rollback();
 				throw e;
 			} finally {
-				if (walrusdb.isActive()) {
-					walrusdb.commit();
+				if (tran.isActive()) {
+					tran.commit();
 				}
 			}
 		}
@@ -479,27 +457,13 @@ public class ObjectStorage400Upgrade {
 					EntityTransaction osgObjectTran = Entities.get(ObjectEntity.class);
 					EntityTransaction walrusObjectTran = Entities.get(ObjectInfo.class);
 
-					ObjectEntity osgObject = null;
-					ObjectInfo walrusObject = null;
-
-					for (ImageCacheInfo image : images) {
-						osgObject = imageToOSGObjectTransformation().apply(image);
-						walrusObject = imageToWalrusObjectTransformation().apply(image);
-
-						if (osgObject != null && walrusObject != null) {
-							try {
-								Entities.persist(osgObject);
-								Entities.persist(walrusObject);
-							} catch (Exception e) {
-								LOG.warn("Failed to persist cached image " + image.getManifestName() + " as an object in Walrus and or objectstorage", e);
-								continue;
-							}
-
+					try {
+						for (ImageCacheInfo image : images) {
+							Entities.persist(imageToOSGObjectTransformation().apply(image)); // Persist a new OSG object
+							Entities.persist(imageToWalrusObjectTransformation().apply(image));
 							Entities.delete(image); // Delete the cached image from database
 						}
-					}
 
-					try {
 						osgObjectTran.commit();
 						walrusObjectTran.commit();
 					} catch (Exception e) {
@@ -520,21 +484,13 @@ public class ObjectStorage400Upgrade {
 				walrusImageTran.commit();
 			} catch (Exception e) {
 				walrusImageTran.rollback();
-				throw e;
+				// Exceptions here should not halt the upgrade process, the cached images can be flushed manually
+				LOG.warn("Cannot flush cached images in Walrus due to an error. May have to be flushed manually");
 			} finally {
 				if (walrusImageTran.isActive()) {
 					walrusImageTran.commit();
 				}
 			}
-		}
-	}
-
-	public enum CopyConfiguration implements UpgradeTask {
-		INSTANCE;
-
-		@Override
-		public void apply() throws Exception {
-			// Coming soon
 		}
 	}
 
@@ -568,6 +524,50 @@ public class ObjectStorage400Upgrade {
 			blockStorageAdmin = getBlockStorageAccount().lookupAdmin();
 		}
 		return blockStorageAdmin;
+	}
+
+	private static void populateSnapshotBucketsAndObjects() {
+		EntityTransaction tran = Entities.get(WalrusSnapshotInfo.class);
+		try {
+			List<WalrusSnapshotInfo> walrusSnapshots = Entities.query(new WalrusSnapshotInfo(), Boolean.TRUE);
+			for (WalrusSnapshotInfo walrusSnapshot : walrusSnapshots) {
+				walrusSnapshotBuckets.add(walrusSnapshot.getSnapshotBucket());
+				walrusSnapshotObjects.add(walrusSnapshot.getSnapshotId());
+			}
+			tran.commit();
+		} catch (Exception e) {
+			LOG.error("Failed to lookup snapshots stored in Walrus", e);
+			tran.rollback();
+			throw e;
+		} finally {
+			if (tran.isActive()) {
+				tran.commit();
+			}
+		}
+	}
+
+	private static void generateCanonicaIDs() throws Exception {
+		EntityTransaction tran = Entities.get(AccountEntity.class);
+		try {
+			List<AccountEntity> accounts = Entities.query(new AccountEntity());
+			if (accounts != null && accounts.size() > 0) {
+				for (AccountEntity account : accounts) {
+					if (account.getCanonicalId() == null || account.getCanonicalId().equals("")) {
+						account.populateCanonicalId();
+						LOG.debug("Assigning canonical id " + account.getCanonicalId() + " for account " + account.getAccountNumber());
+					}
+				}
+			}
+			tran.commit();
+		} catch (Exception e) {
+			LOG.error("Failed to generate and assign canonical ids", e);
+			tran.rollback();
+			throw e;
+		} finally {
+			if (tran.isActive()) {
+				tran.commit();
+			}
+		}
 	}
 
 	private static ArrayList<Grant> getBucketGrants(BucketInfo walrusBucket) throws Exception {
@@ -680,6 +680,7 @@ public class ObjectStorage400Upgrade {
 			@Override
 			@Nullable
 			public Bucket apply(@Nonnull BucketInfo walrusBucket) {
+				Bucket osgBucket = null;
 				try {
 					Account owningAccount = null;
 					User owningUser = null;
@@ -781,7 +782,7 @@ public class ObjectStorage400Upgrade {
 					}
 
 					// Create a new instance of osg bucket and popluate all the fields
-					Bucket osgBucket = new Bucket();
+					osgBucket = new Bucket();
 					osgBucket.setBucketName(walrusBucket.getBucketName());
 					osgBucket.withUuid(walrusBucket.getBucketName());
 					osgBucket.setBucketSize(walrusBucket.getBucketSize());
@@ -808,12 +809,11 @@ public class ObjectStorage400Upgrade {
 					}
 					AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getName()), acl);
 					osgBucket.setAcl(acp);
-
-					return osgBucket;
 				} catch (Exception e) {
 					LOG.error("Failed to transform Walrus bucket " + walrusBucket.getBucketName() + " to objectstorage bucket", e);
-					return null;
+					Exceptions.toUndeclared("Failed to transform Walrus bucket " + walrusBucket.getBucketName() + " to objectstorage bucket", e);
 				}
+				return osgBucket;
 			}
 		};
 	}
@@ -842,6 +842,7 @@ public class ObjectStorage400Upgrade {
 			@Override
 			@Nullable
 			public ObjectEntity apply(@Nonnull ObjectInfo walrusObject) {
+				ObjectEntity osgObject = null;
 				try {
 					Bucket osgBucket = null;
 					if (bucketMap.containsKey(walrusObject.getBucketName())) {
@@ -851,7 +852,7 @@ public class ObjectStorage400Upgrade {
 						bucketMap.put(walrusObject.getBucketName(), osgBucket);
 					}
 
-					ObjectEntity osgObject = new ObjectEntity(osgBucket, walrusObject.getObjectKey(), walrusObject.getVersionId());
+					osgObject = new ObjectEntity(osgBucket, walrusObject.getObjectKey(), walrusObject.getVersionId());
 
 					if (walrusObject.getDeleted() != null && walrusObject.getDeleted()) { // delete marker
 						osgObject.setObjectUuid(UUID.randomUUID().toString());
@@ -968,12 +969,11 @@ public class ObjectStorage400Upgrade {
 						AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getName()), acl);
 						osgObject.setAcl(acp);
 					}
-
-					return osgObject;
 				} catch (Exception e) {
 					LOG.error("Failed to transform Walrus object " + walrusObject.getObjectKey() + " to objectstorage object", e);
-					return null;
+					Exceptions.toUndeclared("Failed to transform Walrus object " + walrusObject.getObjectKey() + " to objectstorage object", e);
 				}
+				return osgObject;
 			}
 		};
 	}
@@ -984,6 +984,7 @@ public class ObjectStorage400Upgrade {
 			@Override
 			@Nullable
 			public ObjectEntity apply(@Nonnull ImageCacheInfo image) {
+				ObjectEntity osgObject = null;
 				try {
 					Bucket osgBucket = null;
 					if (bucketMap.containsKey(image.getBucketName())) {
@@ -994,7 +995,7 @@ public class ObjectStorage400Upgrade {
 					}
 
 					// Create OSG object with name set to manifest
-					ObjectEntity osgObject = new ObjectEntity(osgBucket, image.getManifestName(), ObjectStorageProperties.NULL_VERSION_ID);
+					osgObject = new ObjectEntity(osgBucket, image.getManifestName(), ObjectStorageProperties.NULL_VERSION_ID);
 					osgObject.setIsDeleteMarker(Boolean.FALSE);
 					osgObject.setIsLatest(Boolean.TRUE);
 					osgObject.setObjectUuid(image.getImageName()); // set the uuid to file name on filesystem
@@ -1015,12 +1016,11 @@ public class ObjectStorage400Upgrade {
 					acl.setGrants(new ArrayList<Grant>());
 					AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(osgObject.getOwnerCanonicalId(), osgObject.getOwnerDisplayName()), acl);
 					osgObject.setAcl(acp);
-
-					return osgObject;
 				} catch (Exception e) {
 					LOG.error("Failed to create objectstorage object for cached image " + image.getManifestName(), e);
-					return null;
+					Exceptions.toUndeclared("Failed to create objectstorage object for cached image " + image.getManifestName(), e);
 				}
+				return osgObject;
 			}
 		};
 	}
@@ -1031,9 +1031,10 @@ public class ObjectStorage400Upgrade {
 			@Override
 			@Nullable
 			public ObjectInfo apply(@Nonnull ImageCacheInfo image) {
+				ObjectInfo walrusObject = null;
 				try {
 					// Set the image location on the filesystem as the key
-					ObjectInfo walrusObject = new ObjectInfo(image.getBucketName(), image.getImageName());
+					walrusObject = new ObjectInfo(image.getBucketName(), image.getImageName());
 					walrusObject.setDeleted(Boolean.FALSE);
 					walrusObject.setLast(Boolean.TRUE);
 					walrusObject.setLastModified(new Date());
@@ -1048,12 +1049,11 @@ public class ObjectStorage400Upgrade {
 					List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 					GrantInfo.setFullControl(walrusObject.getOwnerId(), grantInfos);
 					walrusObject.setGrants(grantInfos);
-
-					return walrusObject;
 				} catch (Exception e) {
 					LOG.error("Failed to create Walrus object for cached image " + image.getManifestName(), e);
-					return null;
+					Exceptions.toUndeclared("Failed to create Walrus object for cached image " + image.getManifestName(), e);
 				}
+				return walrusObject;
 			}
 		};
 	}

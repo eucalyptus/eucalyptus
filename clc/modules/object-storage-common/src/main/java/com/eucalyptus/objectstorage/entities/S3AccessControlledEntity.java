@@ -77,7 +77,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
     @Column(name = "acl", length = 8192, nullable = false)
     private String acl; //A JSON encoded string that is the acl list.
 
-    @Column(name = "owner_displayname", nullable = false)
+    @Column(name = "owner_displayname")
     protected String ownerDisplayName;
 
     /**
