@@ -117,7 +117,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         }
 
         final String etag;
-        Date lastModified;
+        Date lastMod;
         CopyObjectResponseType response;
 
         try {
@@ -165,10 +165,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 }
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
-            // Last modified date in copy response is in ISO8601 format as per S3 spec
-            lastModified = DateFormatter.dateFromListingFormattedString(response.getLastModified()); 
             etag = response.getEtag();
-
+            lastMod = DateFormatter.dateFromListingFormattedString(response.getLastModified());
         } catch(Exception e) {
             LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getObjectUuid(),e);
 
@@ -186,11 +184,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         try {
             //fireRepairTask(bucket, savedEntity.getObjectKey());
             //Update metadata to "extant". Retry as necessary
-            if (!ObjectState.extant.equals(entity.getState())) {
-                return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
-            } else {
-                return entity;
-            }
+            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastMod, etag);
         } catch(Exception e) {
             LOG.warn("Failed to update object metadata for finalization. Failing PUT operation", e);
             throw new InternalErrorException(entity.getResourceFullName());

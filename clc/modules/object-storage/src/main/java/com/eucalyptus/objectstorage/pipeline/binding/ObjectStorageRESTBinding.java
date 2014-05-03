@@ -484,9 +484,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                             if(metaDataDirective != null) {
                                 operationParams.put("MetadataDirective", metaDataDirective);
                             }
-                            AccessControlList accessControlList;
+                            AccessControlList accessControlList = null;
                             if(contentLength > 0) {
-                                accessControlList = null;
                                 accessControlList = getAccessControlList(httpRequest);
                             } else {
                                 accessControlList = new AccessControlList();
@@ -495,10 +494,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                             operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
                             Set<String> headerNames = httpRequest.getHeaderNames();
                             for(String key : headerNames) {
-                                for(ObjectStorageProperties.CopyHeaders header: ObjectStorageProperties.CopyHeaders.values()) {
-                                    if(key.replaceAll("-", "").equals(header.toString().toLowerCase())) {
-                                        String value = httpRequest.getHeader(key);
-                                        parseExtendedHeaders(operationParams, header.toString(), value);
+                                if (key.startsWith("x-amz-")) {
+                                    String stripped = key.replaceFirst("x-amz-", "");
+                                    for(ObjectStorageProperties.CopyHeaders header: ObjectStorageProperties.CopyHeaders.values()) {
+                                        if(stripped.replaceAll("-", "").equals(header.toString().toLowerCase())) {
+                                            String value = httpRequest.getHeader(key);
+                                            parseExtendedHeaders(operationParams, header.toString(), value);
+                                        }
                                     }
                                 }
                             }

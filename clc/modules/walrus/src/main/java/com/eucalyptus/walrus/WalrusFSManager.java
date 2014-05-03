@@ -68,6 +68,7 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -94,6 +95,7 @@ import org.apache.commons.lang.StringUtils;
 import com.eucalyptus.walrus.exceptions.NoSuchLifecycleConfigurationException;
 
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
@@ -2560,6 +2562,8 @@ public class WalrusFSManager extends WalrusManager {
         return reply;
     }
 
+    private static final SimpleDateFormat copyObjectFormat = new SimpleDateFormat(DateUtils.ALT_ISO8601_DATE_PATTERN);
+
     @Override
     public CopyObjectResponseType copyObject(CopyObjectType request)
             throws WalrusException {
@@ -2679,8 +2683,9 @@ public class WalrusFSManager extends WalrusManager {
                         destinationObjectInfo.setContentType(sourceObjectInfo.getContentType());
                         destinationObjectInfo.setContentDisposition(sourceObjectInfo.getContentDisposition());
                         String etag = sourceObjectInfo.getEtag();
-                        Date lastModified = sourceObjectInfo.getLastModified();
                         destinationObjectInfo.setEtag(etag);
+                        //Date lastModified = sourceObjectInfo.getLastModified(); // S3 updates the timestamp on copies
+                        Date lastModified = new Date();
                         destinationObjectInfo.setLastModified(lastModified);
                         destinationObjectInfo.setVersionId(destinationVersionId);
                         destinationObjectInfo.setLast(true);
@@ -2708,7 +2713,8 @@ public class WalrusFSManager extends WalrusManager {
 
                         reply.setEtag(etag);
                         // Last modified date in copy response is in ISO8601 format as per S3 spec
-                        reply.setLastModified(DateFormatter.dateToListingFormattedString(lastModified));
+                        // reply.setLastModified(DateFormatter.dateToListingFormattedString(lastModified));
+                        reply.setLastModified(copyObjectFormat.format(lastModified));
 
                         if (foundDestinationBucketInfo.isVersioningEnabled()) {
                             reply.setCopySourceVersionId(sourceVersionId);
