@@ -408,7 +408,7 @@ static void close_blobstores();
 static int do_list_bs(blobstore * bs, const char *regex);
 static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t type);
 static int do_list(const char *regex);
-static int do_delete(const char *id);
+static int do_delete(const char *bs_path, const char *bb_id);
 static void usage(const char *msg);
 static void set_global_parameter(char *key, char *val);
 #endif /* _EUCA_BLOBS */
@@ -5934,7 +5934,7 @@ static int do_list_bs(blobstore * bs, const char *regex)
     }
     for (blockblob_meta * bm = matches; bm; bm = bm->next) {
         char uid[EUCA_MAX_PATH] = "";
-        snprintf(uid, sizeof(uid), "%s/%s", bs->path, bm->id);
+        snprintf(uid, sizeof(uid), "%s %s", bs->path, bm->id);
         map_set(blob_map, uid, bm);
     }
 
@@ -6052,9 +6052,34 @@ static int do_list(const char *regex)
 //!
 //! @note
 //!
-static int do_delete(const char *id)
+static int do_delete(const char *bs_path, const char *bb_id)
 {
-    return 0;
+    blobstore *bs = NULL;
+
+    if (strcmp(bs_path, work_path) == 0) {
+        bs = work_bs;
+    } else if (strcmp(bs_path, cache_path) == 0) {
+        bs = cache_bs;
+    } else {
+        fprintf(stderr, "error: unrecognized blobstore path '%s'\n", bs_path);
+        return 1;
+    }
+
+    blockblob * bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
+    if (bb == NULL) {
+        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id,
+                blobstore_get_error_str(_blobstore_errno));
+        return 1;
+    }
+
+    int ret = blockblob_delete(bb, 1000000, 0);
+    if (ret != 0) {
+        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id,
+                blobstore_get_error_str(_blobstore_errno));
+        blockblob_close(bb);
+    }
+
+    return ret;
 }
 
 //!
@@ -6235,12 +6260,12 @@ int main(int argc, char *argv[])
         close_blobstores();
 
     } else if (strcmp(command, "delete") == 0) {
-        if (nargs != 1) {
-            fprintf(stderr, "error: command 'delete' requires one parameter: id of the blob to delete\n");
+        if (nargs != 2) {
+            fprintf(stderr, "error: command 'delete' requires two parameters: [blobstore path] [blob id]\n");
             exit(1);
         }
         open_blobstores();
-        ret = do_delete(args[0]);
+        ret = do_delete(args[0], args[1]);
         close_blobstores();
 
     } else {
