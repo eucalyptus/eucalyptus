@@ -287,7 +287,7 @@ public class Volumes {
             volumeState = State.ANNIHILATED;
           } else if ( State.GENERATING.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
             volumeState = State.FAIL;
-          } else if ( State.EXTANT.equals( v.getState( ) ) ) {
+          } else if ( State.EXTANT.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
               //volume is available but the SC does not know about it.
               //This is based on a guarantee that the SC will never send partial information
               //If the SC subsequently reports it as available, it will be recovered
