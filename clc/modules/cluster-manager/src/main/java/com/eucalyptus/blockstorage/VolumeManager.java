@@ -320,7 +320,7 @@ public class VolumeManager {
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
             AttachedVolume attachedVolume = null;
             try {
-                VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
+              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
               attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
