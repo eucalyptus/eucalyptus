@@ -210,7 +210,7 @@ class WF_DownBundleFS_UpBundle(WF_base):
         cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
         bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
-        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1, service_key=args.decryption_key_path, cloud_cert=args.cloud_cert_path)
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=512, service_key=args.decryption_key_path, cloud_cert=args.cloud_cert_path)
         euca2ools = Euca2ools()
 
         try:
