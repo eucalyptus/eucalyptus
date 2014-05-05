@@ -956,12 +956,15 @@ static void update_vbr_with_backing_info(artifact * a)
         blockblob_get_dir(a->bb, bbdirpath, sizeof(bbdirpath)); // fill in blob's base directory
         char *linkname = "[invalid]";
         if (!strcmp(vbr->guestDeviceName, "none")) {
-            linkname = vbr->typeName;;
+            linkname = vbr->typeName;
         } else {
             linkname = vbr->guestDeviceName;
         }
         char linkpath[PATH_MAX];
         snprintf(linkpath, sizeof(linkpath), "%s/link-to-%s", bbdirpath, linkname);
+        if (check_path(linkpath) == 0) { // symlink exists because lower-level artifact created it
+            unlink(linkpath);
+        }
         if (symlink(path, linkpath) == 0) {
             LOGDEBUG("[%s] symlinked %s to %s\n", a->instanceId, path, linkpath);
             euca_strncpy(vbr->backingPath, linkpath, sizeof(vbr->backingPath));
@@ -1516,7 +1519,7 @@ static int disk_expander(artifact * a)
         map[map_entries].first_block_src = 0;
         map[map_entries].first_block_dst = (offset_bytes / 512);
         map[map_entries].len_blocks = (dep->size_bytes / 512);
-        LOGDEBUG("[%s] mapping partition %d from %s [%lld-%lld]\n",
+        LOGDEBUG("[%s] mapping section %d from %s [%lld-%lld]\n",
                  a->instanceId, map_entries, blockblob_get_dev(a->deps[i]->bb), map[map_entries].first_block_dst,
                  map[map_entries].first_block_dst + map[map_entries].len_blocks - 1);
         offset_bytes += dep->size_bytes;
@@ -1542,6 +1545,7 @@ static int disk_expander(artifact * a)
         LOGERROR("[%s] failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
         goto cleanup;
     }
+
     // add the information to MBR for the new partitions
     for (int i = 1; i < map_entries; i++) { // map [0] is for the disk
         LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
@@ -2626,9 +2630,17 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     }
                     vm->virtualBootRecordLen++;
                 } else {
-                    disk_arts[0] = art_realloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]), prereq_arts, total_prereq_arts, // the prereqs
+                    if (disk_arts[1] != NULL) {
+                        LOGERROR("[%s] invalid VBR: has both disk and first partition\n", instanceId);
+                        goto free;
+                    }
+                    if (partitions > 2) {
+                        LOGERROR("[%s] invalid VBR: disk cannot be expanded by more than 2 partitions\n", instanceId);
+                        goto free;
+                    }
+                    disk_arts[0] = art_realloc_disk(disk_arts[0]->vbr, prereq_arts, total_prereq_arts, // the prereqs
                                                     disk_arts[0],   // the disk artifact
-                                                    disk_arts + 2, partitions,  // the partition artifacts (TODO: fix the "+2")
+                                                    disk_arts + 2, partitions,  // the partition artifacts (2nd & maybe 3rd)
                                                     do_make_bootable, do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
