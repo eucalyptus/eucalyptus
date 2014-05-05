@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,14 +60,33 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.cluster;
 
-/*
- *
- */
-public enum LifecycleStatus {
-    ALIVE,
-    REAPED_FOR_EXPIRE,
-    EXPIRED,
-    REAPED_FOR_TRANSITION
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.component.id.ClusterController.GatherLogService;
+import com.eucalyptus.ws.Handlers;
+
+@ComponentPart( GatherLogService.class )
+public final class GatherLogClientPipeline implements ChannelPipelineFactory {
+  @Override
+  public ChannelPipeline getPipeline( ) throws Exception {
+    final ChannelPipeline pipeline = Channels.pipeline( );
+    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 120 ).entrySet( ) ) { // TODO:GRZE: configurable
+      pipeline.addLast( e.getKey( ), e.getValue( ) );
+    }
+    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) ); // TODO:GRZE: configurable
+    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
+    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
+    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusGL#" ) );
+    pipeline.addLast( "soap", Handlers.soapHandler( ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
+    return pipeline;
+  }
 }

@@ -79,10 +79,12 @@ public class StorageRequestType extends BaseMessage {
 	def StorageRequestType() {}
 }
 
+@ComponentMessage(Storage.class)
 public class StorageResponseType extends BaseMessage {
 	def StorageResponseType() {}
 }
 
+@ComponentMessage(Storage.class)
 public class StorageErrorMessageType extends BaseMessage {
   String code
   String message

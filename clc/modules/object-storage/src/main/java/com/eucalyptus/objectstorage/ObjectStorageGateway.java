@@ -117,7 +117,6 @@ import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
@@ -163,10 +162,7 @@ import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -1014,38 +1010,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
     }
 
-	/**
-	 * Common lookupBucket routine used by simple and extended GETs.
-	 */
-	protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) {
-		DefaultHttpResponse httpResponse = new DefaultHttpResponse(
-				HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		long contentLength = reply.getSize();
-		String contentType = reply.getContentType();
-		String etag = reply.getEtag();
-		Date lastModified = reply.getLastModified();
-		String contentDisposition = reply.getContentDisposition();
-		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-		if(etag != null)
-			httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + etag + "\""); //etag in quotes, per s3-spec.
-		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
-		if(contentDisposition != null) {
-			httpResponse.addHeader("Content-Disposition", contentDisposition);
-		}
-		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
-		String versionId = reply.getVersionId();
-		if(versionId != null) {
-			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
-		}
-		httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
-		
-		//write extra headers
-		if(reply.getByteRangeEnd() != null) {
-			httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
-		}
-		return httpResponse;
-	}
-
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObject(com.eucalyptus.objectstorage.msgs.GetObjectType)
 	 */
@@ -1209,14 +1173,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             Bucket destBucket = ensureBucketExists(request.getDestinationBucket());
 
-            String versionId = destBucket.getVersion().toString();
-            /* try {
-                versionId = BucketManagers.getInstance().getVersionId(destBucket);
-            } catch (Exception e2) {
-                LOG.error("Error generating version Id string by bucket " + destBucket.getBucketName(), e2);
-                throw new InternalErrorException(destBucket.getBucketName() + "/" + request.getDestinationObject());
-            }*/
-
             String destinationKey = request.getDestinationObject();
             String metadataDirective = request.getMetadataDirective();
             String copyIfMatch = request.getCopySourceIfMatch();
@@ -1245,12 +1201,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
 
                 try {
-                    if (destObject == null) {
+                    // we need to create a new instance of the object entity if versioning is enabled on the bucket
+                    if (destObject == null ||
+                            ( destBucket.getVersioning() != null
+                                    && destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) ) {
                         destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
                             srcObject.getSize().longValue(), requestUser);
                     }
                 } catch (Exception e) {
-                    LOG.error("Error intializing entity for persiting object metadata for " + destBucket.getBucketName()
+                    LOG.error("Error initializing entity for persisting object metadata for " + destBucket.getBucketName()
                             + "/" + request.getDestinationObject());
                     throw new InternalErrorException(destBucket.getBucketName() + "/" + destinationKey);
                 }
@@ -1283,7 +1242,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 }
 
                 try {
-                    AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, destBucket.getOwnerCanonicalId());
+                    String requestUserCanonicalId = requestUser.getAccount() != null ? requestUser.getAccount().getCanonicalId() : null;
+                    AccessControlPolicy acp = getFullAcp(
+                            AclUtils.expandCannedAcl( request.getAccessControlList(), requestUserCanonicalId, requestUserCanonicalId ),
+                            requestUser,
+                            requestUserCanonicalId);
                     destObject.setAcl(acp);
                 } catch (Exception e) {
                     LOG.warn("encountered an exception while constructing access control policy to set on "
@@ -1294,19 +1257,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
                 destObject.setSize(srcObject.getSize());
                 destObject.setStorageClass(srcObject.getStorageClass());
-                destObject.setOwnerCanonicalId(srcObject.getOwnerCanonicalId());
-                destObject.setOwnerDisplayName(srcObject.getOwnerDisplayName());
-                destObject.setOwnerIamUserId(srcObject.getOwnerIamUserId());
-                destObject.setOwnerIamUserDisplayName(srcObject.getOwnerIamUserDisplayName());
                 String etag = srcObject.geteTag();
-                final Date srcLastMod = srcObject.getObjectModifiedTimestamp();
                 destObject.seteTag(etag);
-                destObject.setObjectModifiedTimestamp(srcLastMod);
                 destObject.setIsLatest(Boolean.TRUE);
 
                 if (destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) {
-                    reply.setCopySourceVersionId(versionId);
-                    reply.setVersionId(versionId);
+                    reply.setCopySourceVersionId(srcObject.getVersionId());
+                    reply.setVersionId(destObject.getVersionId());
                 }
 
                 String sourceObjUuid = srcObject.getObjectUuid();
@@ -1323,8 +1280,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     reply.setLastModified(DateFormatter.dateToListingFormattedString(objectEntity.getObjectModifiedTimestamp()));
                     reply.setEtag(objectEntity.geteTag());
                     try {
-                        fireObjectCreationEvent(destBucket.getBucketName(), destObject.getObjectKey(), versionId,
-                                requestUser.getUserId(), destObject.getSize(), origDestObjectSize);
+                        // send the event if we aren't doing a metadata update only
+                        if (! (destBucket.getBucketName().equals(srcBucket.getBucketName())
+                                && destObject.getObjectKey().equals(srcObject.getObjectKey())) )  {
+                            fireObjectCreationEvent(destBucket.getBucketName(), destObject.getObjectKey(), destObject.getVersionId(),
+                                    requestUser.getUserId(), destObject.getSize(), origDestObjectSize);
+                        }
                     } catch (Exception ex) {
                         LOG.debug("Failed to fire reporting event for OSG COPY object operation", ex);
                     }

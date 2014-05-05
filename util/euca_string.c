@@ -317,7 +317,7 @@ char *euca_strestr(const char *haystack, const char *begin, const char *end)
         return (NULL);
     }
     // Find the ending needle
-    if ((pE = strstr(haystack, end)) == NULL) {
+    if ((pE = strstr(pB + strlen(begin), end)) == NULL) {
         return (NULL);
     }
     // Move 'b' at the end of the begining needle (we don't want

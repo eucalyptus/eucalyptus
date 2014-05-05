@@ -64,9 +64,13 @@ package com.eucalyptus.objectstorage.policy;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
+import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.metadata.MpuPartMetadataManager;
 
 import java.util.List;
 
@@ -97,21 +101,24 @@ public class ObjectStorageQuotaUtil {
     }
 
     public static long getBucketSize(String bucketName) throws AuthException {
-        try {
-            Bucket b = BucketMetadataManagers.getInstance().lookupBucket(bucketName);
-            return b.getBucketSize();
+        try (TransactionResource db = Entities.transactionFor(Bucket.class)) {
+            Bucket bucket = BucketMetadataManagers.getInstance().lookupBucket(bucketName);
+            long objectSize = ObjectMetadataManagers.getInstance().getTotalSize(bucket);
+            long mpuPartsSize = MpuPartMetadataManagers.getInstance().getTotalSize(bucket);
+            return objectSize + mpuPartsSize;
         } catch (Exception e) {
-            throw new AuthException("Failed to search bucket", e);
+            throw new AuthException("Failed to get bucket total size", e);
         }
     }
 
     public static long getTotalObjectsSizeByAccount(String accountId) throws AuthException {
         String canonicalId = Accounts.lookupAccountById(accountId).getCanonicalId();
-        try {
+        try (TransactionResource db = Entities.transactionFor(Bucket.class)) {
             List<Bucket> bucketList = BucketMetadataManagers.getInstance().lookupBucketsByOwner(canonicalId);
             long size = 0;
             for (Bucket b : bucketList) {
-                size += b.getBucketSize();
+                size += ObjectMetadataManagers.getInstance().getTotalSize(b);
+                size += MpuPartMetadataManagers.getInstance().getTotalSize(b);
             }
             return size;
         } catch (Exception e) {
@@ -120,11 +127,12 @@ public class ObjectStorageQuotaUtil {
     }
 
     public static long getTotalObjectsSizeByUser(String userId) throws AuthException {
-        try {
+        try (TransactionResource db = Entities.transactionFor(Bucket.class)) {
             List<Bucket> bucketList = BucketMetadataManagers.getInstance().lookupBucketsByUser(userId);
             long size = 0;
             for (Bucket b : bucketList) {
-                size += b.getBucketSize();
+                size += ObjectMetadataManagers.getInstance().getTotalSize(b);
+                size += MpuPartMetadataManagers.getInstance().getTotalSize(b);
             }
             return size;
         } catch (Exception e) {
@@ -137,7 +145,9 @@ public class ObjectStorageQuotaUtil {
      *
      * @return The size or -1 if the size could not be determined.
      */
-    public static long getTotalObjectSize() {
-        return BucketMetadataManagers.getInstance().totalSizeOfAllBuckets();
+    public static long getTotalObjectSize() throws Exception {
+        //return BucketMetadataManagers.getInstance().totalSizeOfAllBuckets();
+        return ObjectMetadataManagers.getInstance().getTotalSize(null) +
+                MpuPartMetadataManagers.getInstance().getTotalSize(null);
     }
 }

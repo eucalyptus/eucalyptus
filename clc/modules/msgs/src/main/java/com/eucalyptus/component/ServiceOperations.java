@@ -94,7 +94,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceOperations {
   private static Logger                                                  LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class<? extends BaseMessage>, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;                               //TODO:GRZE: @Configurable  
+  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;                               //TODO:GRZE: @Configurable
   @SuppressWarnings( "unchecked" )
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
     return ( Function<I, O> ) serviceOperations.get( msgType );
@@ -104,13 +104,13 @@ public class ServiceOperations {
     return serviceOperations.containsKey( msg.getClass( ) ) ? Ats.from( serviceOperations.get( msg.getClass( ) ) ).get( ServiceOperation.class ).user( ) : false;
   }
 
-  
+
   public static class ServiceOperationDiscovery extends ServiceJarDiscovery {
-    
+
     public ServiceOperationDiscovery( ) {
       super( );
     }
-    
+
     @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( final Class candidate ) throws Exception {
@@ -129,14 +129,14 @@ public class ServiceOperations {
         return false;
       }
     }
-    
+
     @Override
     public Double getPriority( ) {
       return 0.3d;
     }
-    
+
   }
-  
+
   @SuppressWarnings( "unchecked" )
   public static <I extends BaseMessage, O extends BaseMessage> void dispatch( final I request ) {
     if ( !serviceOperations.containsKey( request.getClass( ) ) || !StackConfiguration.OOB_INTERNAL_OPERATIONS ) {
@@ -150,12 +150,12 @@ public class ServiceOperations {
         final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
         final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
         Timers.loggingWrapper( new Callable( ) {
-          
+
           @Override
           public Object call( ) throws Exception {
             if ( StackConfiguration.ASYNC_INTERNAL_OPERATIONS ) {
               Threads.enqueue( Empyrean.class, ServiceOperations.class, new Callable<Boolean>( ) {
-                
+
                 @Override
                 public Boolean call( ) {
                   executeOperation( request, ctx, op );
@@ -172,7 +172,7 @@ public class ServiceOperations {
           public String toString( ) {
             return super.toString( );
           }
-          
+
         } ).call( );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
@@ -180,14 +180,15 @@ public class ServiceOperations {
       }
     }
   }
-  
+
   private static <I extends BaseMessage, O extends BaseMessage> void executeOperation( final I request, final Context ctx, final Function<I, O> op ) {
     Contexts.threadLocal( ctx );
     try {
       final O reply = op.apply( request );
       Contexts.response( reply );
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
+      LOG.debug( ex );
+      LOG.trace( ex, ex );
       Contexts.responseError( request.getCorrelationId( ), ex );
     } finally {
       Contexts.removeThreadLocal( );

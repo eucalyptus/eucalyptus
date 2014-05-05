@@ -29,6 +29,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
@@ -58,17 +59,9 @@ public class ImagingTasks {
       throw new ImagingServiceException("Availability zone is required");
     else{
       try{
-        final List<ClusterInfoType> clusters = 
-            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-        boolean zoneFound = false;
-        for(final ClusterInfoType cluster : clusters ){
-          if(availabilityZone.equals(cluster.getZoneName())){
-            zoneFound = true;
-            break;
-          }
-        }
-        if(!zoneFound)
-          throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
+        final List<String> clusters = ImagingServiceProperties.listConfiguredZones();
+        if(!clusters.contains(availabilityZone))
+          throw new ImagingServiceException(String.format("The availability zone %s is not configured for import", availabilityZone));
       }catch(final ImagingServiceException ex){
         throw ex;
       }catch(final Exception ex){
@@ -136,30 +129,22 @@ public class ImagingTasks {
       throw new ImagingServiceException("Instance type is required");
     
 
-    List<ClusterInfoType> clusters = null;
+    List<String> clusters = null;
     try{
-        clusters=EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+      clusters =ImagingServiceProperties.listConfiguredZones();
     }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-          "Failed to verify availability zone");    
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to verify availability zones");
     }
     String availabilityZone = null;
     if(launchSpec.getPlacement()!=null)
       availabilityZone = launchSpec.getPlacement().getAvailabilityZone();
     if(availabilityZone != null){
-      boolean zoneFound = false;
-      for(final ClusterInfoType cluster : clusters ){
-        if(availabilityZone.equals(cluster.getZoneName())){
-          zoneFound = true;
-          break;
-        }
-      }
-      if(!zoneFound)
-        throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
+      if(!clusters.contains(availabilityZone))
+        throw new ImagingServiceException(String.format("The availability zone %s is not configured for import", availabilityZone));
     }else{
       if (clusters.size()>0){
         //Default: Amazon EC2 chooses a zone for you.
-        availabilityZone = clusters.get(0).getZoneName();
+        availabilityZone = clusters.get(0);
         if(request.getLaunchSpecification().getPlacement()==null)
           request.getLaunchSpecification().setPlacement(new InstancePlacement());
         request.getLaunchSpecification().getPlacement().setAvailabilityZone(availabilityZone);
@@ -418,6 +403,9 @@ public class ImagingTasks {
           final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
           entity.setState(ImportTaskState.PENDING);
           entity.setWorkerId(null);
+          if(entity instanceof VolumeImagingTask){
+            ((VolumeImagingTask)entity).clearDownloadManifesturl();
+          }
           Entities.persist(entity);
           db.commit();
         }catch(final Exception ex){

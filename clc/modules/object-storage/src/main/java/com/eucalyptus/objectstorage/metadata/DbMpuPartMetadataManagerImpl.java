@@ -261,8 +261,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
                             .setProjection(Projections.sum("size"))
                             .setReadOnly(true)
                             .uniqueResult(), 0).longValue();
-                    //Reduce the bucket size by the sum of parts in 'extant' state.
-                    BucketMetadataManagers.getInstance().updateBucketSize(bucket, -size);
 
                     //Remove all part records with this upload id
                     Entities.deleteAllMatching(PartEntity.class,
@@ -432,6 +430,23 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
             lastPartNumber = partNumber;
         }
         return objectSize;
+    }
+
+    @Override
+    public long getTotalSize(Bucket bucket) throws Exception {
+        try(TransactionResource trans = Entities.transactionFor(PartEntity.class)) {
+            Criteria queryCriteria = Entities.createCriteria(PartEntity.class).add(Restrictions.or(Restrictions.eq("state", ObjectState.creating), Restrictions.eq("state", ObjectState.extant)))
+                    .setProjection(Projections.sum("size"));
+            if(bucket != null) {
+                queryCriteria = getSearchByBucket(queryCriteria, bucket);
+            }
+            queryCriteria.setReadOnly(true);
+            final Number count = (Number) queryCriteria.uniqueResult();
+            return count == null ? 0 : count.longValue();
+        } catch (Throwable e) {
+            LOG.error("Error getting part total size for bucket " + bucket.getBucketName(), e);
+            throw new Exception(e);
+        }
     }
 
     @Override

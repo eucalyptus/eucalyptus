@@ -28,13 +28,26 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.param import Param
+
 import eucadmin
 
 
+class EC2(AWSQueryService):
+    Name = 'ec2'
+    Description = 'compute service'
+    APIVersion = '2012-07-20'
+    Authentication = 'sign-v2'
+    Path = '/services/compute'
+    Port = 8773
+    Provider = 'aws'
+    EnvURL = 'EC2_URL'
+
+
 class DescribeInstances(eucadmin.EucadminRequest):
-    ServiceClass = eucadmin.EucAdmin
-    ServicePath = '/services/Eucalyptus'
+    ServiceClass = EC2
+    ServicePath = '/services/compute'
 
     Args = [Param(name='InstanceId', long_name='InstanceId', ptype='array',
                   optional=True)]
@@ -43,7 +56,6 @@ class DescribeInstances(eucadmin.EucadminRequest):
         eucadmin.EucadminRequest.__init__(self, **args)
         self.list_markers = ['reservationSet', 'instancesSet', 'tagSet']
         self.item_markers = ['item']
-        self.get_connection().APIVersion = '2012-07-20'  # cheap hack
 
     def main(self, **args):
         return self.send(**args)

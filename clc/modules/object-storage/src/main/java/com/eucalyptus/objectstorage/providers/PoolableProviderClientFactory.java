@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,121 +60,69 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.objectstorage.providers;
 
-import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
+import com.amazonaws.auth.AWSCredentials;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
+import org.apache.commons.pool.PoolableObjectFactory;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
 import java.util.Date;
 
-@Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table(name = "LifecycleRules")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class LifecycleRuleInfo extends AbstractPersistent {
+/**
+ * see @org.apache.commons.pool.PoolableObjectFactory&lt;T&gt;
+ */
+public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgInternalS3Client> {
 
-    @Column(name = "bucket_name")
-    @Index(name = "IDX_bucket_name")
-    private String bucketName;
+    private AWSCredentials requestUser;
+    private String upstreamEndpoint;
+    private boolean usePathStyle;
 
-    @Column(name = "rule_id", length = 64)
-    private String ruleId;
+    private long checkIntervalInMs = S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChangeCheckInterval().intValue() * 1000l;
 
-    @Column(name = "prefix", length = 256)
-    private String prefix;
-
-    @Column(name = "enabled")
-    private Boolean enabled;
-
-    @Column(name = "transition_date")
-    private Date transitionDate;
-    @Column(name = "transition_days")
-    private Integer transitionDays;
-
-    @Column(name = "transition_storage_class")
-    private String transitionStorageClass;
-
-    @Column(name = "expiration_date")
-    private Date expirationDate;
-    @Column(name = "expiration_days")
-    private Integer expirationDays;
-
-
-    public String getBucketName() {
-        return bucketName;
+    public PoolableProviderClientFactory(AWSCredentials requestUser, String upstreamEndpoint, boolean usePathStyle) {
+        this.requestUser = requestUser;
+        this.upstreamEndpoint = upstreamEndpoint;
+        this.usePathStyle = usePathStyle;
     }
 
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
+    @Override
+    public OsgInternalS3Client makeObject() throws Exception {
+        boolean useHttps = false;
+        if(S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps() != null && S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps()) {
+            useHttps = true;
+        }
+
+        OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, useHttps);
+        osgInternalS3Client.setS3Endpoint(upstreamEndpoint);
+        osgInternalS3Client.setUsePathStyle(usePathStyle);
+        return osgInternalS3Client;
     }
 
-    public String getRuleId() {
-        return ruleId;
+    @Override
+    public void destroyObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        amazonS3Client.getS3Client().shutdown();
     }
 
-    public void setRuleId(String ruleId) {
-        this.ruleId = ruleId;
+    @Override
+    public boolean validateObject(OsgInternalS3Client amazonS3Client) {
+        long now = new Date().getTime();
+        long instantiated = amazonS3Client.getInstantiated().getTime();
+        if (now - instantiated > checkIntervalInMs) {
+            if (S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChange().getTime() - instantiated > 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    public String getPrefix() {
-        return prefix;
+    @Override
+    public void activateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        // no-op
     }
 
-    public void setPrefix(String prefix) {
-        this.prefix = prefix;
-    }
-
-    public Boolean getEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public Date getTransitionDate() {
-        return transitionDate;
-    }
-
-    public void setTransitionDate(Date transitionDate) {
-        this.transitionDate = transitionDate;
-    }
-
-    public Integer getTransitionDays() {
-        return transitionDays;
-    }
-
-    public void setTransitionDays(Integer transitionDays) {
-        this.transitionDays = transitionDays;
-    }
-
-    public String getTransitionStorageClass() {
-        return transitionStorageClass;
-    }
-
-    public void setTransitionStorageClass(String transitionStorageClass) {
-        this.transitionStorageClass = transitionStorageClass;
-    }
-
-    public Date getExpirationDate() {
-        return expirationDate;
-    }
-
-    public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
-    }
-
-    public Integer getExpirationDays() {
-        return expirationDays;
-    }
-
-    public void setExpirationDays(Integer expirationDays) {
-        this.expirationDays = expirationDays;
+    @Override
+    public void passivateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+        // no-op
     }
 }

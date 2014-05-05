@@ -80,13 +80,6 @@ public class ObjectStateTransitions {
                         //invalid bucket, cannot create
                         throw new IllegalResourceStateException(extantBucket.getBucketUuid(), null, BucketState.extant.toString(), extantBucket.getState().toString());
                     }
-                    //Update the bucket size.
-                    try {
-                        BucketMetadataManagers.getInstance().updateBucketSize(extantBucket, initializedObject.getSize());
-                    } catch (TransactionException e) {
-                        LOG.error("attempting to update bucket size during object creation lead to a transaction exception", e);
-                        throw new MetadataOperationFailureException(e);
-                    }
                     initializedObject.setBucket(extantBucket);
                     initializedObject.setState(ObjectState.creating);
                     initializedObject.updateCreationExpiration();
@@ -129,13 +122,6 @@ public class ObjectStateTransitions {
                         updatingEntity.setSize(entity.getSize());
 
                         if(ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
-                            //Update the bucket size for the completed entity
-                            try {
-                                BucketMetadataManagers.getInstance().updateBucketSize(updatingEntity.getBucket(), updatingEntity.getSize());
-                            } catch (TransactionException e) {
-                                LOG.error("attempting to update bucket size during object creation lead to a transaction exception", e);
-                                throw new MetadataOperationFailureException(e);
-                            }
                             //Remove the parts, this will remove the sizes for the parts.
                             MpuPartMetadataManagers.getInstance().removeParts(updatingEntity.getBucket(), updatingEntity.getUploadId());
                         }
@@ -212,9 +198,6 @@ public class ObjectStateTransitions {
                     entity.setState(ObjectState.deleting);
                     entity.setIsLatest(Boolean.FALSE);
 
-                    if(ObjectState.extant.equals(entity.getLastState())) {
-                        BucketMetadataManagers.getInstance().updateBucketSize(entity.getBucket(), -entity.getSize());
-                    }
                     return entity;
                 } catch(NoSuchElementException e) {
                     throw new NoSuchEntityException(objectToUpdate.getObjectUuid());

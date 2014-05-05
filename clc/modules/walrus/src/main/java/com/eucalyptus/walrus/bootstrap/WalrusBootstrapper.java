@@ -69,7 +69,6 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.WalrusControl;
-import com.eucalyptus.walrus.util.WalrusSchedulerManager;
 import org.apache.log4j.Logger;
 
 @Provides(WalrusBackend.class)
@@ -100,7 +99,6 @@ public class WalrusBootstrapper extends Bootstrapper {
     @Override
     public boolean start() throws Exception {
         WalrusControl.configure();
-        WalrusSchedulerManager.start();
         return true;
     }
 

@@ -308,25 +308,6 @@ public class BucketMetadataManagerTest {
     }
 
     @Test
-    public void testUpdateBucketSize() {
-        def bucketName = 'testbucket1'
-        Bucket bucket = TestUtils.createTestBucket(mgr, bucketName)
-        assert (mgr.lookupBucket(bucketName).getBucketSize() == 0)
-
-        mgr.updateBucketSize(bucket, 100)
-        assert (mgr.lookupBucket(bucketName).getBucketSize() == 100)
-
-        mgr.updateBucketSize(bucket, 100)
-        assert (mgr.lookupBucket(bucketName).getBucketSize() == 200)
-
-        mgr.updateBucketSize(bucket, -10)
-        assert (mgr.lookupBucket(bucketName).getBucketSize() == 190)
-
-        def b = mgr.transitionBucketToState(mgr.lookupBucket(bucketName), BucketState.deleting)
-        mgr.deleteBucketMetadata(b)
-    }
-
-    @Test
     public void testCountByUser() {
         Bucket b;
         for (int i = 0; i < 10; i++) {
@@ -380,13 +361,8 @@ public class BucketMetadataManagerTest {
         Bucket postUpdate1 = mgr.setVersioning(lookup1, ObjectStorageProperties.VersioningStatus.Enabled)
         assert (postUpdate1.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled)
 
-        Bucket postUpdate2 = mgr.updateBucketSize(lookup2, 10)
-        assert (postUpdate2.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled)
-        assert (postUpdate2.getBucketSize() == 10)
-
-        Bucket postupdate3 = mgr.setVersioning(postUpdate1, ObjectStorageProperties.VersioningStatus.Suspended)
-        assert (postupdate3.getBucketSize() == 10)
-        assert (postupdate3.getVersioning() == ObjectStorageProperties.VersioningStatus.Suspended)
+        Bucket postupdate2 = mgr.setVersioning(lookup2, ObjectStorageProperties.VersioningStatus.Suspended)
+        assert (postupdate2.getVersioning() == ObjectStorageProperties.VersioningStatus.Suspended)
     }
 
     @Ignore
@@ -446,21 +422,6 @@ public class BucketMetadataManagerTest {
         b = mgr.setVersioning(b, ObjectStorageProperties.VersioningStatus.Suspended)
         versionId = b.generateObjectVersionId()
         assert (b.getVersioning().equals(ObjectStorageProperties.VersioningStatus.Suspended) && versionId == 'null')
-    }
-
-    @Test
-    public void testTotalSizeOfAllBuckets() {
-        Bucket b;
-        int sum = 0;
-        for (int i = 0; i < 10; i++) {
-            b = TestUtils.createTestBucket(mgr, 'bucket' + i)
-            assert (b != null && b.getState().equals(BucketState.extant))
-            mgr.updateBucketSize(b, 10)
-            assert (mgr.lookupBucket(b.getBucketName()).getBucketSize() == 10)
-            sum += 10
-        }
-
-        assert (mgr.totalSizeOfAllBuckets() == sum)
     }
 
     @Test

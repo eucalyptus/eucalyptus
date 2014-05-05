@@ -116,6 +116,7 @@
 int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out);
 int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize);
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName);
+int make_credential_floppy(char *euca_home, char *rundir_path, char *credential);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -139,7 +139,7 @@ public class ConfigurationManager {
                  + request );
     }
     try {
-      reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
+      reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) != null );
     } catch ( final Throwable ex ) {
       //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
       reply.set_return( false );
@@ -154,7 +154,7 @@ public class ConfigurationManager {
     final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) != null );
     } catch ( final Throwable ex ) {
       //throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
       reply.set_return( false );

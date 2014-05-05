@@ -1,4 +1,4 @@
-#!/bin/bash -f
+#!/bin/bash
 
 # Copyright 2014 Eucalyptus Systems, Inc.
 #
@@ -63,6 +63,31 @@ CACHE_DIR=${SCRIPT_DIR}/test_imager_${TS}/cache
 mkdir -p ${WORK_DIR}
 mkdir -p ${CACHE_DIR}
 
+# create a partition to feed to the imager
+KERNEL=`ls -1 /boot/vmlinuz* | tail -1`
+if [ "$KERNEL" == "" ] ; then
+    echo "failed to find local kernel to use"
+    exit 1
+fi
+RAMDISK=`ls -1 /boot/initrd* | tail -1`
+if [ "$RAMDISK" == "" ] ; then
+    echo "failed to find local ramdisk to use"
+    exit 1
+fi
+PARTITION=${SCRIPT_DIR}/centos.5-5.x86-64.img
+if [ ! -e $PARTITION ] ; then
+    PARTITION=${LOG_DIR}/partition.img
+    dd if=/dev/zero of=${PARTITION} bs=512 count=20480 # 10MB
+    DEVICE=`losetup -f`
+    losetup $DEVICE ${PARTITION}
+    if ! mkfs.ext3 $DEVICE ; then
+	echo "failed to create empty file system in $PARTITION"
+	losetup -d $DEVICE
+	exit 1
+    fi
+    sync
+fi
+
 CMD="$IMAGER debug=yes
 work=${WORK_DIR} 
 cache=${CACHE_DIR}
@@ -72,17 +97,22 @@ cache_size=53687091200
 prepare
 id=${EMI1}
 out=${EMI1}.dsk
-boot=false
+boot=true
 work=false
 cache=true
-vbr=ephemeral0:none:1072128:ext3:sda1:none
+vbr=machine:${EMI1}:-1:none:sda1:file://${PARTITION}
+vbr=kernel:EKI-000AAA:-1:none:none:file://${KERNEL}
+vbr=ramdisk:ERI-000AAA:-1:none:none:file://${RAMDISK}"
+
+UNUSED="
+vbr=ephemeral0:none:1072128:ext3:sda3:none
 vbr=swap:none:524288:swap:sda2:none
 
 convert
 in-type=disk
-out-type=vmdk"
+out-type=vmdk
 
-UNUSED="upload
+upload
 login=root
 password=foobar
 vsphere-datacenter=ha-datacenter
@@ -91,8 +121,15 @@ vsphere-vmx=[datastore1]testvm/testvm.vmx
 out=https://192.168.33.5
 in-type=vmdk"
 
-${CMD} >>${LOG_DIR}/cmd0.txt 2>&1 &
-${CMD} >>${LOG_DIR}/cmd0.txt 2>&1 &
+${CMD} >>${LOG_DIR}/cmd0.txt 2>&1
+find $LOG_DIR
+sleep 2
+
+#${CMD} >>${LOG_DIR}/cmd0.txt 2>&1 &
+#find $LOG_DIR
+#sleep 2
+
+exit
 wait
 
 # 3 iterations of the cleanup routine

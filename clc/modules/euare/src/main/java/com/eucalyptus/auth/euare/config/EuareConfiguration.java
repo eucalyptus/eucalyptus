@@ -38,7 +38,7 @@ public class EuareConfiguration extends ComponentConfiguration implements Serial
   public EuareConfiguration( ) {
   }
 
-  public EuareConfiguration( String name, String hostName, Integer port ) {
-    super( "euare", name, hostName, port, "/services/Euare" );
+  public EuareConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, "/services/Euare" );
   }
 }

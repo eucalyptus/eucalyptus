@@ -245,6 +245,7 @@ struct handlers {
  //! bundling structure
 struct bundling_params_t {
     ncInstance *instance;
+    char *accountId;
     char *bucketName;
     char *filePrefix;
     char *objectStorageURL;

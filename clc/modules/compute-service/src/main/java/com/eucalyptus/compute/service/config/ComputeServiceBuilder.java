@@ -51,7 +51,7 @@ public class ComputeServiceBuilder extends AbstractServiceBuilder<ComputeConfigu
 
   @Override
   public ComputeConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new ComputeConfiguration( name, host, port );
+    return new ComputeConfiguration( partition, name, host, port );
   }
 
   @Override

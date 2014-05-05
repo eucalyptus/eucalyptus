@@ -102,7 +102,6 @@ public class AclTests {
         account2ReadAcp = new Grant(account2, Permission.READ_ACP.toString());
         account2WriteAcp = new Grant(account2, Permission.WRITE_ACP.toString());
 
-        //Accounts.addSystemAccountWithAdmin(Account.SYSTEM_ACCOUNT_PREFIX);
         Accounts.addSystemAccount().addUser(User.ACCOUNT_ADMIN, "/", true, null);
     }
 

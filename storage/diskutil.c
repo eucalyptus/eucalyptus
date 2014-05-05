@@ -262,27 +262,22 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
 {
     LOGDEBUG("[%s] getting download manifest from %s\n", instanceId, url);
 
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd),
-             "%s/usr/libexec/eucalyptus/euca-run-workflow down-bundle/write-raw"
-             " --image-manifest-url '%s'"
-             " --output-path '%s'"
-             " --cloud-cert-path '%s'"
-             " --decryption-key-path '%s' >> /tmp/euca_nc_unbundle.log 2>&1",
-             euca_home_path,
-             url,
-             dest_path,
-             cloud_cert_path,
-             service_key_path);
-    LOGDEBUG("%s\n", cmd);
-    if (system(cmd) == 0) {
+    char run_workflow_path[EUCA_MAX_PATH];
+    snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", euca_home_path);
+    int rc = euca_execlp_log(NULL,
+                             run_workflow_path,
+                             "down-bundle/write-raw",
+                             "--image-manifest-url", url,
+                             "--output-path", dest_path,
+                             "--cloud-cert-path", cloud_cert_path,
+                             "--decryption-key-path", service_key_path,
+                             NULL);
+    if (rc == EUCA_OK) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
-        return EUCA_OK;
     } else {
-        LOGERROR("[%s] failed on download and unbundle with command %s\n", instanceId, cmd);
-        return EUCA_ERROR;
+        LOGERROR("[%s] failed on download and unbundle\n", instanceId);
     }
-    return EUCA_ERROR;
+    return rc;
 }
 
 //!

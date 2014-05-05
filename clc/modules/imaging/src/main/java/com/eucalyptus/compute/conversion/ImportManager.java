@@ -251,7 +251,7 @@ public class ImportManager {
           state.equals(ImportTaskState.CONVERTING) ||
           state.equals(ImportTaskState.INSTANTIATING) ) {
         ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
-            ImportTaskState.CANCELLING, null);
+            ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_USER_CANCELLATION);
       }
       reply.set_return(true);
     }catch(final NoSuchElementException ex){

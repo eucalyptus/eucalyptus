@@ -62,7 +62,6 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import com.amazonaws.http.HttpResponse;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
@@ -80,16 +79,13 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
@@ -135,7 +131,6 @@ import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient;
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SynchronousClient;
 import com.eucalyptus.util.SynchronousClient.SynchronousClientException;
@@ -185,35 +180,17 @@ public class WalrusProviderClient extends S3ProviderClient {
 
     }
 
-	@Override
-	protected AmazonS3Client getS3Client(User requestUser) throws InternalErrorException {
-		//TODO: this should be enhanced to share clients/use a pool for efficiency.
-		if (osgInternalS3Client == null) {
-			synchronized(this) {
-				boolean useHttps = false;
-				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
-					useHttps = true;
-				}
-				AWSCredentials credentials = null;
-				try {
-					credentials = mapCredentials(requestUser);
-				} catch(Exception e) {
-                    LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
-                    InternalErrorException ex = new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
-                    ex.initCause(e);
-                    throw ex;
-				}
-				
-				osgInternalS3Client = new OsgInternalS3Client(credentials, useHttps);
-				osgInternalS3Client.setS3Endpoint(Topology.lookup(WalrusBackend.class).getUri().toString());
-				osgInternalS3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
-			}
-		}
-		return osgInternalS3Client.getS3Client();
-	}
+    @Override
+    protected String getUpstreamEndpoint() {
+        return Topology.lookup(WalrusBackend.class).getUri().toString();
+    }
 
+    @Override
+    protected boolean doUsePathStyle() {
+        return true;
+    }
 
-	@Override
+    @Override
 	public void initialize() throws EucalyptusCloudException {
 		try {
 			systemAdmin = Accounts.lookupSystemAdmin();
@@ -245,7 +222,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 * Walrus provider mapping maps all requests to the single ObjectStorage account used for interaction with Walrus
 	 */
 	@Override
-	protected  BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
+	protected BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
 		List<AccessKey> eucaAdminKeys = systemAdmin.getKeys();
 		if(eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
 			return new BasicAWSCredentials( eucaAdminKeys.get(0).getAccessKey(),  eucaAdminKeys.get(0).getSecretKey());

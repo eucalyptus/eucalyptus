@@ -352,6 +352,9 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     if (ramdiskId)
         euca_strncpy(instance->ramdiskId, ramdiskId, sizeof(instance->ramdiskId));
 
+    if (credential)
+        euca_strncpy(instance->credential, credential, sizeof(instance->credential));
+
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
@@ -363,44 +366,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_ERROR;
         goto error;
     }
-    // prepare instance credential
-    if (credential && strlen(credential)) {
-        char symm_key[512];
-        char enc_key[KEY_STRING_SIZE];
-        char enc_tok[KEY_STRING_SIZE];
-        char *ptr[5];
-        int i = 0;
-        char *pch = strtok(credential, "\n");
-        while (i < 5 && pch != NULL) {
-            ptr[i++] = pch;
-            pch = strtok(NULL, "\n");
-        }
-        if (i < 5) {
-            LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
-        } else {
-            euca_strncpy(instance->euareKey, ptr[0], sizeof(instance->euareKey));
-            euca_strncpy(instance->instancePubkey, ptr[1], sizeof(instance->instancePubkey));
-            euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
-            euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
-            euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
-
-            char *pk = NULL;
-            int out_len = -1;
-            if (decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
-                LOGERROR("failed to decrypt the instance credential\n");
-            } else {
-                memcpy(instance->instancePk, pk, strlen(pk));
-                EUCA_FREE(pk);
-                if (decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
-                    LOGERROR("failed to decrypt the instance token\n");
-                } else {
-                    memcpy(instance->instanceToken, pk, strlen(pk));
-                    EUCA_FREE(pk);
-                }
-            }
-        }
-    }
-
     change_state(instance, STAGING);
 
     sem_p(inst_sem);
@@ -768,6 +733,9 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
         instance = find_instance(&global_instances, instanceId);
+        instance->bail_flag = TRUE; // request any pending download retries to bail
+        instance->terminationRequestedTime = time(NULL);
+        save_instance_struct(instance);
         sem_v(inst_sem);
     }
 
@@ -1903,8 +1871,7 @@ static void *bundling_thread(void *arg)
     }
 
     char backing_dev[PATH_MAX] = "";
-    if (realpath(pInstance->params.root->backingPath, backing_dev)==NULL
-        || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
+    if (realpath(pInstance->params.root->backingPath, backing_dev) == NULL || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
         LOGERROR("[%s] failed to resolve backing path (%s) or to chown it\n", pInstance->instanceId, backing_dev);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         return NULL;
@@ -1928,7 +1895,7 @@ static void *bundling_thread(void *arg)
                          "--bucket", pParams->bucketName,\
                          "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
                          "--arch", "x86_64", /* @TODO: obtain arch from instance*/ \
-                         "--account", "123456789012", /* @TODO: obtain account for real*/ \
+                         "--account", pParams->accountId, \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
                          "--upload-policy", pParams->S3Policy,\
@@ -1936,13 +1903,13 @@ static void *bundling_thread(void *arg)
                          "--emi", pInstance->imageId,
 
     if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
-        rc = euca_execlp(&status,
+        rc = euca_execlp_log(&status,
                          _COMMON_BUNDLING_PARAMS
                          "--eki", pParams->kernelId,
                          "--eri", pParams->ramdiskId,
                          NULL);
     } else {
-        rc = euca_execlp(&status,
+        rc = euca_execlp_log(&status,
                          _COMMON_BUNDLING_PARAMS
                          NULL);
     }
@@ -2042,6 +2009,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     if ((pParams = EUCA_ZALLOC(1, sizeof(struct bundling_params_t))) == NULL)
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
 
+    pParams->accountId = strdup(pInstance->accountId); //! @TODO propagate requestor's accountId through the stack
     pParams->instance = pInstance;
     pParams->bucketName = strdup(bucketName);
     pParams->filePrefix = strdup(filePrefix);

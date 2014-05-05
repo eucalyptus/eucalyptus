@@ -63,8 +63,11 @@
 package com.eucalyptus.event;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.eucalyptus.event.Event.Periodic;
 import org.apache.log4j.Logger;
 
+@Periodic
 public class Hertz extends GenericEvent<Long> {
   private static AtomicLong counter = new AtomicLong( System.currentTimeMillis( ) );
   public Hertz( ) {

@@ -154,11 +154,9 @@ public class Nodes {
     for ( String unreportedTag : unreportedTags ) {
       NodeInfo unreportedNode = clusterNodeMap.get( unreportedTag );
       if ( unreportedNode != null && ( System.currentTimeMillis( ) - unreportedNode.getLastSeen( ).getTime( ) ) > Nodes.REFRESH_TIMEOUT ) {
+        Topology.destroy( Components.lookup( NodeController.class ).lookup( unreportedNode.getName() ) );
         NodeInfo removed = clusterNodeMap.remove( unreportedTag );
         nodeLog.append( "GONE:" ).append( removed.getName() ).append( ":" ).append( removed.getLastState() ).append( " " );
-//GRZE: need to clean up NodeControllers so they do not interfere with their ClusterControllers when those are not operable.
-//GRZE: I'm wary to do this en media res.
-//        Topology.destroy( Components.lookup( NodeController.class ).lookup( unreportedNode.getName() ) );
       }
     }
     /** add new nodes or updated existing node infos **/
@@ -175,6 +173,7 @@ public class Nodes {
           NodeInfo nodeInfo = clusterNodeMap.get( serviceTag );
           nodeInfo.setIqn( node.getIqn( ) );
           nodeLog.append( "OLD:" ).append( nodeInfo.getName() ).append( ":" ).append( nodeInfo.getLastState() ).append( " " );
+          nodesToUpdate.add( nodeInfo );
         }
       } catch ( NoSuchElementException e ) {
         LOG.error( e );
@@ -185,7 +184,8 @@ public class Nodes {
     try {
       Nodes.updateServiceConfiguration( ccConfig, nodesToUpdate );
     } catch ( Exception e ) {
-      LOG.debug( "Error while updating nodes: " + e.getMessage(), e );
+        if( !Component.State.ENABLED.apply( ccConfig ))
+          LOG.debug("Error while updating nodes: " + e.getMessage(), e);
     }
     /**
      * TODO:GRZE: if not present emulate {@link ClusterController.NodeController} using

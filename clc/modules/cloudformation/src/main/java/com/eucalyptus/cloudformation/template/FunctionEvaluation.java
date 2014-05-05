@@ -4,12 +4,10 @@ import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
 import java.util.List;
@@ -103,6 +101,7 @@ public class FunctionEvaluation {
     // Some functions require literal values for arguments, so don't recursively evaluate functions on
     // values.  (Will do so within functions where appropriate)
     for (IntrinsicFunction intrinsicFunction: IntrinsicFunctions.values()) {
+
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);

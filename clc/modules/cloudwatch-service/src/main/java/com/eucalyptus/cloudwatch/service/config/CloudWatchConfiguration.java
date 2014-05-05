@@ -42,7 +42,7 @@ public class CloudWatchConfiguration extends ComponentConfiguration implements S
 
   public CloudWatchConfiguration() { }
 
-  public CloudWatchConfiguration( String name, String hostName, Integer port ) {
-    super( "cloudwatch", name, hostName, port, SERVICE_PATH );
+  public CloudWatchConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, SERVICE_PATH );
   }
 }

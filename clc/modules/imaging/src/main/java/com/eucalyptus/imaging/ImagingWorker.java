@@ -66,11 +66,22 @@ public class ImagingWorker extends AbstractStatefulPersistent<ImagingWorker.STAT
   @Column ( name = "metadata_conversion_update_time")
   private Date lastUpdateTime; 
   
+  @Column ( name = "metadata_availability_zone")
+  private String availabilityZone;
+  
   public void setWorkerUpdateTime(){
     this.lastUpdateTime =  new Date();
   }
   
   public Date getWorkerUpdateTime(){
     return this.lastUpdateTime;
+  }
+  
+  public void setAvailabilityZone(final String zone){
+    this.availabilityZone = zone;
+  }
+  
+  public String getAvailabilityZone(){
+    return this.availabilityZone;
   }
 }

@@ -50,6 +50,7 @@ import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.imaging.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
@@ -116,7 +117,9 @@ public class DownloadManifestFactory {
             DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
         return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
       }
-			
+
+      UrlValidator urlValidator = new UrlValidator();
+
 			final String manifest = baseManifest.getManifest();
 			if (manifest == null) {
 				throw new DownloadManifestException("Can't generate download manifest from null base manifest");
@@ -206,6 +209,10 @@ public class DownloadManifestFactory {
 					generatePresignedUrlRequest.setExpiration(expiration);
 					URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
 					partDownloadUrl = s.toString();
+				} else {
+				  // validate url per EUCA-9144
+				  if (!urlValidator.isEucalyptusUrl(partDownloadUrl))
+				    throw new DownloadManifestException("Some parts in the manifest are not stored in the OS. Its location is outside Eucalyptus:" + partDownloadUrl);
 				}
 				Element aPart = manifestDoc.createElement("part");
 				Element getUrl = manifestDoc.createElement("get-url");

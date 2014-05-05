@@ -142,11 +142,11 @@ public interface ObjectMetadataManager {
 	 * @param delimiter
 	 * @param startKey
 	 * @param startVersionId
-	 * @param includeDeleteMarkers
+	 * @param latestOnly
 	 * @return
 	 * @throws TransactionException
 	 */
-	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean includeDeleteMarkers) throws Exception;
+	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean latestOnly) throws Exception;
 	
 	/**
 	 * Delete the object entity
@@ -216,6 +216,16 @@ public interface ObjectMetadataManager {
      * @throws Exception
      */
     public List<ObjectEntity> lookupFailedObjects() throws Exception;
+
+    /**
+     * Returns the conservative sum size of all objects in the given bucket. Includes
+     * any in-progress uploads (objects in 'creating' or 'extant' state)
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public long getTotalSize(Bucket bucket) throws Exception;
+
 
     public List<ObjectEntity> lookupObjectsForReaping(Bucket bucket, String objectKeyPrefix, Date age);
 

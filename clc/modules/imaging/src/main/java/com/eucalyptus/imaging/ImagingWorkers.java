@@ -102,11 +102,10 @@ public class ImagingWorkers {
     final Date lastUpdated = worker.getWorkerUpdateTime();
     Calendar cal = Calendar.getInstance(); // creates calendar
     cal.setTime(lastUpdated); // sets calendar time/date
-    cal.add(Calendar.HOUR, 1); // remove records after 1 hour
+    cal.add(Calendar.MINUTE, 60); // remove records after 1 hour
     final Date expirationTime = cal.getTime();
 
-    return ImagingWorker.STATE.DECOMMISSIONED.equals(worker.getState()) &&
-        expirationTime.before(new Date());
+    return expirationTime.before(new Date());
   }
   
   private static boolean isTimedOut(final ImagingWorker worker){
@@ -145,7 +144,7 @@ public class ImagingWorkers {
         final ImagingWorker entity = Entities.uniqueResult(ImagingWorker.named(workerId));
         return entity;
       }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
+        return null;
       }
     }
   }
@@ -178,7 +177,7 @@ public class ImagingWorkers {
         if(!tagFound)
           throw new Exception("Instance does not have a proper tag");
         if(! (remoteHost.equals(workerInstance.getIpAddress()) || remoteHost.equals(workerInstance.getPrivateIpAddress())))
-          throw new Exception("Request came from invalid host address");        
+          throw new Exception("Request came from invalid host address: "+remoteHost);        
         verifiedWorkers.add(instanceId);
       }catch(final Exception ex){
         throw new Exception("Failed to verify imaging worker", ex);
@@ -186,7 +185,16 @@ public class ImagingWorkers {
     }
   }
   
-  public static void createWorker(final String workerId){
+  public static ImagingWorker createWorker(final String workerId){
+    String availabilityZone = null;
+    try{
+      final List<RunningInstancesItemType> instances =
+          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+      availabilityZone = instances.get(0).getPlacement();
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared("Unable to find the instance named: "+workerId);
+    }
+    
     try ( final TransactionResource db =
         Entities.transactionFor(ImagingWorker.class ) ) {
       try{
@@ -195,8 +203,10 @@ public class ImagingWorkers {
       }catch(final NoSuchElementException ex){
         final ImagingWorker worker = new ImagingWorker(ImagingWorker.STATE.RUNNING, workerId);
         worker.setWorkerUpdateTime();
+        worker.setAvailabilityZone(availabilityZone);
         Entities.persist(worker);
         db.commit();
+        return worker;
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
       }

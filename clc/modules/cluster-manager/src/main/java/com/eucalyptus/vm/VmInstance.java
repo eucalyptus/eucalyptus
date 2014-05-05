@@ -1998,7 +1998,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPrivateDnsName( input.getDisplayPrivateDnsName() );
           runningInstance.setPrivateIpAddress( Strings.emptyToNull( input.getDisplayPrivateAddress() ) );
           if (input.getBootRecord() == null || input.getBootRecord().getArchitecture() == null) {
-            LOG.warn("No architecture set for instance " + input.getInstanceId() + ", defaulting to x86_64");
+            LOG.debug("WARNING: No architecture set for instance " + input.getInstanceId() + ", defaulting to x86_64");
             runningInstance.setArchitecture( "x86_64" );
           } else {
             runningInstance.setArchitecture( input.getBootRecord().getArchitecture().toString() );

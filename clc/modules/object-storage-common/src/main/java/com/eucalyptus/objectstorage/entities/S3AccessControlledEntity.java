@@ -38,8 +38,10 @@ import net.sf.json.JSONSerializer;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
+import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
@@ -66,18 +68,20 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
     protected String ownerIamUserDisplayName;
 
     // Hold the real owner ID. This is the canonical user Id.
-    @Column(name = "owner_canonical_id", nullable = false)
+    @Column(name = "owner_canonical_id", nullable = false, length=64)
     protected String ownerCanonicalId;
 
     //Needed for enforcing IAM resource quotas (an extension of IAM for Euca)
-    @Column(name = "owner_iam_user_id", nullable = false)
+    @Column(name = "owner_iam_user_id", nullable = false, length=64)
     protected String ownerIamUserId;
 
     //8k size should cover 100 80-byte entries which allows for json chars etc
-    @Column(name = "acl", length = 8192, nullable = false)
+    @Column(name = "acl", nullable = false)
+    @Lob
+    @Type(type="org.hibernate.type.StringClobType")
     private String acl; //A JSON encoded string that is the acl list.
 
-    @Column(name = "owner_displayname", nullable = false)
+    @Column(name = "owner_displayname")
     protected String ownerDisplayName;
 
     /**

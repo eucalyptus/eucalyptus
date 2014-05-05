@@ -129,17 +129,7 @@ public interface BucketMetadataManager {
 	 * @return
 	 */
 	public List<Bucket> lookupBucketsByUser(String userIamId) throws Exception;
-	
-	/**
-	 * Change bucket size estimate. sizeToChange can be any value. Negatives decrement, positives
-	 * increment the size
-	 * @param bucket
-	 * @param sizeToChange long indicating the change to make, not the new value
-     * @return Updated bucket entity
-	 * @throws TransactionException
-	 */
-    public Bucket updateBucketSize(final Bucket bucket, final long sizeToChange) throws TransactionException;
-	
+
 	/**
 	 * Returns count of buckets owned by user's iam id, in the given account. Buckets are detached from any persistence session.
 	 * @return

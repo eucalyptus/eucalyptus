@@ -408,7 +408,7 @@ static void close_blobstores();
 static int do_list_bs(blobstore * bs, const char *regex);
 static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t type);
 static int do_list(const char *regex);
-static int do_delete(const char *id);
+static int do_delete(const char *bs_path, const char *bb_id);
 static void usage(const char *msg);
 static void set_global_parameter(char *key, char *val);
 #endif /* _EUCA_BLOBS */
@@ -2332,6 +2332,10 @@ static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long ti
     }
 
     if (read_blockblob_metadata_path(BLOCKBLOB_PATH_DEPS, bs, bb_id, path, sizeof(path)) > 0) {
+        in_use |= BLOCKBLOB_STATUS_BACKED;
+    }
+
+    if (read_blockblob_metadata_path(BLOCKBLOB_PATH_DM, bs, bb_id, path, sizeof(path)) > 0) {
         in_use |= BLOCKBLOB_STATUS_BACKED;
     }
     _err_on();
@@ -5215,7 +5219,7 @@ static int do_metadata_test(const char *base, const char *name)
     int ret;
     int errors = 0;
 
-    printf("\nrunning do_metadata_test()\n");
+    printf("\nTEST: running do_metadata_test(%s)\n", name);
 
     blobstore *bs = create_teststore(BS_SIZE, base, name, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
     if (bs == NULL) {
@@ -5271,7 +5275,7 @@ static int do_metadata_test(const char *base, const char *name)
         return errors;
     }
 
-    printf("\ntesting metadata manipulation\n");
+    printf("\nTEST: testing metadata manipulation\n");
 
     blockblob *bb1;
     _OPENBB(bb1, B1, BB_SIZE, NULL, _CBB, 0, 0);    // bs size: 10
@@ -5329,7 +5333,7 @@ static int do_metadata_test(const char *base, const char *name)
     _CLOSBB(bb1, B1);
 
     blobstore_close(bs);
-    printf("completed metadata test\n");
+    printf("TEST: completed metadata test (%s)\n", name);
 done:
     return errors;
 }
@@ -5353,7 +5357,7 @@ static int do_blobstore_test(const char *base, const char *name, blobstore_forma
     int ret;
     int errors = 0;
 
-    printf("\ntesting blockblob creation (name=%s, format=%d, revocation=%d)\n", name, format, revocation);
+    printf("\nTEST: testing blockblob creation (name=%s, format=%d, revocation=%d)\n", name, format, revocation);
 
     blobstore *bs = create_teststore(BS_SIZE, base, name, format, revocation, BLOBSTORE_SNAPSHOT_ANY);
     if (bs == NULL) {
@@ -5419,7 +5423,7 @@ static int do_blobstore_test(const char *base, const char *name, blobstore_forma
 
     blobstore_close(bs);
 
-    printf("completed blobstore test (name=%s)\n", name);
+    printf("TEST: completed blobstore test (name=%s, errors=%d)\n", name, errors);
 done:
     return errors;
 }
@@ -5538,7 +5542,7 @@ int do_file_lock_test(void)
     int fd1, fd2, fd3;
 
     for (int lc = 0; lc < LOCK_CYCLES; lc++) {
-        printf("\nintra-process locks cycle=%d\n", lc);
+        printf("\nTEST: intra-process locks cycle=%d\n", lc);
 
         _OPEN(fd1, F1, _W, 300, -1);
         _OPEN(fd1, F1, _R, 300, -1);
@@ -5604,7 +5608,7 @@ int do_file_lock_test(void)
     }
 
     for (int lc = 0; lc < LOCK_CYCLES; lc++) {
-        printf("\ninter-process locks cycle=%d\n", lc);
+        printf("\nTEST: inter-process locks cycle=%d\n", lc);
         _OPEN(fd1, F1, _W, 300, -1);
         _OPEN(fd1, F1, _R, 300, -1);
         _OPEN(fd1, F1, _C, 0, 0);
@@ -5702,11 +5706,11 @@ int do_file_lock_test(void)
             }
             fflush(stdout);
             fflush(stderr);
-            printf("waited for all competing processes (returned sum=%d) timeout=%lld\n", proc_ret_sum, t);
             remove(F1);
             remove(F2);
             remove(F3);
             errors += proc_ret_sum;
+            printf("TEST: waited for all competing processes (returned sum=%d) timeout=%lld errors=%d\n", proc_ret_sum, t, errors);
         }
     }
     return errors;
@@ -5783,7 +5787,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    printf("testing blobstore.c\n");
+    printf("TEST: testing blobstore.c\n");
 
     errors += do_file_lock_test();
     if (errors)
@@ -5930,7 +5934,7 @@ static int do_list_bs(blobstore * bs, const char *regex)
     }
     for (blockblob_meta * bm = matches; bm; bm = bm->next) {
         char uid[EUCA_MAX_PATH] = "";
-        snprintf(uid, sizeof(uid), "%s/%s", bs->path, bm->id);
+        snprintf(uid, sizeof(uid), "%s %s", bs->path, bm->id);
         map_set(blob_map, uid, bm);
     }
 
@@ -6048,9 +6052,34 @@ static int do_list(const char *regex)
 //!
 //! @note
 //!
-static int do_delete(const char *id)
+static int do_delete(const char *bs_path, const char *bb_id)
 {
-    return 0;
+    blobstore *bs = NULL;
+
+    if (strcmp(bs_path, work_path) == 0) {
+        bs = work_bs;
+    } else if (strcmp(bs_path, cache_path) == 0) {
+        bs = cache_bs;
+    } else {
+        fprintf(stderr, "error: unrecognized blobstore path '%s'\n", bs_path);
+        return 1;
+    }
+
+    blockblob * bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
+    if (bb == NULL) {
+        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id,
+                blobstore_get_error_str(_blobstore_errno));
+        return 1;
+    }
+
+    int ret = blockblob_delete(bb, 1000000, 0);
+    if (ret != 0) {
+        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id,
+                blobstore_get_error_str(_blobstore_errno));
+        blockblob_close(bb);
+    }
+
+    return ret;
 }
 
 //!
@@ -6231,12 +6260,12 @@ int main(int argc, char *argv[])
         close_blobstores();
 
     } else if (strcmp(command, "delete") == 0) {
-        if (nargs != 1) {
-            fprintf(stderr, "error: command 'delete' requires one parameter: id of the blob to delete\n");
+        if (nargs != 2) {
+            fprintf(stderr, "error: command 'delete' requires two parameters: [blobstore path] [blob id]\n");
             exit(1);
         }
         open_blobstores();
-        ret = do_delete(args[0]);
+        ret = do_delete(args[0], args[1]);
         close_blobstores();
 
     } else {

@@ -1631,15 +1631,27 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i = 0; i < gni->max_instances; i++) {
                     char *strptra = NULL, *strptrb = NULL;
+                    ccInstance *myInstance = NULL;
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
                     if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
                         LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                        // here, we should decide if we need to send the mapping, or not?
-                        rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                        // here, we should decide if we need to send the mapping, or not
+                        rc = find_instanceCacheIP(strptrb, &myInstance);
+                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
+                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                            } else {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                            }
+                        }
+                        if (myInstance) {
+                            EUCA_FREE(myInstance);
+                        }
 
-                        LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
+                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
                     } else {
                         LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                     }
@@ -4014,9 +4026,16 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
                     while (rc && ((time(NULL) - startRun) < ncRunTimeout)) {
 
-                        // if we're running windows, and are an NC, create the pw/floppy locally
-                        if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
-                            //if (strstr(platform, "windows")) {
+                        boolean is_windows = (strstr(platform, "windows") != NULL) ? TRUE : FALSE;
+                        boolean has_creds = (credential != NULL && strlen(credential)>0) ? TRUE : FALSE;
+                        boolean is_res_node = (strstr(res->ncURL, "EucalyptusNC") != NULL) ? TRUE : FALSE;
+
+                        // if this resource is not a node (but a co-located Broker)
+                        // and the guest is either Windows or Linux needing credentials,
+                        // then we'll have to create a floppy to pass to the instance
+                        if (! is_res_node && (is_windows || has_creds)) {
+
+                            //! @TODO: remove the 'windows' subdir or change something more generic
                             char cdir[EUCA_MAX_PATH];
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
                             if (check_directory(cdir)) {
@@ -4033,10 +4052,15 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             if (check_directory(cdir)) {
                                 LOGERROR("could not create console/floppy cache directory '%s'\n", cdir);
                             } else {
-                                // drop encrypted windows password and floppy on filesystem
-                                rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                if (is_windows) {
+                                    // drop encrypted windows password and floppy on filesystem
+                                    rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                } else if (has_creds) {
+                                    // decode the credential and place it into floppy on filesystem
+                                    rc = make_credential_floppy(config->eucahome, cdir, credential);
+                                }
                                 if (rc) {
-                                    LOGERROR("could not create console/floppy cache\n");
+                                    LOGERROR("could not create console/floppy cache/file\n");
                                 }
                             }
                         }
@@ -7288,7 +7312,7 @@ int reconfigureNetworkFromCLC(void)
 
     // clcnet populate
     snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
-    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
+    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15, NULL);
     EUCA_FREE(cloudIp);
     if (rc) {
         LOGWARN("cannot get latest network topology from cloud controller\n");

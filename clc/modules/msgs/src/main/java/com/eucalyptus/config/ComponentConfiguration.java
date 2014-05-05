@@ -67,6 +67,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.NoSuchElementException;
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -102,6 +103,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 @Table( name = "config_component_base" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
+@DiscriminatorColumn(length = 255)
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Transient
   private static final long serialVersionUID = 1L;
@@ -120,11 +122,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private volatile Integer           port;
   @Column( name = "config_component_service_path" )
   private String            servicePath;
-  
+
   protected ComponentConfiguration( ) {
 
   }
-  
+
   protected ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
     super( );
     this.partition = partition;
@@ -132,7 +134,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.hostName = hostName;
     this.servicePath = servicePath;
   }
-  
+
   protected ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
     this.partition = partition;
     this.name = name;
@@ -140,20 +142,20 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.port = port;
     this.servicePath = servicePath;
   }
-  
+
   @Override
   public InetSocketAddress getSocketAddress( ) {
     return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
   }
-  
+
   @Override
   public InetAddress getInetAddress( ) {
     return this.getSocketAddress( ).getAddress( );
   }
-  
+
   /**
    * Use the facade instead.
-   * 
+   *
    * @see ServiceUris#remote(ServiceConfiguration, String...)
    */
   @Override
@@ -161,18 +163,18 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   public URI getUri( ) {
     return ServiceUris.remote( this );
   }
-  
+
   @Override
   public String getName( ) {
     return this.name;
   }
-  
+
   @Override
   @Deprecated
   public final ComponentId getComponentId( ) {
     return lookupComponentId( );
   }
-  
+
   public ComponentId lookupComponentId( ) {
     if ( !Ats.from( this ).has( ComponentPart.class ) ) {
       throw new RuntimeException( "BUG: A component configuration must have the @ComponentPart(ComponentId.class) annotation" );
@@ -180,12 +182,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return ComponentIds.lookup( Ats.from( this ).get( ComponentPart.class ).value( ) );
     }
   }
-  
+
   @Override
   public final CanBootstrap lookupBootstrapper( ) {
     return Components.lookup( this.lookupComponentId( ) ).getBootstrapper( );
   }
-  
+
   @Override
   public Boolean isHostLocal( ) {
     try {
@@ -196,7 +198,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return false;
     }
   }
-  
+
   @Override
   public Boolean isVmLocal( ) {
     try {
@@ -207,18 +209,18 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return false;
     }
   }
-  
+
   @Override
   public final FullName getFullName( ) {
     return ComponentFullName.getInstance( this );
   }
-  
+
   @Override
   public int compareTo( ServiceConfiguration that ) {
     //ASAP: FIXME: GRZE useful ordering here plox.
     return ( this.partition + this.name ).compareTo( that.getPartition( ) + that.getName( ) );
   }
-  
+
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
@@ -237,7 +239,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     builder.append( this.lookupState( ) );
     return builder.toString( );
   }
-  
+
   public String toStrings( ) {
     return String.format( "ServiceConfiguration %s:%s:%s:%s:%s:%s:%s%s",
                           this.getComponentId( ).name( ), this.partition, this.name, this.hostName, this.port, this.servicePath,
@@ -248,7 +250,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
                             ? "host-local:"
                             : "" ) );
   }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -258,7 +260,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
         : this.name.hashCode( ) );
     return result;
   }
-  
+
   @Override
   public boolean equals( Object that ) {
     if ( this == that ) return true;
@@ -270,52 +272,52 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     } else if ( !this.name.equals( other.name ) ) return false;
     return true;
   }
-  
+
   @Override
   public String getPartition( ) {
     return this.partition;
   }
-  
+
   @Override
   public void setPartition( final String partition ) {
     this.partition = partition;
   }
-  
+
   @Override
   public String getHostName( ) {
     return this.hostName;
   }
-  
+
   @Override
   public void setHostName( final String hostName ) {
     this.hostName = hostName;
   }
-  
+
   @Override
   public Integer getPort( ) {
     return this.port;
   }
-  
+
   @Override
   public void setPort( Integer port ) {
     this.port = port;
   }
-  
+
   @Override
   public String getServicePath( ) {
     return this.servicePath;
   }
-  
+
   @Override
   public void setServicePath( final String servicePath ) {
     this.servicePath = servicePath;
   }
-  
+
   @Override
   public void setName( final String name ) {
     this.name = name;
   }
-  
+
   @Override
   public Partition lookupPartition( ) {
     return Partitions.lookupByName( this.getPartition() );

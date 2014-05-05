@@ -140,7 +140,7 @@ public class StackResourceEntityManager {
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
         .add(Restrictions.eq( "accountId" , accountId))
-        .add(Restrictions.eq( "stackName" , stackId))
+        .add(Restrictions.eq( "stackId" , stackId))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       for (StackResourceEntity stackResourceEntity: (List<StackResourceEntity>) criteria.list()) {
         stackResourceEntity.setRecordDeleted(Boolean.TRUE);
@@ -235,6 +235,7 @@ public class StackResourceEntityManager {
       if (physicalResourceId != null) {
         criteria.add(Restrictions.eq("physicalResourceId", logicalResourceId));
       }
+      criteria.add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
       returnValue = criteria.list();
       db.commit( );
     }

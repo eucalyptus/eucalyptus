@@ -81,10 +81,6 @@ import java.util.concurrent.TimeUnit;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.walrus.WalrusBackend;
-import com.eucalyptus.walrus.msgs.LifecycleConfigurationType;
-import com.eucalyptus.walrus.msgs.LifecycleExpiration;
-import com.eucalyptus.walrus.msgs.LifecycleRule;
-import com.eucalyptus.walrus.msgs.LifecycleTransition;
 
 import com.google.common.base.Strings;
 import net.sf.json.JSONArray;
@@ -288,9 +284,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
 
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "GetLifecycle");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "PutLifecycle");
-
 		//Object operations
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
@@ -328,8 +321,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
 
 		// Lifecycle
-		//opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "GET Bucket lifecycle");
-		//opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "PUT Bucket lifecycle");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "GET Bucket lifecycle");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "PUT Bucket lifecycle");
 		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.lifecycle.toString(),"DELETE Bucket lifecycle");
 		// Policy
 		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.policy.toString(), "GET Bucket policy");
@@ -686,10 +679,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			operationParams.put("AccessControlPolicy", getAccessControlPolicy(httpRequest));
 		}
 
-		if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString()) && params.containsKey(WalrusProperties.BucketParameter.lifecycle.toString())) {
-			operationParams.put("lifecycle", getLifecycle(httpRequest));
-		}
-
 		ArrayList paramsToRemove = new ArrayList();
 
         boolean addMore = true;
@@ -868,94 +857,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				throw new BindingException("Unable to parse versioning status " + ex.getMessage());
 			}
 		}
-	}
-
-	private LifecycleConfigurationType getLifecycle(MappingHttpRequest httpRequest) throws BindingException {
-		LifecycleConfigurationType lifecycleConfigurationType = new LifecycleConfigurationType();
-		lifecycleConfigurationType.setRules( new ArrayList<LifecycleRule>() );
-		String message = getMessageString(httpRequest);
-		if (message.length() > 0) {
-			try {
-				XMLParser xmlParser = new XMLParser(message);
-				DTMNodeList rules = xmlParser.getNodes("//LifecycleConfiguration/Rule");
-				if (rules == null) {
-					throw new BindingException("malformed lifecycle configuration");
-				}
-				for (int idx = 0; idx < rules.getLength(); idx++) {
-					lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, rules.item(idx) ) );
-				}
-			}
-			catch (Exception ex) {
-				LOG.warn(ex);
-				throw new BindingException("Unable to parse lifecycle " + ex.getMessage());
-			}
-		}
-		return lifecycleConfigurationType;
-	}
-
-	private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws BindingException{
-		LifecycleRule lifecycleRule = new LifecycleRule();
-		String id = parser.getValue(node, "ID");
-		String prefix = parser.getValue(node, "Prefix");
-		String status = parser.getValue(node, "Status");
-
-		lifecycleRule.setID(id);
-		lifecycleRule.setPrefix(prefix);
-		lifecycleRule.setStatus(status);
-
-		try {
-			LifecycleTransition transition = null;
-			String transitionDays = parser.getValue(node, "Transition/Days");
-			String transitionDate = parser.getValue(node, "Transition/Date");
-			if ( (transitionDays != null && !transitionDays.equals("")) ||
-					( transitionDate != null && !transitionDate.equals("") )) {
-				String storageClass = parser.getValue(node, "Transition/StorageClass");
-				if (transitionDays != null && !transitionDays.equals("")) {
-					transition = new LifecycleTransition();
-					Integer transitionDaysInt = new Integer( Integer.parseInt(transitionDays) );
-					transition.setDays(transitionDaysInt);
-				}
-				else if (transitionDate != null && !transitionDate.equals("")) {
-					transition = new LifecycleTransition();
-					Date transitionDateAsDate = Iso8601DateParser.parse(transitionDate);
-					transition.setDate(transitionDateAsDate);
-				}
-				if (transition != null) {
-					transition.setStorageClass(storageClass);
-				}
-			}
-			if (transition != null) {
-				lifecycleRule.setTransition(transition);
-			}
-
-			LifecycleExpiration expiration = null;
-			String expirationDays = parser.getValue(node, "Expiration/Days");
-			String expirationDate = parser.getValue(node, "Expiration/Date");
-			if ( (expirationDays != null && !expirationDays.equals("")) ||
-					( expirationDate != null && !expirationDate.equals("") )) {
-				if ( expirationDays != null && !expirationDays.equals("") ) {
-					expiration = new LifecycleExpiration();
-					Integer expirationDaysInt = new Integer( Integer.parseInt(expirationDays) );
-					expiration.setDays(expirationDaysInt);
-				}
-				else if ( expirationDate != null && !expirationDate.equals("") ) {
-					expiration = new LifecycleExpiration();
-					Date expirationDateAsDate = Iso8601DateParser.parse(expirationDate);
-					expiration.setDate(expirationDateAsDate);
-				}
-			}
-			if (expiration != null) {
-				lifecycleRule.setExpiration(expiration);
-			}
-		}
-		catch (ParseException e) {
-			throw new BindingException("caught a parsing exception while translating the transition or expiration date - " + e.getMessage());
-		}
-		catch (Exception ex) {
-			throw new BindingException("caught general exception while parsing lifecycle input - " + ex.getMessage());
-		}
-
-		return lifecycleRule;
 	}
 
 	private void parseExtendedHeaders(Map operationParams, String headerString, String value) throws BindingException {
