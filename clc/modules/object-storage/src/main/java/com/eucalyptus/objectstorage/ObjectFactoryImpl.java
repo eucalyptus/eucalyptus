@@ -308,6 +308,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 }
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
+            entity = entityRef.get(); //Get the latest if it was updated
             lastModified = response.getLastModified();
             etag = response.getEtag();
 
@@ -657,6 +658,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             };
 
             response = waitForCompletion(putTask, uploadingObject.getPartUuid(), updateTimeout, failTime, checkIntervalSec);
+            entity = entityRef.get(); //Get the latest if it was updated
             lastModified = response.getLastModified();
             etag = response.getEtag();
 

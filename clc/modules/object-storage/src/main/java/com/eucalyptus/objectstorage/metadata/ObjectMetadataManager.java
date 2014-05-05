@@ -217,6 +217,16 @@ public interface ObjectMetadataManager {
      */
     public List<ObjectEntity> lookupFailedObjects() throws Exception;
 
+    /**
+     * Returns the conservative sum size of all objects in the given bucket. Includes
+     * any in-progress uploads (objects in 'creating' or 'extant' state)
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public long getTotalSize(Bucket bucket) throws Exception;
+
+
     public List<ObjectEntity> lookupObjectsForReaping(Bucket bucket, String objectKeyPrefix, Date age);
 
     /**

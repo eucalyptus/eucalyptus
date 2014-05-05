@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import org.apache.log4j.Logger;
@@ -364,24 +365,5 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
             throw new MetadataOperationFailureException(e);
 	    }
 	    return size;
-	}
-
-	@Override
-	public Bucket updateBucketSize(final Bucket bucket, final long sizeToChange) throws TransactionException {
-		Function<Bucket, Bucket> incrementSize = new Function<Bucket, Bucket>() {
-			@Override
-			public Bucket apply(Bucket updateBucket) {
-                try {
-                    Bucket b = Entities.uniqueResult(new Bucket().withUuid(updateBucket.getBucketUuid()));
-                    b.setBucketSize(b.getBucketSize() + sizeToChange);
-                    return b;
-                } catch(TransactionException e) {
-                    throw new RuntimeException(e);
-                }
-			}
-			
-		};
-
-		return Entities.asTransaction(incrementSize).apply(bucket);
 	}
 }

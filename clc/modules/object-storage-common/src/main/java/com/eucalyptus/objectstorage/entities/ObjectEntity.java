@@ -53,6 +53,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import java.util.Date;
 import java.util.UUID;
 
@@ -62,6 +63,8 @@ import java.util.UUID;
 @Table(name = "objects")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
+    @Transient
+    private static Logger LOG = Logger.getLogger(ObjectEntity.class);
 
     @Index(name = "IDX_object_key")
     @Column(name = "object_key")
@@ -102,6 +105,9 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     @Column(name = "creation_expiration")
     private Long creationExpiration; //Expiration time in system/epoch time to guarantee monotonically increasing values
 
+    @Column(name = "upload_id")
+    private String uploadId;
+
     public Long getCreationExpiration() {
         return creationExpiration;
     }
@@ -117,14 +123,6 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     public void setIsDeleteMarker(Boolean isDeleteMarker) {
         this.isDeleteMarker = isDeleteMarker;
     }
-
-    @Column(name = "upload_id")
-    private String uploadId;
-
-    @Column(name = "part_number")
-    private Integer partNumber;
-
-    private static Logger LOG = Logger.getLogger(ObjectEntity.class);
 
     public ObjectEntity() {
         super();
@@ -159,11 +157,6 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     public ObjectEntity withUploadId(String uploadId) {
         this.setUploadId(uploadId);
-        return this;
-    }
-
-    public ObjectEntity withPartNumber(int partNumber) {
-        this.setPartNumber(partNumber);
         return this;
     }
 
@@ -350,14 +343,6 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     public void setUploadId(String uploadId) {
         this.uploadId = uploadId;
-    }
-
-    public Integer getPartNumber() {
-        return partNumber;
-    }
-
-    public void setPartNumber(Integer partNumber) {
-        this.partNumber = partNumber;
     }
 
     @Override

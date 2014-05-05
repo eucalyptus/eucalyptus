@@ -21,7 +21,6 @@
 package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.objectstorage.BucketState;
-import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -125,6 +124,7 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
         newBucket.setLoggingEnabled(false);
         newBucket.setState(BucketState.creating);
         newBucket.setVersioning(ObjectStorageProperties.VersioningStatus.Disabled);
+        newBucket.genIds(name);
         return newBucket;
     }
 
@@ -156,6 +156,7 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
         newBucket.setLoggingEnabled(false);
         newBucket.setState(BucketState.creating);
         newBucket.setVersioning(ObjectStorageProperties.VersioningStatus.Disabled);
+        newBucket.genIds(name);
         return newBucket;
     }
 

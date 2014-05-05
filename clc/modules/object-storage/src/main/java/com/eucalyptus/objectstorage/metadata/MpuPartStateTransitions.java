@@ -108,11 +108,6 @@ public class MpuPartStateTransitions {
 
                         //Remove old versions and update bucket size within this transaction.
                         MpuPartMetadataManagers.getInstance().cleanupInvalidParts(entity.getBucket(), entity.getObjectKey(), entity.getUploadId(), entity.getPartNumber());
-
-                        //Update the bucket size, guard to ensure duplicate state transitions, while idempotent, don't double sum
-                        if(ObjectState.creating.equals(updatingEntity.getLastState())) {
-                            BucketMetadataManagers.getInstance().updateBucketSize(updatingEntity.getBucket(), entity.getSize());
-                        }
                     } else {
                         throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }
@@ -126,37 +121,6 @@ public class MpuPartStateTransitions {
                     throw new MetadataOperationFailureException(e);
                 }
             }
-
-
-
-            /*
-            if(entity == null) {
-                throw new RuntimeException("Null bucket record cannot be updated");
-            } else {
-                try {
-                    PartEntity updatingEntity = Entities.uniqueResult(new PartEntity().withUuid(entity.getPartUuid()));
-                    if(!ObjectState.deleting.equals(entity.getState())) {
-                        updatingEntity.setState(ObjectState.extant);
-                        updatingEntity.setCreationExpiration(null);
-                        updatingEntity.setObjectModifiedTimestamp(entity.getObjectModifiedTimestamp());
-                        updatingEntity.setIsLatest(true);
-                        updatingEntity.seteTag(entity.geteTag());
-                        updatingEntity.setSize(entity.getSize());
-                        BucketMetadataManagers.getInstance().updateBucketSize(updatingEntity.getBucket(), entity.getSize());
-                    } else {
-                        throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
-                    }
-                    return updatingEntity;
-                } catch(NoSuchElementException e) {
-                    throw new NoSuchEntityException(entity.getPartUuid());
-                } catch(ObjectStorageInternalException e) {
-                    throw e;
-                } catch(Exception e) {
-                    LOG.warn("Cannot update state of object " + entity.getPartUuid(), e);
-                    throw new MetadataOperationFailureException(e);
-                }
-            }
-            */
         }
     };
   
@@ -182,10 +146,6 @@ public class MpuPartStateTransitions {
                     }
 
                     entity.setState(ObjectState.deleting);
-                    //Only decrement bucket size if object was extant
-                    if(ObjectState.extant.equals(entity.getLastState())) {
-                        BucketMetadataManagers.getInstance().updateBucketSize(entity.getBucket(), -entity.getSize());
-                    }
                     return entity;
                 } catch(NoSuchElementException e) {
                     throw new NoSuchEntityException(objectToUpdate.getPartUuid());

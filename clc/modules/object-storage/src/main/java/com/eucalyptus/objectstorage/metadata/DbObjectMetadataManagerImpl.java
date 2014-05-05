@@ -98,7 +98,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
     }
 
 	@Override
-	public List<ObjectEntity> lookupObjectsInState(Bucket bucket, String objectKey, String versionId, ObjectState state) throws Exception {
+	public List<ObjectEntity> lookupObjectsInState(@Nullable Bucket bucket, String objectKey, String versionId, ObjectState state) throws Exception {
         try (TransactionResource db = Entities.transactionFor(ObjectEntity.class)) {
             Criteria search = Entities.createCriteria(ObjectEntity.class).add(Example.create(new ObjectEntity(bucket, objectKey, versionId).withState(state)));
             search.addOrder(Order.desc("objectModifiedTimestamp"));
@@ -112,7 +112,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             // Nothing, return empty list
             return new ArrayList<>(0);
         } catch (Exception e) {
-            LOG.error("Error fetching pending write records for object " + bucket.getBucketName() + "/" + objectKey + "?versionId="
+            LOG.error("Error fetching pending write records for object " + (bucket == null ? "" : bucket.getBucketName()) + "/" + objectKey + "?versionId="
                     + versionId);
             throw e;
         }
@@ -416,7 +416,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             Criteria search = Entities.createCriteria(ObjectEntity.class);
             ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
             searchExample.setUploadId(uploadId);
-            searchExample.setPartNumber(null);
             search.add(Example.create(searchExample));
             search = getSearchByBucket(search, bucket);
             List<ObjectEntity> results = search.list();
@@ -783,6 +782,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             Criteria queryCriteria = Entities.createCriteria(ObjectEntity.class).add(Restrictions.eq("state", ObjectState.extant))
                     .setProjection(Projections.rowCount());
             queryCriteria = getSearchByBucket(queryCriteria, bucket);
+            queryCriteria.setReadOnly(true);
             final Number count = (Number) queryCriteria.uniqueResult();
             trans.commit();
             return count.longValue();
@@ -791,6 +791,23 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 			throw new Exception(e);
 		}
 	}
+
+    @Override
+    public long getTotalSize(Bucket bucket) throws Exception {
+        try(TransactionResource trans = Entities.transactionFor(ObjectEntity.class)) {
+            Criteria queryCriteria = Entities.createCriteria(ObjectEntity.class).add(Restrictions.or(Restrictions.eq("state", ObjectState.creating), Restrictions.eq("state", ObjectState.extant)))
+                    .setProjection(Projections.sum("size"));
+            if(bucket != null) {
+                queryCriteria = getSearchByBucket(queryCriteria, bucket);
+            }
+            queryCriteria.setReadOnly(true);
+            final Number count = (Number) queryCriteria.uniqueResult();
+            return count == null ? 0 : count.longValue();
+        } catch (Throwable e) {
+            LOG.error("Error getting object total size for " + (bucket == null ? "all buckets" : "bucket " + bucket.getBucketName()), e);
+            throw new Exception(e);
+        }
+    }
 
     @Override
     public ObjectEntity transitionObjectToState(@Nonnull final ObjectEntity entity, @Nonnull ObjectState destState) throws IllegalResourceStateException, MetadataOperationFailureException {

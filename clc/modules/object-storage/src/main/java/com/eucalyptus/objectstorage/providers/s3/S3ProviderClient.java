@@ -199,9 +199,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             credentials = mapCredentials(requestUser);
         } catch(Exception e) {
             LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
-            InternalErrorException ex = new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
-            ex.initCause(e);
-            throw ex;
+            throw new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"), e);
         }
         try {
             OsgInternalS3Client internalS3Client =
@@ -209,7 +207,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             return internalS3Client;
         } catch (Exception e) {
             LOG.error("exception thrown retrieving internal s3 client", e);
-            return null;
+            throw new InternalErrorException("Cannot get s3client from pool", e);
         }
 	}
 

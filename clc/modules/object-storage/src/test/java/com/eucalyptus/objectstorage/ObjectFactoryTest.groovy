@@ -174,8 +174,6 @@ public class ObjectFactoryTest {
             PaginatedResult<ObjectEntity> objs = ObjectMetadataManagers.getInstance().listPaginated(bucket, 1000, null, null, null)
             assert(objs != null && objs.getEntityList().size() == 1)
             assert(objs != null && objs.getEntityList().get(0).getObjectUuid() == resultEntity.getObjectUuid())
-
-            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.size())
         }
 
     }
@@ -513,8 +511,6 @@ public class ObjectFactoryTest {
             assert(partsList1.getEntityList().size() == 1)
             assert(partsList1.getEntityList().first().geteTag() == partEntities.get(partNumber - 1).geteTag())
             partList.add(partNumber - 1, new Part(partNumber, partEntities.last().geteTag()))
-
-            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.length)
         }
 
         //Add the rest of the parts
@@ -533,8 +529,6 @@ public class ObjectFactoryTest {
 
         Long summedSize = 0
         partEntities.each { summedSize += ((PartEntity)it).getSize() }
-
-        assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == summedSize)
 
         GetObjectType request = new GetObjectType()
         request.setUser(user)
@@ -568,8 +562,6 @@ public class ObjectFactoryTest {
         for(int i = 0; i < buffer.size(); i++) {
             assert(buffer[i] == content[i])
         }
-
-        assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == summedSize)
     }
 
     /**
