@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging.worker;
+package com.eucalyptus.imaging;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -65,8 +65,8 @@ import edu.ucsb.eucalyptus.msgs.TagInfo;
  */
 public class ImagingServiceActions {
 
-    public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
-    private static Logger  LOG = Logger.getLogger( ImagingServiceActions.class );
+    
+    private static Logger LOG = Logger.getLogger( ImagingServiceActions.class );
 
     // make sure the cloud is ready to launch imaging service instances
     // e.g., lack of resources will keep the launcher from creating resources
@@ -520,7 +520,7 @@ public class ImagingServiceActions {
       @Override
       public String getResult() {
         final String userData = B64.standard.encString(String.format("%s\n%s",
-            CREDENTIALS_STR,
+            ImagingServiceProperties.CREDENTIALS_STR,
             getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));

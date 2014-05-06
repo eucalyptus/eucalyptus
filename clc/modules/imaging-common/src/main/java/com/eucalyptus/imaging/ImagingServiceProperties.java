@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging.worker;
+package com.eucalyptus.imaging;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -69,14 +69,7 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @ConfigurableClass(root = "imaging",  description = "Parameters controlling image conversion service")
 public class ImagingServiceProperties {
   private static Logger  LOG = Logger.getLogger( ImagingServiceProperties.class );
-  @ConfigurableField( displayName="enabled",
-      description = "enabling imaging worker",
-      initial = "true",
-      readonly = false,
-      type = ConfigurableFieldType.BOOLEAN,
-      changeListener = EnabledChangeListener.class)
-  public static Boolean IMAGING_WORKER_ENABLED = true;
-  
+  // IMAGING_WORKER_ENABLED in in the ImagingServiceLaunchers
   @ConfigurableField( displayName = "imaging_worker_emi",
       description = "EMI containing imaging worker",
       initial = "NULL",
@@ -122,8 +115,7 @@ public class ImagingServiceProperties {
      initial = "168",
      type = ConfigurableFieldType.KEYVALUE,
      changeListener = ImportTaskExpirationHoursListener.class)
-  public static String IMPORT_TASK_EXPIRATION_HOURS = "168";
-  
+  public static String IMPORT_TASK_EXPIRATION_HOURS = "168"; 
 
   @ConfigurableField( displayName = "import_task_timeout_minutes",
      description = "expiration time in minutes of import tasks",
@@ -155,6 +147,9 @@ public class ImagingServiceProperties {
       type = ConfigurableFieldType.BOOLEAN)
   public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
   
+  
+  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
+  public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
   
   @Provides(Imaging.class)
   @RunDuring(Bootstrap.Stage.Final)
@@ -218,34 +213,7 @@ public class ImagingServiceProperties {
       return true;
     }
   }
-
-  public static class EnabledChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
-        throws ConfigurablePropertyException {
-      try{
-        if("false".equals(((String) newValue).toLowerCase()) &&
-            "true".equals(t.getValue())){
-          try{
-            if(ImagingServiceLaunchers.getInstance().shouldDisable())
-              ImagingServiceLaunchers.getInstance().disable();
-          }catch(ConfigurablePropertyException ex){
-            throw ex;
-          }catch(Exception ex){
-            throw ex;
-          }
-        }else if ("true".equals((String) newValue)){
-          ;
-        }else
-          throw new ConfigurablePropertyException("Invalid property value");
-      }catch(final ConfigurablePropertyException ex){
-        throw ex;
-      }catch ( final Exception e ){
-        throw new ConfigurablePropertyException("Could not disable imaging service workers", e);
-      }
-    }
-  }
-  
+ 
   public static class AvailabilityZonesChangeListener implements PropertyChangeListener {
 
     @Override
@@ -479,7 +447,7 @@ public class ImagingServiceProperties {
       try{
        final List<TagDescription> tags = EucalyptusActivityTasks.getInstance().describeAutoScalingTags(); 
        for(final TagDescription tag : tags){
-         if(ImagingServiceLaunchers.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+         if(DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
            asgName = tag.getResourceId();
            break;
          }
@@ -522,21 +490,21 @@ public class ImagingServiceProperties {
           String newUserdata = lc.getUserData();
           if(ntpServers!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-                    ImagingServiceActions.CREDENTIALS_STR,
+                    ImagingServiceProperties.CREDENTIALS_STR,
                     ImagingServiceActions.getUserDataMap(ntpServers,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServer!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-                    ImagingServiceActions.CREDENTIALS_STR,
+            		ImagingServiceProperties.CREDENTIALS_STR,
                     ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         logServer,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServerPort!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-                    ImagingServiceActions.CREDENTIALS_STR,
+            		ImagingServiceProperties.CREDENTIALS_STR,
                     ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         logServerPort)));

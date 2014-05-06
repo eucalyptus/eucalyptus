@@ -28,14 +28,11 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
