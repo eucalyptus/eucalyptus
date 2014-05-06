@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage;
 
 import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -71,11 +72,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Date;
+
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.vm.VmInstance;
+
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
@@ -90,6 +94,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
@@ -115,6 +120,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Volumes {
@@ -384,17 +390,18 @@ public class Volumes {
   }
   
   public static Volume lookup( final OwnerFullName ownerFullName, final String volumeId ) {
-    final EntityTransaction db = Entities.get(Volume.class);
-    try {
-      Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
-      db.commit( );
-      return volume;
-    } catch ( final NoSuchElementException e ) {
-      throw e;
-    } catch ( final Exception ex ) {
-      LOG.debug( ex, ex );
-      db.rollback( );
-      throw Exceptions.toUndeclared( ex );
+    try ( final TransactionResource db =
+        Entities.transactionFor( Volume.class ) ){
+      try{
+        Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
+        db.commit( );
+        return volume;
+      } catch ( final NoSuchElementException e ) {
+        throw e;
+      } catch ( final Exception ex ) {
+        LOG.debug( ex, ex );
+        throw Exceptions.toUndeclared( ex );
+      }
     }
   }
   

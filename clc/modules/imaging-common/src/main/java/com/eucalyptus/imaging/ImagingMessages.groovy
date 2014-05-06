@@ -228,6 +228,7 @@ public class PutInstanceImportTaskStatusType extends ImagingMessage {
   String instanceId
   String importTaskId
   String status
+  String errorCode;
   String volumeId
   String message
   Long bytesConverted

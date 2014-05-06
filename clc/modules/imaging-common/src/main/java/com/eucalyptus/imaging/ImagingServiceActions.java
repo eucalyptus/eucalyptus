@@ -39,6 +39,7 @@ import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Dns;
@@ -49,6 +50,8 @@ import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -540,8 +543,39 @@ public class ImagingServiceActions {
       kvMap.put("imaging_service_url", String.format("imaging.%s",DNSProperties.DOMAIN));
       kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
       kvMap.put("compute_service_url",String.format("compute.%s", DNSProperties.DOMAIN));
-      final ServiceConfiguration dns = Topology.lookup(Dns.class);
-      kvMap.put("dns_server", dns.getInetAddress().getHostAddress());
+    
+    //final ServiceConfiguration dns = Topology.lookup(Dns.class);
+      final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
+          new Function<ServiceConfiguration, String>() {
+            @Override
+            public String apply(ServiceConfiguration arg0) {
+              return arg0.getInetAddress().getHostAddress();
+            }
+      }));
+      final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
+          new Function<ServiceConfiguration, String>(){
+            @Override
+            public String apply(ServiceConfiguration arg0) {
+              return arg0.getInetAddress().getHostAddress();
+            }
+      }));
+      
+      final StringBuilder sbDns= new StringBuilder();
+      for(final String address : enabledDns){
+        if(sbDns.length()<=0)
+          sbDns.append(address);
+        else
+          sbDns.append(","+address);
+      }
+      for(final String address : dnsHosts){
+        if(! enabledDns.contains(address)){
+          if(sbDns.length()<=0)
+            sbDns.append(address);
+          else
+            sbDns.append(","+address);
+        } 
+      }
+      kvMap.put("dns_server", sbDns.toString());
 
       final StringBuilder sb = new StringBuilder();
       for (String key : kvMap.keySet()){
