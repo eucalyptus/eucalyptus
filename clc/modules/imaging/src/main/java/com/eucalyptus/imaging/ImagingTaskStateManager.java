@@ -46,7 +46,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.collect.Lists;
@@ -202,13 +202,19 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               instanceTask.getLaunchSpecAvailabilityZone().length()>0){
             availabilityZone = instanceTask.getLaunchSpecAvailabilityZone();
           }
+          String keyName = null;
+          if(instanceTask.getLaunchSpecKeyName()!=null && 
+              instanceTask.getLaunchSpecKeyName().length()>0){
+            keyName = instanceTask.getLaunchSpecKeyName();
+          }
+          
           Boolean monitoringEnabled = instanceTask.getLaunchSpecMonitoringEnabled();
           boolean monitoring = false;
           if(monitoringEnabled!=null && monitoringEnabled.booleanValue())
             monitoring = true;
           instanceId = 
               EucalyptusActivityTasks.getInstance().runInstancesAsUser(instanceTask.getOwnerUserId(),
-              imageId, groupName, userData, instanceType, availabilityZone, monitoring);
+              imageId, groupName, userData, instanceType, availabilityZone, monitoring, keyName);
           conversionTask.getImportInstance().setInstanceId(instanceId);
           ImagingTasks.updateTaskInJson(instanceTask);
         }catch(final Exception ex){

@@ -64,6 +64,7 @@ package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -82,7 +83,9 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.backend.VmTypeDetails;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
@@ -96,7 +99,9 @@ import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.DeviceMapping;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
@@ -221,6 +226,11 @@ public class VerifyMetadata {
                 " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
                 " size " + vmType.getDisk( ) + " GB." );
         }
+        final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
+        if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
+          throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
+                                      + " Please contact your cloud administrator.");
+        }
       } catch ( VerificationException e ) {
         throw e;
       } catch ( MetadataException ex ) {
@@ -231,6 +241,29 @@ public class VerifyMetadata {
         throw new VerificationException( "Failed to verify references for request: " + msg.toSimpleString( ) + " because of: " + ex.getMessage( ), ex );
       }
       return true;
+    }
+
+    private static long GIG = 1073741824l;
+    private static long MB = 1048576l;
+    // check if image can be converted
+    private static boolean verifyImagerCapacity(MachineImageInfo img) {
+      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
+      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_EMI;
+      if (workerType == null || emiName == null)
+	    return false;
+      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      long diskSizeBytes = 0;
+      for(VmTypeDetails type:allTypes){
+        if (type.getName().equalsIgnoreCase(workerType)){
+          diskSizeBytes = type.getDisk() * GIG;
+          break;
+        }
+      }
+      MachineImageInfo emi = LookupMachine.INSTANCE.apply(emiName);
+      long spaceLeft = diskSizeBytes - emi.getImageSizeBytes() - img.getImageSizeBytes() - 100*2*MB;
+      if (spaceLeft > 0)
+        return true;
+      return false;
     }
   }
   

@@ -1,4 +1,4 @@
-# Copyright 2013 Eucalyptus Systems, Inc.
+# Copyright 2013-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -25,12 +25,13 @@
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
+
 import eucadmin
 from eucadmin.modifyservice import ModifyService
 
 class MigrateInstances(AWSQueryRequest):
-    ServicePath = '/services/Eucalyptus'
-    ServiceClass = eucadmin.EucAdmin
+    ServiceClass = eucadmin.EC2
+    ServicePath = '/services/compute'
     Description = ('Migrate one instance from its current host, or migrate '
                    'all instances off a specific host.  Either a single '
                    'instance or a single source host is required.')
@@ -51,12 +52,6 @@ class MigrateInstances(AWSQueryRequest):
                     ptype='boolean', default=False, request_param=False,
                     doc=('also stop the source node controller to prevent new '
                          'instances from running on it (requires --source)'))]
-
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass()
-        return self.connection
 
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')

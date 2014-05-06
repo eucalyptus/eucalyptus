@@ -38,7 +38,7 @@ import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.EucalyptusCloudException;

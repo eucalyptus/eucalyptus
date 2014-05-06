@@ -24,6 +24,14 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -38,14 +46,23 @@ import edu.ucsb.eucalyptus.msgs.TagInfo;
  * In case we want to create multiple instances(ASG) of the imaging service,
  * we should implement the additional methods here.
  */
+@ConfigurableClass(root = "imaging",  description = "Parameters controlling image conversion service")
 public class ImagingServiceLaunchers {
   private static Logger LOG = Logger.getLogger(ImagingServiceLaunchers.class);
 
   private static ImagingServiceLaunchers instance = new ImagingServiceLaunchers();
-  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
+  
   private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
   public static final String launcherId = "worker-01"; // version 4.0.0, but it can be any string
   public static final String SERVER_CERTIFICATE_NAME = "euca-internal-imaging-service";
+  
+  @ConfigurableField( displayName="enabled",
+      description = "enabling imaging worker",
+      initial = "true",
+      readonly = false,
+      type = ConfigurableFieldType.BOOLEAN,
+      changeListener = EnabledChangeListener.class)
+  public static Boolean IMAGING_WORKER_ENABLED = true;
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
@@ -69,10 +86,10 @@ public class ImagingServiceLaunchers {
     // lookup tags
     try{
       final List<TagInfo> tags = EucalyptusActivityTasks.getInstance().describeTags(Lists.newArrayList("value"), 
-          Lists.newArrayList(DEFAULT_LAUNCHER_TAG));
+          Lists.newArrayList(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG));
       if(tags !=null){
         for(final TagInfo tag : tags){
-          if(DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+          if(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
             if("security-group".equals(tag.getResourceType())){
               tagFound=true;
               break;
@@ -115,7 +132,7 @@ public class ImagingServiceLaunchers {
             .withUserData()
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
-            .withTag(DEFAULT_LAUNCHER_TAG)
+            .withTag(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG)
             .build();
       }catch(final Exception ex){
         throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
@@ -158,7 +175,7 @@ public class ImagingServiceLaunchers {
             .withUserData()
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
-            .withTag(DEFAULT_LAUNCHER_TAG)
+            .withTag(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG)
             .build();
       }catch(final Exception ex){
         throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
@@ -192,4 +209,32 @@ public class ImagingServiceLaunchers {
       return launchStateTable.containsKey(launcherId);
     }
   }
+  
+  public static class EnabledChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
+      try{
+        if("false".equals(((String) newValue).toLowerCase()) &&
+            "true".equals(t.getValue())){
+          try{
+            if(ImagingServiceLaunchers.getInstance().shouldDisable())
+              ImagingServiceLaunchers.getInstance().disable();
+          }catch(ConfigurablePropertyException ex){
+            throw ex;
+          }catch(Exception ex){
+            throw ex;
+          }
+        }else if ("true".equals((String) newValue)){
+          ;
+        }else
+          throw new ConfigurablePropertyException("Invalid property value");
+      }catch(final ConfigurablePropertyException ex){
+        throw ex;
+      }catch ( final Exception e ){
+        throw new ConfigurablePropertyException("Could not disable imaging service workers", e);
+      }
+    }
+  }
+
 }

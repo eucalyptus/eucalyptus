@@ -1998,10 +1998,10 @@ void log_argv(char ** argv)
 //! that can and probably should be done with the complementary low-level function:
 //! euca_waitpid().  Consider higher-level alternatives, too:
 //!
-//! - Those who want to use variable arguments (in lue of argv[]), can use
+//! - Those who want to use variable arguments (in lieu of argv[]), can use
 //!   euca_execlp_fd(), which constructs the argv[] and calls this function.
 //!
-//! - Those who want to use variable arguments (in lue of argv[]) and also
+//! - Those who want to use variable arguments (in liue of argv[]) and also
 //!   have the function wait for the child to complete, can use euca_execlp()
 //!   (and thus give up on the ability to feed stdin and read stdout and stderr).
 //!

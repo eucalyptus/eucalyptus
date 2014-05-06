@@ -45,7 +45,7 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;

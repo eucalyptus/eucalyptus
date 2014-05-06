@@ -36,9 +36,8 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
@@ -169,7 +168,7 @@ public class ImagingWorkers {
         final RunningInstancesItemType workerInstance = instances.get(0);
         boolean tagFound = false;
         for(final ResourceTag tag : workerInstance.getTagSet()){
-          if(ImagingServiceLaunchers.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+          if(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
             tagFound = true;
             break;
           } 

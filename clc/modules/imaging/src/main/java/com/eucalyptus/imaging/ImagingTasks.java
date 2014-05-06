@@ -25,18 +25,17 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
@@ -128,6 +127,17 @@ public class ImagingTasks {
     if(launchSpec.getInstanceType()==null)
       throw new ImagingServiceException("Instance type is required");
     
+    if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length() > 0){
+      try{
+        final List<DescribeKeyPairsResponseItemType> keys =
+            EucalyptusActivityTasks.getInstance().describeKeyPairsAsUser(Contexts.lookup().getUser().getUserId(), 
+            Lists.newArrayList(launchSpec.getKeyName()));
+        if(! launchSpec.getKeyName().equals(keys.get(0).getKeyName()))
+          throw new Exception();
+      }catch(final Exception ex){
+        throw new ImagingServiceException("Key "+launchSpec.getKeyName()+" is not found");
+      }
+    }
 
     List<String> clusters = null;
     try{

@@ -42,8 +42,8 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.worker.ImagingServiceProperties;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -119,6 +119,10 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   @Column ( name = "metadata_launchspec_private_ip_address")
   private String privateIpAddress;
   
+  // EUCA-specific extension
+  @Column ( name = "metadata_launchspec_key_name")
+  private String keyName;
+  
   @Column ( name = "metadata_image_id")
   private String imageId;
   
@@ -176,6 +180,14 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   
   public Boolean getLaunchSpecMonitoringEnabled(){
     return this.monitoringEnabled;
+  }
+  
+  public void setLaunchSpecKeyName(final String keyName){
+    this.keyName = keyName;
+  }
+  
+  public String getLaunchSpecKeyName(){
+    return this.keyName;
   }
   
   public List<ImportInstanceVolumeDetail> getVolumes(){
@@ -293,6 +305,9 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
           else if(group.getGroupId()!=null)
             newTask.addLaunchSpecGroupName(group.getGroupId());
         }
+      }
+      if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length()>0){
+        newTask.setLaunchSpecKeyName(launchSpec.getKeyName());
       }
       if(launchSpec.getSubnetId()!=null)
         LOG.warn("SubnetId is not supported for import-instance");

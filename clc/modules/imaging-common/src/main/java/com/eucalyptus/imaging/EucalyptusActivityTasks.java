@@ -17,25 +17,15 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging.worker;
+package com.eucalyptus.imaging;
 
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Lob;
-import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -97,24 +87,16 @@ import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
-import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
 import com.eucalyptus.compute.common.backend.VmTypeDetails;
-import com.eucalyptus.config.ModifyPropertyValueResponseType;
-import com.eucalyptus.config.ModifyPropertyValueType;
-import com.eucalyptus.config.PropertiesMessage;
-import com.eucalyptus.configurable.Properties;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
-import com.eucalyptus.empyrean.PropertiesService;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
@@ -122,8 +104,6 @@ import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vm.VmCreateImageSnapshot;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -162,7 +142,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
-import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -275,55 +254,6 @@ public class EucalyptusActivityTasks {
 		
 	}
 	
-	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatch>{
-		private String userId = null;
-		private CloudWatchUserActivity(final String userId){
-			this.userId = userId;
-		}
-		
-		@Override
-		public String getUserId() {
-			return this.userId;
-		}
-
-		@Override
-		public DispatchingClient<CloudWatchMessage, CloudWatch> getClient() {
-			try{
-				final DispatchingClient<CloudWatchMessage, CloudWatch> client =
-					new DispatchingClient<>(this.getUserId(), CloudWatch.class);
-				client.init();
-				return client;
-			}catch(Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
-	
-	private class DnsSystemActivity implements ActivityContext<DnsMessage, Dns> {
-
-		@Override
-		public String getUserId() {
-			try{
-				return Accounts.lookupSystemAdmin().getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-
-		@Override
-		public DispatchingClient<DnsMessage, Dns> getClient() {
-			try{
-				final DispatchingClient<DnsMessage, Dns> client
-					= new DispatchingClient<>(this.getUserId(), Dns.class);
-				client.init();
-				return client;
-			}catch(Exception e){
-				throw Exceptions.toUndeclared(e);
-			}
-		}
-		
-	}
-	
 	private class EmpyreanSystemActivity implements ActivityContext<EmpyreanMessage, Empyrean>{
 
 		@Override
@@ -346,31 +276,6 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(e);
 			}
 		}
-	}
-	
-	private class PropertiesServiceSystemActivity implements ActivityContext<PropertiesMessage, PropertiesService> {
-
-    @Override
-    public String getUserId() {
-      try{
-        // ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
-        return Accounts.lookupSystemAdmin( ).getUserId();
-      }catch(AuthException ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-
-    @Override
-    public DispatchingClient<PropertiesMessage, PropertiesService> getClient() {
-      try {
-        final DispatchingClient<PropertiesMessage, PropertiesService> client =
-              new DispatchingClient<>( this.getUserId( ), PropertiesService.class );
-          client.init();
-          return client;
-      } catch ( Exception e ) {
-          throw Exceptions.toUndeclared( e );
-      }
-    }
 	}
 	
 	private class EucalyptusSystemActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
@@ -735,6 +640,20 @@ public class EucalyptusActivityTasks {
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
+	}
+	
+	public List<DescribeKeyPairsResponseItemType> describeKeyPairsAsUser(final String userId, final List<String> keyNames){
+	  final EucaDescribeKeyPairsTask task =
+        new EucaDescribeKeyPairsTask(keyNames);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get()){
+        return task.getResult();
+      }else
+        throw new EucalyptusActivityException("failed to describe keypairs");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
 	}
 	
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
@@ -1130,7 +1049,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public String runInstancesAsUser(final String userId, final String imageId, final String groupName, 
-	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring){
+	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring, final String keyName){
 	  if(userId == null || userId.length()<=0)
 	    throw new IllegalArgumentException("User ID is required");
 	  if(imageId == null || imageId.length()<=0)
@@ -1142,6 +1061,7 @@ public class EucalyptusActivityTasks {
 	  task.setInstanceType(instanceType);
 	  task.setAvailabilityZone(availabilityZone);
 	  task.setMonitoring(monitoring);
+	  task.setKeyName(keyName);
 	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
 	  try{
 	    if(result.get())
@@ -1378,7 +1298,7 @@ public class EucalyptusActivityTasks {
 	  private String instanceType = null;
 	  private String availabilityZone = null;
 	  private boolean monitoringEnabled = false;
-	 
+	  private String keyName = null;
 	  private String instanceId = null;
 	  private EucalyptusRunInstancesTask(final String imageId){
 	    this.imageId = imageId;
@@ -1398,6 +1318,9 @@ public class EucalyptusActivityTasks {
 	  private void setMonitoring(final boolean monitoring){
 	    this.monitoringEnabled = monitoring;
 	  }
+	  private void setKeyName(final String keyName){
+	    this.keyName = keyName;
+	  }
 	  
 	  private RunInstancesType runInstances(){
 	    final RunInstancesType req = new RunInstancesType();
@@ -1410,6 +1333,8 @@ public class EucalyptusActivityTasks {
 	      req.setInstanceType(this.instanceType);
 	    if(this.availabilityZone!=null)
 	      req.setAvailabilityZone(this.availabilityZone);
+	    if(this.keyName!=null)
+	      req.setKeyName(this.keyName);
 	    req.setMonitoring(this.monitoringEnabled);
 	    req.setMinCount(1);
 	    req.setMaxCount(1);
