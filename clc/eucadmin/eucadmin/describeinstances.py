@@ -1,6 +1,6 @@
 # Software License Agreement (BSD License)
 #
-# Copyright (c) 2013 Eucalyptus Systems, Inc.
+# Copyright (c) 2013-2014 Eucalyptus Systems, Inc.
 # All rights reserved.
 #
 # Redistribution and use of this software in source and binary forms, with or
@@ -34,19 +34,8 @@ from boto.roboto.param import Param
 import eucadmin
 
 
-class EC2(AWSQueryService):
-    Name = 'ec2'
-    Description = 'compute service'
-    APIVersion = '2012-07-20'
-    Authentication = 'sign-v2'
-    Path = '/services/compute'
-    Port = 8773
-    Provider = 'aws'
-    EnvURL = 'EC2_URL'
-
-
 class DescribeInstances(eucadmin.EucadminRequest):
-    ServiceClass = EC2
+    ServiceClass = eucadmin.EC2
     ServicePath = '/services/compute'
 
     Args = [Param(name='InstanceId', long_name='InstanceId', ptype='array',
