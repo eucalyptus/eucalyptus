@@ -111,6 +111,7 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String subnetId;
   String instanceInitiatedShutdownBehavior;
   String privateIpAddress;
+  String keyName;
   public ImportInstanceLaunchSpecification() {}
 }
 public class ImportInstanceGroup extends EucalyptusData {

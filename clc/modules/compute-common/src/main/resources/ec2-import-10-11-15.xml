@@ -118,6 +118,7 @@
     <value name="subnetId" field="subnetId" usage="optional" />
     <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" />
     <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
+    <value name="keyName" field="keyName" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.DiskImage" abstract="true">
     <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDetail" />

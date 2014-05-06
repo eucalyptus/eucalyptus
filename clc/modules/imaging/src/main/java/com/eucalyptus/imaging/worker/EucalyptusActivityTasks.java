@@ -737,6 +737,20 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<DescribeKeyPairsResponseItemType> describeKeyPairsAsUser(final String userId, final List<String> keyNames){
+	  final EucaDescribeKeyPairsTask task =
+        new EucaDescribeKeyPairsTask(keyNames);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get()){
+        return task.getResult();
+      }else
+        throw new EucalyptusActivityException("failed to describe keypairs");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
 		final EucaDescribeKeyPairsTask task =
 				new EucaDescribeKeyPairsTask(keyNames);
@@ -1130,7 +1144,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public String runInstancesAsUser(final String userId, final String imageId, final String groupName, 
-	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring){
+	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring, final String keyName){
 	  if(userId == null || userId.length()<=0)
 	    throw new IllegalArgumentException("User ID is required");
 	  if(imageId == null || imageId.length()<=0)
@@ -1142,6 +1156,7 @@ public class EucalyptusActivityTasks {
 	  task.setInstanceType(instanceType);
 	  task.setAvailabilityZone(availabilityZone);
 	  task.setMonitoring(monitoring);
+	  task.setKeyName(keyName);
 	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
 	  try{
 	    if(result.get())
@@ -1378,7 +1393,7 @@ public class EucalyptusActivityTasks {
 	  private String instanceType = null;
 	  private String availabilityZone = null;
 	  private boolean monitoringEnabled = false;
-	 
+	  private String keyName = null;
 	  private String instanceId = null;
 	  private EucalyptusRunInstancesTask(final String imageId){
 	    this.imageId = imageId;
@@ -1398,6 +1413,9 @@ public class EucalyptusActivityTasks {
 	  private void setMonitoring(final boolean monitoring){
 	    this.monitoringEnabled = monitoring;
 	  }
+	  private void setKeyName(final String keyName){
+	    this.keyName = keyName;
+	  }
 	  
 	  private RunInstancesType runInstances(){
 	    final RunInstancesType req = new RunInstancesType();
@@ -1410,6 +1428,8 @@ public class EucalyptusActivityTasks {
 	      req.setInstanceType(this.instanceType);
 	    if(this.availabilityZone!=null)
 	      req.setAvailabilityZone(this.availabilityZone);
+	    if(this.keyName!=null)
+	      req.setKeyName(this.keyName);
 	    req.setMonitoring(this.monitoringEnabled);
 	    req.setMinCount(1);
 	    req.setMaxCount(1);
