@@ -747,8 +747,13 @@ public class ImageManager {
         final List<ImageInfo> images = Lists.newArrayList( Iterables.filter(
             Entities.query(
                 Images.exampleWithName( ctx.getUserFullName( ).asAccountFullName( ), name ),
-                Entities.queryOptions( ).withReadonly( true ).build( ) ),
-            Predicates.or( ImageMetadata.State.available, ImageMetadata.State.pending ) ) );
+                Entities.queryOptions( ).withReadonly( true ).build( ) ), new Predicate<ImageInfo>(){
+                  @Override
+                  public boolean apply(ImageInfo arg0) {
+                    return ImageMetadata.State.available.name().equals(arg0.getState().getExternalStateName()) ||
+                    ImageMetadata.State.pending.name().equals(arg0.getState().getExternalStateName());
+                  }
+            } ) );
         if( images.size( ) > 0 )
           throw new ClientComputeException(
               "InvalidAMIName.Duplicate",

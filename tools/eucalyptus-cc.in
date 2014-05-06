@@ -194,15 +194,19 @@ do_start() {
         # correct, succeed but warn the user if the default settings
         # are incorrect (and set them, and continue), fail if the
         # values cannot be set
+	
+        # first, apply sysctl settings (set in /etc/sysctl*)
+
+        apply_sysctl
+
         for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables
         do
 	    if [ -e "$CHECKVAR" ]; then
 		if [ -r "$CHECKVAR" ]; then
-                # first, apply sysctl settings (set in /etc/sysctl*)                                                                                                                                           
-                    apply_sysctl
                     VAL=`cat $CHECKVAR`
 		    
-                # if either the value is disabled after a sysctl reset, WARN the user, set it, and continue                                                                                                    
+                    # if either the value is disabled after a sysctl reset, WARN the user, set it, and continue
+
                     if [ "$VAL" = "0" ]; then
 			echo
 			echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
