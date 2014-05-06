@@ -263,8 +263,11 @@ public class ServiceUris {
       String hostNameString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
         : this.address.getHostAddress( )) : this.address.getHostAddress();
+      String pathString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
+        ? "/" : "/" + this.path)
+        : "/" + this.path; // no path if dns delegation is used and service is public
       try {
-        URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
+        URI u = new URI( schemeString, null, hostNameString, this.port, (pathString ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
