@@ -1358,7 +1358,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
         if (diskutil_part(blockblob_get_dev(a->bb), // issues `parted mkpart`
                           "primary",   //! @TODO make this work with more than 4 partitions
-                          NULL,        // do not create file system
+                          NULL,        // do not annotate file system
                           map[i].first_block_dst,   // first sector
                           map[i].first_block_dst + map[i].len_blocks - 1) != EUCA_OK) {
             LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
@@ -1495,12 +1495,14 @@ static int disk_expander(artifact * a)
         // but fall back to copy when snapshots are not possible or desired
         part_op = BLOBSTORE_COPY;
     }
-    // run through partitions, add their sizes, populate the map
+    // run through disk and partitions, add their sizes, populate the map
     virtualBootRecord *disk = a->vbr;
     assert(disk);
     blockmap map[EUCA_MAX_PARTITIONS]; // the map of disk sections
     int map_entries = 0;               // first map entry is for the disk
     long long offset_bytes = 0;
+    struct partition_table_entry parts[4]; // 4 is maximum for primary partitions
+    int parts_entries = 0;
 
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         artifact *dep = a->deps[i];
@@ -1523,15 +1525,35 @@ static int disk_expander(artifact * a)
                  a->instanceId, map_entries, blockblob_get_dev(a->deps[i]->bb), map[map_entries].first_block_dst,
                  map[map_entries].first_block_dst + map[map_entries].len_blocks - 1);
         offset_bytes += dep->size_bytes;
+
+        if (dep->vbr->type == NC_RESOURCE_IMAGE) {
+            int disk_parts = diskutil_get_parts(blockblob_get_dev(dep->bb), parts, 4);
+            if (disk_parts != 2) {
+                LOGERROR("[%s] expected two partitions in EMI (boot and root), but found %d\n", a->instanceId, disk_parts);
+                goto cleanup;
+            }
+            parts_entries = disk_parts;
+        } else {
+            if (parts_entries < 2 || parts_entries > 3) {
+                LOGERROR("[%s] unexpected additional partition (currently known: %d)\n", a->instanceId, parts_entries);
+                goto cleanup;
+            }
+
+            // shift the boot partition further down the list
+            memcpy(parts + parts_entries, parts + parts_entries - 1, sizeof(struct partition_table_entry));
+            struct partition_table_entry * p = parts + parts_entries - 1;
+            p->start_sector = map[map_entries].first_block_dst;
+            p->end_sector   = map[map_entries].first_block_dst + map[map_entries].len_blocks - 1;
+            if (dep->vbr->type == NC_FORMAT_SWAP) {
+                strncpy(p->filesystem, "linux-swap", sizeof(parts[parts_entries].filesystem));
+            } else {
+                strncpy(p->filesystem, "ext2", sizeof(parts[parts_entries].filesystem)); // ext2 is all 'parted' knows
+            }
+            snprintf(p->type, sizeof(p->type), "primary");
+            parts_entries++;
+        }
         map_entries++;
     }
-
-    // set fields in vbr that are needed for
-    // xml.c:gen_instance_xml() to generate correct disk entries
-    disk->guestDeviceType = disk->guestDeviceType;
-    disk->guestDeviceBus = disk->guestDeviceBus;
-    disk->diskNumber = disk->diskNumber;
-    set_disk_dev(disk);
 
     if (a->do_not_download) {
         LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
@@ -1546,14 +1568,19 @@ static int disk_expander(artifact * a)
         goto cleanup;
     }
 
-    // add the information to MBR for the new partitions
-    for (int i = 1; i < map_entries; i++) { // map [0] is for the disk
+    if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") != EUCA_OK) {   // issues `parted mklabel`
+        LOGERROR("[%s] failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        goto cleanup;
+    }
+
+    // add the information to MBR for all partitions
+    for (int i = 0; i < parts_entries; i++) {
         LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
         if (diskutil_part(blockblob_get_dev(a->bb), // issues `parted mkpart`
-                          "primary",   //! @TODO make this work with more than 4 partitions
-                          NULL,        // do not create file system
-                          map[i].first_block_dst,   // first sector
-                          map[i].first_block_dst + map[i].len_blocks - 1) != EUCA_OK) {
+                          "primary",   // admittedly, only works with 4 partitions max
+                          parts[i].filesystem,
+                          parts[i].start_sector,
+                          parts[i].end_sector) != EUCA_OK) {
             LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
             goto cleanup;
         }

@@ -74,6 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _GNU_SOURCE // for %ms in sscanf
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -578,6 +579,84 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
 
     LOGWARN("bad params: path=%s, part_type=%s\n", SP(path), SP(part_type));
     return (EUCA_INVALID_ERROR);
+}
+
+int diskutil_get_parts(const char *path, struct partition_table_entry entries[], int num_entries)
+{
+    assert(path);
+    assert(entries);
+    assert(num_entries>0);
+    bzero(entries, sizeof(struct partition_table_entry) * num_entries);
+
+    // output of 'parted DEV unit s print' looks roughly like:
+    //
+    // Model:  (file)
+    // Disk /dev/loop8: 3072063s
+    // Sector size (logical/physical): 512B/512B
+    // Partition Table: msdos
+    //
+    //
+    // Number  Start    End       Size      Type     File system  Flags
+    //  2      63s      204862s   204800s   primary  ext3
+    //  1      204863s  3072062s  2867200s  primary  ext3
+    char *output = pruntf(TRUE, "LD_PRELOAD='' %s %s --script %s unit s print",
+                          helpers_path[ROOTWRAP], helpers_path[PARTED], path);
+    if (!output) {
+        LOGERROR("cannot obtain partition information on device %s\n", path);
+        return -1;
+    }
+
+    char * s = strstr(output, "Number");
+    if (s==NULL) {
+        LOGERROR("cannot parse 'parted print' output for device %s (no 'Number')\n", path);
+        free(output);
+        return -1;
+    }
+    s = strstr(output, "Flags\n");
+    if (s==NULL) {
+        LOGERROR("cannot parse 'parted print' output for device %s (no 'Flags')\n", path);
+        free(output);
+        return -1;
+    }
+    s += strlen("Flags\n"); // onto the next line
+
+    // parse the partitions lines thatfollow the headers returned by 'parted print'
+    char * pline = strtok(s, "\n");  // split by semicolon
+    for (int p = 0; pline != NULL; p++) {
+        int index;
+        long long start;
+        long long end;
+        long long size;
+        char * type;
+        char * filesystem;
+
+        // expect syntax like: 1      204863s  3072062s  2867200s  primary  ext3
+        if (sscanf(pline, "%d %llds %llds %llds %ms %ms", &index, &start, &end, &size, &type, &filesystem) == 6) {
+            int n = index - 1;
+            if (n >= num_entries) { // do not have room for this entry
+                break;
+            }
+            entries[n].start_sector = start;
+            entries[n].end_sector = end;
+            euca_strncpy(entries[n].type, type, sizeof(entries[n].type));
+            euca_strncpy(entries[n].filesystem, filesystem, sizeof(entries[n].filesystem));
+            free(type);
+            free(filesystem);
+        }
+        pline = strtok(NULL, "\n");
+    }
+
+    // run through the entries[], ensure they are contiguous, starting with [0]
+    int count = 0;
+    for (int n=0; n<num_entries; n++) {
+        if (entries[n].end_sector > 0) {
+            count++;
+        } else {
+            break;
+        }
+    }
+
+    return count;
 }
 
 //!
@@ -1780,6 +1859,8 @@ int main(int argc, char *argv[])
 
     logfile(NULL, EUCA_LOG_TRACE, 4);
     log_prefix_set("%T %L %t9 |");
+    assert(diskutil_init(FALSE) == EUCA_OK);
+
     printf("%s: starting\n", argv[0]);
     output = execlp_output(TRUE, "/bin/echo", "hi", NULL);
     assert(output);
@@ -1801,6 +1882,23 @@ int main(int argc, char *argv[])
     free(output);
     output = execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL);
     assert(output == NULL);
+
+    { // test diskutil_get_parts()
+        struct partition_table_entry parts[5];
+        int n = diskutil_get_parts("/dev/sda", parts, 5);
+        assert(n > 0);
+        for (int i=0; i<n; i++) {
+            struct partition_table_entry * p = parts + i;
+            assert(p->start_sector >= 0L);
+            assert(p->end_sector > p->start_sector);
+            assert(p->type[0] != '\0');
+            assert(p->filesystem[0] != '\0');
+            printf("%i %014lld %014lld %s %s\n", i, p->start_sector, p->end_sector, p->type, p->filesystem);
+        }
+        n = diskutil_get_parts("/dev/sda", parts, 1);
+        assert(n == 1);
+    }
+
     printf("%s: completed\n", argv[0]);
 }
 
