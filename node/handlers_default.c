@@ -1639,7 +1639,7 @@ static void change_createImage_state(ncInstance * instance, createImage_progress
 //!
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result)
 {
-    LOGINFO("[%s] createImage task result=%s\n", instance->instanceId, createImage_progress_names[result]);
+    LOGINFO("[%s] createImage result: %s\n", instance->instanceId, createImage_progress_names[result]);
     sem_p(inst_sem);
     {
         change_createImage_state(instance, result);
@@ -1801,7 +1801,7 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 //!
 static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_t *pParams, bundling_progress result)
 {
-    LOGINFO("[%s] bundling task result=%s\n", pInstance->instanceId, bundling_progress_names[result]);
+    LOGINFO("[%s] bundling result: %s\n", pInstance->instanceId, bundling_progress_names[result]);
 
     sem_p(inst_sem);
     {
