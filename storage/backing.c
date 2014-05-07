@@ -595,7 +595,11 @@ static int stale_blob_examiner(const blockblob * bb)
 //!
 int save_instance_struct(const ncInstance * instance)
 {
-    return gen_instance_xml(instance);
+    if (instance->state == TEARDOWN) {
+        return EUCA_OK; // instance is without disk state => nowhere to write metadata
+    } else {
+        return gen_instance_xml(instance);
+    }
 }
 
 //!
