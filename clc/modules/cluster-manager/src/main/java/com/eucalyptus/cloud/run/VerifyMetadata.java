@@ -211,25 +211,26 @@ public class VerifyMetadata {
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
-        if ( bootSet.isBlockStorage( ) ) {
-        } else if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) &&
+        if ( ! bootSet.isBlockStorage( ) ) {
+          if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) &&
             bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
           throw new ImageInstanceTypeVerificationException(
               "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
               " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
               " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
               " size " + vmType.getDisk( ) + " GB." );
-        } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
             throw new ImageInstanceTypeVerificationException(
                 "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                 " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
                 " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
                 " size " + vmType.getDisk( ) + " GB." );
-        }
-        final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
-        if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
-          throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
-                                      + " Please contact your cloud administrator.");
+          }
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
+          if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
+            throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
+                                        + " Please contact your cloud administrator.");
+          }
         }
       } catch ( VerificationException e ) {
         throw e;
