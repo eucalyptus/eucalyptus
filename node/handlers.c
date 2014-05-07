@@ -543,7 +543,11 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
         if (instanceId) {
             // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
             ncInstance *instance = find_instance(&global_instances, instanceId);
-            if (instance && instance->terminationRequestedTime) { // termination of this instance was requested
+            if (instance
+                && (instance->terminationRequestedTime // termination of this instance was requested
+                    || (instance->state == BOOTING) // it is booting or rebooting
+                    || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
+                    || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
                 ignore_error = TRUE;
             }
             free(instanceId);
