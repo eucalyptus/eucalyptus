@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
+package com.eucalyptus.imaging.worker;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -47,7 +47,9 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -524,65 +526,11 @@ public class ImagingServiceActions {
       public String getResult() {
         final String userData = B64.standard.encString(String.format("%s\n%s",
             ImagingServiceProperties.CREDENTIALS_STR,
-            getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+            ImagingServiceProperties.getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
         return userData;
       }
-    }
-    
-    public static String getUserDataMap(String ntpServer, String logServer, String logServerPort) {
-      Map<String,String> kvMap = new HashMap<String,String>();
-      if(ntpServer != null)
-        kvMap.put("ntp_server", ntpServer);
-      if(logServer != null)
-        kvMap.put("log_server", logServer);
-      if(logServerPort != null)
-        kvMap.put("log_server_port", logServerPort);
-      
-      kvMap.put("imaging_service_url", String.format("imaging.%s",DNSProperties.DOMAIN));
-      kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
-      kvMap.put("compute_service_url",String.format("compute.%s", DNSProperties.DOMAIN));
-    
-    //final ServiceConfiguration dns = Topology.lookup(Dns.class);
-      final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
-          new Function<ServiceConfiguration, String>() {
-            @Override
-            public String apply(ServiceConfiguration arg0) {
-              return arg0.getInetAddress().getHostAddress();
-            }
-      }));
-      final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
-          new Function<ServiceConfiguration, String>(){
-            @Override
-            public String apply(ServiceConfiguration arg0) {
-              return arg0.getInetAddress().getHostAddress();
-            }
-      }));
-      
-      final StringBuilder sbDns= new StringBuilder();
-      for(final String address : enabledDns){
-        if(sbDns.length()<=0)
-          sbDns.append(address);
-        else
-          sbDns.append(","+address);
-      }
-      for(final String address : dnsHosts){
-        if(! enabledDns.contains(address)){
-          if(sbDns.length()<=0)
-            sbDns.append(address);
-          else
-            sbDns.append(","+address);
-        } 
-      }
-      kvMap.put("dns_server", sbDns.toString());
-
-      final StringBuilder sb = new StringBuilder();
-      for (String key : kvMap.keySet()){
-        String value = kvMap.get(key);
-        sb.append(String.format("%s=%s;", key, value));
-      }
-      return sb.toString();
     }
 
     public static class CreateLaunchConfiguration extends AbstractAction {

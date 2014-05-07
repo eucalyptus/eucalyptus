@@ -20,12 +20,15 @@
 package com.eucalyptus.imaging;
 
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 
@@ -53,7 +56,11 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
 import com.google.common.collect.Sets;
@@ -389,6 +396,60 @@ public class ImagingServiceProperties {
       }
     }
   }
+  
+  public static String getWorkerUserData(String ntpServer, String logServer, String logServerPort) {
+    Map<String,String> kvMap = new HashMap<String,String>();
+    if(ntpServer != null)
+      kvMap.put("ntp_server", ntpServer);
+    if(logServer != null)
+      kvMap.put("log_server", logServer);
+    if(logServerPort != null)
+      kvMap.put("log_server_port", logServerPort);
+    
+    kvMap.put("imaging_service_url", String.format("imaging.%s",DNSProperties.DOMAIN));
+    kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+    kvMap.put("compute_service_url",String.format("compute.%s", DNSProperties.DOMAIN));
+  
+  //final ServiceConfiguration dns = Topology.lookup(Dns.class);
+    final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
+        new Function<ServiceConfiguration, String>() {
+          @Override
+          public String apply(ServiceConfiguration arg0) {
+            return arg0.getInetAddress().getHostAddress();
+          }
+    }));
+    final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
+        new Function<ServiceConfiguration, String>(){
+          @Override
+          public String apply(ServiceConfiguration arg0) {
+            return arg0.getInetAddress().getHostAddress();
+          }
+    }));
+    
+    final StringBuilder sbDns= new StringBuilder();
+    for(final String address : enabledDns){
+      if(sbDns.length()<=0)
+        sbDns.append(address);
+      else
+        sbDns.append(","+address);
+    }
+    for(final String address : dnsHosts){
+      if(! enabledDns.contains(address)){
+        if(sbDns.length()<=0)
+          sbDns.append(address);
+        else
+          sbDns.append(","+address);
+      } 
+    }
+    kvMap.put("dns_server", sbDns.toString());
+
+    final StringBuilder sb = new StringBuilder();
+    for (String key : kvMap.keySet()){
+      String value = kvMap.get(key);
+      sb.append(String.format("%s=%s;", key, value));
+    }
+    return sb.toString();
+  }
 
   private static void onPropertyChange(final String emi, final String instanceType, 
       final String keyname, final String ntpServers, String logServer, String logServerPort) throws EucalyptusCloudException{
@@ -491,21 +552,21 @@ public class ImagingServiceProperties {
           if(ntpServers!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
                     ImagingServiceProperties.CREDENTIALS_STR,
-                    ImagingServiceActions.getUserDataMap(ntpServers,
+                    getWorkerUserData(ntpServers,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServer!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
             		ImagingServiceProperties.CREDENTIALS_STR,
-                    ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+            		getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         logServer,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServerPort!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
             		ImagingServiceProperties.CREDENTIALS_STR,
-                    ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+                    getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         logServerPort)));
           }
