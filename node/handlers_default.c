@@ -1886,6 +1886,8 @@ static void *bundling_thread(void *arg)
     snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", pParams->eucalyptusHomePath);
 
 #define _COMMON_BUNDLING_PARAMS \
+                         euca_run_workflow_parser,\
+                         (void *)pInstance->instanceId,\
                          run_workflow_path,\
                          "read-raw/up-bundle",\
                          "--input-path", backing_dev,\

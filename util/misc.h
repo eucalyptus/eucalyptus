@@ -180,7 +180,8 @@ int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, c
 int euca_waitpid(pid_t pid, int *pStatus);
 int euca_execlp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
 int euca_execlp(int *pStatus, const char *file, ...);
-int euca_execlp_log(int *pStatus, const char *file, ...);
+int euca_run_workflow_parser (const char *line, void *data);
+int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
 
 /*----------------------------------------------------------------------------*\
