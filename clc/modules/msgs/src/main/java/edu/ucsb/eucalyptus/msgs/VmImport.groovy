@@ -73,15 +73,8 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImportMessage extends EucalyptusMessage {
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    VmImportResponseMessage reply = (VmImportResponseMessage) super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return (TYPE) reply;
-  }
 }
 public class VmImportResponseMessage extends VmImportMessage {
-  protected String requestId;
 }
 /*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {

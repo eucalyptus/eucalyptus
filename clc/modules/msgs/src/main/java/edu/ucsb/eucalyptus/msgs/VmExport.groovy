@@ -67,15 +67,8 @@
 package edu.ucsb.eucalyptus.msgs;
 
 public class VmExportMessage extends EucalyptusMessage {
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    VmExportResponseMessage reply = (VmExportResponseMessage) super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return (TYPE) reply;
-  }
 }
 public class VmExportResponseMessage extends VmExportMessage {
-  protected String requestId;
 }
 /*********************************************************************************/
 public class CreateInstanceExportTaskResponseType extends VmExportResponseMessage {

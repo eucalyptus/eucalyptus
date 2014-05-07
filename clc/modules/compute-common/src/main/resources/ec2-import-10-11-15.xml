@@ -26,9 +26,8 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <binding force-classes="true" add-constructors="true">
-  <mapping class="com.eucalyptus.compute.common.VmImportMessage" abstract="true"/>
-  <mapping name="ImportInstance" class="com.eucalyptus.compute.common.ImportInstanceType" extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+  <mapping name="ImportInstance" class="com.eucalyptus.compute.common.ImportInstanceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="description" field="description" usage="optional" />
     <structure name="launchSpecification" field="launchSpecification" usage="required"
       type="com.eucalyptus.compute.common.ImportInstanceLaunchSpecification" />
@@ -39,36 +38,33 @@
     <value name="platform" field="platform" usage="required" />
   </mapping>
   <mapping name="ImportInstanceResponse" class="com.eucalyptus.compute.common.ImportInstanceResponseType"
-    extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.compute.common.ConversionTask" />
   </mapping>
-  <mapping name="CancelConversionTask" class="com.eucalyptus.compute.common.CancelConversionTaskType" extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+  <mapping name="CancelConversionTask" class="com.eucalyptus.compute.common.CancelConversionTaskType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="conversionTaskId" field="conversionTaskId" usage="required" />
   </mapping>
   <mapping name="CancelConversionTaskResponse" class="com.eucalyptus.compute.common.CancelConversionTaskResponseType"
-    extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" field="_return" usage="required" />
   </mapping>
-  <mapping name="ImportVolume" class="com.eucalyptus.compute.common.ImportVolumeType" extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+  <mapping name="ImportVolume" class="com.eucalyptus.compute.common.ImportVolumeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="availabilityZone" field="availabilityZone" usage="required" />
     <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDetail" />
     <value name="description" field="description" usage="optional" />
     <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolume" />
   </mapping>
-  <mapping name="ImportVolumeResponse" class="com.eucalyptus.compute.common.ImportVolumeResponseType" extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+  <mapping name="ImportVolumeResponse" class="com.eucalyptus.compute.common.ImportVolumeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.compute.common.ConversionTask" />
   </mapping>
   <mapping name="DescribeConversionTasks" class="com.eucalyptus.compute.common.DescribeConversionTasksType"
-    extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="conversionTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="conversionTaskIdSet"
       item-type="java.lang.String">
       <structure name="item">
@@ -77,9 +73,8 @@
     </collection>
   </mapping>
   <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.compute.common.DescribeConversionTasksResponseType"
-    extends="com.eucalyptus.compute.common.VmImportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="conversionTasks" usage="optional">
       <collection field="conversionTasks" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
         <structure name="item" type="com.eucalyptus.compute.common.ConversionTask" />
