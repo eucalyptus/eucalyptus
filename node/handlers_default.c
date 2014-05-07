@@ -733,9 +733,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
         instance = find_instance(&global_instances, instanceId);
-        instance->bail_flag = TRUE; // request any pending download retries to bail
-        instance->terminationRequestedTime = time(NULL);
-        save_instance_struct(instance);
+        if (instance != NULL) {
+            instance->bail_flag = TRUE; // request any pending download retries to bail
+            instance->terminationRequestedTime = time(NULL);
+            save_instance_struct(instance);
+        }
         sem_v(inst_sem);
     }
 
