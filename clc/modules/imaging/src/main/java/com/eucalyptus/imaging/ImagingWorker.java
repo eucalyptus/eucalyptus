@@ -41,7 +41,7 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImagingWorker extends AbstractStatefulPersistent<ImagingWorker.STATE> {
   enum STATE {
-    RUNNING, DECOMMISSIONED,  
+    RUNNING, RETIRING, DECOMMISSIONED,  
   }
   private ImagingWorker() {
     super(null, null);

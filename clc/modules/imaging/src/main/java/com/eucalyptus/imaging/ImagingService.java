@@ -283,7 +283,13 @@ public class ImagingService {
           if(request.getStatusMessage()!=null)
             stateMsg = request.getStatusMessage();
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, stateMsg);
-          LOG.warn(String.format("Worker reported failed conversion: %s", stateMsg));
+          LOG.warn(String.format("Worker reported failed conversion: %s-%s", stateMsg, request.getErrorCode() !=null ? request.getErrorCode() : "no error code"));
+          final String errorCode = request.getErrorCode();
+          if(errorCode!=null && errorCode.length()>0 && ImagingWorkers.isFatalError(errorCode)){
+            LOG.warn(String.format("A task %s experienced fatal error. Worker instance %s is being retired",
+                request.getImportTaskId(), request.getInstanceId()));
+            ImagingWorkers.retireWorker(request.getInstanceId());
+          }
           break;
         }
       }else{ // state other than "CONVERTING" is not valid and worker should stop working

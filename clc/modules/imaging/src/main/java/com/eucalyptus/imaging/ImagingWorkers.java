@@ -40,6 +40,7 @@ import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
@@ -69,22 +70,29 @@ public class ImagingWorkers {
       try{
         final List<ImagingWorker> workers = listWorkers();
         final List<ImagingWorker> timedout = Lists.newArrayList();
+        final List<ImagingWorker> retiring = Lists.newArrayList();
         final List<ImagingWorker> toRemove = Lists.newArrayList();
         for(final ImagingWorker worker : workers){
           if(isTimedOut(worker))
             timedout.add(worker);
+          if(ImagingWorker.STATE.RETIRING.equals(worker.getState()))
+            retiring.add(worker);
           if(ImagingWorker.STATE.DECOMMISSIONED.equals(worker.getState()) && shouldRemove(worker))
             toRemove.add(worker);
         }
         
         for(final ImagingWorker worker : timedout){
           LOG.warn(String.format("Imaging service worker %s is not responding", worker.getDisplayName()));
+          retireWorker(worker.getDisplayName());
+        }
+        
+        for(final ImagingWorker worker : retiring){
           final ImagingTask task = ImagingTasks.getConvertingTaskByWorkerId(worker.getDisplayName());
-          if(task!=null) {
+          if(task!=null && ImportTaskState.CONVERTING.equals(task.getState())) {
             ImagingTasks.killAndRerunTask(task.getDisplayName());
             LOG.debug(String.format("Imaging worker task %s is moved back into queue", task.getDisplayName()));
           }
-          retireWorker(worker.getDisplayName());
+          decommisionWorker(worker.getDisplayName());
         }
         
         for(final ImagingWorker worker : toRemove){
@@ -254,7 +262,11 @@ public class ImagingWorkers {
     }
   }
   
-  private static void retireWorker(final String workerId){
+  public static void retireWorker(final String workerId){
+    setWorkerState(workerId, ImagingWorker.STATE.RETIRING);
+  }
+  
+  private static void decommisionWorker(final String workerId){
     // terminate instance
     // set worker state DECOMMISSIONED
     String instanceId = null;
@@ -269,10 +281,16 @@ public class ImagingWorkers {
     if(instanceId!=null){
       try{
         EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
+        LOG.debug("Terminated imaging worker: "+workerId);
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex); 
       }
     }
     setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
+  }
+  
+  private static Set<String> FatalTaskErrors = Sets.newHashSet("FailureToAttachVolume", "FailureToDetachVolume");
+  public static boolean isFatalError(final String errorCode){
+      return FatalTaskErrors.contains(errorCode);
   }
 }

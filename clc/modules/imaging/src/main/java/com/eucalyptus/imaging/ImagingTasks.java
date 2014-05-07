@@ -411,6 +411,9 @@ public class ImagingTasks {
           Entities.transactionFor(ImagingTask.class ) ) {
         try{
           final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+          if(! ImportTaskState.CONVERTING.equals(entity.getState())){
+            return;
+          }
           entity.setState(ImportTaskState.PENDING);
           entity.setWorkerId(null);
           if(entity instanceof VolumeImagingTask){
