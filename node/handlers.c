@@ -2807,6 +2807,10 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "terminated", sizeof(status_str));
         } else if (instance->terminationRequestedTime) {
             strncpy(status_str, "terminating", sizeof(status_str));
+        } else if (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF) {
+            strncpy(status_str, "bundling", sizeof(status_str));
+        } else if (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF) {
+            strncpy(status_str, "creating image", sizeof(status_str));
         } else if (instance->bootTime == 0) {
             strncpy(status_str, "staging", sizeof(status_str));
         } // else it is "running"
