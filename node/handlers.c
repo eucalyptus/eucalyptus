@@ -2761,7 +2761,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     for (i = 0; i < (*outInstsLen); i++) {
         char vols_str[128] = "";
         char vol_str[16] = "";
-        char status_str[128] = "not migrating";
+        char status_str[128] = "running";
         ncInstance *instance = (*outInsts)[i];
 
         // construct a string summarizing the volumes attached to the instance
@@ -2807,7 +2807,9 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "terminated", sizeof(status_str));
         } else if (instance->terminationRequestedTime) {
             strncpy(status_str, "terminating", sizeof(status_str));
-        }
+        } else if (instance->bootTime == 0) {
+            strncpy(status_str, "staging", sizeof(status_str));
+        } // else it is "running"
 
         LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
     }

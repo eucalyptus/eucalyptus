@@ -17,20 +17,37 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
-
-import com.eucalyptus.util.EucalyptusCloudException;
-
+package com.eucalyptus.imaging.worker;
+import com.google.common.base.Function;
 /**
  * @author Sang-Min Park
  *
  */
-public class ImagingServiceActionException extends EucalyptusCloudException {
-  private static final long serialVersionUID = 1L;
-  public ImagingServiceActionException(String message){
-    super(message);
+public abstract class AbstractAction {
+  private Function<Class<? extends AbstractAction>, AbstractAction> actionLookup = null;
+  private String actionGroupId = null;
+  public AbstractAction(Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+    actionLookup = lookup;
+    this.actionGroupId = groupId;
   }
-  public ImagingServiceActionException(String message, Throwable cause){
-    super(message, cause);
+  public abstract boolean apply() throws ImagingServiceActionException;
+  public abstract void rollback() throws ImagingServiceActionException;
+  public abstract String getResult();
+  
+  public String getResult(Class<? extends AbstractAction> actionClass){
+    try{
+      return actionLookup.apply(actionClass).getResult();
+    }catch(final Exception ex){
+      return null;
+    }
+  }
+  
+  public String getGroupId(){
+    return this.actionGroupId;
+  }
+  
+  @Override
+  public String toString(){
+    return String.format("Imaging Service launch action: %s-%s", this.actionGroupId, this.getClass().toString());
   }
 }

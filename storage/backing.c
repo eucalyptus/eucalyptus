@@ -1009,14 +1009,14 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
 
         // delete all non-blob files in the directory
         if (blobstore_delete_nonblobs(work_bs, instance->instancePath) < 0) {
-            LOGWARN("[%s] failed to delete some non-blob files under %s\n", instance->instanceId, instance->instancePath);
+            LOGERROR("[%s] failed to delete some non-blob files under %s\n", instance->instanceId, instance->instancePath);
         }
     }
     // Finally try to remove the directory. If either the user or our code introduced
     // any new files, this last step will fail.
     set_path(path, sizeof(path), instance, NULL);
     if (rmdir(path) && do_destroy_files) {
-        LOGWARN("[%s] failed to remove backing directory %s\n", instance->instanceId, path);
+        LOGERROR("[%s] failed to remove backing directory %s\n", instance->instanceId, path);
     }
 
     return (ret);

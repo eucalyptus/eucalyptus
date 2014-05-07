@@ -24,8 +24,6 @@ import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.imaging.AbstractAction;
-import com.eucalyptus.imaging.ImagingServiceActions;
 import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;

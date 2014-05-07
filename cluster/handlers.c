@@ -3816,7 +3816,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
-    int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
+    int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0, pid = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
     char instId[16], uuid[48];
     ccResource *res = NULL;
@@ -3994,7 +3994,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 // couldn't run this VM, remove networking information from system
                 free_instanceNetwork(mac, vlan, 1, 1);
             } else {
-                int pid, ret;
+                int ret;
 
                 // try to run the instance on the chosen resource
                 LOGINFO("scheduler decided to run instance %s on resource %s, running count %d\n", instId, res->ncURL, res->running);
@@ -4004,12 +4004,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 pid = fork();
                 if (pid == 0) {
                     time_t startRun, ncRunTimeout;
-
-                    sem_mywait(RESCACHE);
-                    if (res->running > 0) {
-                        res->running++;
-                    }
-                    sem_mypost(RESCACHE);
 
                     ret = 0;
                     LOGTRACE("sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... "
@@ -4084,15 +4078,30 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                         ret = 1;
                     }
 
-                    sem_mywait(RESCACHE);
-                    if (res->running > 0) {
-                        res->running--;
-                    }
-                    sem_mypost(RESCACHE);
-
                     exit(ret);
                 } else {
                     rc = 0;
+                    {
+                        int status;
+
+                        if (res->running > 0) {
+                            res->running++;
+                        }
+                        pid_t p = timewait(pid, &status, OP_TIMEOUT - 5);
+                        if (res->running > 0) {
+                            res->running--;
+                        }
+
+                        if (p > 0) {
+                            if (WIFEXITED(status)) {
+                                rc = WEXITSTATUS(status);
+                            } else {
+                                rc = 1; // child crashed
+                            }
+                        } else {
+                            rc = 1; // timeout or error
+                        }
+                    }
                     LOGDEBUG("call complete (pid/rc): %d/%d\n", pid, rc);
                 }
                 if (rc != 0) {
