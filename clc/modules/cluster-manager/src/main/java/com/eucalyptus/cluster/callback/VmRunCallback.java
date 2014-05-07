@@ -223,26 +223,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   public void fireException( final Throwable e ) {
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( VmRunCallback.this.getRequest( ).toString( ) ) );
-    Predicate<Throwable> rollbackAddr = new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( Throwable input ) {
-        final Address addr = VmRunCallback.this.token.getAddress( );
-        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
-        try {
-          addr.release( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex.getMessage( ) );
-          Logs.extreme( ).error( ex, ex );
-        }
-        return true;
-      }
-    };
-    try {
-      Entities.asTransaction( VmInstance.class, Functions.forPredicate( rollbackAddr ) ).apply( e );
-    } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
     Predicate<Throwable> rollbackToken = new Predicate<Throwable>( ) {
       
       @Override
