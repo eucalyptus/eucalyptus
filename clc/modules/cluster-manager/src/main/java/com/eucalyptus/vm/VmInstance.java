@@ -278,11 +278,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       this.networkGroups = null;
     }
     try {
-      if ( this.networkIndex != null ) {
+      if ( this.networkIndex != null && Entities.isPersistent( this ) ) {
         this.networkIndex.release( );
         this.networkIndex.teardown( );
-        this.networkIndex = null;
       }
+      this.networkIndex = null;
     } catch ( final ResourceAllocationException ex ) {
       LOG.error( ex, ex );
     }
