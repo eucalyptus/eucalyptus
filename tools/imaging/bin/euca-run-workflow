@@ -345,6 +345,7 @@ class WF_DownVMDK_UpBundle(WF_base):
         parser = subparsers.add_parser(id, help='a help')
         _add_vmdk_args(parser)
         _add_up_bundle_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
