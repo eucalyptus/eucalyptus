@@ -647,6 +647,7 @@ int diskutil_get_parts(const char *path, struct partition_table_entry entries[],
         }
         pline = strtok(NULL, "\n");
     }
+    free(output);
 
     // run through the entries[], ensure they are contiguous, starting with [0]
     int count = 0;
