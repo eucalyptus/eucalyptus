@@ -21,20 +21,12 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common
 
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class VmExportMessage extends ComputeMessage {
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    VmExportResponseMessage reply = (VmExportResponseMessage) super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return (TYPE) reply;
-  }
 }
 public class VmExportResponseMessage extends VmExportMessage {
-  protected String requestId;
 }
 /*********************************************************************************/
 public class CreateInstanceExportTaskResponseType extends VmExportResponseMessage {

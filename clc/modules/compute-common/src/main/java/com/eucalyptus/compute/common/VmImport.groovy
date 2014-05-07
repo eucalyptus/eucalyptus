@@ -21,7 +21,6 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common
 
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 import net.sf.json.JSONObject;
@@ -31,15 +30,8 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImportMessage extends ComputeMessage {
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    VmImportResponseMessage reply = (VmImportResponseMessage) super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return (TYPE) reply;
-  }
 }
 public class VmImportResponseMessage extends VmImportMessage {
-  protected String requestId;
 }
 
 /*********************************************************************************/

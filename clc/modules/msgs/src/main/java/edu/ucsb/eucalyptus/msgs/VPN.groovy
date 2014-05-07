@@ -157,7 +157,6 @@ public class CreateCustomerGatewayType extends VirtualNetworkingMessage {
   Integer bgpAsn;
 }
 public class CreateCustomerGatewayResponseType extends VirtualNetworkingMessage {
-  String requestId;
   CustomerGatewayType customerGateway;
 }
 
@@ -179,7 +178,6 @@ public class CreateVpnGatewayType extends VirtualNetworkingMessage {
   String availabilityZone;
 }
 public class CreateVpnGatewayResponseType extends VirtualNetworkingMessage {
-  String requestId;
   String vpnGateway;
 }
 
