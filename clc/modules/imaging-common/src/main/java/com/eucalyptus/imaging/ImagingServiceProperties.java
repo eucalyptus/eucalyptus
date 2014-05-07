@@ -149,10 +149,10 @@ public class ImagingServiceProperties {
   
   @ConfigurableField( displayName="enabled",
       description = "enabling imaging worker healthcheck",
-      initial = "false",
+      initial = "true",
       readonly = false,
       type = ConfigurableFieldType.BOOLEAN)
-  public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
+  public static Boolean IMAGING_WORKER_HEALTHCHECK = true;
   
   
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
