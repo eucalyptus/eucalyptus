@@ -39,6 +39,21 @@ import com.eucalyptus.component.id.Eucalyptus;
 @PolicyVendor("eucaimaging")
 public class Imaging extends ComponentId {
   private static final long serialVersionUID = 1L;
+  
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
+
+  @Override
+  public boolean isDistributedService() {
+    return true;
+  }
+
+  @Override
+  public boolean isRegisterable() {
+    return false;
+  }
 
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
