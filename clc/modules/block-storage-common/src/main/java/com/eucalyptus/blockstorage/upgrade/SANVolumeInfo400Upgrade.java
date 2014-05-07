@@ -81,6 +81,7 @@ import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.PostUpgrade;
 import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
 public class SANVolumeInfo400Upgrade {
@@ -169,12 +170,12 @@ public class SANVolumeInfo400Upgrade {
 					}
 				}
 				tran.commit();
-				return true;
 			} catch (Exception e) {
-				LOG.warn("Failed to perform entity upgrade for SANVolumeInfo entities", e);
+				LOG.error("Failed to perform entity upgrade for SANVolumeInfo entities", e);
 				tran.rollback();
-				return false;
+				Exceptions.toUndeclared("Failed to perform entity upgrade for SANVolumeInfo entities", e);
 			}
+			return true;
 		}
 	}
 

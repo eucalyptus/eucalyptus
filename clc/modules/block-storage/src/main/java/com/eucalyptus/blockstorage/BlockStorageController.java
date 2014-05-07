@@ -175,6 +175,7 @@ public class BlockStorageController {
     public static Random randomGenerator = new Random();
 
     public static void configure() throws EucalyptusCloudException {
+    	BlockStorageGlobalConfiguration.getInstance();
         StorageProperties.updateWalrusUrl();
         StorageProperties.updateName();
         StorageProperties.updateStorageHost();
@@ -751,9 +752,10 @@ public class BlockStorageController {
     /**
      * Checks to see if a new snapshot of size volSize will exceed the quota
      * @param volSize
+     * @param maxSize 
      * @return
      */
-    private boolean totalSnapshotSizeLimitExceeded(String snapshotId, int volSize) throws EucalyptusCloudException {
+    private boolean totalSnapshotSizeLimitExceeded(String snapshotId, int volSize, int sizeLimitGB) throws EucalyptusCloudException {
 
         int totalSnapshotSize = 0;
         EntityTransaction dbTrans = Entities.get(SnapshotInfo.class);
@@ -773,7 +775,6 @@ public class BlockStorageController {
             for (SnapshotInfo snap : snapshots) {
                 totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);
             }
-            int sizeLimitGB = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
             LOG.debug("Snapshot " + snapshotId + " checking snapshot total size of  " + totalSnapshotSize + " against limit of " + sizeLimitGB);
             return (totalSnapshotSize + volSize) > sizeLimitGB;
         } catch(final Throwable e) {
@@ -827,16 +828,22 @@ public class BlockStorageController {
                 throw new VolumeNotReadyException(volumeId);
             } else {
                 //create snapshot
-                if(StorageProperties.shouldEnforceUsageLimits && totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize())) {
+                if(StorageProperties.shouldEnforceUsageLimits) {
                     int maxSize = -1;
                     try {
-                        maxSize = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
+                        maxSize = BlockStorageGlobalConfiguration.getInstance().getGlobal_total_snapshot_size_limit_gb();
                     } catch(Exception e) {
                         LOG.error("Could not determine max global snapshot limit. Aborting snapshot creation", e);
                         throw new EucalyptusCloudException("Total size limit not found.", e);
+                    } 
+                    if(maxSize <= 0) {
+                    	LOG.warn("Total snapshot size limit is less than or equal to 0");
+                    	throw new EucalyptusCloudException("Total snapshot size limit is less than or equal to 0");
                     }
-                    LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB");
-                    throw new SnapshotTooLargeException(snapshotId, maxSize);
+                    if(totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize(), maxSize)) {	
+                    	LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB");
+                    	throw new SnapshotTooLargeException(snapshotId, maxSize);
+                    }
                 }
 
                 Snapshotter snapshotter = null;
