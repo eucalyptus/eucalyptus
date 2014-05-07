@@ -2251,6 +2251,9 @@ int euca_execlp(int *pStatus, const char *file, ...)
 
 static void log_line_child (const char *line, int(*custom_parser)(const char *line, void *data), void *parser_data)
 {
+    if (line == NULL) {
+        return;
+    }
     if (custom_parser) {
         custom_parser(line, parser_data);
     } else {
@@ -2260,17 +2263,21 @@ static void log_line_child (const char *line, int(*custom_parser)(const char *li
 
 int euca_run_workflow_parser (const char *line, void *data)
 {
+    char * instance_id = (char *)data;
     long long received_bytes;
     long long total_bytes;
     char * s;
 
     LOGTRACE("%s\n", line); // log all output at TRACE level
-
+    if (instance_id == NULL) {
+        instance_id = "?";
+    }
     // parse progress from lines like: 'Wrote bytes:10485760/237974656,...'
     if ((s = strstr(line, "Wrote bytes"))
-        && sscanf(s, "Wrote bytes:%lld/%lld,", &received_bytes, &total_bytes) == 2) {
+        && (sscanf(s, "Wrote bytes:%lld/%lld,", &received_bytes, &total_bytes) == 2)
+        && (total_bytes > 0LL)) {
         LOGINFO("[%s] download progress: %lld/%lld bytes (%.1f%%)\n",
-                (char *)data,
+                instance_id,
                 received_bytes,
                 total_bytes,
                 ((double)received_bytes/(double)total_bytes)*100);
@@ -2278,7 +2285,7 @@ int euca_run_workflow_parser (const char *line, void *data)
     } else if ((s = strstr(line, "S3 request header: Content-Length: "))
                && sscanf(s, "S3 request header: Content-Length: %lld", &received_bytes) == 1) {
         LOGINFO("[%s] upload progress: %lld new bytes (total unknown)\n",
-                (char *)data,
+                instance_id,
                 received_bytes);
 
     } else if (strcasestr(line, "error")) { // any line with 'error'
