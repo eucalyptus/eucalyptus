@@ -1375,10 +1375,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	@Override
 	public SetBucketVersioningStatusResponseType setBucketVersioningStatus(final SetBucketVersioningStatusType request) throws S3Exception {
         Bucket bucket = getBucketAndCheckAuthorization(request);
-        ObjectStorageProperties.VersioningStatus versionStatus = ObjectStorageProperties.VersioningStatus.valueOf(request.getVersioningStatus());
         try {
+            ObjectStorageProperties.VersioningStatus versionStatus = ObjectStorageProperties.VersioningStatus.valueOf(request.getVersioningStatus());
             BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus);
-        } catch(IllegalResourceStateException e) {
+        } catch(IllegalArgumentException | IllegalResourceStateException e) {
             throw new IllegalVersioningConfigurationException(request.getVersioningStatus());
         } catch(MetadataOperationFailureException e) {
             throw new InternalErrorException(e);
