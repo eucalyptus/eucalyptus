@@ -356,7 +356,7 @@ public class ListenerRegistry {
               return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                  if ( Ats.inClassHierarchy(input).has( Periodic.class ) && busy.compareAndSet( false, true ) ) {
+                  if ( !Ats.inClassHierarchy(input).has( Periodic.class ) || busy.compareAndSet( false, true ) ) {
                     try {
                       key.fireEvent( input );
                     } catch ( Exception ex ) {
