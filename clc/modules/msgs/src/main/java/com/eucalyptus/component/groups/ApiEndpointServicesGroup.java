@@ -80,6 +80,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.util.techpreview.TechPreviews;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
@@ -96,7 +97,10 @@ public class ApiEndpointServicesGroup extends ServiceGroup {
   
   @Override
   public boolean apply( @Nullable ComponentId componentId ) {
-    return Ats.from( componentId ).has( PublicService.class ) && componentId.isRegisterable();
+    return componentId != null &&
+        Ats.from( componentId ).has( PublicService.class ) &&
+        componentId.isRegisterable( ) &&
+        !TechPreviews.isTechPreview( componentId );
   }
   
   @Entity
