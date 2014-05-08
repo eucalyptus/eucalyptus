@@ -1422,6 +1422,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             reply.setName(bucket.getBucketName());
             reply.setMaxKeys(maxKeys);
             reply.setKeyMarker(request.getKeyMarker());
+            reply.setVersionIdMarker(request.getVersionIdMarker());
             reply.setDelimiter(request.getDelimiter());
             reply.setPrefix(request.getPrefix());
             reply.setIsTruncated(versionListing.getIsTruncated());

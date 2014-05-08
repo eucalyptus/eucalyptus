@@ -33,6 +33,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
@@ -55,6 +56,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
@@ -356,8 +358,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             deleteMarker.setOwnerIamUserId(owningUser.getUserId());
             deleteMarker.setAcl(acp);
             ObjectEntity persistedDeleteMarker = Entities.persist(deleteMarker);
-            currentObject.setIsLatest(Boolean.FALSE);
-            Entities.mergeDirect(currentObject);
+            persistedDeleteMarker = ObjectMetadataManagers.getInstance().transitionObjectToState(persistedDeleteMarker, ObjectState.extant);
             trans.commit();
             return persistedDeleteMarker;
         } catch(Exception e) {
@@ -666,11 +667,31 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 				objCriteria.setMaxResults(queryStrideSize);
 
 				if (!Strings.isNullOrEmpty(fromKeyMarker)) {
-					objCriteria.add(Restrictions.gt("objectKey", fromKeyMarker));
-				}
+					if (!Strings.isNullOrEmpty(fromVersionId)) {
+						// Look for the key that matches the key-marker and version-id-marker
+						ObjectEntity searchObject = new ObjectEntity(bucket, fromKeyMarker, fromVersionId);
+						ObjectEntity matchingObject = null;
+						try {
+							matchingObject = Entities.uniqueResult(searchObject);
+							if (matchingObject == null || matchingObject.getObjectModifiedTimestamp() == null) {
+								throw new NoSuchKeyException(bucket.getBucketName() + "/" + fromKeyMarker + "?versionId=" + fromVersionId);
+							}
+						} catch (Exception e) {
+							LOG.warn("No matching object found for key-marker=" + fromKeyMarker + " and version-id-marker=" + fromVersionId);
+							throw new NoSuchKeyException(bucket.getBucketName() + "/" + fromKeyMarker + "?versionId=" + fromVersionId);
+						}
 
-				if (!Strings.isNullOrEmpty(fromVersionId)) {
-					objCriteria.add(Restrictions.gt("versionId", fromVersionId));
+						// The result set should be exclusive of the key with the key-marker version-id-marker pair. Look for keys that chronologically
+						// follow the version-id-marker for the given key-marker and also the keys that follow the key-marker.
+						objCriteria.add(Restrictions.or(
+								Restrictions.and(Restrictions.eq("objectKey", fromKeyMarker),
+										Restrictions.lt("objectModifiedTimestamp", matchingObject.getObjectModifiedTimestamp())),
+								Restrictions.gt("objectKey", fromKeyMarker)));
+					} else { // No version-id-marker, just set the criteria the key-marker
+						objCriteria.add(Restrictions.gt("objectKey", fromKeyMarker));
+					}
+				} else {
+					// No criteria to be set
 				}
 
 				if (!Strings.isNullOrEmpty(prefix)) {

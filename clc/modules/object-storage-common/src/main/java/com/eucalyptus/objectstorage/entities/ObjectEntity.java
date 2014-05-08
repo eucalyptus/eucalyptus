@@ -242,7 +242,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
             throw new IllegalArgumentException("versionId cannot be null for delete marker generation");
         }
 
-        ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId()).withState(ObjectState.extant);
+        ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId()).withState(ObjectState.creating);
         deleteMarker.setObjectUuid(generateInternalKey(objectKey));
         deleteMarker.setStorageClass("STANDARD");
         deleteMarker.setObjectModifiedTimestamp(new Date());
