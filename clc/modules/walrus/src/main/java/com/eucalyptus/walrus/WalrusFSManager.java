@@ -94,6 +94,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.eucalyptus.walrus.exceptions.NoSuchLifecycleConfigurationException;
 
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
@@ -2562,7 +2563,7 @@ public class WalrusFSManager extends WalrusManager {
         return reply;
     }
 
-    private static final SimpleDateFormat copyObjectFormat = new SimpleDateFormat(DateUtils.ALT_ISO8601_DATE_PATTERN);
+    private static final FastDateFormat copyObjectFormat = FastDateFormat.getInstance(DateUtils.ALT_ISO8601_DATE_PATTERN);
 
     @Override
     public CopyObjectResponseType copyObject(CopyObjectType request)
