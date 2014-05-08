@@ -37,6 +37,8 @@ import java.lang.annotation.Target;
 public @interface TechPreview {
   /**
    * Name of the system property to be used when enable the thing marked as TP for the annotated element.
+   *
+   * The property value must be "true" to enable.
    */
   String enableByDefaultProperty( ) default "enable.tech.preview";
 }

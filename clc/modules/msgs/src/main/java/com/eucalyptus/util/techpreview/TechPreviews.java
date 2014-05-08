@@ -75,16 +75,27 @@ public class TechPreviews {
     @Override
     public boolean apply( Class input ) {
       return Ats.from( input ).has( TechPreview.class )
-             && !System.getProperties( ).contains( Ats.from( input ).get( TechPreview.class ).enableByDefaultProperty( ) );
+             && !"true".equalsIgnoreCase( System.getProperty( Ats.from( input ).get( TechPreview.class ).enableByDefaultProperty(), "false" ) );
     }
     
   }
-  
+
+  /**
+   * Check if the given object should be treated as a tech preview.
+   *    * @param input The object to check
+   * @return true for a tech preview
+   */
   public static boolean check( Object input ) {
     return TP.INSTANCE.apply( input instanceof Class
       ? ( Class ) input : input.getClass( ) );
   }
-  
+
+  /**
+   * Check if the given object should be treated as a tech preview.
+   *
+   * @param o The object to check
+   * @return true for a tech preview
+   */
   public static boolean isTechPreview( Object o ) {
     return check( o );
   }
