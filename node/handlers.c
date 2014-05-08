@@ -543,7 +543,11 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
         if (instanceId) {
             // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
             ncInstance *instance = find_instance(&global_instances, instanceId);
-            if (instance && instance->terminationRequestedTime) { // termination of this instance was requested
+            if (instance
+                && (instance->terminationRequestedTime // termination of this instance was requested
+                    || (instance->state == BOOTING) // it is booting or rebooting
+                    || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
+                    || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
                 ignore_error = TRUE;
             }
             free(instanceId);
@@ -2807,6 +2811,10 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "terminated", sizeof(status_str));
         } else if (instance->terminationRequestedTime) {
             strncpy(status_str, "terminating", sizeof(status_str));
+        } else if (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF) {
+            strncpy(status_str, "bundling", sizeof(status_str));
+        } else if (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF) {
+            strncpy(status_str, "creating image", sizeof(status_str));
         } else if (instance->bootTime == 0) {
             strncpy(status_str, "staging", sizeof(status_str));
         } // else it is "running"

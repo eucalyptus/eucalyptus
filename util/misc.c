@@ -2249,15 +2249,59 @@ int euca_execlp(int *pStatus, const char *file, ...)
     return result;
 }
 
-static void log_line (const char * line)
+static void log_line_child (const char *line, int(*custom_parser)(const char *line, void *data), void *parser_data)
 {
-    LOGDEBUG("%s\n", line); //! @TODO add sophisticated parsing
+    if (line == NULL) {
+        return;
+    }
+    if (custom_parser) {
+        custom_parser(line, parser_data);
+    } else {
+        LOGDEBUG("%s\n", line);
+    }
+}
+
+int euca_run_workflow_parser (const char *line, void *data)
+{
+    char * instance_id = (char *)data;
+    long long received_bytes;
+    long long total_bytes;
+    char * s;
+
+    LOGTRACE("%s\n", line); // log all output at TRACE level
+    if (instance_id == NULL) {
+        instance_id = "?";
+    }
+    // parse progress from lines like: 'Wrote bytes:10485760/237974656,...'
+    if ((s = strstr(line, "Wrote bytes"))
+        && (sscanf(s, "Wrote bytes:%lld/%lld,", &received_bytes, &total_bytes) == 2)
+        && (total_bytes > 0LL)) {
+        LOGINFO("[%s] download progress: %lld/%lld bytes (%.1f%%)\n",
+                instance_id,
+                received_bytes,
+                total_bytes,
+                ((double)received_bytes/(double)total_bytes)*100);
+
+    } else if ((s = strstr(line, "S3 request header: Content-Length: "))
+               && sscanf(s, "S3 request header: Content-Length: %lld", &received_bytes) == 1) {
+        LOGINFO("[%s] upload progress: %lld new bytes (total unknown)\n",
+                instance_id,
+                received_bytes);
+
+    } else if (strcasestr(line, "error")) { // any line with 'error'
+        LOGERROR("%s\n", line);
+
+    } else if (strcasestr(line, "warn")) { // any line with 'warn'
+        LOGWARN("%s\n", line);
+    }
+
+    return 0;
 }
 
 // to accommodate potentially large JSON-formatted status lines
 #define LINEBUFSIZE 10240
 
-static int log_fds(int nfds, int fds[])
+static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, void *data), void *parser_data)
 {
     assert(nfds<=FD_SETSIZE);
     int ret = EUCA_ERROR;
@@ -2316,14 +2360,14 @@ static int log_fds(int nfds, int fds[])
                         for (int j=0; j<read_bytes; j++) {
                             if (wptr[j]=='\n') { // we have a new line to print!
                                 wptr[j]='\0';
-                                log_line(linebuf + rpos);
+                                log_line_child(linebuf + rpos, custom_parser, parser_data);
                                 rpos = wpos[i] + j + 1;
                             }
                         }
                         int unprinted = (wpos[i] + read_bytes) - rpos;
                         if (unprinted == LINEBUFSIZE-1) { // if buffer is full, dump it without waiting for a newline
                             linebuf[LINEBUFSIZE-1] = '\0';
-                            log_line(linebuf);
+                            log_line_child(linebuf, custom_parser, parser_data);
                             unprinted = 0;
                         }
                         if (rpos > 0 && unprinted > 0) { // some bytes were printed
@@ -2370,7 +2414,7 @@ static int log_fds(int nfds, int fds[])
 //!
 //! @note
 //!
-int euca_execlp_log(int *pStatus, const char *file, ...)
+int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *data), void *parser_data, const char *file, ...)
 {
     char **argv = NULL;
     int result;
@@ -2391,7 +2435,7 @@ int euca_execlp_log(int *pStatus, const char *file, ...)
     int child_fds[2];
     result = euca_execvp_fd(&pid, NULL, &child_fds[0], &child_fds[1], argv);
     if (result == EUCA_OK) {
-        log_fds(2, child_fds);
+        log_fds(2, child_fds, custom_parser, parser_data);
         result = euca_waitpid(pid, pStatus);
     }
     free_char_list(argv);
@@ -2438,17 +2482,17 @@ static void *competitor_function(void *arg)
 {
     int status;
     for (int i=0; i<COMPETITOR_ITERATIONS; i++) {
-        assert(euca_execlp_log(&status, "/bin/ls", "/", NULL)==EUCA_OK);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "/", NULL)==EUCA_OK);
         assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
         assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
         assert (status!=0);
-        assert(euca_execlp_log(&status, "/bin/cat", "/etc/passwd", NULL)==EUCA_OK);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/passwd", NULL)==EUCA_OK);
         assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/cat", "/etc/mime.types", NULL)==EUCA_OK);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", NULL)==EUCA_OK);
         assert (status==0);
-        assert(euca_execlp_log(&status, "/bin/cat", "/etc/mime.types", "/foo", "/etc/mime.types", NULL)==EUCA_ERROR);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", "/foo", "/etc/mime.types", NULL)==EUCA_ERROR);
         assert (status!=0);
     }
 

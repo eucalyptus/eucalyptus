@@ -733,9 +733,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
         instance = find_instance(&global_instances, instanceId);
-        instance->bail_flag = TRUE; // request any pending download retries to bail
-        instance->terminationRequestedTime = time(NULL);
-        save_instance_struct(instance);
+        if (instance != NULL) {
+            instance->bail_flag = TRUE; // request any pending download retries to bail
+            instance->terminationRequestedTime = time(NULL);
+            save_instance_struct(instance);
+        }
         sem_v(inst_sem);
     }
 
@@ -1639,7 +1641,7 @@ static void change_createImage_state(ncInstance * instance, createImage_progress
 //!
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result)
 {
-    LOGINFO("[%s] createImage task result=%s\n", instance->instanceId, createImage_progress_names[result]);
+    LOGINFO("[%s] createImage result: %s\n", instance->instanceId, createImage_progress_names[result]);
     sem_p(inst_sem);
     {
         change_createImage_state(instance, result);
@@ -1801,7 +1803,7 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 //!
 static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_t *pParams, bundling_progress result)
 {
-    LOGINFO("[%s] bundling task result=%s\n", pInstance->instanceId, bundling_progress_names[result]);
+    LOGINFO("[%s] bundling result: %s\n", pInstance->instanceId, bundling_progress_names[result]);
 
     sem_p(inst_sem);
     {
@@ -1886,6 +1888,8 @@ static void *bundling_thread(void *arg)
     snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", pParams->eucalyptusHomePath);
 
 #define _COMMON_BUNDLING_PARAMS \
+                         euca_run_workflow_parser,\
+                         (void *)pInstance->instanceId,\
                          run_workflow_path,\
                          "read-raw/up-bundle",\
                          "--input-path", backing_dev,\

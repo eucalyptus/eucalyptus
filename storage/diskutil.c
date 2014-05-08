@@ -266,6 +266,8 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
     char run_workflow_path[EUCA_MAX_PATH];
     snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", euca_home_path);
     int rc = euca_execlp_log(NULL,
+                             euca_run_workflow_parser,
+                             (void *)instanceId,
                              run_workflow_path,
                              "down-bundle/write-raw",
                              "--image-manifest-url", url,
@@ -645,6 +647,7 @@ int diskutil_get_parts(const char *path, struct partition_table_entry entries[],
         }
         pline = strtok(NULL, "\n");
     }
+    free(output);
 
     // run through the entries[], ensure they are contiguous, starting with [0]
     int count = 0;
