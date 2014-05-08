@@ -130,7 +130,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
         }
       }
       final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
-      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" );
+      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
       return
           usesServicePath ||
           ( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) );

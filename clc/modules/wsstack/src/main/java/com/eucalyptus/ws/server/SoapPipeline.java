@@ -78,7 +78,7 @@ public abstract class SoapPipeline extends FilteredPipeline {
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
     final boolean usesServicePath = Iterables.any( servicePaths, Strings.isSuffixOf( message.getUri( ) ) );
-    final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" );
+    final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
     return
         message.getHeaderNames().contains( "SOAPAction" ) &&
             ( usesServicePath ||
