@@ -126,13 +126,13 @@ public class ImportManager {
     }
     
     try{
-      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+      if (! Permissions.isAuthorized(
           VENDOR_EC2,
           EC2_RESOURCE_INSTANCE,
           "",
           null,
           EC2_IMPORTINSTANCE,
-          context.getAuthContext() ) ) ) {
+          context.getAuthContext() ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import instance." );
       }
     }catch(final ImagingServiceException ex){
@@ -181,13 +181,13 @@ public class ImportManager {
     }
     
     try{
-      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+      if (! Permissions.isAuthorized(
           VENDOR_EC2,
           EC2_RESOURCE_VOLUME,
           "",
           null,
           EC2_IMPORTVOLUME,
-          context.getAuthContext() ) ) ) {
+          context.getAuthContext() ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import volume." );
       }
     }catch(final ImagingServiceException ex){
@@ -228,13 +228,13 @@ public class ImportManager {
     final CancelConversionTaskResponseType reply = request.getReply( );
     final Context context = Contexts.lookup( );
     try{
-      if ( ! ( context.isAdministrator( ) || Permissions.isAuthorized(
+      if (! Permissions.isAuthorized(
           VENDOR_EC2,
           EC2_RESOURCE_VOLUME,
           "",
           null,
           EC2_CANCELCONVERSIONTASK,
-          context.getAuthContext() ) ) ) {
+          context.getAuthContext() ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion task." );
       }
     }catch(final ImagingServiceException ex){
@@ -275,13 +275,13 @@ public class ImportManager {
         ? Collections.<String> emptyList( )
             : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
     try{
-      if ( ! ( ctx.isAdministrator( ) || Permissions.isAuthorized(
+      if (! Permissions.isAuthorized(
           VENDOR_EC2,
           EC2_RESOURCE_VOLUME,
           "",
           null,
           EC2_DESCRIBECONVERSIONTASKS,
-          ctx.getAuthContext() ) ) ) {
+          ctx.getAuthContext() ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
       }
     }catch(final ImagingServiceException ex){
