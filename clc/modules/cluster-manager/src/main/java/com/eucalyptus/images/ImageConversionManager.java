@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -91,7 +92,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
@@ -532,28 +532,27 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     return pendingImages;
   }
   
-  private static final Function<String, Optional<DiskImageConversionTask>> resolveConversionTask(){
-    return new Function<String, Optional<DiskImageConversionTask>>(){
-      @Override
-      public Optional<DiskImageConversionTask> apply(final String taskId) {
-        try{
-          final DescribeConversionTasks task = 
-              new DescribeConversionTasks(Lists.newArrayList(taskId));
-          final CheckedListenableFuture<Boolean> result = task.dispatch();
-          if(result.get()){
-            return Optional.of(task.getTasks().get(0));
-          }
-        }catch(final Exception ex){
-          ;
-        }
-        return Optional.absent();
-      }};
-  }
-  
   private static final LoadingCache<String, Optional<DiskImageConversionTask>> conversionTaskCache =
-      CacheBuilder
-          .from( CacheBuilderSpec.parse( "maximumSize=250, expireAfterAccess=30s" ) )
-          .build( CacheLoader.from( resolveConversionTask() ) );
+      CacheBuilder.newBuilder()
+      .maximumSize(250)
+      .expireAfterWrite(20, TimeUnit.SECONDS)
+      .build( new CacheLoader<String, Optional<DiskImageConversionTask>>(){
+        @Override
+        public Optional<DiskImageConversionTask> load(String taskId)
+            throws Exception {
+          try{
+            final DescribeConversionTasks task = 
+                new DescribeConversionTasks(Lists.newArrayList(taskId));
+            final CheckedListenableFuture<Boolean> result = task.dispatch();
+            if(result.get()){
+              return Optional.of(task.getTasks().get(0));
+            }
+          }catch(final Exception ex){
+            LOG.error("Failed to call describe-conversion-task: "+taskId);
+          }
+          return Optional.absent();
+        }
+      });
 
   private static Set<String> taggedImages = Sets.newHashSet();
   private void updateTags(final List<String> images) throws Exception{
@@ -569,8 +568,9 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           try{
             Optional<DiskImageConversionTask> task = 
                conversionTaskCache.get(taskId);
-            if(task.isPresent())
+            if(task.isPresent()){
               message = task.get().getStatusMessage();
+            }
           }catch(final Exception ex){
             ;
           }
@@ -645,7 +645,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     for(final VmInstance instance : instances){
       final String instanceId = instance.getInstanceId();
       final String instanceOwnerId = instance.getOwnerUserId();
-      if(tagMessage.containsKey(instanceId) && statusMessage.endsWith(tagMessage.get(instanceId))){
+      if(tagMessage.containsKey(instanceId) && statusMessage.equals(tagMessage.get(instanceId))){
         ;
       }else{
         resetTag(instanceOwnerId, instanceId, TAG_KEY_MESSAGE, statusMessage);
