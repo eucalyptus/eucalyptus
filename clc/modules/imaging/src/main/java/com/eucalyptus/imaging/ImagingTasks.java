@@ -453,22 +453,14 @@ public class ImagingTasks {
     }
   }
   /************************* Methods for volume imaging tasks ************************/
-  public static List<VolumeImagingTask> getVolumeImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
+  public static List<VolumeImagingTask> getVolumeImagingTasks() {
     synchronized(lock){
-      final List<VolumeImagingTask> result = Lists.newArrayList();
       try ( final TransactionResource db =
           Entities.transactionFor( VolumeImagingTask.class ) ) {
-        final VolumeImagingTask sample = VolumeImagingTask.namedByAccount(owningAccount.getAccountNumber());
+        final VolumeImagingTask sample = VolumeImagingTask.named();
         final List<VolumeImagingTask> tasks = Entities.query(sample, true);
-        if(taskIdList!=null && taskIdList.size()>0){
-          for(final VolumeImagingTask candidate : tasks){
-            if(taskIdList.contains(candidate.getDisplayName()))
-              result.add(candidate);
-          }
-        }else
-          result.addAll(tasks);
+        return tasks;
       }
-      return result;
     }
   }
   

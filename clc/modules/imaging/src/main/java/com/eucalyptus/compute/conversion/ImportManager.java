@@ -290,15 +290,13 @@ public class ImportManager {
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
     }
 
-    //TODO: extends for volumes
     final Predicate<? super VolumeImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( VolumeImagingTask.class )
         .byId( request.getConversionTaskIdSet( ) )
         .byOwningAccount( ownerInfo )
         .byPrivileges()
         .buildPredicate( );
     Iterable<VolumeImagingTask> tasksToList = 
-        ImagingTasks.getVolumeImagingTasks(AccountFullName.getInstance(ctx.getAccount()), 
-        request.getConversionTaskIdSet());
+        ImagingTasks.getVolumeImagingTasks();
     for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
       ConversionTask t = task.getTask( );
       reply.getConversionTasks().add( t );
