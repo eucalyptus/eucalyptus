@@ -296,10 +296,8 @@ public class WalrusOutboundHandler extends MessageStackHandler {
         //write extra headers
         if (reply.getByteRangeEnd() != null && reply.getByteRangeStart() != null) {
             httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
-            httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(reply.getByteRangeEnd() - reply.getByteRangeStart()));
-        } else {
-            httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
         }
+        httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
         return httpResponse;
     }
 

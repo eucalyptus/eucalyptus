@@ -2424,7 +2424,7 @@ public class WalrusFSManager extends WalrusManager {
                     }
                     reply.setMetaData(metaData);
                 }
-                Long size = objectInfo.getSize();
+                Long size = byteRangeEnd - byteRangeStart + 1;
                 String contentType = objectInfo.getContentType();
                 String contentDisposition = objectInfo.getContentDisposition();
                 db.commit();
