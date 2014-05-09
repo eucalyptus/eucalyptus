@@ -74,5 +74,10 @@ public interface SessionManager {
 	public void connect() throws EucalyptusCloudException;
 
 	public String runTask(final AbstractSANTask task) throws InterruptedException;
+
+	public interface TaskRunner extends AutoCloseable {
+		public String runTask(final AbstractSANTask task) throws InterruptedException;
+		public void close( );
+	}
 }
 
