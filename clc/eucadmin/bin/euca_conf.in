@@ -301,17 +301,6 @@ class EucaConf(object):
                                                           'component_name']},
                                metavar='<partition> <host>',
                                help='Remove a VMware broker.')
-        self.parser.add_option('--register-osg',
-                               action='callback', callback=self.reg_callback,
-                               callback_kwargs={'needs': ['partition_name',
-                                                          'component_name',
-                                                          'host_name']},
-                               help='Add a new object storage gateway.').help = optparse.SUPPRESS_HELP
-        self.parser.add_option('--deregister-osg',
-                               action='callback', callback=self.reg_callback,
-                               callback_kwargs={'needs': ['partition_name',
-                                                          'component_name']},
-                               help='Remove an object storage gateway.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--list-walrusbackends', action='store_true',
                                dest='list_walrusbackends', default=False,
                                help='List registered walrus back ends.')
