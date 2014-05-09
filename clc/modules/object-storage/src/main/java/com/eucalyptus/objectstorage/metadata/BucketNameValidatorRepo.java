@@ -88,20 +88,20 @@ public class BucketNameValidatorRepo {
 
     private static final Pattern IP_MATCHER = Pattern.compile("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
 
-    public static Validator<String> getBucketNameValidator() {
-        if (ObjectStorageGlobalConfiguration.bucket_naming_restrictions != null
-                && "extended".equalsIgnoreCase(ObjectStorageGlobalConfiguration.bucket_naming_restrictions) ) {
+    public static Validator<String> getBucketNameValidator(final String restrictionValue) {
+        if (restrictionValue != null
+                && "extended".equalsIgnoreCase(restrictionValue) ) {
             return extendedValidator;
         }
-        else if (ObjectStorageGlobalConfiguration.bucket_naming_restrictions != null
-                && "dns-compliant".equalsIgnoreCase(ObjectStorageGlobalConfiguration.bucket_naming_restrictions)) {
+        else if (restrictionValue != null
+                && "dns-compliant".equalsIgnoreCase(restrictionValue)) {
             return dnsCompliantValidator;
         }
         else {
             return new Validator<String>() {
                 @Override
                 public boolean check(String value) {
-                    LOG.error("the value " + ObjectStorageGlobalConfiguration.bucket_naming_restrictions
+                    LOG.error("the value " + restrictionValue
                             + " is not valid, must be either 'extended' or 'dns-compliant'. No validation " +
                             "will be done on the specified bucket name (may result in errors).");
                     if (value != null && value.length() > 0) {

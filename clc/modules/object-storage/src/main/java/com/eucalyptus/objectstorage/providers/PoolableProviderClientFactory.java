@@ -64,6 +64,7 @@ package com.eucalyptus.objectstorage.providers;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import org.apache.commons.pool.PoolableObjectFactory;
 
@@ -78,7 +79,7 @@ public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgI
     private String upstreamEndpoint;
     private boolean usePathStyle;
 
-    private long checkIntervalInMs = S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChangeCheckInterval().intValue() * 1000l;
+    private long checkIntervalInMs = 15l; //use constant for now, if we start using this again should make a config value
 
     public PoolableProviderClientFactory(AWSCredentials requestUser, String upstreamEndpoint, boolean usePathStyle) {
         this.requestUser = requestUser;
@@ -89,12 +90,12 @@ public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgI
     @Override
     public OsgInternalS3Client makeObject() throws Exception {
         boolean useHttps = false;
-        if(S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps() != null && S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseHttps()) {
+        S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
+        if(providerConfig != null && providerConfig.getS3UseHttps() != null && providerConfig.getS3UseHttps()) {
             useHttps = true;
         }
 
-        OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, useHttps);
-        osgInternalS3Client.setS3Endpoint(upstreamEndpoint);
+        OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, upstreamEndpoint, useHttps, providerConfig.getS3UseBackendDns());
         osgInternalS3Client.setUsePathStyle(usePathStyle);
         return osgInternalS3Client;
     }
@@ -109,7 +110,7 @@ public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgI
         long now = new Date().getTime();
         long instantiated = amazonS3Client.getInstantiated().getTime();
         if (now - instantiated > checkIntervalInMs) {
-            if (S3ProviderConfiguration.getS3ProviderConfiguration().getPropertyChange().getTime() - instantiated > 0) {
+            if (ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getLastUpdateTimestamp().getTime() - instantiated > 0) {
                 return false;
             }
         }

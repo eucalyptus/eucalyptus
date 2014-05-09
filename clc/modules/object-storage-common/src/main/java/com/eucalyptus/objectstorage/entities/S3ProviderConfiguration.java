@@ -23,106 +23,69 @@ package com.eucalyptus.objectstorage.entities;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
-import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.storage.config.CacheableConfiguration;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import java.util.Date;
 import java.util.NoSuchElementException;
 
 @Entity
-@PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "provider_config")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
-@ConfigurableClass( root = "objectstorage.s3provider", description = "Configuration for S3-compatible backend")
-public class S3ProviderConfiguration extends AbstractPersistent {
-
+@PersistenceContext(name="eucalyptus_osg")
+@Table(name="s3provider_config")
+@ConfigurableClass( root = "objectstorage.s3provider", alias="backendconfig", description = "Configuration for S3-compatible backend", singleton = true)
+public class S3ProviderConfiguration extends AbstractPersistent implements CacheableConfiguration<S3ProviderConfiguration> {
     @Transient
-    private static Logger LOG = Logger.getLogger(S3ProviderConfiguration.class);
+    private static final String DEFAULT_S3_ENDPOINT = "uninitialized-s3-endpoint";
+    @Transient
+    private static final Logger LOG = Logger.getLogger(S3ProviderConfiguration.class);
+    @Transient
+    private static final boolean DEFAULT_BACKEND_DNS = false;
+    @Transient
+    private static final Boolean DEFAULT_BACKEND_HTTPS = false;
 
-    private static final String NAME = "osg_provider_config";
-
-    @Column(name = "config_name", unique = true)
-    private String name = NAME;
-
-	@ConfigurableField( description = "External S3 endpoint.",
-			displayName = "s3_endpoint",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class,
+    @ConfigurableField( description = "External S3 endpoint.",
+            displayName = "s3_endpoint",
             initial = "s3.amazonaws.com" )
     @Column(name = "endpoint")
-	public String S3Endpoint;
+    protected String S3Endpoint;
 
 	@ConfigurableField( description = "Local Store S3 Access Key.",
 			displayName = "s3_access_key", 
-			type = ConfigurableFieldType.KEYVALUEHIDDEN,
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
+			type = ConfigurableFieldType.KEYVALUEHIDDEN)
     @Column(name = "access_key")
-	public String S3AccessKey;
+	protected String S3AccessKey;
 
 	@ConfigurableField( description = "Local Store S3 Secret Key.",
 			displayName = "s3_secret_key", 
-			type = ConfigurableFieldType.KEYVALUEHIDDEN,
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
+			type = ConfigurableFieldType.KEYVALUEHIDDEN)
     @Column(name = "secret_key")
-	public String S3SecretKey;
+    @Lob
+    @Type(type="org.hibernate.type.StringClobType")
+	protected String S3SecretKey;
 	
 	@ConfigurableField( description = "Use HTTPS for communication to service backend.",
 			displayName = "use_https",
-			initial="false",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
+			initial="false")
     @Column(name = "use_https")
-	public boolean S3UseHttps;
+	protected Boolean S3UseHttps;
 	
 	@ConfigurableField( description = "Use DNS virtual-hosted-style bucket names for communication to service backend.",
 			displayName = "use_backend_dns",
-			initial="false",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
+			initial="false")
     @Column(name = "use_backend_dns")
-	public boolean S3UseBackendDns;
-
-    @ConfigurableField( description = "Number of seconds to wait between checks for configuration change.",
-            displayName = "prop_change_check_interval",
-            initial = "15",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
-    @Column(name = "prop_change_check_interval")
-    public Integer propertyChangeCheckInterval;
-
-    @ConfigurableField( description = "cap on the number of \"sleeping\" instances in the pool.",
-            displayName = "pool_max_idle",
-            initial = "5",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
-    @Column(name = "pool_max_idle")
-    public Integer poolMaxIdle;
-
-    @ConfigurableField( description = "cap on the total number of active instances from the pool.",
-            displayName = "pool_max_active",
-            initial = "20",
-            changeListener = S3ProviderConfiguration.S3ProviderConfigurationListener.class )
-    @Column(name = "pool_max_active")
-    public Integer poolMaxActive;
-
-    @Column(name = "prop_change")
-    private Date propertyChange;
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+	protected Boolean S3UseBackendDns;
 
     public boolean getS3UseBackendDns() {
 		return S3UseBackendDns;
@@ -140,12 +103,29 @@ public class S3ProviderConfiguration extends AbstractPersistent {
 		S3AccessKey = s3AccessKey;
 	}
 
-	public String getS3SecretKey() {
-		return S3SecretKey;
+	public String getS3SecretKey() throws Exception {
+        if(this.S3SecretKey != null) {
+            try {
+                return OSGUtil.decryptWithComponentPrivateKey(ObjectStorage.class, this.S3SecretKey);
+            } catch(EucalyptusCloudException ex) {
+                LOG.error(ex);
+                throw ex;
+            }
+        } else {
+            return this.S3SecretKey;
+        }
 	}
 
-	public void setS3SecretKey(String s3SecretKey) {
-		S3SecretKey = s3SecretKey;
+	public void setS3SecretKey(String s3SecretKey) throws Exception {
+        if(s3SecretKey != null) {
+            try {
+                s3SecretKey = OSGUtil.encryptWithComponentPublicKey(ObjectStorage.class, s3SecretKey);
+            } catch(EucalyptusCloudException ex) {
+                LOG.error(ex);
+                throw ex;
+            }
+        }
+        this.S3SecretKey = s3SecretKey;
 	}
 	
 	public Boolean getS3UseHttps() {
@@ -164,109 +144,31 @@ public class S3ProviderConfiguration extends AbstractPersistent {
 		S3Endpoint = endPoint;
 	}
 
-    public Date getPropertyChange() {
-        return propertyChange;
-    }
-
-    public void setPropertyChange(Date propertyChange) {
-        this.propertyChange = propertyChange;
-    }
-
-    public String getS3EndpointHost() {
-		String[] s3EndpointParts = S3Endpoint.split(":");
-		if (s3EndpointParts.length > 0) {
-			return s3EndpointParts[0];
-		} else {
-			return null;
-		}
-	}
-
-	public int getS3EndpointPort() {
-		String[] s3EndpointParts = S3Endpoint.split(":");
-		if (s3EndpointParts.length > 1) {
-			try {
-				return Integer.parseInt(s3EndpointParts[1]);
-			} catch (NumberFormatException e) {
-				return 80;
-			}
-		} else {
-			return 80; //default http port
-		}
-	}
-
-    public Integer getPropertyChangeCheckInterval() {
-        return propertyChangeCheckInterval;
-    }
-
-    public void setPropertyChangeCheckInterval(Integer propertyChangeCheckInterval) {
-        this.propertyChangeCheckInterval = propertyChangeCheckInterval;
-    }
-
-    public Integer getPoolMaxIdle() {
-        return poolMaxIdle;
-    }
-
-    public void setPoolMaxIdle(Integer poolMaxIdle) {
-        this.poolMaxIdle = poolMaxIdle;
-    }
-
-    public Integer getPoolMaxActive() {
-        return poolMaxActive;
-    }
-
-    public void setPoolMaxActive(Integer poolMaxActive) {
-        this.poolMaxActive = poolMaxActive;
+    public S3ProviderConfiguration initializeDefaults() {
+        this.setS3Endpoint(DEFAULT_S3_ENDPOINT);
+        this.setS3UserBackendDns(DEFAULT_BACKEND_DNS);
+        this.setS3UseHttps(DEFAULT_BACKEND_HTTPS);
+        return this;
     }
 
     public static S3ProviderConfiguration getS3ProviderConfiguration() {
-        S3ProviderConfiguration example = new S3ProviderConfiguration();
-        example.setName(NAME);
-        S3ProviderConfiguration retrieved = null;
-        boolean needsCreated = false;
-        try (TransactionResource tran = Entities.transactionFor(S3ProviderConfiguration.class)) {
-            retrieved = Entities.uniqueResult(example);
-            tran.commit();
-            return retrieved;
-        }
-        catch (NoSuchElementException enf ){
-            needsCreated = true;
-        }
-        catch (TransactionException e) {
-            LOG.error("exception occurred while retrieving S3 provider configuration", e);
-            return null;
-        }
-        if (needsCreated) {
-            try (TransactionResource tran = Entities.transactionFor(S3ProviderConfiguration.class)) {
-                example.setS3Endpoint("s3.amazonaws.com");
-                example.setPropertyChangeCheckInterval( new Integer(15) );
-                example.setPoolMaxActive( new Integer(20) );
-                example.setPoolMaxIdle( new Integer(5) );
-                example = Entities.persist(example);
-                tran.commit();
-                return example;
+        try {
+            try {
+                return Transactions.find(new S3ProviderConfiguration());
             }
-            catch (Exception ex) {
-                LOG.error("exception occurred while creating S3 provider configuration", ex);
-                return null;
+            catch (NoSuchElementException enf ){
+                LOG.info("No extant S3 provider configuration found. Initializing defaults");
+                return Transactions.saveDirect(new S3ProviderConfiguration().initializeDefaults());
             }
         }
-        return null;
-    }
-
-    public static final class S3ProviderConfigurationListener implements PropertyChangeListener {
-        @Override
-        public void fireChange(ConfigurableProperty t, Object newValue) throws ConfigurablePropertyException {
-            S3ProviderConfiguration configuration = S3ProviderConfiguration.getS3ProviderConfiguration();
-            try (TransactionResource tran = Entities.transactionFor(S3ProviderConfiguration.class)) {
-                configuration = Entities.uniqueResult(configuration);
-                configuration.setPropertyChange(new Date());
-                tran.commit();
-            } catch (TransactionException e) {
-                LOG.error("exception occurred while retrieving S3 provider configuration, your configuration " +
-                        "change may require a cloud restart before taking effect");
-            }
+        catch (Throwable f) {
+            LOG.error("exception occurred while retrieving S3 provider configuration", f);
+            throw Exceptions.toUndeclared("Error getting/initializing s3 provider configuration", f);
         }
     }
 
-
+    @Override
+    public S3ProviderConfiguration getLatest() {
+        return getS3ProviderConfiguration();
+    }
 }

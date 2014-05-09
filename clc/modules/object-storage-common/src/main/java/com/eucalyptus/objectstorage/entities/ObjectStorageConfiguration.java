@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.config;
+package com.eucalyptus.objectstorage.entities;
 
 import java.io.Serializable;
 

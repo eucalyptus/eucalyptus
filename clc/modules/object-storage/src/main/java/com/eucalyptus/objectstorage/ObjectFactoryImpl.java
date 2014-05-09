@@ -41,6 +41,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
@@ -93,6 +94,19 @@ public class ObjectFactoryImpl implements ObjectFactory {
     private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
     private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE));
 
+    public static long getPutTimeoutInMillis() {
+        return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getFailed_put_timeout_hrs() * 60l * 60l * 1000l;
+    }
+
+    public static boolean useGetPutOnCopy() {
+        try {
+            return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getDoGetPutOnCopyFail();
+        } catch(Throwable f) {
+            LOG.error("Error getting OSG configuration for get/put on copy fail. Falling back to fail the operation", f);
+            return false;
+        }
+    }
+
     @Override
     public ObjectEntity copyObject(@Nonnull final ObjectStorageProviderClient provider,
                                    @Nonnull ObjectEntity entity,
@@ -100,6 +114,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                                    @Nonnull final User requestUser,
                                    final String metadataDirective) throws S3Exception {
         final ObjectMetadataManager objectManager = ObjectMetadataManagers.getInstance();
+
 
         //Initialize metadata for the object
         if(BucketState.extant.equals(entity.getBucket().getState())) {
@@ -133,7 +148,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                         response = provider.copyObject(request);
                     }
                     catch (Exception ex) {
-                        if (ObjectStorageGlobalConfiguration.doGetPutOnCopyFail != null && ObjectStorageGlobalConfiguration.doGetPutOnCopyFail.booleanValue() ) {
+                        if (useGetPutOnCopy()) {
                             response = providerGetPut(provider, request, requestUser, metadataDirective);
                         }
                         else {
@@ -149,7 +164,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<CopyObjectResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<ObjectEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -292,7 +307,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<PutObjectResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<ObjectEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -641,7 +656,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<UploadPartResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<PartEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -720,7 +735,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<CompleteMultipartUploadResponseType> completeTask = new FutureTask<>(completeCallable);
             PUT_OBJECT_SERVICE.execute(completeTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = 60;
             CompleteMultipartUploadResponseType response = waitForMultipartCompletion(completeTask, commitRequest.getUploadId(), commitRequest.getCorrelationId(), failTime, checkIntervalSec);
             mpuEntity.seteTag(response.getEtag());

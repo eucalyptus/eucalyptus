@@ -22,6 +22,7 @@ package com.eucalyptus.objectstorage;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageWalrus;
 
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
@@ -50,7 +51,7 @@ public class ObjectStorageAvailabilityEventListener implements EventListener<Clo
     if ( BootstrapArgs.isCloudController() && Bootstrap.isOperational() ) {
       try {
       	long capacity = 0;      	
-      	capacity = ObjectStorageGlobalConfiguration.max_total_reporting_capacity_gb;
+      	capacity = ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_total_reporting_capacity_gb();
 
       	ListenerRegistry.getInstance().fireEvent(
       			new ResourceAvailabilityEvent( StorageWalrus, new Availability(

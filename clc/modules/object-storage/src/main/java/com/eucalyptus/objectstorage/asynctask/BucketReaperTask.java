@@ -26,7 +26,9 @@ import java.util.Random;
 import com.eucalyptus.objectstorage.*;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -101,7 +103,7 @@ public class BucketReaperTask implements Runnable {
      */
     private void resolveBucketState(Bucket bucket) {
         LOG.trace("Resolving bucket state for bucket uuid " + bucket.getBucketUuid());
-        if(BucketState.deleting.equals(bucket.getState()) || !bucket.stateStillValid()) {
+        if(BucketState.deleting.equals(bucket.getState()) || !bucket.stateStillValid(ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getBucket_creation_wait_interval_seconds())) {
             //Clean-up a bucket marked for deletion. This usually indicates a failed delete operation previously
             LOG.trace("Deleting backend bucket for bucket uuid " + bucket.getBucketUuid() + " during bucket cleanup");
             try {

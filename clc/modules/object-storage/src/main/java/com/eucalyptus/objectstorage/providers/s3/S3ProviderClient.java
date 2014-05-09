@@ -64,6 +64,7 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
@@ -132,7 +133,6 @@ import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
-import com.eucalyptus.objectstorage.providers.PoolableProviderClientFactory;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -155,20 +155,19 @@ import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.VersionEntry;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
-import org.apache.commons.pool.PoolableObjectFactory;
-import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
@@ -185,7 +184,9 @@ import java.util.NoSuchElementException;
  */
 @ObjectStorageProviderClientProperty("s3")
 public class S3ProviderClient implements ObjectStorageProviderClient {
-	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class); 
+	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class);
+    private volatile URI upstreamEndpoint;
+    private volatile OsgInternalS3Client backendClient;
 
 	/**
 	 * Returns a usable S3 Client configured to send requests to the currently configured
@@ -193,7 +194,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	 * @return
 	 */
 	protected OsgInternalS3Client getS3Client(User requestUser) throws InternalErrorException {
-
+        S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
         AWSCredentials credentials;
         try {
             credentials = mapCredentials(requestUser);
@@ -201,76 +202,86 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
             throw new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"), e);
         }
-        try {
-            OsgInternalS3Client internalS3Client =
-                    getClientPool( credentials, this.getUpstreamEndpoint(), this.doUsePathStyle() ).borrowObject();
-            return internalS3Client;
-        } catch (Exception e) {
-            LOG.error("exception thrown retrieving internal s3 client", e);
-            throw new InternalErrorException("Cannot get s3client from pool", e);
-        }
-	}
 
-    protected void returnS3Client(User requestUser, OsgInternalS3Client pooledClient) throws InternalErrorException {
-        AWSCredentials credentials;
-        try {
-            credentials = mapCredentials(requestUser);
-        } catch(Exception e) {
-            LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call. This is likely to lead to a connection leak!", e);
-            InternalErrorException ex = new InternalErrorException("Cannot return s3client to pool due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
-            ex.initCause(e);
-            throw ex;
-        }
-        try {
-            GenericObjectPool<OsgInternalS3Client> pool = getClientPool(credentials, this.getUpstreamEndpoint(), this.doUsePathStyle());
-            pool.returnObject(pooledClient);
-        } catch (Exception e) {
-            LOG.error("failed to return s3client to pool, this connection is now leaked", e);
-        }
-    }
-
-    private static Map<String,GenericObjectPool<OsgInternalS3Client>> pools = Maps.newHashMap();
-    private static final int DEFAULT_POOL_MAX_IDLE = 5;
-    private static final int DEFAULT_POOL_MAX_ACTIVE = 20;
-    private synchronized static GenericObjectPool<OsgInternalS3Client> getClientPool(AWSCredentials credentials, String upstreamEndpoint, boolean usePathStyle){
-        if (pools.containsKey( credentials.getAWSAccessKeyId() )) {
-            return pools.get( credentials.getAWSAccessKeyId() );
-        }
-        GenericObjectPool.Config config = new GenericObjectPool.Config();
-        config.maxIdle = S3ProviderConfiguration.getS3ProviderConfiguration().getPoolMaxIdle() == null ?
-                DEFAULT_POOL_MAX_IDLE : S3ProviderConfiguration.getS3ProviderConfiguration().getPoolMaxIdle().intValue() ;
-        config.maxActive = S3ProviderConfiguration.getS3ProviderConfiguration().getPoolMaxActive() == null ?
-                DEFAULT_POOL_MAX_ACTIVE : S3ProviderConfiguration.getS3ProviderConfiguration().getPoolMaxActive().intValue() ;
-        config.testOnBorrow = true;
-
-        PoolableObjectFactory<OsgInternalS3Client> factory =
-                new PoolableProviderClientFactory( credentials, upstreamEndpoint, usePathStyle );
-        GenericObjectPool<OsgInternalS3Client> pool = new GenericObjectPool<>( factory, config);
-        pools.put(credentials.getAWSAccessKeyId(), pool);
-        return pool;
-    }
-
-    protected String getUpstreamEndpoint() {
-        return S3ProviderConfiguration.getS3ProviderConfiguration().getS3Endpoint();
-    }
-
-    protected boolean doUsePathStyle() {
-        return !S3ProviderConfiguration.getS3ProviderConfiguration().getS3UseBackendDns();
-    }
-
-    public static void flushClientPools() {
-        LOG.debug("closing, clearing and re-instantiating pools");
-        synchronized (pools) {
-            for (GenericObjectPool<OsgInternalS3Client> pool : pools.values()) {
-                try {
-                    pool.close();
-                    pool.clear();
-                } catch (Exception e) {
-                    LOG.error("caught exception while clearing out client connection pool", e);
+        if(this.backendClient == null ) {
+            synchronized(this) {
+                if(this.backendClient == null) {
+                    try {
+                        //Create new one
+                        this.backendClient = new OsgInternalS3Client(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(), providerConfig.getS3UseBackendDns());
+                        return this.backendClient;
+                    } catch (Exception e) {
+                        LOG.error("exception thrown retrieving internal s3 client", e);
+                        throw new InternalErrorException("Cannot get s3client from pool", e);
+                    }
                 }
             }
         }
-        pools = Maps.newHashMap();
+
+        try {
+            this.backendClient.update(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(), providerConfig.getS3UseBackendDns());
+            return this.backendClient;
+        } catch(Exception e){
+            throw new InternalErrorException(e);
+        }
+    }
+
+    protected URI getUpstreamEndpoint() throws URISyntaxException {
+        String raw = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3Endpoint();
+        if(upstreamEndpoint == null || !(upstreamEndpoint.getHost().equals(getUpstreamEndpointHost(raw)) && upstreamEndpoint.getPort() == getUpstreamEndpointPort(raw))) {
+            synchronized(this) {
+                upstreamEndpoint =  convertToFullURI(raw);
+            }
+        }
+        return upstreamEndpoint;
+   }
+
+    /**
+     * Returns valid URI with port, will assign 80 if not specified explicitly
+     * and will add a 'http' scheme if none found.
+     * @param raw
+     * @return
+     */
+    protected URI convertToFullURI(@Nonnull String raw) {
+        URI tmp = URI.create(raw);
+        if(!"http".equals(tmp.getScheme()) && !"https".equals(tmp.getScheme())) {
+            //Add the scheme
+            raw = "http://" + raw;
+            tmp = URI.create(raw);
+        }
+
+        if(tmp.getPort() != -1) {
+            return tmp; //It's valid
+        } else {
+            return URI.create(raw + ":80"); //just add default http port
+        }
+    }
+
+    protected String getUpstreamEndpointHost(@Nonnull String raw) {
+        String[] s3EndpointParts = raw.split(":");
+        if (s3EndpointParts.length > 0) {
+            return s3EndpointParts[0];
+        } else {
+            return null;
+        }
+    }
+
+    protected int getUpstreamEndpointPort(@Nonnull String raw) {
+        String[] s3EndpointParts = raw.split(":");
+        if (s3EndpointParts.length > 1) {
+            try {
+                return Integer.parseInt(s3EndpointParts[1]);
+            } catch (NumberFormatException e) {
+                return 80;
+            }
+        } else {
+            return 80; //default http port
+        }
+    }
+
+
+    protected boolean doUsePathStyle() {
+        return !ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3UseBackendDns();
     }
 
     /**
@@ -314,10 +325,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	 * @throws NoSuchElementException
 	 * @throws IllegalArgumentException
 	 */
-	protected BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
+	protected BasicAWSCredentials mapCredentials(User requestUser) throws Exception {
 		return new BasicAWSCredentials(
-                S3ProviderConfiguration.getS3ProviderConfiguration().getS3AccessKey(),
-                S3ProviderConfiguration.getS3ProviderConfiguration().getS3SecretKey());
+                ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3AccessKey(),
+                ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
 	}
 
 	protected ObjectMetadata getS3ObjectMetadata(PutObjectType request) {
@@ -346,6 +357,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	@Override
 	public void initialize() throws EucalyptusCloudException {
 		LOG.debug("Initializing");
+        //Prime the cache, initializes defaults etc. This is a bit ugly but needs to be provider-specific
+        ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
 		check();
 		LOG.debug("Initialization completed successfully");		
 	}
@@ -355,13 +368,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 		LOG.debug("Checking");
         Socket s = null;
 		try {
-            s = new Socket(S3ProviderConfiguration.getS3ProviderConfiguration().getS3EndpointHost(),
-                    S3ProviderConfiguration.getS3ProviderConfiguration().getS3EndpointPort());
-		} catch (UnknownHostException e) {
+            URI endpoint = this.getUpstreamEndpoint();
+            s = new Socket(endpoint.getHost(), endpoint.getPort());
+		} catch (URISyntaxException | UnknownHostException e) {
 			//it is safe to do this because we won't try to execute an operation until enable returns successfully.
-			throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3ProviderConfiguration().getS3Endpoint() + ". Please check configuration and network connection");
+			throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint Please check configuration and network connection");
 		} catch (IOException e) {
-			throw new EucalyptusCloudException("Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3ProviderConfiguration().getS3Endpoint() + ". Please check configuration and network connection");
+			throw new EucalyptusCloudException("Unable to connect to S3 Endpoint. Please check configuration and network connection");
 		} finally {
             try {
                 if( s != null && !s.isClosed()) {
@@ -383,14 +396,14 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	@Override
 	public void start() throws EucalyptusCloudException {
 		LOG.debug("Starting");
-		LOG.debug("Start completed successfully");		
+		LOG.debug("Start completed successfully");
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		LOG.debug("Stopping");
 		//Force a new load of this on startup.
-        flushClientPools();
+        //flushClientPools();
 		LOG.debug("Stop completed successfully");		
 	}
 
@@ -449,11 +462,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
         return reply;
 	}
 
@@ -479,12 +487,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
-		return reply;		
+		return reply;
 
 	}
 
@@ -505,11 +508,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
 		}
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
 		return reply;		
 	}
 
@@ -528,11 +526,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 		} catch(AmazonServiceException ex) {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
 		return reply;		
 	}
@@ -562,11 +555,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
 		}
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
+
 		return reply;
 	}
 
@@ -599,11 +588,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
 		}
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
 	}
 
 	@Override
@@ -628,11 +612,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException ex) {
             LOG.debug("Error from backend", ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
 	}
 
@@ -694,11 +673,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
     }
 
     @Override
@@ -714,11 +688,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
         return reply;
     }
@@ -771,11 +740,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
     }
 
@@ -833,11 +797,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
     }
 
     @Override
@@ -854,11 +813,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
 
         return reply;
@@ -909,11 +863,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
         return reply;
 
     }
@@ -947,11 +896,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
         return reply;
     }
 
@@ -979,12 +923,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
-
         return reply;
     }
 
@@ -1003,11 +941,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
 
         return reply;
@@ -1030,11 +963,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
 
         return reply;
@@ -1114,11 +1042,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
 
         return reply;
     }
@@ -1138,11 +1061,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
     }
 
@@ -1167,11 +1085,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
+
     }
 
     @Override
@@ -1202,11 +1116,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
     }
 
@@ -1245,11 +1154,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
     }
 
     @Override
@@ -1284,11 +1188,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
         return reply;
     }
 
@@ -1311,11 +1210,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
         return reply;
     }
@@ -1372,12 +1266,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
-        }
-
         return reply;
     }
 
@@ -1434,11 +1322,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
-        }
-        finally {
-            if (internalS3Client != null && requestUser != null) {
-                returnS3Client(requestUser, internalS3Client);
-            }
         }
     }
 }

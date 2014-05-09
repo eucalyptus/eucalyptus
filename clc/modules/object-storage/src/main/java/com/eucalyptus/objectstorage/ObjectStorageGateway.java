@@ -38,6 +38,7 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
@@ -184,9 +185,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class ObjectStorageGateway implements ObjectStorageService {
     private static Logger LOG = Logger.getLogger( ObjectStorageGateway.class );
-
     private static ObjectStorageProviderClient ospClient = null;
-    protected static final String USR_EMAIL_KEY = "email";//lookup for account admins email
 
 	public ObjectStorageGateway() {}
 
@@ -196,7 +195,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	}
 
 	public static void configure() throws EucalyptusCloudException {
-		synchronized(ObjectStorageGateway.class) {			
+		synchronized(ObjectStorageGateway.class) {
+            ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class); //prime the cache
+
 			if(ospClient == null) {
 				try {
 					ospClient = ObjectStorageProviders.getInstance();
@@ -309,7 +310,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
      * Check that the bucket is a valid DNS name (or optionally can look like an IP)
      */
     protected static boolean checkBucketNameValidity(String bucketName) {
-        return BucketNameValidatorRepo.getBucketNameValidator().check(bucketName);
+        return BucketNameValidatorRepo.getBucketNameValidator(ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getBucket_naming_restrictions()).check(bucketName);
     }
 
 	@Override
@@ -516,7 +517,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 				 * This is a secondary check, independent to the iam quota check, based on the configured max bucket count property.
 				 */
                 if (!Contexts.lookup().hasAdministrativePrivileges() &&
-                        BucketMetadataManagers.getInstance().countBucketsByAccount(requestAccount.getCanonicalId()) >= ObjectStorageGlobalConfiguration.max_buckets_per_account) {
+                        BucketMetadataManagers.getInstance().countBucketsByAccount(requestAccount.getCanonicalId()) >= ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_buckets_per_account()) {
                     throw new TooManyBucketsException(request.getBucket());
                 }
 

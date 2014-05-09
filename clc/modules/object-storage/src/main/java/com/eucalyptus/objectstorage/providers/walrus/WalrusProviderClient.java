@@ -63,6 +63,8 @@
 package com.eucalyptus.objectstorage.providers.walrus;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
@@ -141,6 +143,7 @@ import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.net.URI;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -162,7 +165,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 *
 	 */
 	protected static class WalrusClient extends SynchronousClient<WalrusRequestType, WalrusBackend> {
-		WalrusClient( final String userId ) {
+		WalrusClient() {
 			super( systemAdmin.getUserId(), WalrusBackend.class );
 		}
 
@@ -181,8 +184,8 @@ public class WalrusProviderClient extends S3ProviderClient {
     }
 
     @Override
-    protected String getUpstreamEndpoint() {
-        return Topology.lookup(WalrusBackend.class).getUri().toString();
+    protected URI getUpstreamEndpoint() {
+        return Topology.lookup(WalrusBackend.class).getUri();
     }
 
     @Override
@@ -192,6 +195,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 
     @Override
 	public void initialize() throws EucalyptusCloudException {
+        super.initialize();
 		try {
 			systemAdmin = Accounts.lookupSystemAdmin();
 		} catch (AuthException e) {
@@ -201,15 +205,20 @@ public class WalrusProviderClient extends S3ProviderClient {
 	}
 
 	@Override
-	public void check() throws EucalyptusCloudException { }
+	public void check() throws EucalyptusCloudException {
+        if(Topology.lookup(WalrusBackend.class) == null) {
+            throw new EucalyptusCloudException("No ENABLED WalrusBackend found. Cannot initialize fully.");
+        }
+        super.check();
+    }
 	
 	/**
 	 * Simply looks up the currently enabled Walrus service.
 	 * @return
 	 */
-	protected WalrusClient getEnabledWalrusClient(String userId) throws ObjectStorageException {
+	protected WalrusClient getEnabledWalrusClient() throws ObjectStorageException {
 		try {
-            WalrusClient c = new WalrusClient(userId);
+            WalrusClient c = new WalrusClient();
 			c.init();
 			return c;
 		} catch (SynchronousClientException e) {
@@ -245,7 +254,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	WalReq extends WalrusRequestType> ObjResp proxyRequest(ObjReq request, Class<WalReq> walrusRequestClass, Class<WalResp> walrusResponseClass) throws EucalyptusCloudException {
 		ObjectStorageException osge = null;
 		try  {
-			WalrusClient c = getEnabledWalrusClient(null); //unused, does a static mapping to euca/admin currently
+			WalrusClient c = getEnabledWalrusClient();
 			WalReq walrusRequest = MessageMapper.INSTANCE.proxyWalrusRequest(walrusRequestClass, request);
 			WalResp walrusResponse = c.sendSyncA(walrusRequest);
 			ObjResp reply = MessageMapper.INSTANCE.proxyWalrusResponse(request, walrusResponse);
@@ -290,7 +299,7 @@ public class WalrusProviderClient extends S3ProviderClient {
             WalReq extends WalrusDataRequestType> ObjResp proxyDataRequest(ObjReq request, Class<WalReq> walrusRequestClass, Class<WalResp> walrusResponseClass) throws EucalyptusCloudException {
         ObjectStorageException osge = null;
         try  {
-            WalrusClient c = getEnabledWalrusClient(null); //unused, does a static mapping currently
+            WalrusClient c = getEnabledWalrusClient();
             WalReq walrusRequest = MessageMapper.INSTANCE.proxyWalrusDataRequest(walrusRequestClass, request);
             WalResp walrusResponse = c.sendSyncADataReq(walrusRequest);
             ObjResp reply = MessageMapper.INSTANCE.proxyWalrusDataResponse(request, walrusResponse);

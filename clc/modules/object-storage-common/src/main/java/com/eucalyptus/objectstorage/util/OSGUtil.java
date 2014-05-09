@@ -62,20 +62,28 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import org.apache.tools.ant.util.DateUtils;
+import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 
+import javax.crypto.Cipher;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Date;
 
 
@@ -166,5 +174,29 @@ public class OSGUtil {
 
     public static int findLastMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
         return buffer.indexOf(buffer.readableBytes(), start, new ByteMatcherBeginningIndexFinder(bytesToFind));
+    }
+
+    //Encrypt data using the cloud public key
+    public static String encryptWithComponentPublicKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+        try {
+            PublicKey clcPublicKey = SystemCredentials.lookup(componentClass).getCertificate().getPublicKey();
+            Cipher cipher = Ciphers.RSA_PKCS1.get();
+            cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey);
+            return new String(Base64.encode(cipher.doFinal(data.getBytes("UTF-8"))));
+        } catch ( Exception e ) {
+            throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
+        }
+    }
+
+    //Decrypt data encrypted with the Cloud public key
+    public static String decryptWithComponentPrivateKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+        PrivateKey clcPrivateKey = SystemCredentials.lookup(componentClass).getPrivateKey();
+        try {
+            Cipher cipher = Ciphers.RSA_PKCS1.get();
+            cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey);
+            return new String(cipher.doFinal(Base64.decode(data)));
+        } catch(Exception ex) {
+            throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
+        }
     }
 }

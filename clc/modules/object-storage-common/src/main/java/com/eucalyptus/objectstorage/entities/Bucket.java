@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -178,14 +179,18 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
         setBucketUuid(UUID.randomUUID().toString());
     }
 
-    public boolean stateStillValid() {
+    public boolean stateStillValid(int stateTimeoutSeconds) {
         if (getState() != null && !BucketState.creating.equals(getState())) {
             //extant and deleting states are always valid
             return true;
         } else if (getState() == null) {
             return false;
         } else {
-            return ((System.currentTimeMillis() - this.getLastUpdateTimestamp().getTime()) / 1000) <= ObjectStorageGlobalConfiguration.bucket_creation_wait_interval_seconds;
+            try {
+                return (System.currentTimeMillis() - this.getLastUpdateTimestamp().getTime()) <= ((long)stateTimeoutSeconds * 1000l);
+            } catch(Throwable e) {
+                return true; //Err on side of keeping the bucket rather than flushing it if there is an error in lookup.
+            }
         }
     }
 
