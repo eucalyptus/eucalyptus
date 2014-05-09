@@ -136,6 +136,7 @@ struct nc_state_t {
     boolean convert_to_disk;
     boolean do_inject_key;
     int concurrent_disk_ops, concurrent_cleanup_ops;
+    int sc_request_timeout_sec;
     int disable_snapshots;
     int staging_cleanup_threshold;
     int booting_cleanup_threshold;
