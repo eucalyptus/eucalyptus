@@ -200,7 +200,7 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
     LOGTRACE("invoked: scOps=%s scURL=%s timeout=%d\n", scOp, scURL, timeout);  // these are common
 
     if (timeout <= 0)
-        timeout = DEFAULT_SC_CALL_TIMEOUT;
+        timeout = DEFAULT_SC_REQUEST_TIMEOUT;
 
     if ((rc = pipe(filedes)) != 0) {
         LOGERROR("cannot create pipe scOps=%s\n", scOp);

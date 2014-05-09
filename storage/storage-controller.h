@@ -83,7 +83,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define DEFAULT_SC_CALL_TIMEOUT                  45 //!< 45  second sync call timeout
+#define DEFAULT_SC_REQUEST_TIMEOUT                  45 //!< 45  second sync call timeout
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

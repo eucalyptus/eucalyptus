@@ -136,6 +136,7 @@ const char *euca_client_component_name = "nc";  //!< The client component name
 \*----------------------------------------------------------------------------*/
 
 static sem *vol_sem = NULL;            //!< Semaphore to protect volume operations
+static int request_timeout_sec = DEFAULT_SC_REQUEST_TIMEOUT;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -172,9 +173,10 @@ static int re_encrypt_token(char *in_token, char **out_token);  //! Decrypts tok
 //!
 //! @note
 //!
-int init_ebs_utils(void)
+int init_ebs_utils(int sc_request_timeout_sec)
 {
     LOGDEBUG("Initializing EBS utils\n");
+    request_timeout_sec = sc_request_timeout_sec;
     if (vol_sem == NULL) {
         vol_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     }
@@ -371,7 +373,7 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
     LOGTRACE("Got volume lock\n");
 
     LOGTRACE("Calling ExportVolume on SC at %s\n", sc_url);
-    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", (*vol_data)->volumeId, reencrypted_token, local_ip, local_iqn,
+    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "ExportVolume", (*vol_data)->volumeId, reencrypted_token, local_ip, local_iqn,
                      &connect_string) != EUCA_OK) {
         LOGERROR("Failed to get connection information for volume %s from storage controller at: %s\n", (*vol_data)->volumeId, sc_url);
         ret = EUCA_ERROR;
@@ -568,7 +570,7 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
     }
 
     LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, reencrypted_token, local_ip, local_iqn) !=
+    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "UnexportVolume", vol_data->volumeId, reencrypted_token, local_ip, local_iqn) !=
         EUCA_OK) {
         EUCA_FREE(reencrypted_token);
         LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);

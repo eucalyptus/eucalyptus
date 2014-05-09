@@ -2166,6 +2166,7 @@ static int init(void)
     GET_VAR_INT(nc_state.config_max_cores, CONFIG_MAX_CORES, 0);
     GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
+    GET_VAR_INT(nc_state.sc_request_timeout_sec, CONFIG_SC_REQUEST_TIMEOUT, 45);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
     GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
@@ -2235,7 +2236,7 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if (init_ebs_utils() != 0) {
+    if (init_ebs_utils(nc_state.sc_request_timeout_sec) != 0) {
         LOGFATAL("Failed to initialize ebs utils\n");
         return (EUCA_FATAL_ERROR);
     }
