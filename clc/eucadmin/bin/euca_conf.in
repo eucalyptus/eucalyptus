@@ -227,112 +227,112 @@ class EucaConf(object):
         self.parser.add_option('--register-nodes',
                                action='append', type='string',
                                dest='reg_nodes', metavar='"host host..."',
-                               help='Add new nodes to EUCALYPTUS.')
+                               help='Add node controllers to a cluster controller.')
         self.parser.add_option('--deregister-nodes',
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
-                               help='Remove nodes from EUCALYPTUS.')
+                               help='Remove node controllers from a cluster controller.')
         # DEPRECATED ---------------\/
         self.parser.add_option('--register-arbitrator',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new arbitrator to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a new arbitrator.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--deregister-arbitrator',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
-                               help='Remove arbitrator from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove an arbitrator.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--register-cloud',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new clc to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a cloud controller.')
         self.parser.add_option('--deregister-cloud',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
-                               help='Remove clc from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove a cloud controller.')
         self.parser.add_option('--register-cluster',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new cluster to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a cluster controller.')
         self.parser.add_option('--deregister-cluster',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
-                               help='Remove cluster from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove a cluster.')
         self.parser.add_option('--register-walrusbackend',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new walrus backend to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a walrus back end.')
         self.parser.add_option('--deregister-walrusbackend',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
-                               help='Remove walrus backend from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove a walrus back end.')
         self.parser.add_option('--register-sc',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new storage controller to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a storage controller.')
         self.parser.add_option('--deregister-sc',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
                                metavar='<partition> <host>',
-                               help='Remove storage controller from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove a storage controller.')
         self.parser.add_option('--register-vmwarebroker',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new vmwarebroker to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a VMware broker.')
         self.parser.add_option('--deregister-vmwarebroker',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
                                metavar='<partition> <host>',
-                               help='Remove vmwarebroker from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove a VMware broker.')
         self.parser.add_option('--register-osg',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name',
                                                           'host_name']},
-                               help='Add new object storage gateway to EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Add a new object storage gateway.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--deregister-osg',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs': ['partition_name',
                                                           'component_name']},
-                               help='Remove object storage gateway from EUCALYPTUS.').help = optparse.SUPPRESS_HELP
+                               help='Remove an object storage gateway.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--list-walrusbackends', action='store_true',
                                dest='list_walrusbackends', default=False,
-                               help='List registered walrusbackend(s).').help = optparse.SUPPRESS_HELP
+                               help='List registered walrus back ends.')
         self.parser.add_option('--list-clouds', action='store_true',
                                dest='list_clouds', default=False,
-                               help='List registered CLCs.').help = optparse.SUPPRESS_HELP
+                               help='List registered cloud controllers.')
         self.parser.add_option('--list-clusters', action='store_true',
                                dest='list_clusters', default=False,
-                               help='List registered CCs.').help = optparse.SUPPRESS_HELP
+                               help='List registered cluster controllers.')
         self.parser.add_option('--list-arbitrators', action='store_true',
                                dest='list_arbitrators', default=False,
                                help='List registered arbitrators.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--list-vmwarebrokers', action='store_true',
                                dest='list_vmwarebrokers', default=False,
-                               help='List registered VMware brokers.').help = optparse.SUPPRESS_HELP
+                               help='List registered VMware brokers.')
         self.parser.add_option('--list-scs', action='store_true',
                                dest='list_scs', default=False,
-                               help='List registered SCs.').help = optparse.SUPPRESS_HELP
+                               help='List registered storage controllers.')
         self.parser.add_option('--list-nodes', action='store_true',
                                dest='list_nodes', default=False,
-                               help='List registered NCs.').help = optparse.SUPPRESS_HELP
+                               help='List registered node controllers.')
         self.parser.add_option('--cc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname': 'CC_PORT'},
@@ -352,63 +352,62 @@ class EucaConf(object):
         # DEPRECATED -----/\
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
-                               help='Used with --register-* to skip syncing \
-                                     keys.')
+                               help='Do not sync keys when registering a component.')
         self.parser.add_option('-d', action='callback', type='string',
                                metavar='<dir>', callback=self.option_callback,
                                callback_kwargs={'optname': 'EUCALYPTUS'},
-                               help='Point EUCALYPTUS to <dir>.')
+                               help='Point EUCALYPTUS to <dir>.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--nc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname': 'NC_PORT'},
-                               help='Set NC port.', default=8775)
+                               help='Set NC port.', default=8775).help = optparse.SUPPRESS_HELP
         self.parser.add_option('--instances', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<path>',
                                callback_kwargs={'optname': 'INSTANCE_PATH'},
-                               help='Set the INSTANCE path.')
+                               help='Set the INSTANCE path.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--hypervisor', action='callback',
                                type='choice', callback=self.option_callback,
                                metavar='[kvm|xen]', choices=['kvm', 'xen'],
                                callback_kwargs={'optname': 'HYPERVISOR'},
-                               help='Set hypervisor to use.')
+                               help='Set hypervisor to use.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--user', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<euca_user>',
                                callback_kwargs={'optname': 'EUCA_USER'},
-                               help='Set the user to use for EUCA_USER.')
+                               help='Set the user to use for EUCA_USER.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--dhcpd', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<dhcpd>',
                                callback_kwargs={'optname': 'DHCPD'},
-                               help='Set the dhcpd binary to <dhcpd>.')
+                               help='Set the dhcpd binary to <dhcpd>.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--dhcp_user', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<user>',
                                callback_kwargs={'optname': 'DHCPC_USER'},
-                               help='Set the username to run dhcpd as.')
+                               help='Set the username to run dhcpd as.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--bridge', action='callback',
                                type='string', callback=self.option_callback,
-                               callback_kwargs={'optname': 'BRIDGE'}),
+                               callback_kwargs={'optname': 'BRIDGE'}).help = optparse.SUPPRESS_HELP
         self.parser.add_option('--name', action='store',
                                type='string', dest='var_name',
-                               help='Returns the value or <name>.')
+                               help='Returns the value or <name>.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--import-conf', action='store',
                                type='string', dest='import_conf_file',
-                               help='Import vars from another eucalyptus.conf.')
+                               help='Import vars from another eucalyptus.conf.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--upgrade-conf', action='store',
                                type='string', dest='upgrade_conf_file',
                                help='Upgrade eucalyptus.conf from old \
-                                     installation.')
+                                     installation.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
-                               help='Perform initial setup.')
+                               help='Perform initial setup.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--check',
                                action='store', type='choice',
                                choices=CheckableServices,
                                metavar='[common|vmware]',
                                dest='check_what',
-                               help='Pre-flight checks.')
+                               help='Pre-flight checks.').help = optparse.SUPPRESS_HELP
         self.parser.add_option('--debug', action='store_true',
                                default=False, help='Enable debug output')
         self.parser.add_option('--debugger', action='store_true',
