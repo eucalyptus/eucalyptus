@@ -243,12 +243,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
      * @return
      */
     protected URI convertToFullURI(@Nonnull String raw) {
-        URI tmp = URI.create(raw);
-        if(!"http".equals(tmp.getScheme()) && !"https".equals(tmp.getScheme())) {
+        URI tmp;
+        if(!raw.startsWith("http://") && !raw.startsWith("https://")) {
             //Add the scheme
             raw = "http://" + raw;
-            tmp = URI.create(raw);
         }
+        tmp = URI.create(raw);
 
         if(tmp.getPort() != -1) {
             return tmp; //It's valid

@@ -646,9 +646,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
                 @Override
                 public UploadPartResponseType call() throws Exception {
-                    LOG.debug("Putting data");
+                    LOG.trace("Putting data");
                     UploadPartResponseType response = provider.uploadPart(putRequest, content);
-                    LOG.debug("Done with put. " + response.getStatusMessage());
+                    LOG.trace("Done with put. " + response.getStatusMessage());
                     return response;
                 }
             };
