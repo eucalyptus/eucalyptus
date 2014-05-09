@@ -241,7 +241,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
           for(final Snapshot snapshot: snapshots){
             if("completed".equals(snapshot.getStatus()))
               numCompleted++;
-            else if("error".equals(snapshot.getStatus()))
+            else if("error".equals(snapshot.getStatus()) || "failed".equals(snapshot.getStatus()))
               numError++;
           }
           if(numError>0){
