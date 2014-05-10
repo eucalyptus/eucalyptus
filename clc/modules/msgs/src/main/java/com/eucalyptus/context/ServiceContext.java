@@ -112,7 +112,8 @@ public class ServiceContext {
   public static Integer                        HUP                      = 0;
   @ConfigurableField( initial = "64", description = "Internal connector core pool size." )
   public static Integer                        MIN_SCHEDULER_CORE_SIZE  = 64;
-  
+  public static Integer                        CONTEXT_TIMEOUT          = Integer.parseInt( System.getProperty( "com.eucalyptus.context.timeoutSeconds", "60" ) );
+
   public static class HupListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
@@ -168,7 +169,7 @@ public class ServiceContext {
     } finally {
       if ( dispatcher != null ) dispatcher.dispose( );
     }
-    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( 60 );
+    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
     Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
