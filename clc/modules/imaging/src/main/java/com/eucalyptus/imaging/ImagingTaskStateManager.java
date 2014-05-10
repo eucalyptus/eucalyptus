@@ -72,8 +72,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   @Override
   public void fireEvent(ClockTick event) {
     if (!( Bootstrap.isFinished() &&
-        // Topology.isEnabledLocally( Imaging.class ) &&
-         Topology.isEnabled( Eucalyptus.class ) ) )
+         Topology.isEnabledLocally( Imaging.class ) ) )
        return;
     final Map <ImportTaskState, List<ImagingTask>> taskByState =
         Maps.newHashMap();

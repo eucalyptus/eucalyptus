@@ -121,8 +121,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   @Override
   public void fireEvent(ClockTick event) {
     if (!( Bootstrap.isFinished() &&
-         Topology.isEnabled( Eucalyptus.class) && 
-             Topology.isEnabled(Imaging.class) ) )
+         Topology.isEnabledLocally( Eucalyptus.class)  ) )
        return;
     
     /// check the state of emis
