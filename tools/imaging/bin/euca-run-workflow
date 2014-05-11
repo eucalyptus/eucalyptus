@@ -128,12 +128,13 @@ class EucaImager():
                   'out=-',
                   'login=' + args.vsphere_login,
                   'password=' + args.vsphere_password,
-                  'vsphere-datacenter=' +  args.vsphere_datacenter,
+                  'vsphere-datacenter=' + args.vsphere_datacenter,
                   'vsphere-vmdk=' + args.vsphere_vmdk,
                   'vsphere-vmx=' +args.vsphere_vmx]
         # TODO: handle in-range=100-100000
         op_ps = subprocess.Popen(op_args,
                                  stdout=fd_w,
+                                 close_fds=True,
                                  bufsize=-1)
         return op_ps
 
@@ -170,6 +171,8 @@ class Euca2ools(object):
             op_args.extend(['--ramdisk', args.eri])
         if (args.secret_key != None):
             op_args.extend(['--secret-key', args.secret_key])
+        if (args.image_size != None):
+            op_args.extend(['--image-size', args.image_size])
         if (args.upload_policy != None):
             policy = args.upload_policy
             try:
@@ -184,6 +187,7 @@ class Euca2ools(object):
             op_args.extend(['--debug'])
         op_ps = subprocess.Popen(op_args,
                                  stdin=fd_r,
+                                 close_fds=True,
                                  bufsize=-1)
         return op_ps
 
@@ -345,6 +349,7 @@ class WF_DownVMDK_UpBundle(WF_base):
         parser = subparsers.add_parser(id, help='a help')
         _add_vmdk_args(parser)
         _add_up_bundle_args(parser)
+        parser.add_argument('--image-size', required=True, help='Size of the bundled image in bytes')
         parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
@@ -366,7 +371,7 @@ class WF_DownVMDK_UpBundle(WF_base):
 
             imager_ps = imager.download_vmdk(args, fd_w)
             bundle_ps = euca2ools.bundle_and_upload(
-                image_path=args.input_path,
+                image_path='-',
                 destination_dir=bundle_dir,
                 args=args, # the rest of the arguments are inherited from run-workflow's command-line
                 acl=euca2ools.BUNDLE_INSTANCE_ACL,
