@@ -559,10 +559,10 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private boolean doesManifestExist(final String manifestUrl) throws Exception {
     // validate urls per EUCA-9144
-    UrlValidator urlValidator = new UrlValidator();
+    final UrlValidator urlValidator = new UrlValidator();
     if (!urlValidator.isEucalyptusUrl(manifestUrl))
-      throw new RuntimeException("Manifest is not stored in the OS. It's location is outside Eucalyptus: " + manifestUrl);
-    HttpClient client = new HttpClient();
+      throw new RuntimeException("Manifest's URL is not in the Eucalyptus format: " + manifestUrl);
+    final HttpClient client = new HttpClient();
     client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
     GetMethod method = new GetMethod(manifestUrl);
     String manifest = null;
@@ -570,6 +570,8 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       client.executeMethod(method);
       manifest = method.getResponseBodyAsString();
       if (manifest == null) {
+        return false;
+      }else if (manifest.contains("<Code>NoSuchKey</Code>") || manifest.contains("The specified key does not exist")){
         return false;
       }
     } catch(IOException ex) {
@@ -580,7 +582,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     final List<String> partsUrls = getPartsHeadUrl(manifest);
     for(final String url : partsUrls){
       if (!urlValidator.isEucalyptusUrl(url))
-        throw new RuntimeException("Manifest's part is not stored in the OS. Its location is outside Eucalyptus: " + url);
+        throw new RuntimeException("Manifest's URL is not in the Eucalyptus format: " + url);
       HeadMethod partCheck = new HeadMethod(url);
       int res = client.executeMethod(partCheck);
       if ( res != HttpStatus.SC_OK){
