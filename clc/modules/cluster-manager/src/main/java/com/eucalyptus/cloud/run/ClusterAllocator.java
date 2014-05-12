@@ -145,7 +145,9 @@ public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
   
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
-  
+
+  private static int workers             = Integer.parseInt( System.getProperty( "com.eucalyptus.cloud.allocatorWorkers", "6" ) );
+
   enum State {
     START,
     CREATE_VOLS,
@@ -187,7 +189,7 @@ public class ClusterAllocator implements Runnable {
             return Boolean.TRUE;
           }
         };
-        Threads.enqueue( config, 32, runnable );
+        Threads.enqueue( config, ClusterAllocator.class, workers, runnable );
         return true;
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
