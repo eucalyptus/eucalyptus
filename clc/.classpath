@@ -83,6 +83,10 @@
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/test/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
+	<classpathentry kind="src" path="modules/loadbalancing-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-service/src/test/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry exported="true" kind="lib" path="lib/ant-1.7.jar"/>
@@ -125,14 +129,7 @@
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-jms_1.1_spec-1.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/guava-14.0.1-gwt.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/guava-14.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-api-checker-2.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-dev-2.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-servlet-2.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-servlet-deps-2.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-soyc-vis-2.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/gwt-user-2.4.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/hibernate-commons-annotations-4.0.2.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/hibernate-core-4.2.3.Final.jar"/>
@@ -216,8 +213,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/staxmapper-1.1.0.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/stax-utils-20080702-osgi.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/validation-api-1.0.0.GA.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/validation-api-1.0.0.GA-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/velocity-1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/woodstox-core-asl-4.2.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/wrapper-3.2.3.jar"/>
@@ -233,8 +228,11 @@
 	<classpathentry kind="lib" path="lib/spock-core-0.7-groovy-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.6.13.jar"/>
 	<classpathentry kind="lib" path="lib/xmlsec-1.5.6.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-3.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/aws-java-sdk-1.7.1.jar"/>
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.7.5.jar"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-core-2.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

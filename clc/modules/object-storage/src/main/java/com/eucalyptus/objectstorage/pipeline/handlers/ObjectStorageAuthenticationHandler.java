@@ -312,7 +312,8 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
                 }
 
                 //Try using the '/services/ObjectStorage' portion of the addrString and retry the signature calc
-                if (httpRequest.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath())) {
+                if (httpRequest.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || 
+                		httpRequest.getUri().startsWith(ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
                     try {
                         String modifiedAddrString = getS3AddressString(httpRequest, false);
                         data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
@@ -370,7 +371,8 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
                         SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
                     } catch (Exception ex) {
                         //Try adding back the '/services/objectStorage' portion of the addrString and retry the signature calc
-                        if (httpRequest.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath())) {
+                        if (httpRequest.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || 
+                        		httpRequest.getUri().startsWith(ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
                             try {
                                 String modifiedAddrString = getS3AddressString(httpRequest, false);
                                 stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
@@ -517,10 +519,22 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
                     } else {
                         addrString.append("/" + hostBucket);
                     }
+                } else if (targetHost.contains(".walrus")) { 
+                	 //dns-style request with walrus
+                    String hostBucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
+                    if (hostBucket.length() == 0) {
+                        throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+                    } else {
+                        addrString.append("/" + hostBucket);
+                    }
                 } else {
                     //path-style request (or service request that won't have a bucket anyway)
-                    if (removeServicePath && addr.startsWith(osgServicePath)) {
-                        addr = addr.substring(osgServicePath.length(), addr.length());
+                    if (removeServicePath) {
+                    	if (addr.startsWith(osgServicePath)) {
+                    		addr = addr.substring(osgServicePath.length(), addr.length());
+                    	} else if (addr.startsWith(ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
+                    		addr = addr.substring(ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH.length(), addr.length());
+                    	}
                     }
                 }
 

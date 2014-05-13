@@ -87,6 +87,7 @@ public class ObjectStorageProperties {
 
     public static final String AMZ_ACL = "x-amz-acl";
     public static final String AMZ_REQUEST_ID = "x-amz-request-id";
+    public static final String LEGACY_WALRUS_SERVICE_PATH = "/services/Walrus";
     public static final long OBJECT_CREATION_EXPIRATION_INTERVAL_SEC = 30;
 
     //TODO: zhill - these should be replaced by references to the actual Accounts lookup. May need to add these as valid groups/accounts

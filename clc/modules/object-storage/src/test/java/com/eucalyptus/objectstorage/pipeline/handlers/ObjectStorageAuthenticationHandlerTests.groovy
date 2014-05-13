@@ -141,6 +141,23 @@ class ObjectStorageAuthenticationHandlerTests {
         }
 
     }
+	
+	@Test
+	public void testPathStyleAddressParsingLegacyWalrus() {
+		MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket/object")
+		request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/Walrus/bucket/object"))
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+
+		request.setUri("/bucket/")
+		request.setHeader(HttpHeaders.Names.HOST, "walrus.mydomain.com")
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/"))
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/"))
+
+		request.setUri("/bucket/object")
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object"))
+	}
 
     @Test
     public void testDnsStyleAddressParsing() {
@@ -168,8 +185,28 @@ class ObjectStorageAuthenticationHandlerTests {
 
         assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
         assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
-
     }
+	
+	@Test
+	public void testDnsStyleAddressParsingLegacyWalrus() {
+		MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/object")
+		request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
+		
+		request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/object%20for%20me+letsgo")
+		request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object%20for%20me+letsgo"))
+		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object%20for%20me+letsgo"))
+		
+		for (ObjectStorageProperties.SubResource resource : ObjectStorageProperties.SubResource.values()) {
+			request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/key?" + resource.toString())
+			request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
+
+			assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
+			assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
+		}
+	}
 
     @Test
     public void testQueryParameterHandling() {
