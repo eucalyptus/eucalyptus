@@ -180,14 +180,33 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
 			}
 			
-			boolean error = false;
 			try{
-				EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true);
-				// willl terminate all instances
-			}catch(Exception ex){
-				LOG.warn("Failed to delete autoscale group "+groupName, ex);
-				error = true;
+			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0);
+			}catch(final Exception ex){
+			  LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
 			}
+			
+			boolean error = false;
+			final int NUM_DELETE_ASG_RETRY = 4;
+			for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
+			  try{
+			    EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true);
+			    error = false;
+			    // willl terminate all instances
+			  }catch(final Exception ex){
+			    error = true;
+			    LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
+			    try{
+			      long sleepMs = (i+1) * 500;
+			      Thread.sleep(sleepMs);
+			    }catch(final Exception ex2){
+			      ;
+			    }
+	      }
+			  if(!error)
+			    break;
+			}
+			
 			if(launchConfigName!=null){
 				try{
 					EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName);

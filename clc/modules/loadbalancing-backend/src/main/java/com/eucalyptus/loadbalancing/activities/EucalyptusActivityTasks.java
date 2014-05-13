@@ -84,6 +84,8 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationNames;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.SecurityGroups;
+import com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityResponseType;
+import com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityType;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
@@ -756,10 +758,24 @@ public class EucalyptusActivityTasks {
 			if(result.get()){
 				return;
 			}else
-				throw new EucalyptusActivityException("failed to enable zones in autoscaling group");
+				throw new EucalyptusActivityException("failed to update autoscaling group");
 		}catch(Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
+	}
+	
+	public void setAutoScalingDesiredCapacity(final String groupName, final int capacity) {
+	  final AutoScalingSetDesiredCapacityTask task =
+	      new AutoScalingSetDesiredCapacityTask(groupName, capacity);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+    try{
+      if(result.get()){
+        return;
+      }else
+        throw new EucalyptusActivityException("failed to set autoscaling group capacity");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
 	}
 	
 	public List<RoleType> listRoles(final String pathPrefix){
@@ -1700,6 +1716,37 @@ public class EucalyptusActivityTasks {
 				EuareMessage response) {
 			final DeleteRolePolicyResponseType resp = (DeleteRolePolicyResponseType) response;
 		}
+	}
+	
+	private class AutoScalingSetDesiredCapacityTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+	  private String groupName = null;
+	  private Integer capacity = null;
+	  private AutoScalingSetDesiredCapacityTask(final String groupName, final Integer capacity){
+	    this.groupName = groupName;
+	    this.capacity = capacity;
+	  }
+	  
+	  private SetDesiredCapacityType setDesiredCapacity(){
+	    final SetDesiredCapacityType req = new SetDesiredCapacityType();
+	    req.setAutoScalingGroupName(groupName);
+	    req.setDesiredCapacity(this.capacity);
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<AutoScalingMessage, AutoScaling> context,
+        Checked<AutoScalingMessage> callback) {
+      final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+      client.dispatch(setDesiredCapacity(), callback);
+    }
+    
+    @Override
+    void dispatchSuccess(
+        ActivityContext<AutoScalingMessage, AutoScaling> context,
+        AutoScalingMessage response) {
+      final SetDesiredCapacityResponseType resp = (SetDesiredCapacityResponseType) response;
+    }
 	}
 	
 	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
