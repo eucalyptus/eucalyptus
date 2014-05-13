@@ -30,7 +30,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -61,8 +60,8 @@ public class ImagingWorkers {
     @Override
     public void fireEvent(ClockTick event) {
       if (!( Bootstrap.isFinished() &&
-           Topology.isEnabled( Eucalyptus.class ) ) )
-         return;
+          Topology.isEnabledLocally( Imaging.class ) ) )
+        return;
       if(!ImagingServiceProperties.IMAGING_WORKER_HEALTHCHECK)
         return;
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},

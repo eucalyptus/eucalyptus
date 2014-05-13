@@ -56,7 +56,6 @@ import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceGroup;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
@@ -298,12 +297,9 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
         newTask.setLaunchSpecAvailabilityZone(launchSpec.getPlacement().getAvailabilityZone());
       if(launchSpec.getMonitoring()!=null)
         newTask.setLaunchSpecMonitoringEnabled(launchSpec.getMonitoring().getEnabled());
-      if(launchSpec.getGroupSet()!=null){
-        for(final ImportInstanceGroup group : launchSpec.getGroupSet()){
-          if(group.getGroupName()!=null)
-            newTask.addLaunchSpecGroupName(group.getGroupName());
-          else if(group.getGroupId()!=null)
-            newTask.addLaunchSpecGroupName(group.getGroupId());
+      if(launchSpec.getGroupName()!=null){
+        for(final String groupName : launchSpec.getGroupName()){
+          newTask.addLaunchSpecGroupName(groupName);
         }
       }
       if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length()>0){

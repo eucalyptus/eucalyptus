@@ -94,8 +94,8 @@ public class ImportInstanceResponseType extends VmImportResponseMessage {
 public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String architecture;
   @HttpEmbedded(multiple = true)
-  @HttpParameterMapping (parameter = "SecurityGroup")
-  ArrayList<ImportInstanceGroup> groupSet = new ArrayList<ImportInstanceGroup>();
+  @HttpParameterMapping (parameter = "GroupName")
+  ArrayList<String> groupName = new ArrayList<String>();
   @HttpEmbedded
   UserData userData;
   String instanceType;
@@ -107,11 +107,7 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String keyName;
   public ImportInstanceLaunchSpecification() {}
 }
-public class ImportInstanceGroup extends EucalyptusData {
-  String groupId;
-  String groupName;
-  public ImportInstanceGroupItem() {}
-}
+
 public class DiskImage extends EucalyptusData {
   DiskImageDetail image;
   String description;
