@@ -324,8 +324,6 @@ public class WalrusFSManager extends WalrusManager {
     @Override
     public ListAllMyBucketsResponseType listAllMyBuckets(
             ListAllMyBucketsType request) throws WalrusException {
-        LOG.info("Handling ListAllBuckets request");
-
         ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
@@ -858,7 +856,7 @@ public class WalrusFSManager extends WalrusManager {
                                     ctx.getAccount().getName(),
                                     ctx.getAccount().getAccountNumber());
                             Threads.lookup(WalrusBackend.class, WalrusFSManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
-                            LOG.info("Transfer interrupted: "+ key);
+                            LOG.warn("Transfer interrupted: "+ key);
                             messenger.removeQueue(key, randomKey);
                             break;
                         }
@@ -1012,7 +1010,7 @@ public class WalrusFSManager extends WalrusManager {
                         // messenger.removeMonitor(key);
                         messenger.clearQueues(key);
                         messenger.removeQueue(key, randomKey);
-                        LOG.info("Transfer complete: " + key);
+                        LOG.trace("Transfer complete: " + key);
 
                         break;
                     } else {
@@ -1353,15 +1351,14 @@ public class WalrusFSManager extends WalrusManager {
             BucketInfo bucketInfo = null;
             try {
                 bucketInfo = db.uniqueResultEscape(bucketInfos);
-            } catch(NoSuchElementException e) {
+            } catch(TransactionException e) {
                 //Nothing to do, object cannot exist if bucket does not.
                 bucketInfo = null;
-            } catch(TransactionException e) {
-                LOG.error("Transaction error looking up bucket: " + bucketName,e);
-                throw new NoSuchBucketException(e);
             }
 
-            if(bucketInfo != null) {
+            if(bucketInfo == null) {
+                throw new NoSuchBucketException(bucketName);
+            } else {
                 BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
 
                 EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -1475,14 +1472,16 @@ public class WalrusFSManager extends WalrusManager {
                                 + ". Nothing to delete");
                     }
                 }
-            } else {
-                throw new NoSuchBucketException(bucketName);
             }
             db.commit();
             // In either case, set the response to 204 NO CONTENT
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("NO CONTENT");
             return reply;
+        } catch(WalrusException e) {
+            //pass thru
+            LOG.debug("Replying to client with error: " + e.getCode());
+            throw e;
         } catch(EucalyptusCloudException e) {
             LOG.error("DeleteObject operation for " + bucketName + "/" + objectKey + " failed with: " + e.getMessage());
             throw new InternalErrorException(e);
@@ -3472,7 +3471,7 @@ public class WalrusFSManager extends WalrusManager {
                                     ctx.getAccount().getName(),
                                     ctx.getAccount().getAccountNumber());
                             Threads.lookup(WalrusBackend.class, WalrusFSManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
-                            LOG.info("Transfer interrupted: " + key);
+                            LOG.warn("Transfer interrupted: " + key);
                             messenger.removeQueue(key, randomKey);
                             break;
                         }
@@ -3562,7 +3561,7 @@ public class WalrusFSManager extends WalrusManager {
                         // messenger.removeMonitor(key);
                         messenger.clearQueues(key);
                         messenger.removeQueue(key, randomKey);
-                        LOG.info("Transfer complete: " + key + " uploadId: " + uploadId + " partNumber: " + partNumber);
+                        LOG.trace("Transfer complete: " + key + " uploadId: " + uploadId + " partNumber: " + partNumber);
 
                         break;
                     } else {
@@ -3888,7 +3887,7 @@ public class WalrusFSManager extends WalrusManager {
                             LOG.error("Unable to delete part on disk: " + e.getMessage());
                         }
                     }
-                    LOG.info("Garbage collecting part: " + part.getBucketName() + "/" + part.getObjectName() + " partNumber: " + part.getPartNumber() + " uploadId: " + part.getUploadId());
+                    LOG.trace("Garbage collecting part: " + part.getBucketName() + "/" + part.getObjectName() + " partNumber: " + part.getPartNumber() + " uploadId: " + part.getUploadId());
                     if (part.getGrants() != null) {
                         for (GrantInfo grant : part.getGrants()) {
                             Entities.delete(grant);

@@ -27,6 +27,8 @@ import com.eucalyptus.objectstorage.*;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
+import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import org.apache.log4j.Logger;

@@ -88,6 +88,7 @@ import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticatio
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -160,13 +161,15 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     @Override
     public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-        LOG.trace( LogUtil.dumpObject( channelEvent ) );
+        if(Logs.isExtrrreeeme()) {
+            Logs.extreme().trace( LogUtil.dumpObject(channelEvent) );
+        }
         if ( channelEvent instanceof MessageEvent ) {
             final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
             try {
                 this.incomingMessage( channelHandlerContext, msgEvent );
             } catch ( Exception e ) {
-                LOG.error( e, e );
+                Logs.extreme().trace("Error binding request", e);
                 Channels.fireExceptionCaught( channelHandlerContext, e );
                 return;
             }
@@ -294,7 +297,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             throw new BindingException( errMsg.toString() );
         }
 
-        LOG.trace(groovyMsg.toString());
+        Logs.extreme().trace(groovyMsg.toString());
         try
         {
             Binding binding = BindingManager.getDefaultBinding( );
@@ -334,6 +337,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
         if(targetHost.contains(".objectstorage")) {
             String bucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
+            path = "/" + bucket + path;
+        } else if(targetHost.contains(".walrus")) {
+            String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
             path = "/" + bucket + path;
         }
 
@@ -418,7 +424,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     ChannelBuffer buffer = (ChannelBuffer)formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
                     if(buffer == null) {
                         //No content found.
-                        LOG.trace("No data content found for POST upload");
                         throw new MalformedPOSTRequestException("No upload content found");
                     }
                 } else if(ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {
@@ -745,7 +750,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             } catch(S3Exception e) {
                 throw e;
             } catch(Exception ex) {
-                LOG.warn("Unexpected error binding bucket logging target config", ex);
                 MalformedXMLException malEx = new MalformedXMLException("//TargetBucket");
                 malEx.initCause(ex);
                 throw malEx;
@@ -763,7 +767,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                     return;
                 operationParams.put("VersioningStatus", status);
             } catch(Exception ex) {
-                LOG.warn("Failed parsing versioning status for binding", ex);
                 MalformedXMLException malEx = new MalformedXMLException(message);
                 malEx.initCause(ex);
                 throw malEx;
@@ -797,8 +800,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 try {
                     operationParams.put(headerString, DateUtils.parseIso8601DateTime(value));
                 } catch (ParseException e) {
-                    LOG.error(e);
-                    throw new BindingException(e);
+                    throw new BindingException("Error parsing date: " + value, e);
                 }
             }
         } else {
@@ -866,7 +868,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             //pass it up
             throw e;
         } catch(Exception ex) {
-            LOG.warn("Unexpected error parsing user's requested acl", ex);
             throw new MalformedACLErrorException(aclString);
         }
         accessControlList.setGrants(grants);
@@ -921,7 +922,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         } catch(S3Exception e) {
             throw e;
         } catch(Exception ex) {
-            LOG.warn("Unexpected error parsing ACL in incoming request", ex);
             throw new MalformedACLErrorException("Unable to parse access control list: " + aclString);
         }
         accessControlList.setGrants(grants);
@@ -945,7 +945,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 }
             }
         }catch(Exception ex) {
-            LOG.warn(ex);
             throw new BindingException("Unable to parse part list " + ex.getMessage());
         }
         return partList;
@@ -983,7 +982,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 locationConstraint = xmlParser.getValue("/CreateBucketConfiguration/LocationConstraint");
             }
         } catch(Exception ex) {
-            LOG.warn("Error parsing bucket location constraint", ex);
             MalformedXMLException malEx = new MalformedXMLException("/CreateBucketConfiguration/LocationConstraint");
             malEx.initCause(ex);
             throw malEx;
@@ -1191,7 +1189,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 throw e;
             }
             catch (Exception ex) {
-                LOG.warn(ex);
                 MalformedXMLException e = new MalformedXMLException("/LifecycleConfiguration");
                 ex.initCause(ex);
                 throw e;

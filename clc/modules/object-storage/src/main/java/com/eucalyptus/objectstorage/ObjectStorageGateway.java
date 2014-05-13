@@ -38,6 +38,7 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -155,6 +156,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -423,6 +425,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 * @param request
 	 */
 	protected static <I extends ObjectStorageRequestType> void logRequest(I request) {
+        if(!Logs.isTrace()) {
+            return;
+        }
+
 		StringBuilder canonicalLogEntry = new StringBuilder("osg handling request:" );
 		try {			
 			String accnt = null;
@@ -453,7 +459,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 			} else if(request instanceof PutObjectType) {
 				canonicalLogEntry.append(" ContentMD5: " + ((PutObjectType)request).getContentMD5());
 			}		
-			LOG.info(canonicalLogEntry.toString());
+			LOG.trace(canonicalLogEntry.toString());
 		} catch(Exception e) {
 			LOG.warn("Problem formatting request log entry. Incomplete entry: " + canonicalLogEntry.toString(), e);
 		}		
@@ -533,7 +539,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     reply.setBucket(bucket.getBucketName());
                     reply.setTimestamp(new Date());
                     reply.setStatusMessage("OK");
-                    LOG.info("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
+                    LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
                     return reply;
                 } catch(BucketAlreadyExistsException e) {
                     Bucket extantBucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
@@ -562,7 +568,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                         reply.setStatus(HttpResponseStatus.OK);
                         reply.setBucket(bucket.getBucketName());
                         reply.setStatusMessage("OK");
-                        LOG.info("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
+                        LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
                         return reply;
                     } else {
                         // Wrap the error from back-end with a 500 error
@@ -599,18 +605,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         if(bucket != null) {
             try {
-                if(ObjectMetadataManagers.getInstance().countValid(bucket) > 0) {
-                    throw new BucketNotEmptyException(bucket.getBucketName());
-                }
-            } catch(S3Exception e) {
-                throw e;
-            } catch(Exception e) {
-                LOG.warn("Problem with bucket deletion during emptiness checks", e);
-                throw new InternalErrorException(e);
-            }
-            
-            try {
             	OsgBucketFactory.getFactory().deleteBucket(ospClient, bucket, request.getCorrelationId(), Contexts.lookup().getUser());
+            } catch(MetadataOperationFailureException e) {
+                /*
+                Be conservative here. The emptiness check is there and any metadata failure
+                means we can't delete it, usually this is emptiness failing.
+                It's okay to be wrong here, the client can retry. S3 is very conservative this way too
+                */
+                throw new BucketNotEmptyException(bucket.getBucketName());
             } catch (Exception e) {
             	// Wrap the error from back-end with a 500 error
                 LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
@@ -622,7 +624,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         DeleteBucketResponseType reply = request.getReply();
         reply.setStatus(HttpResponseStatus.NO_CONTENT);
         reply.setStatusMessage("NoContent");
-        LOG.info("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
+        LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
         return reply;
     }
 

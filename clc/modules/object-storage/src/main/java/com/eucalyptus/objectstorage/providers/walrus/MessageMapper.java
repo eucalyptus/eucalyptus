@@ -20,7 +20,6 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
@@ -135,6 +134,7 @@ public enum MessageMapper {
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InlineDataTooLargeException.class, InlineDataTooLargeException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidArgumentException.class, InvalidArgumentException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidBucketNameException.class, InvalidBucketNameException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InternalErrorException.class, InternalErrorException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidTargetBucketForLoggingException.class, InvalidTargetBucketForLoggingException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchBucketException.class, NoSuchBucketException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchEntityException.class, NoSuchKeyException.class);

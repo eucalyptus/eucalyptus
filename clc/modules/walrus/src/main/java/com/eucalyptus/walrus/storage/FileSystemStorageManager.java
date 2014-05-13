@@ -161,7 +161,7 @@ public class FileSystemStorageManager implements StorageManager {
 
     public void deleteBucket(String bucket) throws IOException {
         File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
-        if(!bukkit.delete()) {
+        if(bukkit.exists() && !bukkit.delete()) {
             throw new IOException("Unable to delete bucket: " + bucket);
         }
     }

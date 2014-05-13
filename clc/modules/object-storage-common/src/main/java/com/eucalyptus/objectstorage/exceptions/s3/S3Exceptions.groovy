@@ -27,6 +27,86 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
  * S3 Error codes. See http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html
  */
 
+class S3ErrorCodeStrings {
+    public static final String AccessDenied = "AccessDenied"
+    public static final String AccountProblem = "AccountProblem"
+    public static final String AmbiguousGrantByEmailAddress = "AmbiguousGrantByEmailAddress"
+    public static final String BadDigest = "BadDigest"
+    public static final String BucketAlreadyExists = "BucketAlreadyExists"
+    public static final String BucketAlreadyOwnedByYou = "BucketAlreadyOwnedByYou"
+    public static final String BucketNotEmpty = "BucketNotEmpty"
+    public static final String CredentialsNotSupported = "CredentialsNotSupported"
+    public static final String CrossLocationLoggingProhibited = "CrossLocationLoggingProhibited"
+    public static final String EntityTooSmall = "EntityTooSmall"
+    public static final String EntityTooLarge = "EntityTooLarge"
+    public static final String ExpiredToken = "ExpiredToken"
+    public static final String IllegalVersioningConfigurationException = "IllegalVersioningConfigurationException"
+    public static final String IncompleteBody = "IncompleteBody"
+    public static final String IncorrectNumberOfFilesInPostRequest = "IncorrectNumberOfFilesInPostRequest"
+    public static final String InlineDataTooLarge = "InlineDataTooLarge"
+    public static final String InternalError = "InternalError"
+    public static final String InvalidAccessKeyId = "InvalidAccessKeyId"
+    public static final String InvalidAddressingHeader = "InvalidAddressingHeader"
+    public static final String InvalidArgument = "InvalidArgument"
+    public static final String InvalidBucketName = "InvalidBucketName"
+    public static final String InvalidBucketState = "InvalidBucketState"
+    public static final String InvalidDigest = "InvalidDigest"
+    public static final String InvalidLocationConstraint = "InvalidLocationConstraint"
+    public static final String InvalidObjectState = "InvalidObjectState"
+    public static final String InvalidPart = "InvalidPart"
+    public static final String InvalidPartOrder = "InvalidPartOrder"
+    public static final String InvalidPayer = "InvalidPayer"
+    public static final String InvalidPolicyDocument = "InvalidPolicyDocument"
+    public static final String InvalidRange = "InvalidRange"
+    public static final String InvalidRequest = "InvalidRequest"
+    public static final String InvalidSecurity = "InvalidSecurity"
+    public static final String InvalidSOAPRequest = "InvalidSOAPRequest"
+    public static final String InvalidStorageClass = "InvalidStorageClass"
+    public static final String InvalidTargetBucketForLogging = "InvalidTargetBucketForLogging"
+    public static final String InvalidToken = "InvalidToken"
+    public static final String InvalidURI = "InvalidURI"
+    public static final String KeyTooLong = "KeyTooLong"
+    public static final String MalformedACLError = "MalformedACLError"
+    public static final String MalformedPOSTRequest = "MalformedPOSTRequest"
+    public static final String MalformedXML = "MalformedXML"
+    public static final String MaxMessageLengthExceeded = "MaxMessageLengthExceeded"
+    public static final String MaxPostPreDataLengthExceededError = "MaxPostPreDataLengthExceededError"
+    public static final String MetadataTooLarge = "MetadataTooLarge"
+    public static final String MethodNotAllowed = "MethodNotAllowed"
+    public static final String MissingAttachment = "MissingAttachment"
+    public static final String MissingContentLength = "MissingContentLength"
+    public static final String MissingRequestBodyError = "MissingRequestBodyError"
+    public static final String MissingSecurityElement = "MissingSecurityElement"
+    public static final String MissingSecurityHeader = "MissingSecurityHeader"
+    public static final String NoLoggingStatusForKey = "NoLoggingStatusForKey"
+    public static final String NoSuchBucket = "NoSuchBucket"
+    public static final String NoSuchKey = "NoSuchKey"
+    public static final String NoSuchLifecycleConfiguration = "NoSuchLifecycleConfiguration"
+    public static final String NoSuchUpload = "NoSuchUpload"
+    public static final String NoSuchVersion = "NoSuchVersion"
+    public static final String NotImplemented = "NotImplemented"
+    public static final String NotSignedUp = "NotSignedUp"
+    public static final String NotSuchBucketPolicy = "NotSuchBucketPolicy"
+    public static final String OperationAborted = "OperationAborted"
+    public static final String PermanentRedirect = "PermanentRedirect"
+    public static final String PreconditionFailed = "PreconditionFailed"
+    public static final String Redirect = "Redirect"
+    public static final String RestoreAlreadyInProgress = "RestoreAlreadyInProgress"
+    public static final String RequestIsNotMultiPartContent = "RequestIsNotMultiPartContent"
+    public static final String RequestTimeout = "RequestTimeout"
+    public static final String RequestTimeTooSkewed = "RequestTimeTooSkewed"
+    public static final String RequestTorrentOfBucketError = "RequestTorrentOfBucketError"
+    public static final String SignatureDoesNotMatch = "SignatureDoesNotMatch"
+    public static final String ServiceUnavailable = "ServiceUnavailable"
+    public static final String SlowDown = "SlowDown"
+    public static final String TemporaryRedirect = "TemporaryRedirect"
+    public static final String TokenRefreshRequired = "TokenRefreshRequired"
+    public static final String TooManyBuckets = "TooManyBuckets"
+    public static final String UnexpectedContent = "UnexpectedContent"
+    public static final String UnresolvableGrantByEmailAddress = "UnresolvableGrantByEmailAddress"
+    public static final String UserKeyMustBeSpecified = "UserKeyMustBeSpecified"
+}
+
 class S3Exception extends ObjectStorageException {
     def S3Exception() {}
 
@@ -38,35 +118,9 @@ class S3Exception extends ObjectStorageException {
     }
 }
 
-class S3ClientException extends S3Exception {
-    def S3ClientException() {
-        super();
-    }
-
-    def S3ClientException(String errorCode, String description, HttpResponseStatus statusCode) {
-        super();
-        this.code = errorCode;
-        this.message = description;
-        this.status = statusCode;
-    }
-}
-
-class S3ServerException extends S3Exception {
-    def S3ServerException() {
-        super();
-    }
-
-    def S3ServerException(String errorCode, String description, HttpResponseStatus statusCode) {
-        super();
-        this.code = errorCode;
-        this.message = description;
-        this.status = statusCode;
-    }
-}
-
-class AccessDeniedException extends S3ClientException {
+class AccessDeniedException extends S3Exception {
     def AccessDeniedException() {
-        super("AccessDenied", "Access Denied", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.AccessDenied, "Access Denied", HttpResponseStatus.FORBIDDEN);
     }
 
     def AccessDeniedException(String resource) {
@@ -75,9 +129,9 @@ class AccessDeniedException extends S3ClientException {
     }
 }
 
-class AccountProblemException extends S3ClientException {
+class AccountProblemException extends S3Exception {
     def AccountProblemException() {
-        super("AccountProblem", "There is a problem with your Eucalyptus account that prevents the operation from completing successfully. Please use Contact Us.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.AccountProblem, "There is a problem with your Eucalyptus account that prevents the operation from completing successfully. Please use Contact Us.", HttpResponseStatus.FORBIDDEN);
     }
 
     def AccountProblemException(String resource) {
@@ -86,9 +140,9 @@ class AccountProblemException extends S3ClientException {
     }
 }
 
-class AmbiguousGrantByEmailAddressException extends S3ClientException {
+class AmbiguousGrantByEmailAddressException extends S3Exception {
     def AmbiguousGrantByEmailAddressException() {
-        super("AmbiguousGrantByEmailAddress", "The e-mail address you provided is associated with more than one account.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.AmbiguousGrantByEmailAddress, "The e-mail address you provided is associated with more than one account.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def AmbiguousGrantByEmailAddressException(String resource) {
@@ -97,9 +151,9 @@ class AmbiguousGrantByEmailAddressException extends S3ClientException {
     }
 }
 
-class BadDigestException extends S3ClientException {
+class BadDigestException extends S3Exception {
     def BadDigestException() {
-        super("BadDigest", "The Content-MD5 you specified did not match what we received.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.BadDigest, "The Content-MD5 you specified did not match what we received.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def BadDigestException(String resource) {
@@ -108,9 +162,9 @@ class BadDigestException extends S3ClientException {
     }
 }
 
-class BucketAlreadyExistsException extends S3ClientException {
+class BucketAlreadyExistsException extends S3Exception {
     def BucketAlreadyExistsException() {
-        super("BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.BucketAlreadyExists, "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", HttpResponseStatus.CONFLICT);
     }
 
     def BucketAlreadyExistsException(String resource) {
@@ -119,9 +173,9 @@ class BucketAlreadyExistsException extends S3ClientException {
     }
 }
 
-class BucketAlreadyOwnedByYouException extends S3ClientException {
+class BucketAlreadyOwnedByYouException extends S3Exception {
     def BucketAlreadyOwnedByYouException() {
-        super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.BucketAlreadyOwnedByYou, "Your previous request to create the named bucket succeeded and you already own it.", HttpResponseStatus.CONFLICT);
     }
 
     def BucketAlreadyOwnedByYouException(String resource) {
@@ -130,9 +184,9 @@ class BucketAlreadyOwnedByYouException extends S3ClientException {
     }
 }
 
-class BucketNotEmptyException extends S3ClientException {
+class BucketNotEmptyException extends S3Exception {
     def BucketNotEmptyException() {
-        super("BucketNotEmpty", "The bucket you tried to delete is not empty.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.BucketNotEmpty, "The bucket you tried to delete is not empty.", HttpResponseStatus.CONFLICT);
     }
 
     def BucketNotEmptyException(String resource) {
@@ -141,9 +195,9 @@ class BucketNotEmptyException extends S3ClientException {
     }
 }
 
-class CredentialsNotSupportedException extends S3ClientException {
+class CredentialsNotSupportedException extends S3Exception {
     def CredentialsNotSupportedException() {
-        super("CredentialsNotSupported", "This request does not support credentials.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.CredentialsNotSupported, "This request does not support credentials.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def CredentialsNotSupportedException(String resource) {
@@ -152,9 +206,9 @@ class CredentialsNotSupportedException extends S3ClientException {
     }
 }
 
-class CrossLocationLoggingProhibitedException extends S3ClientException {
+class CrossLocationLoggingProhibitedException extends S3Exception {
     def CrossLocationLoggingProhibitedException() {
-        super("CrossLocationLoggingProhibited", "Cross location logging not allowed. Buckets in one geographic location cannot log information to a bucket in another location.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.CrossLocationLoggingProhibited, "Cross location logging not allowed. Buckets in one geographic location cannot log information to a bucket in another location.", HttpResponseStatus.FORBIDDEN);
     }
 
     def CrossLocationLoggingProhibitedException(String resource) {
@@ -163,9 +217,9 @@ class CrossLocationLoggingProhibitedException extends S3ClientException {
     }
 }
 
-class EntityTooSmallException extends S3ClientException {
+class EntityTooSmallException extends S3Exception {
     def EntityTooSmallException() {
-        super("EntityTooSmall", "Your proposed upload is smaller than the minimum allowed object size.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.EntityTooSmall, "Your proposed upload is smaller than the minimum allowed object size.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def EntityTooSmallException(String resource) {
@@ -174,9 +228,9 @@ class EntityTooSmallException extends S3ClientException {
     }
 }
 
-class EntityTooLargeException extends S3ClientException {
+class EntityTooLargeException extends S3Exception {
     def EntityTooLargeException() {
-        super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.EntityTooLarge, "Your proposed upload exceeds the maximum allowed object size.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def EntityTooLargeException(String resource) {
@@ -185,9 +239,9 @@ class EntityTooLargeException extends S3ClientException {
     }
 }
 
-class ExpiredTokenException extends S3ClientException {
+class ExpiredTokenException extends S3Exception {
     def ExpiredTokenException() {
-        super("ExpiredToken", "The provided token has expired.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.ExpiredToken, "The provided token has expired.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def ExpiredTokenException(String resource) {
@@ -196,9 +250,9 @@ class ExpiredTokenException extends S3ClientException {
     }
 }
 
-class IllegalVersioningConfigurationException extends S3ClientException {
+class IllegalVersioningConfigurationException extends S3Exception {
     def IllegalVersioningConfigurationException() {
-        super("IllegalVersioningConfigurationException", "Indicates that the Versioning configuration specified in the request is invalid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.IllegalVersioningConfigurationException, "Indicates that the Versioning configuration specified in the request is invalid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def IllegalVersioningConfigurationException(String resource) {
@@ -207,9 +261,9 @@ class IllegalVersioningConfigurationException extends S3ClientException {
     }
 }
 
-class IncompleteBodyException extends S3ClientException {
+class IncompleteBodyException extends S3Exception {
     def IncompleteBodyException() {
-        super("IncompleteBody", "You did not provide the number of bytes specified by the Content-Length HTTP header", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.IncompleteBody, "You did not provide the number of bytes specified by the Content-Length HTTP header", HttpResponseStatus.BAD_REQUEST);
     }
 
     def IncompleteBodyException(String resource) {
@@ -218,9 +272,9 @@ class IncompleteBodyException extends S3ClientException {
     }
 }
 
-class IncorrectNumberOfFilesInPostRequestException extends S3ClientException {
+class IncorrectNumberOfFilesInPostRequestException extends S3Exception {
     def IncorrectNumberOfFilesInPostRequestException() {
-        super("IncorrectNumberOfFilesInPostRequest", "POST requires exactly one file upload per request.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.IncorrectNumberOfFilesInPostRequest, "POST requires exactly one file upload per request.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def IncorrectNumberOfFilesInPostRequestException(String resource) {
@@ -229,9 +283,9 @@ class IncorrectNumberOfFilesInPostRequestException extends S3ClientException {
     }
 }
 
-class InlineDataTooLargeException extends S3ClientException {
+class InlineDataTooLargeException extends S3Exception {
     def InlineDataTooLargeException() {
-        super("InlineDataTooLarge", "Inline data exceeds the maximum allowed size.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InlineDataTooLarge, "Inline data exceeds the maximum allowed size.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InlineDataTooLargeException(String resource) {
@@ -240,9 +294,9 @@ class InlineDataTooLargeException extends S3ClientException {
     }
 }
 
-class InternalErrorException extends S3ServerException {
+class InternalErrorException extends S3Exception {
     def InternalErrorException() {
-        super("InternalError", "We encountered an internal error. Please try again.", HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        super(S3ErrorCodeStrings.InternalError, "We encountered an internal error. Please try again.", HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
 
     def InternalErrorException(String resource) {
@@ -262,9 +316,9 @@ class InternalErrorException extends S3ServerException {
 	}
 }
 
-class InvalidAccessKeyIdException extends S3ClientException {
+class InvalidAccessKeyIdException extends S3Exception {
     def InvalidAccessKeyIdException() {
-        super("InvalidAccessKeyId", "The AWS Access Key Id you provided does not exist in our records.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.InvalidAccessKeyId, "The AWS Access Key Id you provided does not exist in our records.", HttpResponseStatus.FORBIDDEN);
     }
 
     def InvalidAccessKeyIdException(String resource) {
@@ -273,9 +327,9 @@ class InvalidAccessKeyIdException extends S3ClientException {
     }
 }
 
-class InvalidAddressingHeaderException extends S3ClientException {
+class InvalidAddressingHeaderException extends S3Exception {
     def InvalidAddressingHeaderException() {
-        super("InvalidAddressingHeader", "You must specify the Anonymous role.", null);
+        super(S3ErrorCodeStrings.InvalidAddressingHeader, "You must specify the Anonymous role.", null);
     }
 
     def InvalidAddressingHeaderException(String resource) {
@@ -284,9 +338,9 @@ class InvalidAddressingHeaderException extends S3ClientException {
     }
 }
 
-class InvalidArgumentException extends S3ClientException {
+class InvalidArgumentException extends S3Exception {
     def InvalidArgumentException() {
-        super("InvalidArgument", "Invalid Argument", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidArgument, "Invalid Argument", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidArgumentException(String resource) {
@@ -295,9 +349,9 @@ class InvalidArgumentException extends S3ClientException {
     }
 }
 
-class InvalidBucketNameException extends S3ClientException {
+class InvalidBucketNameException extends S3Exception {
     def InvalidBucketNameException() {
-        super("InvalidBucketName", "The specified bucket is not valid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidBucketName, "The specified bucket is not valid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidBucketNameException(String resource) {
@@ -306,9 +360,9 @@ class InvalidBucketNameException extends S3ClientException {
     }
 }
 
-class InvalidBucketStateException extends S3ClientException {
+class InvalidBucketStateException extends S3Exception {
     def InvalidBucketStateException() {
-        super("InvalidBucketState", "The request is not valid with the current state of the bucket.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.InvalidBucketState, "The request is not valid with the current state of the bucket.", HttpResponseStatus.CONFLICT);
     }
 
     def InvalidBucketStateException(String resource) {
@@ -317,9 +371,9 @@ class InvalidBucketStateException extends S3ClientException {
     }
 }
 
-class InvalidDigestException extends S3ClientException {
+class InvalidDigestException extends S3Exception {
     def InvalidDigestException() {
-        super("InvalidDigest", "The Content-MD5 you specified was an invalid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidDigest, "The Content-MD5 you specified was an invalid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidDigestException(String resource) {
@@ -328,9 +382,9 @@ class InvalidDigestException extends S3ClientException {
     }
 }
 
-class InvalidLocationConstraintException extends S3ClientException {
+class InvalidLocationConstraintException extends S3Exception {
     def InvalidLocationConstraintException() {
-        super("InvalidLocationConstraint", "The specified location constraint is not valid. For more information about Regions, see How to Select a Region for Your Buckets.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidLocationConstraint, "The specified location constraint is not valid. For more information about Regions, see How to Select a Region for Your Buckets.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidLocationConstraintException(String resource) {
@@ -339,9 +393,9 @@ class InvalidLocationConstraintException extends S3ClientException {
     }
 }
 
-class InvalidObjectStateException extends S3ClientException {
+class InvalidObjectStateException extends S3Exception {
     def InvalidObjectStateException() {
-        super("InvalidObjectState", "The operation is not valid for the current state of the object.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.InvalidObjectState, "The operation is not valid for the current state of the object.", HttpResponseStatus.FORBIDDEN);
     }
 
     def InvalidObjectStateException(String resource) {
@@ -350,9 +404,9 @@ class InvalidObjectStateException extends S3ClientException {
     }
 }
 
-class InvalidPartException extends S3ClientException {
+class InvalidPartException extends S3Exception {
     def InvalidPartException() {
-        super("InvalidPart", "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidPart, "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidPartException(String resource) {
@@ -361,9 +415,9 @@ class InvalidPartException extends S3ClientException {
     }
 }
 
-class InvalidPartOrderException extends S3ClientException {
+class InvalidPartOrderException extends S3Exception {
     def InvalidPartOrderException() {
-        super("InvalidPartOrder", "The list of parts was not in ascending order.Parts list must specified in order by part number.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidPartOrder, "The list of parts was not in ascending order.Parts list must specified in order by part number.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidPartOrderException(String resource) {
@@ -372,9 +426,9 @@ class InvalidPartOrderException extends S3ClientException {
     }
 }
 
-class InvalidPayerException extends S3ClientException {
+class InvalidPayerException extends S3Exception {
     def InvalidPayerException() {
-        super("InvalidPayer", "All access to this object has been disabled.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.InvalidPayer, "All access to this object has been disabled.", HttpResponseStatus.FORBIDDEN);
     }
 
     def InvalidPayerException(String resource) {
@@ -383,9 +437,9 @@ class InvalidPayerException extends S3ClientException {
     }
 }
 
-class InvalidPolicyDocumentException extends S3ClientException {
+class InvalidPolicyDocumentException extends S3Exception {
     def InvalidPolicyDocumentException() {
-        super("InvalidPolicyDocument", "The content of the form does not meet the conditions specified in the policy document.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidPolicyDocument, "The content of the form does not meet the conditions specified in the policy document.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidPolicyDocumentException(String resource) {
@@ -400,9 +454,9 @@ class InvalidPolicyDocumentException extends S3ClientException {
     }
 }
 
-class InvalidRangeException extends S3ClientException {
+class InvalidRangeException extends S3Exception {
     def InvalidRangeException() {
-        super("InvalidRange", "The requested range cannot be satisfied.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+        super(S3ErrorCodeStrings.InvalidRange, "The requested range cannot be satisfied.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
     }
 
     def InvalidRangeException(String resource) {
@@ -411,9 +465,9 @@ class InvalidRangeException extends S3ClientException {
     }
 }
 
-class InvalidRequestException extends S3ClientException {
+class InvalidRequestException extends S3Exception {
     def InvalidRequestException() {
-        super("InvalidRequest", "SOAP requests must be made over an HTTPS connection.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidRequest, "SOAP requests must be made over an HTTPS connection.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidRequestException(String resource) {
@@ -422,9 +476,9 @@ class InvalidRequestException extends S3ClientException {
     }
 }
 
-class InvalidSecurityException extends S3ClientException {
+class InvalidSecurityException extends S3Exception {
     def InvalidSecurityException() {
-        super("InvalidSecurity", "The provided security credentials are not valid.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.InvalidSecurity, "The provided security credentials are not valid.", HttpResponseStatus.FORBIDDEN);
     }
 
     def InvalidSecurityException(String resource) {
@@ -433,9 +487,9 @@ class InvalidSecurityException extends S3ClientException {
     }
 }
 
-class InvalidSOAPRequestException extends S3ClientException {
+class InvalidSOAPRequestException extends S3Exception {
     def InvalidSOAPRequestException() {
-        super("InvalidSOAPRequest", "The SOAP request body is invalid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidSOAPRequest, "The SOAP request body is invalid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidSOAPRequestException(String resource) {
@@ -444,9 +498,9 @@ class InvalidSOAPRequestException extends S3ClientException {
     }
 }
 
-class InvalidStorageClassException extends S3ClientException {
+class InvalidStorageClassException extends S3Exception {
     def InvalidStorageClassException() {
-        super("InvalidStorageClass", "The storage class you specified is not valid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidStorageClass, "The storage class you specified is not valid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidStorageClassException(String resource) {
@@ -455,9 +509,9 @@ class InvalidStorageClassException extends S3ClientException {
     }
 }
 
-class InvalidTargetBucketForLoggingException extends S3ClientException {
+class InvalidTargetBucketForLoggingException extends S3Exception {
     def InvalidTargetBucketForLoggingException() {
-        super("InvalidTargetBucketForLogging", "The target bucket for logging does not exist, is not owned by you, or does not have the appropriate grants for the log-delivery group.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidTargetBucketForLogging, "The target bucket for logging does not exist, is not owned by you, or does not have the appropriate grants for the log-delivery group.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidTargetBucketForLoggingException(String resource) {
@@ -466,9 +520,9 @@ class InvalidTargetBucketForLoggingException extends S3ClientException {
     }
 }
 
-class InvalidTokenException extends S3ClientException {
+class InvalidTokenException extends S3Exception {
     def InvalidTokenException() {
-        super("InvalidToken", "The provided token is malformed or otherwise invalid.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidToken, "The provided token is malformed or otherwise invalid.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidTokenException(String resource) {
@@ -477,9 +531,9 @@ class InvalidTokenException extends S3ClientException {
     }
 }
 
-class InvalidURIException extends S3ClientException {
+class InvalidURIException extends S3Exception {
     def InvalidURIException() {
-        super("InvalidURI", "Couldn't parse the specified URI.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.InvalidURI, "Couldn't parse the specified URI.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def InvalidURIException(String resource) {
@@ -488,9 +542,9 @@ class InvalidURIException extends S3ClientException {
     }
 }
 
-class KeyTooLongException extends S3ClientException {
+class KeyTooLongException extends S3Exception {
     def KeyTooLongException() {
-        super("KeyTooLong", "Your key is too long.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.KeyTooLong, "Your key is too long.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def KeyTooLongException(String resource) {
@@ -499,9 +553,9 @@ class KeyTooLongException extends S3ClientException {
     }
 }
 
-class MalformedACLErrorException extends S3ClientException {
+class MalformedACLErrorException extends S3Exception {
     def MalformedACLErrorException() {
-        super("MalformedACLError", "The XML you provided was not well-formed or did not validate against our published schema.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MalformedACLError, "The XML you provided was not well-formed or did not validate against our published schema.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MalformedACLErrorException(String resource) {
@@ -510,9 +564,9 @@ class MalformedACLErrorException extends S3ClientException {
     }
 }
 
-class MalformedPOSTRequestException extends S3ClientException {
+class MalformedPOSTRequestException extends S3Exception {
     def MalformedPOSTRequestException() {
-        super("MalformedPOSTRequest", "The body of your POST request is not well-formed multipart/form-data.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MalformedPOSTRequest, "The body of your POST request is not well-formed multipart/form-data.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MalformedPOSTRequestException(String resource) {
@@ -521,9 +575,9 @@ class MalformedPOSTRequestException extends S3ClientException {
     }
 }
 
-class MalformedXMLException extends S3ClientException {
+class MalformedXMLException extends S3Exception {
     def MalformedXMLException() {
-        super("MalformedXML", "The XML you provided was not well-formed or did not validate against our published schema.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MalformedXML, "The XML you provided was not well-formed or did not validate against our published schema.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MalformedXMLException(String resource) {
@@ -532,9 +586,9 @@ class MalformedXMLException extends S3ClientException {
     }
 }
 
-class MaxMessageLengthExceededException extends S3ClientException {
+class MaxMessageLengthExceededException extends S3Exception {
     def MaxMessageLengthExceededException() {
-        super("MaxMessageLengthExceeded", "Your request was too big.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MaxMessageLengthExceeded, "Your request was too big.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MaxMessageLengthExceededException(String resource) {
@@ -543,9 +597,9 @@ class MaxMessageLengthExceededException extends S3ClientException {
     }
 }
 
-class MaxPostPreDataLengthExceededErrorException extends S3ClientException {
+class MaxPostPreDataLengthExceededErrorException extends S3Exception {
     def MaxPostPreDataLengthExceededErrorException() {
-        super("MaxPostPreDataLengthExceededError", "Your POST request fields preceding the upload file were too large.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MaxPostPreDataLengthExceededError, "Your POST request fields preceding the upload file were too large.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MaxPostPreDataLengthExceededErrorException(String resource) {
@@ -554,9 +608,9 @@ class MaxPostPreDataLengthExceededErrorException extends S3ClientException {
     }
 }
 
-class MetadataTooLargeException extends S3ClientException {
+class MetadataTooLargeException extends S3Exception {
     def MetadataTooLargeException() {
-        super("MetadataTooLarge", "Your metadata headers exceed the maximum allowed metadata size.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MetadataTooLarge, "Your metadata headers exceed the maximum allowed metadata size.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MetadataTooLargeException(String resource) {
@@ -565,9 +619,9 @@ class MetadataTooLargeException extends S3ClientException {
     }
 }
 
-class MethodNotAllowedException extends S3ClientException {
+class MethodNotAllowedException extends S3Exception {
     def MethodNotAllowedException() {
-        super("MethodNotAllowed", "The specified method is not allowed against this resource.", HttpResponseStatus.METHOD_NOT_ALLOWED);
+        super(S3ErrorCodeStrings.MethodNotAllowed, "The specified method is not allowed against this resource.", HttpResponseStatus.METHOD_NOT_ALLOWED);
     }
 
     def MethodNotAllowedException(String resource) {
@@ -576,9 +630,9 @@ class MethodNotAllowedException extends S3ClientException {
     }
 }
 
-class MissingAttachmentException extends S3ClientException {
+class MissingAttachmentException extends S3Exception {
     def MissingAttachmentException() {
-        super("MissingAttachment", "A SOAP attachment was expected, but none were found.", null);
+        super(S3ErrorCodeStrings.MissingAttachment, "A SOAP attachment was expected, but none were found.", null);
     }
 
     def MissingAttachmentException(String resource) {
@@ -587,9 +641,9 @@ class MissingAttachmentException extends S3ClientException {
     }
 }
 
-class MissingContentLengthException extends S3ClientException {
+class MissingContentLengthException extends S3Exception {
     def MissingContentLengthException() {
-        super("MissingContentLength", "You must provide the Content-Length HTTP header.", HttpResponseStatus.LENGTH_REQUIRED);
+        super(S3ErrorCodeStrings.MissingContentLength, "You must provide the Content-Length HTTP header.", HttpResponseStatus.LENGTH_REQUIRED);
     }
 
     def MissingContentLengthException(String resource) {
@@ -598,9 +652,9 @@ class MissingContentLengthException extends S3ClientException {
     }
 }
 
-class MissingRequestBodyErrorException extends S3ClientException {
+class MissingRequestBodyErrorException extends S3Exception {
     def MissingRequestBodyErrorException() {
-        super("MissingRequestBodyError", "Request body is empty.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MissingRequestBodyError, "Request body is empty.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MissingRequestBodyErrorException(String resource) {
@@ -609,9 +663,9 @@ class MissingRequestBodyErrorException extends S3ClientException {
     }
 }
 
-class MissingSecurityElementException extends S3ClientException {
+class MissingSecurityElementException extends S3Exception {
     def MissingSecurityElementException() {
-        super("MissingSecurityElement", "The SOAP 1.1 request is missing a security element.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MissingSecurityElement, "The SOAP 1.1 request is missing a security element.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MissingSecurityElementException(String resource) {
@@ -620,9 +674,9 @@ class MissingSecurityElementException extends S3ClientException {
     }
 }
 
-class MissingSecurityHeaderException extends S3ClientException {
+class MissingSecurityHeaderException extends S3Exception {
     def MissingSecurityHeaderException() {
-        super("MissingSecurityHeader", "Your request was missing a required header.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.MissingSecurityHeader, "Your request was missing a required header.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def MissingSecurityHeaderException(String resource) {
@@ -631,9 +685,9 @@ class MissingSecurityHeaderException extends S3ClientException {
     }
 }
 
-class NoLoggingStatusForKeyException extends S3ClientException {
+class NoLoggingStatusForKeyException extends S3Exception {
     def NoLoggingStatusForKeyException() {
-        super("NoLoggingStatusForKey", "There is no such thing as a logging status sub-resource for a key.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.NoLoggingStatusForKey, "There is no such thing as a logging status sub-resource for a key.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def NoLoggingStatusForKeyException(String resource) {
@@ -642,9 +696,9 @@ class NoLoggingStatusForKeyException extends S3ClientException {
     }
 }
 
-class NoSuchBucketException extends S3ClientException {
+class NoSuchBucketException extends S3Exception {
     def NoSuchBucketException() {
-        super("NoSuchBucket", "The specified bucket does not exist.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NoSuchBucket, "The specified bucket does not exist.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NoSuchBucketException(String resource) {
@@ -653,9 +707,9 @@ class NoSuchBucketException extends S3ClientException {
     }
 }
 
-class NoSuchKeyException extends S3ClientException {
+class NoSuchKeyException extends S3Exception {
     def NoSuchKeyException() {
-        super("NoSuchKey", "The specified key does not exist.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NoSuchKey, "The specified key does not exist.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NoSuchKeyException(String resource) {
@@ -664,9 +718,9 @@ class NoSuchKeyException extends S3ClientException {
     }
 }
 
-class NoSuchLifecycleConfigurationException extends S3ClientException {
+class NoSuchLifecycleConfigurationException extends S3Exception {
     def NoSuchLifecycleConfigurationException() {
-        super("NoSuchLifecycleConfiguration", "The lifecycle configuration does not exist.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NoSuchLifecycleConfiguration, "The lifecycle configuration does not exist.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NoSuchLifecycleConfigurationException(String resource) {
@@ -675,9 +729,9 @@ class NoSuchLifecycleConfigurationException extends S3ClientException {
     }
 }
 
-class NoSuchUploadException extends S3ClientException {
+class NoSuchUploadException extends S3Exception {
     def NoSuchUploadException() {
-        super("NoSuchUpload", "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NoSuchUpload, "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NoSuchUploadException(String resource) {
@@ -686,9 +740,9 @@ class NoSuchUploadException extends S3ClientException {
     }
 }
 
-class NoSuchVersionException extends S3ClientException {
+class NoSuchVersionException extends S3Exception {
     def NoSuchVersionException() {
-        super("NoSuchVersion", "Indicates that the version ID specified in the request does not match an existing version.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NoSuchVersion, "Indicates that the version ID specified in the request does not match an existing version.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NoSuchVersionException(String resource) {
@@ -697,9 +751,9 @@ class NoSuchVersionException extends S3ClientException {
     }
 }
 
-class NotImplementedException extends S3ClientException {
+class NotImplementedException extends S3Exception {
     def NotImplementedException() {
-        super("NotImplemented", "A header you provided implies functionality that is not implemented.", HttpResponseStatus.NOT_IMPLEMENTED);
+        super(S3ErrorCodeStrings.NotImplemented, "A header you provided implies functionality that is not implemented.", HttpResponseStatus.NOT_IMPLEMENTED);
     }
 
     def NotImplementedException(String resource) {
@@ -708,9 +762,9 @@ class NotImplementedException extends S3ClientException {
     }
 }
 
-class NotSignedUpException extends S3ClientException {
+class NotSignedUpException extends S3Exception {
     def NotSignedUpException() {
-        super("NotSignedUp", "Your account is not signed up for this service. You must sign up before you can use it.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.NotSignedUp, "Your account is not signed up for this service. You must sign up before you can use it.", HttpResponseStatus.FORBIDDEN);
     }
 
     def NotSignedUpException(String resource) {
@@ -719,9 +773,9 @@ class NotSignedUpException extends S3ClientException {
     }
 }
 
-class NotSuchBucketPolicyException extends S3ClientException {
+class NotSuchBucketPolicyException extends S3Exception {
     def NotSuchBucketPolicyException() {
-        super("NotSuchBucketPolicy", "The specified bucket does not have a bucket policy.", HttpResponseStatus.NOT_FOUND);
+        super(S3ErrorCodeStrings.NotSuchBucketPolicy, "The specified bucket does not have a bucket policy.", HttpResponseStatus.NOT_FOUND);
     }
 
     def NotSuchBucketPolicyException(String resource) {
@@ -730,9 +784,9 @@ class NotSuchBucketPolicyException extends S3ClientException {
     }
 }
 
-class OperationAbortedException extends S3ClientException {
+class OperationAbortedException extends S3Exception {
     def OperationAbortedException() {
-        super("OperationAborted", "A conflicting conditional operation is currently in progress against this resource. Please try again.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.OperationAborted, "A conflicting conditional operation is currently in progress against this resource. Please try again.", HttpResponseStatus.CONFLICT);
     }
 
     def OperationAbortedException(String resource) {
@@ -741,9 +795,9 @@ class OperationAbortedException extends S3ClientException {
     }
 }
 
-class PermanentRedirectException extends S3ClientException {
+class PermanentRedirectException extends S3Exception {
     def PermanentRedirectException() {
-        super("PermanentRedirect", "The bucket you are attempting to access must be addressed using the specified endpoint. Please send all future requests to this endpoint.", HttpResponseStatus.MOVED_PERMANENTLY);
+        super(S3ErrorCodeStrings.PermanentRedirect, "The bucket you are attempting to access must be addressed using the specified endpoint. Please send all future requests to this endpoint.", HttpResponseStatus.MOVED_PERMANENTLY);
     }
 
     def PermanentRedirectException(String resource) {
@@ -752,9 +806,9 @@ class PermanentRedirectException extends S3ClientException {
     }
 }
 
-class PreconditionFailedException extends S3ClientException {
+class PreconditionFailedException extends S3Exception {
     def PreconditionFailedException() {
-        super("PreconditionFailed", "At least one of the preconditions you specified did not hold.", HttpResponseStatus.PRECONDITION_FAILED);
+        super(S3ErrorCodeStrings.PreconditionFailed, "At least one of the preconditions you specified did not hold.", HttpResponseStatus.PRECONDITION_FAILED);
     }
 
     def PreconditionFailedException(String resource) {
@@ -763,9 +817,9 @@ class PreconditionFailedException extends S3ClientException {
     }
 }
 
-class RedirectException extends S3ClientException {
+class RedirectException extends S3Exception {
     def RedirectException() {
-        super("Redirect", "Temporary redirect.", HttpResponseStatus.TEMPORARY_REDIRECT);
+        super(S3ErrorCodeStrings.Redirect, "Temporary redirect.", HttpResponseStatus.TEMPORARY_REDIRECT);
     }
 
     def RedirectException(String resource) {
@@ -774,9 +828,9 @@ class RedirectException extends S3ClientException {
     }
 }
 
-class RestoreAlreadyInProgressException extends S3ClientException {
+class RestoreAlreadyInProgressException extends S3Exception {
     def RestoreAlreadyInProgressException() {
-        super("RestoreAlreadyInProgress", "Object restore is already in progress.", HttpResponseStatus.CONFLICT);
+        super(S3ErrorCodeStrings.RestoreAlreadyInProgress, "Object restore is already in progress.", HttpResponseStatus.CONFLICT);
     }
 
     def RestoreAlreadyInProgressException(String resource) {
@@ -785,9 +839,9 @@ class RestoreAlreadyInProgressException extends S3ClientException {
     }
 }
 
-class RequestIsNotMultiPartContentException extends S3ClientException {
+class RequestIsNotMultiPartContentException extends S3Exception {
     def RequestIsNotMultiPartContentException() {
-        super("RequestIsNotMultiPartContent", "Bucket POST must be of the enclosure-type multipart/form-data.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.RequestIsNotMultiPartContent, "Bucket POST must be of the enclosure-type multipart/form-data.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def RequestIsNotMultiPartContentException(String resource) {
@@ -796,9 +850,9 @@ class RequestIsNotMultiPartContentException extends S3ClientException {
     }
 }
 
-class RequestTimeoutException extends S3ClientException {
+class RequestTimeoutException extends S3Exception {
     def RequestTimeoutException() {
-        super("RequestTimeout", "Your socket connection to the server was not read from or written to within the timeout period.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.RequestTimeout, "Your socket connection to the server was not read from or written to within the timeout period.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def RequestTimeoutException(String resource) {
@@ -807,9 +861,9 @@ class RequestTimeoutException extends S3ClientException {
     }
 }
 
-class RequestTimeTooSkewedException extends S3ClientException {
+class RequestTimeTooSkewedException extends S3Exception {
     def RequestTimeTooSkewedException() {
-        super("RequestTimeTooSkewed", "The difference between the request time and the server's time is too large.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.RequestTimeTooSkewed, "The difference between the request time and the server's time is too large.", HttpResponseStatus.FORBIDDEN);
     }
 
     def RequestTimeTooSkewedException(String resource) {
@@ -818,9 +872,9 @@ class RequestTimeTooSkewedException extends S3ClientException {
     }
 }
 
-class RequestTorrentOfBucketErrorException extends S3ClientException {
+class RequestTorrentOfBucketErrorException extends S3Exception {
     def RequestTorrentOfBucketErrorException() {
-        super("RequestTorrentOfBucketError", "Requesting the torrent file of a bucket is not permitted.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.RequestTorrentOfBucketError, "Requesting the torrent file of a bucket is not permitted.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def RequestTorrentOfBucketErrorException(String resource) {
@@ -829,9 +883,9 @@ class RequestTorrentOfBucketErrorException extends S3ClientException {
     }
 }
 
-class SignatureDoesNotMatchException extends S3ClientException {
+class SignatureDoesNotMatchException extends S3Exception {
     def SignatureDoesNotMatchException() {
-        super("SignatureDoesNotMatch", "The request signature we calculated does not match the signature you provided.", HttpResponseStatus.FORBIDDEN);
+        super(S3ErrorCodeStrings.SignatureDoesNotMatch, "The request signature we calculated does not match the signature you provided.", HttpResponseStatus.FORBIDDEN);
     }
 
     def SignatureDoesNotMatchException(String resource) {
@@ -840,9 +894,9 @@ class SignatureDoesNotMatchException extends S3ClientException {
     }
 }
 
-class ServiceUnavailableException extends S3ServerException {
+class ServiceUnavailableException extends S3Exception {
     def ServiceUnavailableException() {
-        super("ServiceUnavailable", "Please reduce your request rate.", HttpResponseStatus.SERVICE_UNAVAILABLE);
+        super(S3ErrorCodeStrings.ServiceUnavailable, "Please reduce your request rate.", HttpResponseStatus.SERVICE_UNAVAILABLE);
     }
 
     def ServiceUnavailableException(String resource) {
@@ -851,9 +905,9 @@ class ServiceUnavailableException extends S3ServerException {
     }
 }
 
-class SlowDownException extends S3ServerException {
+class SlowDownException extends S3Exception {
     def SlowDownException() {
-        super("SlowDown", "Please reduce your request rate.", HttpResponseStatus.SERVICE_UNAVAILABLE);
+        super(S3ErrorCodeStrings.SlowDown, "Please reduce your request rate.", HttpResponseStatus.SERVICE_UNAVAILABLE);
     }
 
     def SlowDownException(String resource) {
@@ -862,9 +916,9 @@ class SlowDownException extends S3ServerException {
     }
 }
 
-class TemporaryRedirectException extends S3ClientException {
+class TemporaryRedirectException extends S3Exception {
     def TemporaryRedirectException() {
-        super("TemporaryRedirect", "You are being redirected to the bucket while DNS updates.", HttpResponseStatus.TEMPORARY_REDIRECT);
+        super(S3ErrorCodeStrings.TemporaryRedirect, "You are being redirected to the bucket while DNS updates.", HttpResponseStatus.TEMPORARY_REDIRECT);
     }
 
     def TemporaryRedirectException(String resource) {
@@ -873,9 +927,9 @@ class TemporaryRedirectException extends S3ClientException {
     }
 }
 
-class TokenRefreshRequiredException extends S3ClientException {
+class TokenRefreshRequiredException extends S3Exception {
     def TokenRefreshRequiredException() {
-        super("TokenRefreshRequired", "The provided token must be refreshed.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.TokenRefreshRequired, "The provided token must be refreshed.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def TokenRefreshRequiredException(String resource) {
@@ -884,9 +938,9 @@ class TokenRefreshRequiredException extends S3ClientException {
     }
 }
 
-class TooManyBucketsException extends S3ClientException {
+class TooManyBucketsException extends S3Exception {
     def TooManyBucketsException() {
-        super("TooManyBuckets", "You have attempted to create more buckets than allowed.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.TooManyBuckets, "You have attempted to create more buckets than allowed.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def TooManyBucketsException(String resource) {
@@ -895,9 +949,9 @@ class TooManyBucketsException extends S3ClientException {
     }
 }
 
-class UnexpectedContentException extends S3ClientException {
+class UnexpectedContentException extends S3Exception {
     def UnexpectedContentException() {
-        super("UnexpectedContent", "This request does not support content.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.UnexpectedContent, "This request does not support content.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def UnexpectedContentException(String resource) {
@@ -906,9 +960,9 @@ class UnexpectedContentException extends S3ClientException {
     }
 }
 
-class UnresolvableGrantByEmailAddressException extends S3ClientException {
+class UnresolvableGrantByEmailAddressException extends S3Exception {
     def UnresolvableGrantByEmailAddressException() {
-        super("UnresolvableGrantByEmailAddress", "The e-mail address you provided does not match any account on record.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.UnresolvableGrantByEmailAddress, "The e-mail address you provided does not match any account on record.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def UnresolvableGrantByEmailAddressException(String resource) {
@@ -917,13 +971,96 @@ class UnresolvableGrantByEmailAddressException extends S3ClientException {
     }
 }
 
-class UserKeyMustBeSpecifiedException extends S3ClientException {
+class UserKeyMustBeSpecifiedException extends S3Exception {
     def UserKeyMustBeSpecifiedException() {
-        super("UserKeyMustBeSpecified", "The bucket POST must contain the specified field name. If it is specified, please check the order of the fields.", HttpResponseStatus.BAD_REQUEST);
+        super(S3ErrorCodeStrings.UserKeyMustBeSpecified, "The bucket POST must contain the specified field name. If it is specified, please check the order of the fields.", HttpResponseStatus.BAD_REQUEST);
     }
 
     def UserKeyMustBeSpecifiedException(String resource) {
         this();
         this.resource = resource;
+    }
+}
+
+public enum S3Exceptions {
+    INSTANCE;
+    public static final Map<String, Class<? extends S3Exception>> exceptionCodeToClassMap;
+
+    static {
+        exceptionCodeToClassMap = new HashMap<String, Class<? extends S3Exception>>();
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.AccessDenied, AccessDeniedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.AccountProblem, AccountProblemException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.AmbiguousGrantByEmailAddress, AmbiguousGrantByEmailAddressException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.BadDigest, BadDigestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyExists, BucketAlreadyExistsException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyOwnedByYou, BucketAlreadyOwnedByYouException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.CredentialsNotSupported, CredentialsNotSupportedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.CrossLocationLoggingProhibited, CrossLocationLoggingProhibitedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.EntityTooLarge, EntityTooLargeException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.EntityTooSmall, EntityTooSmallException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.ExpiredToken, ExpiredTokenException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.IllegalVersioningConfigurationException, IllegalVersioningConfigurationException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.IncompleteBody, IncompleteBodyException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.IncorrectNumberOfFilesInPostRequest, IncorrectNumberOfFilesInPostRequestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InlineDataTooLarge, InlineDataTooLargeException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InternalError, InternalErrorException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidAccessKeyId, InvalidAccessKeyIdException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidArgument, InvalidArgumentException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidBucketName, InvalidBucketNameException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidBucketState, InvalidBucketStateException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidDigest, InvalidDigestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidLocationConstraint, InvalidLocationConstraintException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidObjectState, InvalidObjectStateException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPart, InvalidPartException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPartOrder, InvalidPartOrderException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPayer, InvalidPayerException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPolicyDocument, InvalidPolicyDocumentException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidRange, InvalidRangeException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidRequest, InvalidRequestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSecurity, InvalidSecurityException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSOAPRequest, InvalidSOAPRequestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidStorageClass, InvalidStorageClassException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidTargetBucketForLogging, InvalidTargetBucketForLoggingException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidToken, InvalidTokenException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidURI, InvalidURIException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.KeyTooLong, KeyTooLongException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedACLError, MalformedACLErrorException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedPOSTRequest, MalformedPOSTRequestException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedXML, MalformedXMLException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MaxMessageLengthExceeded, MaxMessageLengthExceededException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MaxPostPreDataLengthExceededError, MaxPostPreDataLengthExceededErrorException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MetadataTooLarge, MetadataTooLargeException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MethodNotAllowed, MethodNotAllowedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingAttachment, MissingAttachmentException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingContentLength, MissingContentLengthException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingRequestBodyError, MissingRequestBodyErrorException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingSecurityElement, MissingSecurityElementException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoLoggingStatusForKey, NoLoggingStatusForKeyException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchBucket, NoSuchBucketException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchKey, NoSuchKeyException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchLifecycleConfiguration, NoSuchLifecycleConfigurationException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchUpload, NoSuchUploadException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchVersion, NoSuchVersionException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotImplemented, NotImplementedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSignedUp, NotSignedUpException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSuchBucketPolicy, NotSuchBucketPolicyException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.OperationAborted, OperationAbortedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.PermanentRedirect, PermanentRedirectException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.PreconditionFailed, PreconditionFailedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.Redirect, RedirectException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestIsNotMultiPartContent, RequestIsNotMultiPartContentException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTimeout, RequestTimeoutException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTimeTooSkewed, RequestTimeTooSkewedException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTorrentOfBucketError, RequestTorrentOfBucketErrorException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.RestoreAlreadyInProgress, RestoreAlreadyInProgressException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.ServiceUnavailable, ServiceUnavailableException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.SignatureDoesNotMatch, SignatureDoesNotMatchException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.SlowDown, SlowDownException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.TemporaryRedirect, TemporaryRedirectException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.TokenRefreshRequired, TokenRefreshRequiredException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.TooManyBuckets, TooManyBucketsException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.UnexpectedContent, UnexpectedContentException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.UnresolvableGrantByEmailAddress, UnresolvableGrantByEmailAddressException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.UserKeyMustBeSpecified, UserKeyMustBeSpecifiedException.class)
     }
 }
