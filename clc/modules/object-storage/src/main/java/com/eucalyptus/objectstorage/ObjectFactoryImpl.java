@@ -181,7 +181,11 @@ public class ObjectFactoryImpl implements ObjectFactory {
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
             etag = response.getEtag();
-            lastMod = DateFormatter.dateFromListingFormattedString(response.getLastModified());
+            // right now the time between walrus's response and object creation is not long enough that ObjectMetadataManager.cleanupInvalidObjects
+            // can tell which object is the latest if (for instance) a delete and copyObject are called subsequently
+            // TODO - try to honor upstream last modified date in the future by refactoring OMM.cleanupInvalidObjects not to depend on timestamps
+            //lastMod = DateFormatter.dateFromListingFormattedString(response.getLastModified());
+            lastMod = new Date();
         } catch(Exception e) {
             LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getObjectUuid(),e);
 
@@ -324,7 +328,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
             entity = entityRef.get(); //Get the latest if it was updated
-            lastModified = response.getLastModified();
+            // lastModified = response.getLastModified();
+            lastModified = new Date();
             etag = response.getEtag();
 
         } catch(Exception e) {
@@ -674,7 +679,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
             response = waitForCompletion(putTask, uploadingObject.getPartUuid(), updateTimeout, failTime, checkIntervalSec);
             entity = entityRef.get(); //Get the latest if it was updated
-            lastModified = response.getLastModified();
+            // lastModified = response.getLastModified();
+            lastModified = new Date();
             etag = response.getEtag();
 
         } catch(Exception e) {
@@ -740,7 +746,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             CompleteMultipartUploadResponseType response = waitForMultipartCompletion(completeTask, commitRequest.getUploadId(), commitRequest.getCorrelationId(), failTime, checkIntervalSec);
             mpuEntity.seteTag(response.getEtag());
 
-            ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, response.getLastModified(), mpuEntity.geteTag());
+            ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, new Date(), mpuEntity.geteTag());
 
             //all okay, delete all parts
             /* This is handled in the object state transition now. All done in one transaction.
