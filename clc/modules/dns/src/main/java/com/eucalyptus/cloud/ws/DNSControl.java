@@ -69,6 +69,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -95,6 +96,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.system.Capabilities;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -163,13 +165,11 @@ public class DNSControl {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			if ( newValue instanceof String  ) {
-				if( t.getValue( ) == null || !t.getValue( ).equals( newValue ) ){
-					updateAddressMatchers( (String) newValue );
-					try {
-						restart( );
-					} catch ( final Exception e ) {
-						throw new ConfigurablePropertyException( e.getMessage( ) );
-					}
+				updateAddressMatchers( (String) newValue );
+				try {
+					restart( );
+				} catch ( final Exception e ) {
+					throw new ConfigurablePropertyException( e.getMessage( ) );
 				}
 			}
 		}
@@ -223,8 +223,14 @@ public class DNSControl {
 				final List<T> listeners = Lists.newArrayList( );
 				for ( final InetAddress listenAddress : listenAddresses ) {
 					try {
-						final T listener = builder.build( listenAddress, listenPort );
-						listener.start( );
+						final T listener = Capabilities.runWithCapabilities( new Callable<T>() {
+							@Override
+							public T call() throws Exception {
+								final T listener = builder.build( listenAddress, listenPort );
+								listener.start( );
+								return listener;
+							}
+						} );
 						listeners.add( listener );
 					} catch( final Exception ex ) {
 						LOG.error( "Error starting DNS "+description+" listener on "+listenAddress+":"+listenPort, ex );
