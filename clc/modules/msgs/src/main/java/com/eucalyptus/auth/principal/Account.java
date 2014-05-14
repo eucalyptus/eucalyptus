@@ -102,6 +102,8 @@ public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Seria
   public static final String SYSTEM_ACCOUNT = "eucalyptus";
   public static final String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
   public static final Long SYSTEM_ACCOUNT_ID = 0l;
+  //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635 
+  public static final String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";
 
   public void setName( String name ) throws AuthException;
   

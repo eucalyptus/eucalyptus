@@ -109,7 +109,6 @@ public class StorageProperties {
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 
     public static final String SNAPSHOT_BUCKET_PREFIX = "snapshots-";
-    public static final String BLOCKSTORAGE_ACCOUNT = "(eucalyptus)blockstorage";
     public static final String EBS_ROLE_NAME = "EBSUpload";
     public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
     public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess";

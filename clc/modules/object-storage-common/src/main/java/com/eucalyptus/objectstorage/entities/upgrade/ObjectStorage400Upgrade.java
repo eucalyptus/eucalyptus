@@ -123,7 +123,6 @@ import com.google.common.collect.Sets;
 public class ObjectStorage400Upgrade {
 
 	private static Logger LOG = Logger.getLogger(ObjectStorage400Upgrade.class);
-	private static final String BLOCKSTORAGE_ACCOUNT_NAME = "(eucalyptus)blockstorage";
 	private static Map<String, Account> accountIdAccountMap = Maps.newHashMap(); // Cache account ID -> account info
 	private static Map<String, User> accountIdAdminMap = Maps.newHashMap(); // Cache account ID -> admin user info
 	private static Map<String, User> userIdUserMap = Maps.newHashMap(); // Cache user ID -> user info
@@ -509,7 +508,7 @@ public class ObjectStorage400Upgrade {
 	}
 
 	private static void createBlockStorageAccount() throws Exception {
-		blockStorageAccount = Accounts.addSystemAccountWithAdmin(BLOCKSTORAGE_ACCOUNT_NAME);
+		blockStorageAccount = Accounts.addSystemAccountWithAdmin(Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
 	}
 
 	private static Account getBlockStorageAccount() throws Exception {
