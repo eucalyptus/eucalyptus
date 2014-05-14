@@ -276,6 +276,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
           volume.setVolume(new DiskImageVolumeDescription());
           volume.getVolume().setSize(disk.getVolume().getSize());
           volume.setBytesConverted(0L);
+          volume.setStatus( ImportTaskState.NEW.getExternalTaskStateName( ) );
           volumes.add(volume);
         }
       }
