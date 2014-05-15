@@ -247,11 +247,15 @@ public class VerifyMetadata {
     private static long GIG = 1073741824l;
     private static long MB = 1048576l;
     // check if image can be converted
-    private static boolean verifyImagerCapacity(MachineImageInfo img) {
+    private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException{
       String workerType = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
       String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_EMI;
-      if (workerType == null || emiName == null)
-	    return false;
+      if (workerType == null )
+        return false;
+      if (emiName == null || "NULL".equals(emiName))
+        throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
+            + " Please contact your cloud administrator.");
+      
       List<VmTypeDetails> allTypes = com.eucalyptus.imaging.EucalyptusActivityTasks.getInstance().describeVMTypes();
       long diskSizeBytes = 0;
       for(VmTypeDetails type:allTypes){
