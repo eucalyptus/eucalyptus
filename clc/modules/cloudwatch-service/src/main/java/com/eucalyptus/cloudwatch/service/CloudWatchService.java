@@ -50,7 +50,7 @@ public class CloudWatchService {
 
   public CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( request ), user ) ) {
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {
       throw new CloudWatchAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
