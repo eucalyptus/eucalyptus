@@ -277,7 +277,7 @@ public class StackConfiguration extends AbstractPersistent {
       
       @Override
       public String getScheme( ) {
-        return Databases.getBootstrapper( ).getJdbcScheme( );
+        return Databases.getJdbcScheme( );
       }
       
     };

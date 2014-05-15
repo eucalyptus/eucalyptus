@@ -146,6 +146,33 @@ public class Pair<L,R> {
     return new PairRightExtractor<>( );
   }
 
+  @Nonnull
+  public static <T,L,R> NonNullFunction<T,Pair<L,R>> builder( @Nonnull final Function<? super T, L> leftFunction,
+                                                              @Nonnull final Function<? super T, R> rightFunction ) {
+    return new NonNullFunction<T,Pair<L,R>>( ) {
+      @SuppressWarnings( "ConstantConditions" )
+      @Nonnull
+      @Override
+      public Pair<L,R> apply( final T value ) {
+        return Pair.pair( leftFunction.apply( value ), rightFunction.apply( value ) );
+      }
+    };
+  }
+
+  @Nonnull
+  public static <T,L,R> NonNullFunction<T,Pair<L,Optional<R>>> robuilder(
+      @Nonnull final Function<? super T, L> leftFunction,
+      @Nonnull final Function<? super T, R> rightFunction ) {
+    return new NonNullFunction<T,Pair<L,Optional<R>>>( ) {
+      @SuppressWarnings( "ConstantConditions" )
+      @Nonnull
+      @Override
+      public Pair<L,Optional<R>> apply( final T value ) {
+        return Pair.pair( leftFunction.apply( value ), Optional.fromNullable( rightFunction.apply( value ) ) );
+      }
+    };
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

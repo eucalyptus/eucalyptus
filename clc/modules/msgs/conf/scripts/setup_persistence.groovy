@@ -60,13 +60,15 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.entities.PersistenceContexts
 
-Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_persistence" );
+Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_persistence' );
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',
@@ -81,22 +83,20 @@ default_hiber_config = [
       'hibernate.default_batch_fetch_size': '50',
 ]
 
-PersistenceContexts.list( ).each { String ctx_simplename ->
-  
-  String context_name = ctx_simplename.replaceAll("eucalyptus_","")
+PersistenceContexts.list( ).each { String context_name ->
   
   // Set system properties
   System.setProperty( 'com.eucalyptus.cache.cluster', SystemIds.cacheName( ) )
-  
+
   // Configure the hibernate connection
   hibernate_config = [:]
-  hibernate_config.putAll(default_hiber_config)
+  hibernate_config.putAll((Map<?,?>)default_hiber_config)
   hibernate_config.putAll( [
         /** jdbc driver **/
         'hibernate.dialect': Databases.getHibernateDialect( ),
         /** db pools **/
         'hibernate.connection.provider_class': 'org.hibernate.service.jdbc.connections.internal.ProxoolConnectionProvider',
-        'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",
+        'hibernate.proxool.pool_alias': PersistenceContexts.toDatabaseName( ).apply( context_name ),
         'hibernate.proxool.existing_pool': 'true',
         /** transactions **/
         'hibernate.transaction.auto_close_session': 'false',
@@ -108,30 +108,35 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'hibernate.cache.default_cache_concurrency_strategy': 'transactional',
         'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
         'hibernate.cache.infinispan.cfg': 'eucalyptus_cache_infinispan.xml',
-        'hibernate.cache.region_prefix': "eucalyptus_${context_name}_cache",
+        'hibernate.cache.region_prefix': "${context_name}_cache",
         'hibernate.cache.use_minimal_puts': 'true',
         'hibernate.cache.use_structured_entries': 'true',
       ] )
-  
+
+  String schemaName = PersistenceContexts.toSchemaName( ).apply( context_name )
+  if ( schemaName ) {
+    hibernate_config.put( 'hibernate.default_schema', schemaName )
+  }
+
   // Register the properties with the config
   config = new Ejb3Configuration();
-  LOG.info( "${ctx_simplename} Setting up persistence:        done." )
+  LOG.info( "${context_name} Setting up persistence:        done." )
   hibernate_config.each { k , v ->
     LOG.trace( "${k} = ${v}" )
     config.setProperty( k, v )
   }
   
   // Register the system-discovered entity list
-  LOG.info( "${ctx_simplename} Registered entities:           " +
-      PersistenceContexts.listEntities( ctx_simplename ).collect{ ent ->
+  LOG.info( "${context_name} Registered entities:           " +
+      PersistenceContexts.listEntities( context_name ).collect{ Class<?> ent ->
         config.addAnnotatedClass( ent )
-        ent.getSimpleName()
+        ent.simpleName
       }
-      )
+  )
   
   // Register the context
   try {
-    PersistenceContexts.registerPersistenceContext(ctx_simplename, config)
+    PersistenceContexts.registerPersistenceContext(context_name, config)
   } catch( Exception t ) {
     t.printStackTrace();
   }

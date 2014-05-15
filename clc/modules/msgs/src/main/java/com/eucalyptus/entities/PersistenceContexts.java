@@ -66,10 +66,12 @@ import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicStampedReference;
+import javax.annotation.Nullable;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
@@ -83,6 +85,9 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -90,6 +95,8 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Strings;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -186,7 +193,28 @@ public class PersistenceContexts {
       return false;
     }
   }
-  
+
+  public static DatabaseNamingStrategy getNamingStrategy( final String context ) {
+    DatabaseNamingStrategy strategy = DatabaseNamingStrategy.defaultStrategy( );
+
+    try {
+      final ComponentId componentId = ComponentIds.lookup( Strings.trimPrefix( "eucalyptus_", context ) );
+      strategy = componentId.getDatabaseNamingStrategy( );
+    } catch ( final NoSuchElementException e ) {
+      // use default
+    }
+
+    return DatabaseNamingStrategy.overrideStrategy( strategy );
+  }
+
+  public static Function<String,String> toDatabaseName( ) {
+    return PersistenceContextStringFunctions.CONTEXT_TO_DATABASE;
+  }
+
+  public static Function<String,String> toSchemaName( ) {
+    return PersistenceContextStringFunctions.CONTEXT_TO_SCHEMA;
+  }
+
   static void addEntity( Class entity ) {
     if ( !isDuplicate( entity ) ) {
       String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
@@ -312,5 +340,21 @@ public class PersistenceContexts {
       }
     }
   }
-  
+
+  private enum PersistenceContextStringFunctions implements Function<String,String> {
+    CONTEXT_TO_DATABASE {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String context ) {
+        return PersistenceContexts.getNamingStrategy( context ).getDatabaseName( context );
+      }
+    },
+    CONTEXT_TO_SCHEMA {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String context ) {
+        return PersistenceContexts.getNamingStrategy( context ).getSchemaName( context );
+      }
+    },
+  }
 }

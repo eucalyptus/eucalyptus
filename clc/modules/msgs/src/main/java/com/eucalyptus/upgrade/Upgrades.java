@@ -31,10 +31,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
@@ -58,6 +62,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
@@ -66,14 +71,16 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 public class Upgrades {
   private static Logger LOG = Logger.getLogger( Upgrades.class );
@@ -161,7 +168,7 @@ public class Upgrades {
       return System.getProperty( this.propName );
     }
   }
-  
+
   public enum Version {
     v3_1_0,
     v3_1_1,
@@ -184,11 +191,11 @@ public class Upgrades {
     v4_0_4,
     v4_1_0;
 
-    
+
     public String getVersion( ) {
       return this.name( ).substring( 1 ).replace( "_", "." );
     }
-    
+
     public static Version getOldVersion( ) {
       return Version.valueOf( "v" + Arguments.OLD_VERSION.getValue( ).replace( ".", "_" ) );
     }
@@ -200,7 +207,7 @@ public class Upgrades {
     public static Version getCurrentVersion( ) {
       return Version.valueOf( "v" + Arguments.CURRENT_VERSION.getValue( ).replace( ".", "_" ) );
     }
-    
+
     /**
      * Filter {@link Version#values()} to include only those {@link Version}s which are in the
      * current upgrade path (if any).
@@ -399,7 +406,7 @@ public class Upgrades {
     }
 
     public static boolean exists( ) {
-      return Databases.getBootstrapper( ).listTables( Databases.Events.INSTANCE.getName( ) ).contains( UpgradeEventLog.INSTANCE.tableName );
+      return Databases.getBootstrapper( ).listTables( Databases.Events.INSTANCE.getName( ), null ).contains( UpgradeEventLog.INSTANCE.tableName );
     }
   }
   
@@ -477,7 +484,7 @@ public class Upgrades {
     }
     
     public Sql getConnection( String databaseName ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( this.getVersionedName( databaseName ) ); 
+      return Databases.getBootstrapper( ).getConnection( this.getVersionedName( databaseName ), null );
     }
     
   }
@@ -511,6 +518,30 @@ public class Upgrades {
         return this.call( );
       }
     },
+//    CHECK_NAMING { //TODO:STEVE: enable or remove this
+//      @Override
+//      public boolean callAndLog() throws Exception {
+//        return this.call( );
+//      }
+//
+//      @Override
+//      public Boolean call( ) throws Exception {
+//        return BootstrapArgs.isCloudController( ) && !databaseNamingConflict( );
+//      }
+//
+//      private boolean databaseNamingConflict( ) {
+//        if ( BootstrapArgs.isUpgradeSystem( ) ) return false;
+//
+//        final Set<String> databaseNames = getDatabaseNames( );
+//        final Set<String> schemaNames = getSchemaNames( databaseNames );
+//        databaseNames.retainAll( schemaNames );
+//        if ( !databaseNames.isEmpty( ) ) {
+//          LOG.fatal( "Conflicting schema/database for contexts: " + databaseNames + ", resolve conflicts and restart." );
+//          System.exit( 1 );
+//        }
+//        return false;
+//      }
+//    },
     PARSE_ARGS {
       
       @Override
@@ -526,6 +557,83 @@ public class Upgrades {
         return true;
       }
       
+    },
+    /**
+     * Ensure each context is using the expected naming strategy.
+     *
+     * TODO:STEVE: Perform only when upgrading?
+     */
+    UPGRADE_NAMING {
+      @Override
+      public boolean callAndLog( ) throws Exception {
+        return call( );
+      }
+
+      @Override
+      public Boolean call( ) throws Exception {
+        final Set<String> databaseNames = getDatabaseNames( );
+        final Set<String> schemaNames = getSchemaNames( databaseNames );
+        int exitCode = -1;
+        for ( final String ctx : PersistenceContexts.list( ) ) {
+          final DatabaseNamingStrategy strategy = PersistenceContexts.getNamingStrategy( ctx );
+          final Collection<DatabaseNamingStrategy> otherStrategies = EnumSet.complementOf( EnumSet.of( strategy ) );
+          final Collection<DatabaseNamingStrategy> presentStrategies = Collections2.filter( otherStrategies, new Predicate<DatabaseNamingStrategy>() {
+            @Override
+            public boolean apply( @Nullable final DatabaseNamingStrategy strategy ) {
+              final String databaseName = strategy.getDatabaseName( ctx );
+              final String schemaName = strategy.getSchemaName( ctx );
+              return
+                  ( schemaName == null && databaseNames.contains( databaseName ) ) ||
+                      ( schemaName != null && schemaNames.contains( schemaName ) );
+            }
+          } );
+
+          if ( presentStrategies.size( ) > 1 ) {
+            LOG.fatal( "Error updating naming for context '"+ctx+"', multiple sources." );
+            exitCode = 1;
+            break;
+          } else if ( presentStrategies.size( ) == 1 ) {
+            exitCode = 123; // restart after renaming
+            final String targetDatabaseName = strategy.getDatabaseName( ctx );
+            final String targetSchemaName = Objects.firstNonNull( strategy.getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );
+            final String sourceDatabaseName = Iterables.getOnlyElement( presentStrategies ).getDatabaseName( ctx );
+            final String sourceSchemaName = Objects.firstNonNull( Iterables.getOnlyElement( presentStrategies ).getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );;
+            boolean copied = false;
+            try {
+              Databases.getBootstrapper().copyDatabaseSchema( sourceDatabaseName, sourceSchemaName, targetDatabaseName, targetSchemaName );
+              copied = true;
+            } catch ( final Exception e ) {
+              LOG.fatal( "Error updating naming for context '"+ctx+"'", e );
+              exitCode = 1;
+            } finally {
+              try {
+                final String databaseToDelete = copied ? sourceDatabaseName : targetDatabaseName;
+                final String schemaToDelete = copied ? sourceSchemaName : targetSchemaName;
+                if ( !DatabaseNamingStrategy.SHARED_DATABASE_NAME.equals( databaseToDelete )  ) {
+                  Databases.getBootstrapper( ).deleteDatabase( databaseToDelete );
+                } else if ( getSchemaNames( Collections.singleton( databaseToDelete ) ).contains( schemaToDelete ) ) {
+                  LOG.info( "Dropping schema " + schemaToDelete + " for database " + databaseToDelete );
+                  final Sql sql = Databases.getBootstrapper( ).getConnection( databaseToDelete, null );
+                  try {
+                    sql.executeUpdate( "DROP SCHEMA " + schemaToDelete + " CASCADE" );
+                  } finally {
+                    if ( sql != null ) sql.close( );
+                  }
+                }
+              } catch ( Exception e ) {
+                LOG.fatal( "Error cleaning up after updating naming for context '"+ctx+"'", e );
+                exitCode = 1;
+              }
+            }
+            if ( exitCode == 1 ) break;
+          }
+        }
+        if ( exitCode > -1 ) {
+          LOG.info( "Restarting due to database renaming." );
+          System.exit( exitCode );
+        }
+        return true;
+      }
     },
     CHECK_ARGS {
       
@@ -587,6 +695,7 @@ public class Upgrades {
           switch ( previousState ) {
             case START:
             case PARSE_ARGS:
+            case UPGRADE_NAMING:
             case CHECK_ARGS:
             case CHECK_UPGRADE_LOG:
             case PRE_SCHEMA_UPDATE:
@@ -690,7 +799,7 @@ public class Upgrades {
     },
     BEGIN_UPGRADE,
     /**
-     * Creates a {@link System.currentTimeMillis()} timestampled backup of each database in {@link SubDirectory#BACKUPS#getChildPath(String...)} for each
+     * Creates a {@link System#currentTimeMillis()} timestamped backup of each database in {@link SubDirectory#BACKUPS#getChildPath(String...)} for each
      * database prefixed with <tt>eucalyptus_</tt>
      */
     PRE_BACKINGUP_DATABASE {
@@ -750,13 +859,13 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         try {
-          final Map<String, String> props = UpgradeState.getDatabaseProperties( );
+          final Map<String, String> props = getDatabaseProperties( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
             final Properties p = new Properties( );
             p.putAll( props );
-            final String ctxUrl = String.format( "jdbc:%s",
-                                                 ServiceUris.remote( Components.lookup( Database.class ), DatabaseFilters.NEWVERSION.getVersionedName( ctx ) ) );
-            p.put( "hibernate.connection.url", ctxUrl );
+            final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx );
+            final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx );
+            putContextProperties( p, schemaName, DatabaseFilters.NEWVERSION.getVersionedName( databaseName ) );
             final Ejb3Configuration config = new Ejb3Configuration( );
             config.setProperties( p );
             for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
@@ -935,7 +1044,30 @@ public class Upgrades {
       LOG.info( "Finished upgrade stage: " + this.name( ) + "; starting " + next.name( ) );
       return next;
     }
-    
+
+    Set<String> getDatabaseNames( ) {
+      return Sets.newTreeSet( Iterables.filter(
+          Databases.getBootstrapper( ).listDatabases( ),
+          DatabaseFilters.EUCALYPTUS ) );
+    }
+
+    Set<String> getSchemaNames( final Set<String> databaseNames ) {
+      return databaseNames.contains( DatabaseNamingStrategy.SHARED_DATABASE_NAME ) ?
+          Sets.newTreeSet( Iterables.filter(
+              Databases.getBootstrapper( ).listSchemas( DatabaseNamingStrategy.SHARED_DATABASE_NAME ),
+              DatabaseFilters.EUCALYPTUS ) ) :
+          Collections.<String>emptySet( );
+    }
+
+    public static void putContextProperties( Map<? super String, ? super String> properties,
+                                             String schema,
+                                             String... databasePath ) {
+      final String ctxUrl = String.format( "jdbc:%s",
+          ServiceUris.remote( Components.lookup( Database.class ), databasePath ) );
+      properties.put( "hibernate.connection.url", ctxUrl );
+      if ( schema != null ) properties.put( "hibernate.default_schema", schema );
+    }
+
     public static Map<String, String> getDatabaseProperties( ) {
       DatabaseBootstrapper db = Databases.getBootstrapper( );
       final Map<String, String> props = ImmutableMap.<String, String> builder( )
@@ -974,9 +1106,9 @@ public class Upgrades {
       for ( final String ctx : PersistenceContexts.list( ) ) {
         final Properties p = new Properties( );
         p.putAll( props );
-        final String ctxUrl = String.format( "jdbc:%s",
-                                             ServiceUris.remote( Components.lookup( Database.class ), dbName.getVersionedName( ctx ) ) );
-        p.put( "hibernate.connection.url", ctxUrl );
+        final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx );
+        final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx );
+        UpgradeState.putContextProperties( p, schemaName, dbName.getVersionedName( databaseName ) );
         final Ejb3Configuration config = new Ejb3Configuration( );
         config.setProperties( p );
         for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {

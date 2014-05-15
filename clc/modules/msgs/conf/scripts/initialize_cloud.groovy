@@ -125,9 +125,12 @@ try {
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.localHostInetAddress( ),ctx)}";
-      p.put( "hibernate.connection.url", ctxUrl );
-      p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
+      final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
+      final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.localHostInetAddress( ), databaseName)}";
+      p.setProperty( "hibernate.connection.url", ctxUrl );
+      p.setProperty( 'hibernate.cache.region_prefix', ctx + '_cache' );
+      if ( schemaName != null ) p.setProperty( 'hibernate.default_schema', schemaName )
       Ejb3Configuration config = new Ejb3Configuration( );
       config.setProperties( p );
       for ( Class c : PersistenceContexts.listEntities( ctx ) ) {
