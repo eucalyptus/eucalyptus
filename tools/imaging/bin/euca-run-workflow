@@ -165,15 +165,15 @@ class Euca2ools(object):
                    '--privatekey', args.signing_key_path,
                    '--cert', args.encryption_cert_path,
                    '--ec2cert', args.encryption_cert_path]
-        if (args.eki != None):
+        if hasattr(args, 'eki') and args.eki is not None:
             op_args.extend(['--kernel', args.eki])
-        if (args.eri != None):
+        if hasattr(args, 'eri') and args.eri is not None:
             op_args.extend(['--ramdisk', args.eri])
-        if (args.secret_key != None):
+        if hasattr(args, 'secret_key') and args.secret_key is not None:
             op_args.extend(['--secret-key', args.secret_key])
-        if (args.image_size != None):
+        if hasattr(args, 'image_size') and args.image_size is not None:
             op_args.extend(['--image-size', args.image_size])
-        if (args.upload_policy != None):
+        if hasattr(args, 'upload_policy') and args.upload_policy is not None:
             policy = args.upload_policy
             try:
                 json.loads(policy) # try parsing as JSON
@@ -181,7 +181,7 @@ class Euca2ools(object):
                 policy = args.upload_policy.decode('base64', 'strict')
                 json.loads(policy) # try parsing again, which should work
             op_args.extend(['--upload-policy', policy])
-        if (args.upload_policy_signature != None):
+        if hasattr(args, 'upload_policy_signature') and args.upload_policy_signature is not None:
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
             op_args.extend(['--debug'])
