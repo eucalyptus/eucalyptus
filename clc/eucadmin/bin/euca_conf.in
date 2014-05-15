@@ -25,28 +25,29 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import tempfile
-import optparse
+import bdb
 import inspect
+import optparse
 import os
 import pwd
-import sys
 import re
-import boto.utils
-from eucadmin import EucaFormat
-from eucadmin.describeservices import DescribeServices
-import eucadmin
-import eucadmin.configfile
-from boto.roboto.awsqueryservice import NoCredentialsError
-
-import bdb
+import sys
+import tempfile
 import traceback
-from eucadmin.serviceregistration import RegisterService, DeregisterService, DescribeAvailableServiceTypes
-
+import urlparse
 try:
     import epdb as debugger
 except ImportError:
     import pdb as debugger
+
+from boto.roboto.awsqueryservice import NoCredentialsError
+import boto.utils
+
+import eucadmin
+from eucadmin import EucaFormat
+import eucadmin.configfile
+from eucadmin.describeservices import DescribeServices
+from eucadmin.serviceregistration import RegisterService, DeregisterService, DescribeAvailableServiceTypes
 
 
 def euca_except_hook(debugger_flag, debug_flag):
@@ -142,6 +143,9 @@ class EucaConf(object):
         self.parser.add_option('--synckey', action='store_true',
                                dest='sync_keys', help='',
                                default=False)
+        self.parser.add_option('--sync-euca-p12', action='store_true',
+                               dest='sync_euca_p12_for_40',
+                               help='[4.0 upgrade] Copy euca.p12 to pre-4.0 service hosts')
         self.parser.add_option('--no-rsync', action='store_true',
                                dest='no_rsync', default=False,
                                help="Don't use rsync when registering."),
@@ -777,6 +781,39 @@ class EucaConf(object):
                   use_rsync=(not self.options.no_rsync),
                   use_scp=(not self.options.no_scp))
         return req.sync_keys()
+
+    def do_sync_euca_p12_for_40(self):
+        if not self.options.sync_euca_p12_for_40:
+            return
+        req = DescribeServices()
+        try:
+            response = req.main(debug=self.debug, all=True)
+        except NoCredentialsError:
+            url = 'http://localhost:8773/services/Eucalyptus'
+            ak, sk = self._get_accesskey_secretkey(url)
+            req = DescribeServices(url=url, aws_access_key_id=ak,
+                                   aws_secret_access_key=sk)
+            response = req.main(debug=self.debug, all=True)
+        services = getattr(response, 'euca:serviceStatuses') or {}
+        euca_p12_hosts = set()
+        euca_p12_blacklist = set()
+        for service in services:
+            service_id = service.get('euca:serviceId') or {}
+            service_type = service_id.get('euca:type')
+            if service_type in ('bootstrap', 'storage', 'vmwarebroker',
+                                'walrusbackend'):
+                uri = service_id.get('euca:uri')
+                if uri:
+                    host = urlparse.urlparse(uri).netloc.split(':')[0]
+                    euca_p12_hosts.add(host)
+                    if (service_type == 'bootstrap' and
+                            service.get('euca:localState') == 'ENABLED'):
+                        # Do not sync euca.p12 to an enabled CLC, which
+                        # had better be the machine this runs from.
+                        euca_p12_blacklist.add(host)
+        for host in euca_p12_hosts - euca_p12_blacklist:
+            print 'Copying euca.p12 to {0}...'.format(host)
+            self._sync_keys_if_necessary(['euca.p12'], host=host)
 
     def _print_service_errors(self, service_names=None):
         def _service_state_request(names=None, filter_state='BROKEN'):
