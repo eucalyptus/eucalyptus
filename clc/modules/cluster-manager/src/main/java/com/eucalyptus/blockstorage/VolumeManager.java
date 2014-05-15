@@ -327,7 +327,7 @@ public class VolumeManager {
             Entities.delete( foundVol );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
-          } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
+          } else {
             AttachedVolume attachedVolume = null;
             try {
                 VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
@@ -350,7 +350,6 @@ public class VolumeManager {
         } catch ( TransactionException ex ) {
           throw Exceptions.toUndeclared( ex );
         }
-        throw new NoSuchElementException( "Failed to lookup volume: " + input );
       }
       
     };
