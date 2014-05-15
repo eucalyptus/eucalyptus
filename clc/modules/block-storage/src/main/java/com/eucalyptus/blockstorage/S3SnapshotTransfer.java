@@ -71,7 +71,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -117,6 +119,8 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotFinalizeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotInitializeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotUploadPartException;
+import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
+import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -128,6 +132,9 @@ import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+
+import edu.ucsb.eucalyptus.util.SystemUtil;
+import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 /**
  * S3SnapshotTransfer manages snapshot transfers between SC and S3 API such as objectstorage gateway. An instance of the class must be obtained using one of the
@@ -166,6 +173,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	private static final Integer READ_BUFFER_SIZE = 1024 * 1024;
 	private static final Integer TX_RETRIES = 20;
 	private static final Integer REFRESH_TOKEN_RETRIES = 1;
+	private static final String UNCOMPRESSED_SIZE_KEY = "uncompressedsize";
 
 	public S3SnapshotTransfer() throws SnapshotTransferException {
 		initializeEucaS3Client();
@@ -239,8 +247,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	 */
 	@Override
 	public void upload(String sourceFileName) throws SnapshotTransferException {
-		validateInput();
-		loadTransferConfig();
+		validateInput(); // Validate input
+		loadTransferConfig(); // Load the transfer configuration parameters from database
+		SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
 
 		Boolean error = Boolean.FALSE;
 		ArrayBlockingQueue<SnapshotPart> partQueue = null;
@@ -257,6 +266,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		int partNumber = 1;
 
 		try {
+			// Get the uncompressed file size for uploading as metadata
+			Long uncompressedSize = getFileSize(sourceFileName);
+
 			// Setup the snapshot and part entities.
 			snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
 			Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
@@ -288,12 +300,12 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 							part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.FALSE);
 						} else {// Initialize multipart upload only once after the first part is created
 							LOG.info("Uploading snapshot " + snapshotId + " to objectstorage using multipart upload");
-							uploadId = initiateMulitpartUpload();
+							progressCallback.setUploadSize(uncompressedSize);
+							uploadId = initiateMulitpartUpload(uncompressedSize);
 							snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
 							part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
 							partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-							uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue,
-									new SnapshotProgressCallback(snapshotId, sourceFileName)));
+							uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
 						}
 
 						// Check for the future task before adding part to the queue.
@@ -365,7 +377,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				try {
 					LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
 							+ " bytes) is less than minimum part size (" + partSize + " bytes) for multipart upload");
-					PutObjectResult putResult = uploadSnapshotAsSingleObject(zipFilePath.toString(), bytesWritten);
+					PutObjectResult putResult = uploadSnapshotAsSingleObject(zipFilePath.toString(), bytesWritten, uncompressedSize, progressCallback);
 					markSnapshotAvailable();
 					try {
 						part = part.updateStateUploaded(putResult.getETag());
@@ -488,7 +500,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	private void initializeEucaS3Client() throws SnapshotTransferException {
 		if (role == null) {
 			try {
-				role = BlockStorageController.checkAndConfigureBlockStorageAccount();
+				role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
 			} catch (Exception e) {
 				LOG.error("Failed to initialize account for snapshot transfers due to " + e);
 				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
@@ -527,6 +539,19 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		if (eucaS3Client == null) {
 			throw new SnapshotTransferException("S3 client reference is invalid. Cannot upload snapshot " + snapshotId);
 		}
+	}
+
+	private Long getFileSize(String fileName) throws UnknownFileSizeException {
+		Long size = 0L;
+		if ((size = new File(fileName).length()) <= 0) {
+			try {
+				CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", fileName });
+				size = Long.parseLong(StringUtils.trimToEmpty(result.output));
+			} catch (Exception ex) {
+				throw new UnknownFileSizeException(fileName, ex);
+			}
+		}
+		return size;
 	}
 
 	private String createAndReturnBucketName() throws SnapshotTransferException {
@@ -585,11 +610,15 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		return bucket;
 	}
 
-	private PutObjectResult uploadSnapshotAsSingleObject(String compressedSnapFileName, Long fileSize) throws Exception {
-		SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, fileSize);
+	private PutObjectResult uploadSnapshotAsSingleObject(String compressedSnapFileName, Long actualSize, Long uncompressedSize,
+			SnapshotProgressCallback callback) throws Exception {
+		callback.setUploadSize(actualSize);
 		FileInputStreamWithCallback snapInputStream = new FileInputStreamWithCallback(new File(compressedSnapFileName), callback);
-		ObjectMetadata metadata = new ObjectMetadata();
-		metadata.setContentLength(fileSize);
+		ObjectMetadata objectMetadata = new ObjectMetadata();
+		Map<String, String> userMetadataMap = new HashMap<String, String>();
+		userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
+		objectMetadata.setUserMetadata(userMetadataMap);
+		objectMetadata.setContentLength(actualSize);
 
 		return retryAfterRefresh(new Function<PutObjectRequest, PutObjectResult>() {
 
@@ -600,11 +629,18 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				return eucaS3Client.putObject(arg0);
 			}
 
-		}, new PutObjectRequest(bucketName, keyName, snapInputStream, metadata), REFRESH_TOKEN_RETRIES);
+		}, new PutObjectRequest(bucketName, keyName, snapInputStream, objectMetadata), REFRESH_TOKEN_RETRIES);
 	}
 
-	private String initiateMulitpartUpload() throws SnapshotInitializeMpuException {
+	private String initiateMulitpartUpload(Long uncompressedSize) throws SnapshotInitializeMpuException {
 		InitiateMultipartUploadResult initResponse = null;
+		InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, keyName);
+		ObjectMetadata objectMetadata = new ObjectMetadata();
+		Map<String, String> userMetadataMap = new HashMap<String, String>();
+		userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
+		objectMetadata.setUserMetadata(userMetadataMap);
+		initRequest.setObjectMetadata(objectMetadata);
+
 		try {
 			LOG.info("Inititating multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName);
 			initResponse = retryAfterRefresh(new Function<InitiateMultipartUploadRequest, InitiateMultipartUploadResult>() {
@@ -616,7 +652,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 					return eucaS3Client.initiateMultipartUpload(arg0);
 				}
 
-			}, new InitiateMultipartUploadRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+			}, initRequest, REFRESH_TOKEN_RETRIES);
 		} catch (Exception ex) {
 			throw new SnapshotInitializeMpuException("Failed to initialize multipart upload part for snapshotId=" + snapshotId + ", bucketName=" + bucketName
 					+ ", keyName=" + keyName, ex);

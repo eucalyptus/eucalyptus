@@ -197,7 +197,7 @@ public class BlockStorageController {
         checkerService = new StorageCheckerService();
         
         try {
-        	checkAndConfigureBlockStorageAccount();
+        	BlockStorageUtil.checkAndConfigureBlockStorageAccount();
         } catch (Exception e) {
         	LOG.warn("Error checking and or configuring blockstorage account during bootstrap. Moving on with the SC bootstrap process");
         }
@@ -278,123 +278,6 @@ public class BlockStorageController {
         }
     }
     
-	/**
-	 * Looks up the blockstorage account, admin user and role and sets them up if they are not already present. Uses Accounts library directly rather than euare
-	 * service API. The necessary resources are looked up first. If the lookup fails, an attempt is made to create or add new resource. Any failure is followed
-	 * by a lookup again before exiting the method. This process is repeated for every resource separately as they could be concurrently processed by another SC
-	 */
-	public static Role checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
-		Account blockStorageAccount = null;
-		Role role = null;
-
-		// Lookup blockstorage account. Create a new one if necessary. If that fails, lookup the account again before bailing out
-		try {
-			blockStorageAccount = Accounts.addSystemAccountWithAdmin(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-		} catch (Exception e) {
-			LOG.warn("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " or failed to create a new one", e);
-			throw new EucalyptusCloudException("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-					+ " or failed to create a new one");
-		}
-
-		// Lookup role of the account. Add the role if necessary. If that fails, lookup the role again before bailing out
-		try {
-			role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
-		} catch (Exception e) {
-			LOG.debug("Cannot to find " + StorageProperties.EBS_ROLE_NAME + " role for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-					+ " account. The role may not exist, trying to add role to the account");
-			try {
-				role = blockStorageAccount.addRole(StorageProperties.EBS_ROLE_NAME, "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
-			} catch (Exception e1) {
-				LOG.debug("Failed to add " + StorageProperties.EBS_ROLE_NAME + " role. Checking if the role is assigned to the account");
-				try {
-					role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
-				} catch (Exception e2) {
-					LOG.warn("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-							+ " account and failed to assign the role to the account", e2);
-					throw new EucalyptusCloudException("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for "
-							+ StorageProperties.BLOCKSTORAGE_ACCOUNT + " account and failed to assign the role to the account");
-				}
-			}
-		}
-
-		try {
-			boolean foundBucketPolicy = false;
-			boolean foundObjectPolicy = false;
-
-			List<Policy> policies = role.getPolicies();
-			for (Policy policy : policies) {
-				if (policy.getName().equals(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME)) {
-					foundBucketPolicy = true;
-				}
-				if (policy.getName().equals(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME)) {
-					foundObjectPolicy = true;
-				}
-				if (foundBucketPolicy && foundObjectPolicy) {
-					break;
-				}
-			}
-
-			if (!foundBucketPolicy) {
-				try {
-					role.putPolicy(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME, StorageProperties.S3_SNAPSHOT_BUCKET_ACCESS_POLICY);
-				} catch (Exception e) {
-					LOG.debug("Failed to assign " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy to " + StorageProperties.EBS_ROLE_NAME
-							+ " role. Checking if the policy is assigned to the role");
-
-					foundBucketPolicy = false;
-					policies = role.getPolicies();
-					for (Policy policy : policies) {
-						if (policy.getName().equals(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME)) {
-							foundBucketPolicy = true;
-							break;
-						}
-					}
-
-					if (!foundBucketPolicy) {
-						LOG.warn("Could not find " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy assigned to " + StorageProperties.EBS_ROLE_NAME
-								+ " role and failed to assign the policy to the role", e);
-						throw new EucalyptusCloudException("Could not find " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy assigned to "
-								+ StorageProperties.EBS_ROLE_NAME + " role and failed to assign the policy to the role");
-					}
-				}
-			}
-
-			if (!foundObjectPolicy) {
-				try {
-					role.putPolicy(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME, StorageProperties.S3_SNAPSHOT_OBJECT_ACCESS_POLICY);
-				} catch (Exception e) {
-					LOG.debug("Failed to assign " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy to " + StorageProperties.EBS_ROLE_NAME
-							+ " role. Checking if the policy is assigned to the role");
-
-					foundObjectPolicy = false;
-					policies = role.getPolicies();
-					for (Policy policy : policies) {
-						if (policy.getName().equals(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME)) {
-							foundObjectPolicy = true;
-							break;
-						}
-					}
-
-					if (!foundObjectPolicy) {
-						LOG.warn("Could not find " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy assigned to " + StorageProperties.EBS_ROLE_NAME
-								+ " role and failed to assign the policy to the role", e);
-						throw new EucalyptusCloudException("Could not find " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy assigned to "
-								+ StorageProperties.EBS_ROLE_NAME + " role and failed to assign the policy to the role");
-					}
-				}
-			}
-
-			return role;
-		} catch (EucalyptusCloudException e) {
-			throw e;
-		} catch (Exception e) {
-			LOG.warn("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to " + StorageProperties.BLOCKSTORAGE_ACCOUNT
-					+ " account", e);
-			throw new EucalyptusCloudException("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to "
-					+ StorageProperties.BLOCKSTORAGE_ACCOUNT + " account");
-		}
-	}
-
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))

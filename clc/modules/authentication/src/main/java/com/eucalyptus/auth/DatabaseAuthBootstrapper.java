@@ -101,6 +101,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       // Older code may produce non-lowercase keys.
       // Normalize them if there is any.
       this.ensureUserInfoNormalized( );
+      // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
+      this.ensureBlockStorageAccountExists();
       LdapSync.start( );
     }
     return true;
@@ -221,5 +223,18 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     String getPath();
     String getAssumeRolePolicy();
     String getPolicy();
+  }
+  
+  // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
+  private void ensureBlockStorageAccountExists( ) throws Exception {
+    try {
+      Accounts.lookupAccountByName( Account.BLOCKSTORAGE_SYSTEM_ACCOUNT );
+    } catch ( Exception e ) {
+      try {
+    	Accounts.addSystemAccountWithAdmin( Account.BLOCKSTORAGE_SYSTEM_ACCOUNT ); 
+      } catch (Exception e1) {
+    	LOG.error("Error during account creation for " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT, e1);
+      }
+    }
   }
 }

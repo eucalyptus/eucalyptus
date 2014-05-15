@@ -3741,6 +3741,7 @@ public class WalrusFSManager extends WalrusManager {
                             objectInfo.setLast(true);
                             objectInfo.setDeleted(false);
                             objectInfo.updateGrants(foundManifest);
+                            objectInfo.setMetaData(foundManifest.cloneMetaData());
                             objectInfo.setLastModified(new Date());
                             EntityWrapper<ObjectInfo> dbOject = db.recast(ObjectInfo.class);
                             dbOject.add(objectInfo);
