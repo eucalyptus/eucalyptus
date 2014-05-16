@@ -489,12 +489,25 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                             if(metaDataDirective != null) {
                                 operationParams.put("MetadataDirective", metaDataDirective);
                             }
+
                             AccessControlList accessControlList = null;
-                            if(contentLength > 0) {
+                            if (contentLength > 0) {
                                 accessControlList = getAccessControlList(httpRequest);
-                            } else {
+                            }
+                            else {
                                 accessControlList = new AccessControlList();
                             }
+                            String aclHeader = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
+                            if (aclHeader != null && !"".equals(aclHeader)) {
+                                validateCannedAcl(aclHeader);
+                                CanonicalUser aws = new CanonicalUser();
+                                aws.setDisplayName("");
+                                Grant grant = new Grant(new Grantee(aws), aclHeader);
+                                ArrayList<Grant> grants = Lists.newArrayList();
+                                grants.add(grant);
+                                accessControlList.getGrants().addAll(grants);
+                            }
+
                             operationParams.put("AccessControlList", accessControlList);
                             operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
                             Set<String> headerNames = httpRequest.getHeaderNames();
