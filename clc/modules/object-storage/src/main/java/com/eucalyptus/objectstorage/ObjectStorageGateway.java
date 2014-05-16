@@ -1247,7 +1247,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 try {
                     String requestUserCanonicalId = requestUser.getAccount() != null ? requestUser.getAccount().getCanonicalId() : null;
                     AccessControlPolicy acp = getFullAcp(
-                            AclUtils.expandCannedAcl( request.getAccessControlList(), requestUserCanonicalId, requestUserCanonicalId ),
+                            AclUtils.expandCannedAcl( request.getAccessControlList(), destBucket.getOwnerCanonicalId(), requestUserCanonicalId ),
                             requestUser,
                             requestUserCanonicalId);
                     destObject.setAcl(acp);
