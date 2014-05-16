@@ -63,6 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -71,8 +72,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
@@ -102,6 +107,7 @@ import org.bouncycastle.util.encoders.DecoderException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
@@ -1122,6 +1128,35 @@ public class VmControl {
         }
       }
     };
+    
+    final Function<String, AccessKey> LookupAccessKey = new Function<String, AccessKey>(){
+      @Override
+      public AccessKey apply(final String policySignature) {
+        try{
+          final List<AccessKey> keys = ctx.getUser().getKeys();
+          AccessKey keyForSign = null;
+          final Mac hmac = Mac.getInstance("HmacSHA1");
+          for(final AccessKey key : keys){
+            hmac.init(new SecretKeySpec(key.getSecretKey().getBytes("UTF-8"), "HmacSHA1"));
+            final String sig = B64.standard.encString(hmac.doFinal(request.getUploadPolicy().getBytes("UTF-8")));
+            if(sig.equals(policySignature)){
+              keyForSign = key;
+              break;
+            }
+          }
+          return keyForSign;
+        }catch(final Exception ex){
+          LOG.warn("Failed to generate upload policy signature", ex);
+          return null;
+        }
+      }
+    };
+    
+    final AccessKey accessKeyForPolicySignature = LookupAccessKey.apply(request.getUploadPolicySignature());
+    if(accessKeyForPolicySignature==null){
+      throw new ComputeException( "InternalError", "Error processing request: unable to find the access key signed the upload policy" );
+    }
+    
     VmInstance bundledVm = Entities.asTransaction( VmInstance.class, bundleFunc ).apply( instanceId );
     try {
       ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
@@ -1130,7 +1165,7 @@ public class VmControl {
   			setInstanceId(request.getInstanceId());
   			setBucket(request.getBucket());
   			setPrefix(request.getPrefix());
-  			setAwsAccessKeyId(request.getAwsAccessKeyId());
+  			setAwsAccessKeyId(accessKeyForPolicySignature.getAccessKey());
   			setUploadPolicy(request.getUploadPolicy());
   			setUploadPolicySignature(request.getUploadPolicySignature());
   			setUrl(request.getUrl());
@@ -1144,7 +1179,6 @@ public class VmControl {
       throw Exceptions.toUndeclared( ex );
     }
     return reply;
-    
   }
   
   public GetPasswordDataResponseType getPasswordData( final GetPasswordDataType request ) throws Exception {
