@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -34,11 +35,13 @@ import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.HeadMethod;
+import org.apache.commons.httpclient.params.HttpConnectionParams;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -51,6 +54,7 @@ import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
@@ -564,9 +568,13 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       throw new RuntimeException("Manifest's URL is not in the Eucalyptus format: " + manifestUrl);
     final HttpClient client = new HttpClient();
     client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
+    client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
+    client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 30000);
     GetMethod method = new GetMethod(manifestUrl);
     String manifest = null;
     try {
+      // avoid TCP's CLOSE_WAIT  
+      method.setRequestHeader("Connection", "close");
       client.executeMethod(method);
       manifest = method.getResponseBodyAsString();
       if (manifest == null) {
@@ -574,7 +582,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       }else if (manifest.contains("<Code>NoSuchKey</Code>") || manifest.contains("The specified key does not exist")){
         return false;
       }
-    } catch(IOException ex) {
+    } catch(final Exception ex){
       return false;
     } finally {
       method.releaseConnection();
