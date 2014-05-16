@@ -352,6 +352,10 @@
       <priority value="ERROR"/>
       <appender-ref ref="${euca.log.appender}" />
   </category>
+  <category name="com.amazonaws.services.s3.AmazonS3Client" additivity="false">
+      <priority value="ERROR"/>
+      <appender-ref ref="${euca.log.appender}" />
+  </category>
 
   <root>
     <appender-ref ref="${euca.log.appender}" />
