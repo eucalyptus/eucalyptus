@@ -225,11 +225,11 @@ class WF_DownBundleFS_UpBundle(WF_base):
                 destination_dir=bundle_dir,
                 args=args) # the rest of the arguments are inherited from run-workflow's command-line
             op_ps.wait() # bundle and upload the disk
-            imager.purge(args) # clean up disk artifacts
             if op_ps.returncode != 0:
                 raise subprocess.CalledProcessError(op_ps.returncode, "euca-bundle-and-upload-image")
 
         finally: # cleanup
+            imager.purge(args) # clean up disk artifacts
             shutil.rmtree(cache_dir)
             shutil.rmtree(work_dir)
             shutil.rmtree(bundle_dir)
