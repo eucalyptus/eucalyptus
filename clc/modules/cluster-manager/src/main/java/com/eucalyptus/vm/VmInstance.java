@@ -1617,7 +1617,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance entity = Entities.merge( this );
+      final VmInstance entity = Entities.isPersistent( this ) ?
+          this :
+          Entities.uniqueResult( this );
       VmVolumeAttachment volumeAttachment;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
