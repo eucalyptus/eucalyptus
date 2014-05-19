@@ -247,7 +247,7 @@ import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class WalrusFSManager extends WalrusManager {
-    private static Logger LOG = Logger.getLogger(WalrusManager.class);
+    private static Logger LOG = Logger.getLogger(WalrusFSManager.class);
 
     private StorageManager storageManager;
     private static ExecutorService MPU_EXECUTOR;

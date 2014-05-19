@@ -546,7 +546,12 @@ public class WalrusProviderClient extends S3ProviderClient {
 	@Override
 	public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception {
 		try {
-			return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteObjectType.class, com.eucalyptus.walrus.msgs.DeleteObjectResponseType.class);			
+			DeleteObjectResponseType response = proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteObjectType.class, com.eucalyptus.walrus.msgs.DeleteObjectResponseType.class);
+			// HACK: Remote Walrus cannot send HTTP status over wire. Setting the status here for now - EUCA-9425 
+			if (response.getStatus() == null && response.getStatusMessage().equals("NO CONTENT")) {
+				response.setStatus(HttpResponseStatus.NO_CONTENT);
+			}
+			return response;
 		} catch (EucalyptusCloudException e) {
 			LOG.debug("Error response from WalrusBackend", e);
 			throw mapWalrusExceptionToS3Exception(e);
