@@ -913,12 +913,6 @@ class EucaConf(object):
                              'vtunpass')]
             self._sync_keys_if_necessary(global_keys + cluster_keys)
 
-    def do_register_walrusbackend(self):
-        if hasattr(self.options, 'register_walrusbackend'):
-            self._do_register('eucadmin.registerwalrusbackend',
-                              'RegisterWalrusBackend', 'walrusbackend_port')
-            self._sync_keys_if_necessary(['euca.p12'])
-
     def do_register_sc(self):
         if hasattr(self.options, 'register_sc'):
             self._do_register('eucadmin.registerstoragecontroller',
