@@ -800,13 +800,13 @@ class EucaConf(object):
         for service in services:
             service_id = service.get('euca:serviceId') or {}
             service_type = service_id.get('euca:type')
-            if service_type in ('bootstrap', 'storage', 'vmwarebroker',
+            if service_type in ('eucalyptus', 'storage', 'vmwarebroker',
                                 'walrusbackend'):
                 uri = service_id.get('euca:uri')
                 if uri:
                     host = urlparse.urlparse(uri).netloc.split(':')[0]
                     euca_p12_hosts.add(host)
-                    if (service_type == 'bootstrap' and
+                    if (service_type == 'eucalyptus' and
                             service.get('euca:localState') == 'ENABLED'):
                         # Do not sync euca.p12 to an enabled CLC, which
                         # had better be the machine this runs from.
