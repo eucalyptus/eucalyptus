@@ -190,13 +190,13 @@ public class ServiceRegistrationManager {
         if ( ServiceGroups.isGroup( config ) ) {
           final ServiceGroupConfiguration groupConfig = ( ServiceGroupConfiguration ) config;
           final ServiceGroupBuilder<ServiceGroupConfiguration> groupBuilder = ( ServiceGroupBuilder<ServiceGroupConfiguration> ) builder;
-          final Collection<ServiceConfiguration> configsToRegister = groupBuilder.onRegister( groupConfig );
+          final Collection<ServiceConfiguration> configsToDeregister = groupBuilder.onDeregister( groupConfig );
           //do registrations
           final Future<ServiceConfiguration> groupFuture = ServiceEvents.deregisterFunction().apply( groupConfig );
           deregistered.add( groupFuture );
           try {//require that the group op succeeds before doing the members
             groupFuture.get();
-            deregistered.addAll( Collections2.transform( configsToRegister, ServiceEvents.deregisterFunction( ) ) );
+            deregistered.addAll( Collections2.transform( configsToDeregister, ServiceEvents.deregisterFunction( ) ) );
           } catch ( Exception e ) {
             e.printStackTrace();
           }
