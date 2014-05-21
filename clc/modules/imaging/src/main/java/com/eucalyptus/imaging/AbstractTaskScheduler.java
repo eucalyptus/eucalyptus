@@ -114,11 +114,12 @@ public abstract class AbstractTaskScheduler {
     final ImagingTask nextTask = this.getNext(availabilityZone);
     if(nextTask==null)
       return null;
-    if(this.imagingServiceKey==null){
-      loadImagingServiceKey();
-      if(this.imagingServiceKey==null)
-        throw new Exception("Failed to load public key of the imaging service");
-    }
+    
+    this.imagingServiceKey = null;
+    this.imagingServiceCertArn = null;
+    loadImagingServiceKey();
+    if(this.imagingServiceKey==null || this.imagingServiceCertArn==null)
+      throw new Exception("Failed to load public key of the imaging service");
     
     WorkerTask newTask = null;
     if(cloudCert == null)
