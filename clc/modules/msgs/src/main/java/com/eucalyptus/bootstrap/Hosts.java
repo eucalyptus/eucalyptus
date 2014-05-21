@@ -70,6 +70,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -573,7 +574,12 @@ public class Hosts {
          */
         private final String coordinatorAddress = preMergeCoordinator != null ? preMergeCoordinator.getDisplayName() : "NONE";
 
-        private String logPrefix( View v ) { return "Hosts.viewChange(): merge   [" + v.getViewId( ).getId( ) + ":" + v.getViewId( ).getCreator() + "]=> "; }
+        private String logPrefix( final View v ) {
+          final ViewId viewId = v == null ? null : v.getViewId( );
+          final String id = viewId == null ? "?" : Objects.toString( viewId.getId() );
+          final String creator = viewId == null ? "?" : Objects.toString( viewId.getCreator( ), "?" );
+          return "Hosts.viewChange(): merge   [" +id + ":" + creator + "]=> ";
+        }
 
         @Override
         public void run( ) {
