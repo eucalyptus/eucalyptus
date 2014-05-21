@@ -21,9 +21,7 @@ package com.eucalyptus.imaging.worker;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -38,22 +36,12 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Dns;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceProperties;
-import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -696,10 +684,48 @@ public class ImagingServiceActions {
           }
           
           try{
-            EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.createdAutoScalingGroup, true);
+            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.createdAutoScalingGroup, null, 0);
           }catch(final Exception ex){
-            throw new ImagingServiceActionException("failed to delete autoscaling group", ex);
+            LOG.warn(String.format("Unable to set desired capacity for %s", this.createdAutoScalingGroup), ex);
           }
+          
+          boolean error = false;
+          final int NUM_DELETE_ASG_RETRY = 4;
+          for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
+            try{
+              EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.createdAutoScalingGroup, true);
+              boolean asgFound=false;
+              try{
+                final DescribeAutoScalingGroupsResponseType resp = 
+                    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(this.createdAutoScalingGroup));
+                for(final AutoScalingGroupType asg :
+                  resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()){
+                  if(this.createdAutoScalingGroup.equals(asg.getAutoScalingGroupName()))
+                    asgFound=true; 
+                }
+              }catch(final Exception ex){
+                asgFound=false;
+              }
+              if(asgFound)
+                throw new Exception("Autoscaling group was not deleted");
+              error = false;
+              // willl terminate all instances
+            }catch(final Exception ex){
+              error = true;
+              LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), this.createdAutoScalingGroup));
+              try{
+                long sleepMs = (i+1) * 500;
+                Thread.sleep(sleepMs);
+              }catch(final Exception ex2){
+                ;
+              }
+            }
+            if(!error)
+              break;
+          }
+          
+          if(error)
+            throw new ImagingServiceActionException("Failed to delete autoscaling group");
           
           // poll the state of instances
           do{

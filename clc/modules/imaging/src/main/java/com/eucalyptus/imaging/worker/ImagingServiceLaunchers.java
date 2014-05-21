@@ -81,6 +81,19 @@ public class ImagingServiceLaunchers {
     return !tagExists();
   }
   
+  public boolean isWorkedEnabled() {
+    try{
+      if(isLauncherLocked(launcherId))
+        return false;
+      if( tagExists() )
+        return true;
+      else
+        return false;
+    }catch(final Exception ex){
+      return false;
+    }
+  }
+  
   private boolean tagExists(){
     boolean tagFound = false;
     // lookup tags
@@ -98,7 +111,8 @@ public class ImagingServiceLaunchers {
         }
       }
     }catch(final Exception ex){
-      tagFound=false;
+      // in error situation, better to assume that the imaging worker is running fine
+      tagFound=true;
     }
     return tagFound;
   }

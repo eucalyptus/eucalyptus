@@ -49,6 +49,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.XMLParser;
@@ -78,6 +79,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     if (!( Bootstrap.isFinished() &&
          Topology.isEnabledLocally( Imaging.class ) ) )
        return;
+    
     final Map <ImportTaskState, List<ImagingTask>> taskByState =
         Maps.newHashMap();
     final List<ImagingTask> allTasks = ImagingTasks.getImagingTasks();
@@ -390,6 +392,21 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   }
   
   private void processNewTasks(final List<ImagingTask> tasks){
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable()){
+        ImagingServiceLaunchers.getInstance().enable();
+        LOG.debug("Imaging service worker launched");
+        return;
+      }
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      return;
+    }
+    if(!ImagingServiceLaunchers.getInstance().isWorkedEnabled()){
+      LOG.warn("Imaging worker is not currently enabled");
+      return;
+    }
+    
     for(final ImagingTask task : tasks){
       try{
         if(isExpired(task)){
