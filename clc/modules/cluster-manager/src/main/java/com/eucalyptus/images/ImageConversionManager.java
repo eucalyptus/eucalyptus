@@ -598,6 +598,19 @@ public class ImageConversionManager implements EventListener<ClockTick> {
             taggedImages.remove(imageId);
           }
           this.tagResources(imageId, "failed", message);
+          try ( final TransactionResource db =
+              Entities.transactionFor( ImageInfo.class ) ) {
+            try{
+              final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+              entity.setState(ImageMetadata.State.pending_available);
+              entity.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
+              ((MachineImageInfo)entity).setImageConversionId(null);
+              Entities.persist(entity);
+              db.commit();
+            }catch(final Exception ex){
+              LOG.error("Failed to mark the image state available for conversion", ex);
+            }
+          }
         }
       }catch(final Exception ex){
         LOG.error("Failed to update tags for resources in conversion", ex);
