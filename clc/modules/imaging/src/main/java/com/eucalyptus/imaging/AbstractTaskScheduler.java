@@ -110,141 +110,144 @@ public abstract class AbstractTaskScheduler {
   }
 
   static X509Certificate cloudCert =  null;
-  public synchronized WorkerTask getTask(final String availabilityZone) throws Exception{
-    final ImagingTask nextTask = this.getNext(availabilityZone);
-    if(nextTask==null)
-      return null;
-    
-    this.imagingServiceKey = null;
-    this.imagingServiceCertArn = null;
-    loadImagingServiceKey();
-    if(this.imagingServiceKey==null || this.imagingServiceCertArn==null)
-      throw new Exception("Failed to load public key of the imaging service");
-    
-    WorkerTask newTask = null;
-    if(cloudCert == null)
-      cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
-    
-    try{
-      if (nextTask instanceof DiskImagingTask){
-        final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
-        final DiskImageConversionTask conversionTask = imagingTask.getTask();
-        // generate temporary download manifests
-        try{
-          final List<ImportDiskImageDetail> importImages = conversionTask.getImportDisk().getDiskImageSet();
-          for(final ImportDiskImageDetail image : importImages){
-            String manifestUrl = image.getDownloadManifestUrl();
-            final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-            manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
-            final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-            final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket, key),
-                BundleImageManifest.INSTANCE);
-            String manifestName = String.format("%s-%s-%s", imagingTask.getDisplayName(),
-                conversionTask.getImportDisk().getConvertedImage().getPrefix(),
-                image.getFormat());
-            final String downloadManifest = 
-                DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
-                    manifestName, 5);
-            image.setDownloadManifestUrl(downloadManifest);
-          }
-        }catch(final Exception ex){
-          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
-          throw new EucalyptusCloudException("Failed to generate download manifest", ex);
-        }
+  private static Object taskLock = new Object();
+  public WorkerTask getTask(final String availabilityZone) throws Exception{
+    synchronized(taskLock){
+      final ImagingTask nextTask = this.getNext(availabilityZone);
+      if(nextTask==null)
+        return null;
 
-        newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
+      this.imagingServiceKey = null;
+      this.imagingServiceCertArn = null;
+      loadImagingServiceKey();
+      if(this.imagingServiceKey==null || this.imagingServiceCertArn==null)
+        throw new Exception("Failed to load public key of the imaging service");
 
-        final InstanceStoreTask ist = new InstanceStoreTask();
-        ist.setAccountId(imagingTask.getOwnerAccountNumber());
-        ist.setAccessKey(conversionTask.getImportDisk().getAccessKey());
-        ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
-        ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
-        ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
-        ist.setUploadPolicySignature(conversionTask.getImportDisk().getUploadPolicySignature());
-        ist.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
-        ist.setServiceCertArn(this.imagingServiceCertArn);
-        final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
-        final URI osgUri = osg.getUri();
-        ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath()));
-        newTask.setInstanceStoreTask(ist);
-      }else if(nextTask instanceof ImportVolumeImagingTask){
-        final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;
-        String manifestLocation = null;
-        if(volumeTask.getDownloadManifestUrl().size() == 0){
+      WorkerTask newTask = null;
+      if(cloudCert == null)
+        cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+
+      try{
+        if (nextTask instanceof DiskImagingTask){
+          final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
+          final DiskImageConversionTask conversionTask = imagingTask.getTask();
+          // generate temporary download manifests
           try{
-            manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile(volumeTask.getImportManifestUrl(),
-                    ImportImageManifest.INSTANCE ),
-                    null, volumeTask.getDisplayName(), 1);
-          }catch(final InvalidBaseManifestException ex){
-            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
+            final List<ImportDiskImageDetail> importImages = conversionTask.getImportDisk().getDiskImageSet();
+            for(final ImportDiskImageDetail image : importImages){
+              String manifestUrl = image.getDownloadManifestUrl();
+              final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
+              manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
+              final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
+              final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket, key),
+                  BundleImageManifest.INSTANCE);
+              String manifestName = String.format("%s-%s-%s", imagingTask.getDisplayName(),
+                  conversionTask.getImportDisk().getConvertedImage().getPrefix(),
+                  image.getFormat());
+              final String downloadManifest = 
+                  DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
+                      manifestName, 5);
+              image.setDownloadManifestUrl(downloadManifest);
+            }
+          }catch(final Exception ex){
+            ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
             throw new EucalyptusCloudException("Failed to generate download manifest", ex);
           }
-          ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
-        }else
-          manifestLocation = volumeTask.getDownloadManifestUrl().get(0).getDownloadManifestUrl();
-        newTask = new WorkerTask(volumeTask.getDisplayName(), WorkerTaskType.import_volume);
-        final VolumeTask vt = new VolumeTask();
-        final ImageManifest im = new ImageManifest();
-        im.setManifestUrl(manifestLocation);
-        im.setFormat(volumeTask.getFormat());
-        vt.setImageManifestSet(Lists.newArrayList(im));
-        vt.setVolumeId(volumeTask.getVolumeId());
-        vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
-        newTask.setVoumeTask(vt);
-      }else if (nextTask instanceof ImportInstanceImagingTask){
-        final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
-        for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
-          final String importManifestUrl = volume.getImage().getImportManifestUrl();
-          // that this task has not been fully processed by worker and the zone matches
-          if(! instanceTask.hasDownloadManifestUrl(importManifestUrl) && 
-              availabilityZone.equals(volume.getAvailabilityZone())){
-            String manifestLocation = null;
-            manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
-            if(manifestLocation == null){
-              try{
-                String manifestName = String.format("%s-%s", nextTask.getDisplayName(), volume.getVolume().getId());
-                manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                    new ImageManifestFile(importManifestUrl,
-                        ImportImageManifest.INSTANCE ),
-                        null, manifestName, 1);
-                ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
-              }catch(final InvalidBaseManifestException ex){
-                ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
-                throw new EucalyptusCloudException("Failed to generate download manifest", ex);
-              }       
+
+          newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
+
+          final InstanceStoreTask ist = new InstanceStoreTask();
+          ist.setAccountId(imagingTask.getOwnerAccountNumber());
+          ist.setAccessKey(conversionTask.getImportDisk().getAccessKey());
+          ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
+          ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
+          ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
+          ist.setUploadPolicySignature(conversionTask.getImportDisk().getUploadPolicySignature());
+          ist.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
+          ist.setServiceCertArn(this.imagingServiceCertArn);
+          final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
+          final URI osgUri = osg.getUri();
+          ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath()));
+          newTask.setInstanceStoreTask(ist);
+        }else if(nextTask instanceof ImportVolumeImagingTask){
+          final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;
+          String manifestLocation = null;
+          if(volumeTask.getDownloadManifestUrl().size() == 0){
+            try{
+              manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                  new ImageManifestFile(volumeTask.getImportManifestUrl(),
+                      ImportImageManifest.INSTANCE ),
+                      null, volumeTask.getDisplayName(), 1);
+            }catch(final InvalidBaseManifestException ex){
+              ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
+              throw new EucalyptusCloudException("Failed to generate download manifest", ex);
             }
-            newTask = new WorkerTask(instanceTask.getDisplayName(), WorkerTaskType.import_volume);
-            final VolumeTask vt = new VolumeTask();
-            final ImageManifest im = new ImageManifest();
-            im.setManifestUrl(manifestLocation);
-            im.setFormat(volume.getImage().getFormat());
-            vt.setImageManifestSet(Lists.newArrayList(im));
-            vt.setVolumeId(volume.getVolume().getId());
-            vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
-            newTask.setVoumeTask(vt);
-            break;
+            ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
+          }else
+            manifestLocation = volumeTask.getDownloadManifestUrl().get(0).getDownloadManifestUrl();
+          newTask = new WorkerTask(volumeTask.getDisplayName(), WorkerTaskType.import_volume);
+          final VolumeTask vt = new VolumeTask();
+          final ImageManifest im = new ImageManifest();
+          im.setManifestUrl(manifestLocation);
+          im.setFormat(volumeTask.getFormat());
+          vt.setImageManifestSet(Lists.newArrayList(im));
+          vt.setVolumeId(volumeTask.getVolumeId());
+          vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
+          newTask.setVoumeTask(vt);
+        }else if (nextTask instanceof ImportInstanceImagingTask){
+          final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
+          for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
+            final String importManifestUrl = volume.getImage().getImportManifestUrl();
+            // that this task has not been fully processed by worker and the zone matches
+            if(! instanceTask.hasDownloadManifestUrl(importManifestUrl) && 
+                availabilityZone.equals(volume.getAvailabilityZone())){
+              String manifestLocation = null;
+              manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
+              if(manifestLocation == null){
+                try{
+                  String manifestName = String.format("%s-%s", nextTask.getDisplayName(), volume.getVolume().getId());
+                  manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                      new ImageManifestFile(importManifestUrl,
+                          ImportImageManifest.INSTANCE ),
+                          null, manifestName, 1);
+                  ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
+                }catch(final InvalidBaseManifestException ex){
+                  ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
+                  throw new EucalyptusCloudException("Failed to generate download manifest", ex);
+                }       
+              }
+              newTask = new WorkerTask(instanceTask.getDisplayName(), WorkerTaskType.import_volume);
+              final VolumeTask vt = new VolumeTask();
+              final ImageManifest im = new ImageManifest();
+              im.setManifestUrl(manifestLocation);
+              im.setFormat(volume.getImage().getFormat());
+              vt.setImageManifestSet(Lists.newArrayList(im));
+              vt.setVolumeId(volume.getVolume().getId());
+              vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
+              newTask.setVoumeTask(vt);
+              break;
+            }
           }
         }
-      }
-    }catch(final EucalyptusCloudException ex){
-      throw new Exception("failed to prepare worker task", ex);
-    }catch(final Exception ex){
-      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
-      throw new Exception("failed to prepare worker task", ex);
-    }
-    
-    if(newTask!=null){
-      try{
-        ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, "");
+      }catch(final EucalyptusCloudException ex){
+        throw new Exception("failed to prepare worker task", ex);
       }catch(final Exception ex){
-        ;
+        ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
+        throw new Exception("failed to prepare worker task", ex);
       }
-    }else{
-      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
+
+      if(newTask!=null){
+        try{
+          ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, "");
+        }catch(final Exception ex){
+          ;
+        }
+      }else{
+        ImagingTasks.setState(nextTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
+      }
+
+      return newTask;
     }
-    
-    return newTask;
   }
 
   public static AbstractTaskScheduler getScheduler(){
