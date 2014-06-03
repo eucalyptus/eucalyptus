@@ -33,6 +33,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
@@ -47,6 +48,7 @@ import com.google.common.collect.Sets;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceAutoScalingInstances extends AutoScalingInstances {
 
   private final Logger logger = Logger.getLogger( PersistenceAutoScalingInstances.class ) ;

@@ -90,6 +90,7 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
@@ -174,6 +175,7 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 /**
  * Launches / pokes / times out activities.
  */
+@ComponentNamed
 public class ActivityManager {
   private static final Logger logger = Logger.getLogger( ActivityManager.class );
 

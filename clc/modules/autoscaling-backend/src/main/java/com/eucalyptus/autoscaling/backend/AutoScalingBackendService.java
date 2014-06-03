@@ -34,6 +34,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
@@ -44,7 +45,6 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
-import com.eucalyptus.autoscaling.activities.PersistenceScalingActivities;
 import com.eucalyptus.autoscaling.activities.ScalingActivities;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
@@ -136,14 +136,12 @@ import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationMinimumView;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
-import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupCoreView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupMinimumView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
-import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
 import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
@@ -151,11 +149,9 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstanceGroupView;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
-import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
-import com.eucalyptus.autoscaling.policies.PersistenceScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.policies.ScalingPolicyView;
@@ -163,6 +159,7 @@ import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.autoscaling.tags.Tags;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -192,6 +189,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
+@ComponentNamed
 public class AutoScalingBackendService {
   private static final Logger logger = Logger.getLogger( AutoScalingBackendService.class );
 
@@ -219,23 +217,14 @@ public class AutoScalingBackendService {
   private final ScalingPolicies scalingPolicies;
   private final ActivityManager activityManager;
   private final ScalingActivities scalingActivities;
-  
-  public AutoScalingBackendService() {
-    this( 
-        new PersistenceLaunchConfigurations( ),
-        new PersistenceAutoScalingGroups( ),
-        new PersistenceAutoScalingInstances( ),
-        new PersistenceScalingPolicies( ),
-        new ActivityManager( ),
-        new PersistenceScalingActivities( ) );
-  }
 
-  protected AutoScalingBackendService( final LaunchConfigurations launchConfigurations,
-                                       final AutoScalingGroups autoScalingGroups,
-                                       final AutoScalingInstances autoScalingInstances,
-                                       final ScalingPolicies scalingPolicies,
-                                       final ActivityManager activityManager,
-                                       final ScalingActivities scalingActivities ) {
+  @Inject
+  public AutoScalingBackendService( final LaunchConfigurations launchConfigurations,
+                                    final AutoScalingGroups autoScalingGroups,
+                                    final AutoScalingInstances autoScalingInstances,
+                                    final ScalingPolicies scalingPolicies,
+                                    final ActivityManager activityManager,
+                                    final ScalingActivities scalingActivities ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;

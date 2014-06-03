@@ -31,6 +31,7 @@ import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -47,6 +48,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
 /**
  *
  */
+@ComponentNamed
 public class AutoScalingService {
 
   public AutoScalingMessage dispatchAction( final AutoScalingMessage request ) throws EucalyptusCloudException {
