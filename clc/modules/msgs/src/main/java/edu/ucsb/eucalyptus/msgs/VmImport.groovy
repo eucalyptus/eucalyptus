@@ -96,8 +96,9 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "GroupName")
   ArrayList<String> groupName = new ArrayList<String>();
-  @HttpEmbedded
-  UserData userData;
+  String userData;
+  String version;
+  String encoding;
   String instanceType;
   InstancePlacement placement;
   MonitoringInstance monitoring;
@@ -107,19 +108,11 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String keyName;
   public ImportInstanceLaunchSpecification() {}
 }
-
 public class DiskImage extends EucalyptusData {
   DiskImageDetail image;
   String description;
   DiskImageVolume volume;
   public DiskImage() {}
-}
-public class UserData extends EucalyptusData {
-  @HttpParameterMapping( parameter="UserData" )
-  String data;
-  String version = "1.0"
-  String encoding = "base64"
-  public UserData() {}
 }
 public class InstancePlacement extends EucalyptusData {
   String availabilityZone;

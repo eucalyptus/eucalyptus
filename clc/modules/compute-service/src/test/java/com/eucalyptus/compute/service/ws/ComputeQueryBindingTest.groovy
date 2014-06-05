@@ -25,6 +25,8 @@ import com.eucalyptus.compute.common.LaunchPermissionItemType
 import com.eucalyptus.compute.common.LaunchPermissionOperationType
 import com.eucalyptus.compute.common.ModifyImageAttributeType
 import com.eucalyptus.compute.common.UserIdGroupPairType
+import com.eucalyptus.compute.common.ImportInstanceType
+import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import groovy.transform.CompileStatic
@@ -579,5 +581,37 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
         'ProductCode.2': 'Code2',
         'Description.Value': 'An image',
     ] )
+  }
+
+  @Test
+  void testInstanceImportQueryBindings() {
+	URL resource = ComputeQueryBindingTest.class.getResource( '/ec2-import-10-11-15.xml' )
+
+	String version = "2010-11-15"
+	ComputeQueryBinding eb = new ComputeQueryBinding() {
+	  @Override
+	  protected com.eucalyptus.binding.Binding getBindingWithElementClass( final String operationName ) {
+		createTestBindingFromXml( resource, operationName )
+	  }
+
+	  @Override
+	  String getNamespace() {
+		return getNamespaceForVersion( version );
+	  }
+
+	  @Override
+	  protected void validateBinding( final com.eucalyptus.binding.Binding currentBinding,
+									  final String operationName,
+									  final Map<String, String> params,
+									  final BaseMessage eucaMsg) {
+		// Validation requires compiled bindings
+	  }
+	}
+
+	bindAndAssertObject( eb, ImportInstanceType.class, "ImportInstance", new ImportInstanceType(
+		launchSpecification: new ImportInstanceLaunchSpecification(
+			userData: 'foo'
+		)
+	), 1 )
   }
 }

@@ -121,7 +121,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   // EUCA-specific extension
   @Column ( name = "metadata_launchspec_key_name")
   private String keyName;
-  
+
   @Column ( name = "metadata_image_id")
   private String imageId;
   
@@ -290,9 +290,8 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
         newTask.setLaunchSpecArchitecture("i386");
       else
         newTask.setLaunchSpecArchitecture(launchSpec.getArchitecture());
-      
-      if(launchSpec.getUserData()!=null && launchSpec.getUserData().getData()!=null) //base64 encoded string
-        newTask.setLaunchSpecUserData(launchSpec.getUserData().getData());
+      if(launchSpec.getUserData()!=null) //base64 encoded string
+        newTask.setLaunchSpecUserData(launchSpec.getUserData());
       newTask.setLaunchSpecInstanceType(launchSpec.getInstanceType());
       if(launchSpec.getPlacement()!=null)
         newTask.setLaunchSpecAvailabilityZone(launchSpec.getPlacement().getAvailabilityZone());
