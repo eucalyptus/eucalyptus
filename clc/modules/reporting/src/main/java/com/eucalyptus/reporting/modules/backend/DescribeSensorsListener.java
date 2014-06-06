@@ -20,6 +20,13 @@
 
 package com.eucalyptus.reporting.modules.backend;
 
+import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.util.concurrent.SettableFuture;
+import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
+import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -27,7 +34,13 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -50,7 +63,8 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
   public static Long DEFAULT_POLL_INTERVAL_MINS = 5L;
-  
+  public static final int REPORTING_NUM_THREADS = 4;
+
   private Integer COLLECTION_INTERVAL_TIME_MS;
 
   @ConfigurableField(initial = "5", description = "The initial history size of metrics to be send from the cc to the clc")
@@ -58,15 +72,17 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
   private Integer SENSOR_QUERY_BATCH_SIZE = 10;
-  
+
+  private static final AtomicBoolean busy = new AtomicBoolean( false );
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
   
   public static void register() {
     Listeners.register( Hertz.class, new DescribeSensorsListener() );
   }
   
+
   @Override
-  public void fireEvent( Hertz event ) {
+  public void fireEvent( final Hertz event ) {
     if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
       return;
     } else {
@@ -86,30 +102,62 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
           if (event.isAsserted(TimeUnit.MINUTES
               .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
             if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
+              if ( busy.compareAndSet( false, true ) ) {
+                Threads.lookup( Reporting.class ).limitTo( REPORTING_NUM_THREADS ).submit( new Callable<Object>() {
 
-              List<VmInstance> instList = VmInstances.list(VmState.RUNNING);
+                  @Override
+                  public Object call() throws Exception {
+                    try {
 
-              List<String> instIdList = Lists.newArrayList();
+                      List<VmInstance> instList = VmInstances.list( VmState.RUNNING );
 
-              for (final VmInstance inst : instList) {
-                instIdList.add(inst.getInstanceId());
-              }
-              Iterable<List<String>> processInts = Iterables.paddedPartition(instIdList, SENSOR_QUERY_BATCH_SIZE);
+                      List<String> instIdList = Lists.newArrayList();
+
+                      for ( final VmInstance inst : instList ) {
+                        instIdList.add( inst.getInstanceId() );
+                      }
+                      Iterable<List<String>> processInts = Iterables.paddedPartition( instIdList, SENSOR_QUERY_BATCH_SIZE );
 
 
-              for (final ServiceConfiguration ccConfig : Topology
-                  .enabledServices(ClusterController.class)) {
-                for (List<String> instIds : processInts) {
+                      for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
+                        for ( List<String> instIds : processInts ) {
 
-                  ArrayList<String> instanceIds = Lists.newArrayList(instIds);
-                  Iterables.removeIf(instanceIds, Predicates.isNull());
+                          ArrayList<String> instanceIds = Lists.newArrayList( instIds );
+                          Iterables.removeIf( instanceIds, Predicates.isNull() );
+                          //                  LOG.info("DecribeSensorCallback about to be sent");
+                          /**
+                           * Here this is hijacking the sensor callback in order to control the thread of execution used when invoking the
+                           */
+                          final DescribeSensorCallback msgCallback = new DescribeSensorCallback( HISTORY_SIZE,
+                                                                                                 COLLECTION_INTERVAL_TIME_MS, instanceIds ) {
+                            @Override
+                            public void fireException( Throwable e ) {}
 
-                  AsyncRequests.newRequest(
-                      new DescribeSensorCallback(HISTORY_SIZE,
-                          COLLECTION_INTERVAL_TIME_MS, instanceIds))
-                      .dispatch(ccConfig);
-                  LOG.debug("DecribeSensorCallback has been successfully executed");
-                }
+                            @Override
+                            public void fire( DescribeSensorsResponse msg ) {}
+                          };
+                          /**
+                           * Here we actually get the future reference to the result and, from this thread, invoke .fire().
+                           */
+                          Future<DescribeSensorsResponse> ret = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig );
+                          try {
+                            new DescribeSensorCallback( HISTORY_SIZE,
+                                                        COLLECTION_INTERVAL_TIME_MS, instanceIds ).fire(ret.get());
+        //                  LOG.info("DecribeSensorCallback has been successfully executed");
+                          } catch ( Exception e ) {
+                            Exceptions.maybeInterrupted( e );
+                          }
+                        }
+                      }
+                    } finally {
+                      /**
+                       * Only and finally set the busy bit back to false.
+                       */
+                      busy.set( false );
+                    }
+                    return null;
+                  }
+                } );
               }
             }
           }

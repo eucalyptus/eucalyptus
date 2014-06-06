@@ -274,7 +274,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
                 LOG.error( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
                 return true;
               }
-              LOG.trace( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
+              LOG.trace( String.format( "Listener still within time limit (%d): %s using executor %s", FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
             } catch ( Exception e ) {
               LOG.error( e );
             }
