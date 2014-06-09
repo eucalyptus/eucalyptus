@@ -64,7 +64,7 @@ public interface ObjectMetadataManager {
      * @return
      * @throws TransactionException
      */
-    public ObjectEntity lookupUpload(Bucket bucket, String uploadId) throws Exception;
+    public ObjectEntity lookupUpload(Bucket bucket, String key, String uploadId) throws Exception;
 
 
     public List<ObjectEntity> lookupObjectsInState(Bucket bucket, String objectKey, String versionId, ObjectState state) throws Exception;

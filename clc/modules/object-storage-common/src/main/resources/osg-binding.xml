@@ -636,9 +636,9 @@
         <structure name="Owner" field="owner"
                    map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser"/>
         <value name="StorageClass" field="storageClass"/>
-        <value name="PartNumberMarker" field="partNumberMarker" usage="optional"/>
-        <value name="NextPartNumberMarker" field="nextPartNumberMarker" usage="optional"/>
-        <value name="MaxParts" field="maxParts" usage="optional"/>
+        <value name="PartNumberMarker" field="partNumberMarker"/>
+        <value name="NextPartNumberMarker" field="nextPartNumberMarker"/>
+        <value name="MaxParts" field="maxParts"/>
         <value name="IsTruncated" field="isTruncated"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="parts">

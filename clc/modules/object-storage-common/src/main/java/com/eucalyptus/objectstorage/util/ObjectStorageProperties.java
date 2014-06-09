@@ -299,7 +299,7 @@ public class ObjectStorageProperties {
     }
 
     public enum ObjectParameter {
-        acl, torrent, versionId, uploads, partNumber, uploadId;
+        acl, torrent, versionId, uploads, partNumber, uploadId, maxParts, partNumberMarker;
     }
 
     public enum RequiredQueryParams {

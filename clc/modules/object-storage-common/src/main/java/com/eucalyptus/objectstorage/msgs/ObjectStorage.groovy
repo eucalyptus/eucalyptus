@@ -844,8 +844,8 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 //Account must have read access to the bucket
 public class ListPartsType extends ObjectStorageDataRequestType {
     String uploadId;
-    Integer maxParts;
-    Integer partNumberMarker;
+    String maxParts;
+    String partNumberMarker;
 }
 
 public class ListPartsResponseType extends ObjectStorageDataResponseType {
@@ -855,9 +855,9 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
     Initiator initiator;
     CanonicalUser owner;
     String storageClass;
-    Integer partNumberMarker;
-    Integer nextPartNumberMarker;
-    Integer maxParts;
+    int partNumberMarker;
+    int nextPartNumberMarker;
+    int maxParts;
     Boolean isTruncated;
     ArrayList<Part> parts = new ArrayList<Part>();
 }
