@@ -78,6 +78,17 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		    }
 		}
 	}
+	
+	public static class ELBDnsTtlChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      try{
+        final int ttl = Integer.parseInt((String)newValue);
+      }catch(final Exception ex){
+       throw new ConfigurablePropertyException("Malformed ttl value"); 
+      }
+    }
+	}
 
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerDnsRecord.class );
 	@ConfigurableField( displayName = "loadbalancer_dns_subdomain",
@@ -88,6 +99,18 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			changeListener = ELBDnsChangeListener.class
 			)
 	public static String LOADBALANCER_DNS_SUBDOMAIN = "lb";
+	
+	@ConfigurableField( displayName = "loadbalancer_dns_ttl",
+	      description = "loadbalancer dns ttl value",
+	      initial = "60",
+	      readonly = false,
+	      type = ConfigurableFieldType.KEYVALUE,
+	      changeListener = ELBDnsTtlChangeListener.class
+	      )
+	public static String LOADBALANCER_DNS_TTL = "60";
+	public static int getLoadbalancerTTL(){
+	  return Integer.parseInt(LOADBALANCER_DNS_TTL);
+	}
 	
 	@Transient
 	private static final long serialVersionUID = 1L;

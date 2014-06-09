@@ -95,6 +95,7 @@ import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.DispatchingClient;
@@ -1899,7 +1900,7 @@ public class EucalyptusActivityTasks {
 			final CreateMultiARecordType req = new CreateMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
-			req.setTtl(86400);
+			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
 			return req;
 		}
 		
@@ -1934,7 +1935,7 @@ public class EucalyptusActivityTasks {
 			req.setZone(this.zone);
 			req.setName(this.name);
 			req.setAddress(this.address);
-			req.setTtl(86400);
+			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
 			return req;
 		}
 		
