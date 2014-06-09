@@ -595,13 +595,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public DeleteBucketResponseType deleteBucket(final DeleteBucketType request) throws S3Exception {
-		Bucket bucket;
-        try {
-            bucket = getBucketAndCheckAuthorization(request);
-        } catch(NoSuchBucketException e) {
-            //This is okay, fall through
-            bucket = null;
-        }
+		Bucket bucket = getBucketAndCheckAuthorization(request);
 
         if(bucket != null) {
             try {
