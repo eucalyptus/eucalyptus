@@ -1718,9 +1718,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             ObjectEntity objectEntity;
             try {
-                objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+                objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
             } catch (Exception e) {
-                throw new NoSuchUploadException("Cannot get upload for: " + bucket.getBucketName() + "/" + request.getKey());
+                throw new NoSuchUploadException(request.getUploadId());
             }
             try {
                 PartEntity updatedEntity = OsgObjectFactory.getFactory().createObjectPart(ospClient, objectEntity, partEntity, request.getData(), requestUser);
@@ -1754,7 +1754,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         ObjectEntity objectEntity;
         User requestUser = Contexts.lookup().getUser();
         try {
-            objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+            objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
         } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchUploadException(request.getUploadId());
         } catch (Exception e) {
@@ -1763,11 +1763,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize(); //No change, completion cannot increase the size of the bucket, only decrease it.
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
-            try {
-                objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
-            } catch (Exception e) {
-                throw new NoSuchUploadException("Cannot get upload for: " + bucket.getBucketName() + "/" + request.getKey());
-            }
             try {
                 //TODO: need to add the necesary logic to hold the connection open by sending ' ' on the channel periodically
                 //The backend operation could take a while.
@@ -1810,7 +1805,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(e.getMessage());
         }
         try {
-            objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+            objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
             //convert to uuid, which corresponding to the key on the backend
             request.setKey(objectEntity.getObjectUuid());
             request.setBucket(bucket.getBucketUuid());
@@ -1842,76 +1837,83 @@ public class ObjectStorageGateway implements ObjectStorageService {
      * Return parts for a given multipart request
      *
      */
-    public ListPartsResponseType listParts(ListPartsType request) throws S3Exception {
-        logRequest(request);
-        ListPartsResponseType reply = request.getReply();
-        String bucketName = request.getBucket();
-        String objectKey = request.getKey();
-        ObjectEntity objectEntity;
-        Bucket bucket;
-        try {
-            bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucketName);
-        } catch(NoSuchElementException e) {
-            throw new NoSuchBucketException(request.getBucket());
-        } catch(Exception e) {
-            throw new InternalErrorException(e.getMessage());
-        }
-        try {
-            objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
-        } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
-        } catch(Exception e) {
-            throw new InternalErrorException(e.getMessage());
-        }
+	public ListPartsResponseType listParts(ListPartsType request) throws S3Exception {
+		logRequest(request);
 
-        if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-            int maxParts = 1000;
-            try {
-                if(request.getMaxParts() != null) {
-                    maxParts = request.getMaxParts();
-                }
-            } catch(NumberFormatException e) {
-                LOG.error("Failed to parse max parts from request properly: " + request.getMaxParts(), e);
-                throw new InvalidArgumentException("maxParts");
-            }
+		int maxParts = ObjectStorageProperties.MAX_KEYS;
+		if (!Strings.isNullOrEmpty(request.getMaxParts())) {
+			try {
+				maxParts = Integer.parseInt(request.getMaxParts());
+				if (maxParts < 0 || maxParts > ObjectStorageProperties.MAX_KEYS) {
+					throw new InvalidArgumentException("max-parts");
+				}
+			} catch (NumberFormatException e) {
+				throw new InvalidArgumentException("max-parts");
+			}
+		}
 
-            try {
-                Initiator initiator = new Initiator(
-                        objectEntity.getOwnerIamUserId(),
-                        objectEntity.getOwnerIamUserDisplayName());
-                reply.setInitiator(initiator);
-                CanonicalUser owner = new CanonicalUser(
-                        objectEntity.getOwnerCanonicalId(),
-                        objectEntity.getOwnerDisplayName());
-                reply.setOwner(owner);
-                reply.setStorageClass(objectEntity.getStorageClass());
-                reply.setPartNumberMarker(request.getPartNumberMarker());
-                reply.setMaxParts(request.getMaxParts());
-                reply.setBucket(bucketName);
-                reply.setKey(objectKey);
-                reply.setUploadId(request.getUploadId());
-            } catch (Exception e) {
-                throw new NoSuchUploadException(request.getUploadId());
-            }
-            try {
-                PaginatedResult<PartEntity> result = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
-                reply.setIsTruncated(result.getIsTruncated());
-                if(	result.getLastEntry() instanceof PartEntity) {
-                    reply.setNextPartNumberMarker(((PartEntity)result.getLastEntry()).getPartNumber());
-                }
-                for (PartEntity entity : result.getEntityList()) {
-                    List<Part> replyParts = reply.getParts();
-                    replyParts.add(entity.toPartListEntry());
-                }
-            } catch (Exception e) {
-                throw new InternalErrorException(e.getMessage());
-            }
-            return reply;
-        } else {
-            throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
-        }
+		int partNumberMarker = 0;
+		if (!Strings.isNullOrEmpty(request.getPartNumberMarker())) {
+			try {
+				partNumberMarker = Integer.parseInt(request.getPartNumberMarker());
+			} catch (NumberFormatException e) {
+				throw new InvalidArgumentException("part-number-marker");
+			}
+		}
 
-    }
+		ListPartsResponseType reply = request.getReply();
+		String bucketName = request.getBucket();
+		String objectKey = request.getKey();
+		ObjectEntity objectEntity;
+		Bucket bucket;
+		try {
+			bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucketName);
+		} catch (NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch (Exception e) {
+			throw new InternalErrorException(e.getMessage());
+		}
+		try {
+			objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
+		} catch (NoSuchElementException e) {
+			throw new NoSuchUploadException(request.getUploadId());
+		} catch (Exception e) {
+			throw new InternalErrorException(e.getMessage());
+		}
+
+		if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+			try {
+				PaginatedResult<PartEntity> result = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(),
+						partNumberMarker, maxParts);
+
+				reply.setStorageClass(objectEntity.getStorageClass());
+				reply.setPartNumberMarker(partNumberMarker);
+				reply.setMaxParts(maxParts);
+				reply.setBucket(bucketName);
+				reply.setKey(objectKey);
+				reply.setUploadId(request.getUploadId());
+				reply.setIsTruncated(result.getIsTruncated());
+				reply.setInitiator(new Initiator(Accounts.getUserArn(Accounts.lookupUserById(objectEntity.getOwnerIamUserId())), objectEntity
+						.getOwnerIamUserDisplayName()));
+				reply.setOwner(new CanonicalUser(objectEntity.getOwnerCanonicalId(), objectEntity.getOwnerDisplayName()));
+
+				if (result.getLastEntry() instanceof PartEntity) {
+					reply.setNextPartNumberMarker(((PartEntity) result.getLastEntry()).getPartNumber());
+				} else {
+					reply.setNextPartNumberMarker(0);
+				}
+				for (PartEntity entity : result.getEntityList()) {
+					List<Part> replyParts = reply.getParts();
+					replyParts.add(entity.toPartListEntry());
+				}
+			} catch (Exception e) {
+				throw new InternalErrorException(e.getMessage());
+			}
+			return reply;
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+	}
 
     /*
      * Return all active multipart uploads for a bucket

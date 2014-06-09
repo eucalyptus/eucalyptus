@@ -411,26 +411,27 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
 
     @Override
-    public ObjectEntity lookupUpload(Bucket bucket, String uploadId) throws Exception {
-        EntityTransaction db = Entities.get(ObjectEntity.class);
-        try {
-            Criteria search = Entities.createCriteria(ObjectEntity.class);
-            ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
-            searchExample.setUploadId(uploadId);
-            search.add(Example.create(searchExample));
-            search = getSearchByBucket(search, bucket);
-            List<ObjectEntity> results = search.list();
-            db.commit();
-            if (results.size() > 0) {
-                return results.get(0);
-            } else {
-                throw new NoSuchUploadException(uploadId);
-            }
-        } finally {
-            if (db != null && db.isActive()) {
-                db.rollback();
-            }
-        }
+    public ObjectEntity lookupUpload(Bucket bucket, String objectKey, String uploadId) throws NoSuchElementException, MetadataOperationFailureException {
+		try {
+			try (TransactionResource trans = Entities.transactionFor(ObjectEntity.class)) {
+				ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withKey(objectKey).withUploadId(uploadId).withState(ObjectState.mpu_pending);
+				Criteria searchUploadId = Entities.createCriteria(ObjectEntity.class).add(Example.create(searchExample));
+				searchUploadId = getSearchByBucket(searchUploadId, bucket);
+				List<ObjectEntity> results = searchUploadId.list();
+				trans.commit();
+
+				if (results == null || results.isEmpty()) {
+					throw new NoSuchElementException();
+				} else {
+					return results.get(0);
+				}
+			}
+		} catch (NoSuchElementException e) {
+			throw e;
+		} catch (Exception e) {
+			LOG.error("Error getting object entity for " + bucket.getBucketName() + "/" + objectKey + "?uploadId=" + uploadId, e);
+			throw new MetadataOperationFailureException(e);
+		}
     }
 
     @Override
