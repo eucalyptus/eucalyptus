@@ -572,7 +572,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                         return reply;
                     } else {
                         // Wrap the error from back-end with a 500 error
-                    	throw new InternalErrorException(request.getBucket(), e);
+                        throw new BucketAlreadyExistsException(request.getBucket());
                     }
                 }
             } else {
