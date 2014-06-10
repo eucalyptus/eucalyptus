@@ -1915,69 +1915,72 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		}
 	}
 
-    /*
-     * Return all active multipart uploads for a bucket
-     *
-     */
-    public ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws S3Exception {
-        Bucket bucket = getBucketAndCheckAuthorization(request);
+	/*
+	 * Return all active multipart uploads for a bucket
+	 */
+	public ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws S3Exception {
+		Bucket bucket = getBucketAndCheckAuthorization(request);
 
-        int maxUploads = ObjectStorageProperties.MAX_KEYS;
-        try {
-            if(request.getMaxUploads() != null) {
-                maxUploads = request.getMaxUploads();
-            }
-        } catch(NumberFormatException e) {
-            LOG.error("Failed to parse max uploads from request properly: " + request.getMaxUploads(), e);
-            throw new InvalidArgumentException("MaxKeys");
-        }
+		int maxUploads = ObjectStorageProperties.MAX_KEYS;
+		if (!Strings.isNullOrEmpty(request.getMaxUploads())) {
+			try {
+				maxUploads = Integer.parseInt(request.getMaxUploads());
+				if (maxUploads < 0 || maxUploads > ObjectStorageProperties.MAX_KEYS) {
+					throw new InvalidArgumentException("max-uploads");
+				}
+			} catch (NumberFormatException e) {
+				throw new InvalidArgumentException("max-uploads");
+			}
+		}
 
+		ListMultipartUploadsResponseType reply = request.getReply();
+		reply.setMaxUploads(maxUploads);
+		reply.setBucket(request.getBucket());
+		reply.setDelimiter(request.getDelimiter());
+		reply.setKeyMarker(request.getKeyMarker() != null ? request.getKeyMarker() : ""); // mandatory for response
+		reply.setUploadIdMarker(request.getUploadIdMarker() != null ? request.getUploadIdMarker() : ""); // mandatory for response
+		reply.setPrefix(request.getPrefix());
+		reply.setIsTruncated(false);
+		reply.setNextKeyMarker(""); // mandatory for response
+		reply.setNextUploadIdMarker(""); // mandatory for response
 
-        ListMultipartUploadsResponseType reply = request.getReply();
-        reply.setMaxUploads(maxUploads);
-        reply.setBucket(request.getBucket());
-        reply.setDelimiter(request.getDelimiter());
-        reply.setKeyMarker(request.getKeyMarker());
-        reply.setPrefix(request.getPrefix());
-        reply.setIsTruncated(false);
+		PaginatedResult<ObjectEntity> result;
+		try {
+			result = ObjectMetadataManagers.getInstance().listUploads(bucket, maxUploads, request.getPrefix(), request.getDelimiter(), request.getKeyMarker(),
+					request.getUploadIdMarker());
 
-        PaginatedResult<ObjectEntity> result;
-        try {
-            result = ObjectMetadataManagers.getInstance().listUploads(bucket, maxUploads, request.getPrefix(), request.getDelimiter(), request.getKeyMarker(), request.getUploadIdMarker());
-        } catch(Exception e) {
-            LOG.error("Error getting object listing for bucket: " + request.getBucket(), e);
-            throw new InternalErrorException(request.getBucket());
-        }
+			if (result != null) {
+				reply.setUploads(new ArrayList<Upload>());
 
-        if(result != null) {
-            reply.setUploads(new ArrayList<Upload>());
+				for (ObjectEntity obj : result.getEntityList()) {
+					reply.getUploads()
+							.add(new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupUserById(obj
+									.getOwnerIamUserId())), obj.getOwnerIamUserDisplayName()), new CanonicalUser(obj.getOwnerCanonicalId(), obj
+									.getOwnerDisplayName()), obj.getStorageClass(), obj.getCreationTimestamp()));
+				}
 
-            for(ObjectEntity obj : result.getEntityList()){
-                reply.getUploads().add(new Upload(obj.getObjectKey(), obj.getUploadId(),
-                        new Initiator(obj.getOwnerIamUserId(), obj.getOwnerIamUserDisplayName()),
-                        new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()),
-                        obj.getStorageClass(), obj.getCreationTimestamp()));
-            }
-
-            if(result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
-                reply.setCommonPrefixes(new ArrayList<CommonPrefixesEntry>());
-
-                for(String s : result.getCommonPrefixes()) {
-                    reply.getCommonPrefixes().add(new CommonPrefixesEntry(s));
-                }
-            }
-            reply.setIsTruncated(result.isTruncated);
-            if(result.getLastEntry() instanceof ObjectEntity) {
-                reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
-                reply.setNextUploadIdMarker(((ObjectEntity)result.getLastEntry()).getUploadId());
-            } else {
-                //If max-keys = 0, then last entry may be empty
-                reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
-            }
-        }
-
-        return reply;
-    }
+				if (result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
+					reply.setCommonPrefixes(new ArrayList<CommonPrefixesEntry>());
+					for (String s : result.getCommonPrefixes()) {
+						reply.getCommonPrefixes().add(new CommonPrefixesEntry(s));
+					}
+				}
+				reply.setIsTruncated(result.isTruncated);
+				if (result.getLastEntry() instanceof ObjectEntity) {
+					reply.setNextKeyMarker(((ObjectEntity) result.getLastEntry()).getObjectKey());
+					reply.setNextUploadIdMarker(((ObjectEntity) result.getLastEntry()).getUploadId());
+				} else {
+					// If the listing does not contain last key (it may or may not contain common prefixes), next markers should be empty
+					reply.setNextKeyMarker("");
+					reply.setNextUploadIdMarker("");
+				}
+			}
+		} catch (Exception e) {
+			LOG.error("Error getting object listing for bucket: " + request.getBucket(), e);
+			throw new InternalErrorException(request.getBucket());
+		}
+		return reply;
+	}
 
     /**
      * Fire creation and possibly a related delete event.

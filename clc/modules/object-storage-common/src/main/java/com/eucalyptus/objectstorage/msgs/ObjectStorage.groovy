@@ -869,7 +869,7 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
     String delimiter;
-    Integer maxUploads;
+    String maxUploads;
     String keyMarker;
     String prefix;
     String uploadIdMarker;
@@ -881,10 +881,10 @@ public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseT
     String uploadIdMarker;
     String nextKeyMarker;
     String nextUploadIdMarker;
+	String delimiter;
+	String prefix;
     Integer maxUploads;
     Boolean isTruncated;
     List<Upload> uploads = new ArrayList<Upload>();
-    String prefix;
-    String delimiter;
     ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
 }

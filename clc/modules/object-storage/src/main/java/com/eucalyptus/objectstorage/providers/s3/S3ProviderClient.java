@@ -1278,7 +1278,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
         String bucketName = request.getBucket();
         ListMultipartUploadsRequest listMultipartUploadsRequest = new ListMultipartUploadsRequest(bucketName);
-        listMultipartUploadsRequest.setMaxUploads(request.getMaxUploads());
+        listMultipartUploadsRequest.setMaxUploads(Integer.parseInt(request.getMaxUploads()));
         listMultipartUploadsRequest.setKeyMarker(request.getKeyMarker());
         listMultipartUploadsRequest.setDelimiter(request.getDelimiter());
         listMultipartUploadsRequest.setPrefix(request.getPrefix());
