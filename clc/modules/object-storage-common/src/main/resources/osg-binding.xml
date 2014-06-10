@@ -660,18 +660,18 @@
              class="com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType">
         <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType"/>
         <value name="Bucket" field="bucket"/>
-        <value name="KeyMarker" field="keyMarker" usage="optional"/>
-        <value name="UploadIdMarker" field="uploadIdMarker" usage="optional"/>
-        <value name="NextKeyMarker" field="nextKeyMarker" usage="optional"/>
-        <value name="NextUploadIdMarker" field="nextUploadIdMarker" usage="optional"/>
-        <value name="MaxUploads" field="maxUploads" usage="optional"/>
-        <value name="IsTruncated" field="isTruncated" usage="optional"/>
+        <value name="KeyMarker" field="keyMarker"/>
+        <value name="UploadIdMarker" field="uploadIdMarker"/>
+        <value name="NextKeyMarker" field="nextKeyMarker"/>
+        <value name="NextUploadIdMarker" field="nextUploadIdMarker"/>
+		<value name="Delimiter" field="delimiter" usage="optional"/>
+        <value name="Prefix" field="prefix" usage="optional"/>
+        <value name="MaxUploads" field="maxUploads"/>
+        <value name="IsTruncated" field="isTruncated"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="uploads">
             <structure name="Upload" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
         </collection>
-        <value name="Prefix" field="prefix" usage="optional"/>
-        <value name="Delimiter" field="delimiter" usage="optional"/>
         <collection field="commonPrefixes"
                     factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure map-as="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry"/>
