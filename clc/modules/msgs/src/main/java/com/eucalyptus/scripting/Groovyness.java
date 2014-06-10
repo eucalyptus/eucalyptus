@@ -62,6 +62,11 @@
 
 package com.eucalyptus.scripting;
 
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import groovy.lang.ExpandoMetaClass;
 import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
@@ -73,6 +78,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.management.ClassLoadingMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.util.Map;
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
@@ -85,6 +94,7 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Maps;
+import org.codehaus.groovy.jsr223.GroovyScriptEngineImpl;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
@@ -107,7 +117,46 @@ public class Groovyness {
     loader.setShouldRecompile( true );
     return loader;
   }
-  
+
+  /**
+   * Periodically free the groovy engine to workaround perm-gen leak
+   */
+  public static class FreeTheGroovyEngine implements EventListener<ClockTick> {
+    public static void register() {
+      Listeners.register( ClockTick.class, new FreeTheGroovyEngine() );
+    }
+
+    private static void logJmx() {
+      ClassLoadingMXBean classLoadingMx = ManagementFactory.getClassLoadingMXBean();
+      MemoryPoolMXBean permGen = Iterables.find( ManagementFactory.getMemoryPoolMXBeans(), new Predicate<MemoryPoolMXBean>() {
+        @Override
+        public boolean apply( MemoryPoolMXBean memoryPoolMXBean ) {
+          return memoryPoolMXBean.getName().contains( "Perm Gen" );
+        }
+      } );
+      MemoryUsage permGcUsage = permGen.getCollectionUsage();
+      MemoryUsage permPeakUsage = permGen.getPeakUsage();
+      MemoryUsage permUsage = permGen.getUsage();
+      LOG.debug("EUCA-8917: loaded/unloaded/total=" + classLoadingMx.getLoadedClassCount() + "/" + classLoadingMx.getUnloadedClassCount() + "/" + classLoadingMx.getTotalLoadedClassCount() +
+                " used=" + permUsage.getUsed()/1024.0 + "/" + permUsage.getMax()/1024.0 +
+                " last-gc="+ permGcUsage.getUsed()/1024.0 + "/" + permGcUsage.getMax()/1024.0 +
+                " peak="+ permPeakUsage.getUsed()/1024.0 + "/" + permPeakUsage.getMax()/1024.0 );
+    }
+
+    @Override
+    public void fireEvent( ClockTick event ) {
+      synchronized( Groovyness.class ) {
+        if ( Groovyness.groovyEngine != null ) {
+          GroovyScriptEngineImpl groovyEngine = ( GroovyScriptEngineImpl ) Groovyness.groovyEngine;
+          groovyEngine.getClassLoader().clearCache();
+          Groovyness.groovyEngine = null;
+        }
+      }
+      System.gc();
+      logJmx();
+    }
+  }
+
   private static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
