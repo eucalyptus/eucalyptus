@@ -1226,10 +1226,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         String uploadId = request.getUploadId();
         ListPartsRequest listPartsRequest = new ListPartsRequest(bucketName, key, uploadId);
         if (request.getMaxParts() != null) {
-            listPartsRequest.setMaxParts(request.getMaxParts());
+            listPartsRequest.setMaxParts(Integer.parseInt(request.getMaxParts()));
         }
         if(request.getPartNumberMarker() != null) {
-            listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
+            listPartsRequest.setPartNumberMarker(Integer.parseInt(request.getPartNumberMarker()));
         }
         try {
             internalS3Client = getS3Client(requestUser);
@@ -1278,7 +1278,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
         String bucketName = request.getBucket();
         ListMultipartUploadsRequest listMultipartUploadsRequest = new ListMultipartUploadsRequest(bucketName);
-        listMultipartUploadsRequest.setMaxUploads(request.getMaxUploads());
+        listMultipartUploadsRequest.setMaxUploads(Integer.parseInt(request.getMaxUploads()));
         listMultipartUploadsRequest.setKeyMarker(request.getKeyMarker());
         listMultipartUploadsRequest.setDelimiter(request.getDelimiter());
         listMultipartUploadsRequest.setPrefix(request.getPrefix());
