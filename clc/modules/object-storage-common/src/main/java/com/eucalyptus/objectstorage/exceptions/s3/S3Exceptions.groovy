@@ -474,6 +474,12 @@ class InvalidRequestException extends S3Exception {
         this();
         this.resource = resource;
     }
+
+	def InvalidRequestException(String resource, String message) {
+		this();
+		this.resource = resource;
+		this.message = message;
+	}
 }
 
 class InvalidSecurityException extends S3Exception {
