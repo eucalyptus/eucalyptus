@@ -2430,7 +2430,12 @@ public class WalrusFSManager extends WalrusManager {
                     versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : WalrusProperties.NULL_VERSION_ID;
                 }
                 if (request.getGetData()) {
-                    storageManager.getObject(bucketName, objectName, reply, byteRangeStart, byteRangeEnd + 1, request.getIsCompressed());
+                	if (objectInfo.isMultipart()) {
+                    	List<PartInfo> parts = getOrderedListOfParts(objectInfo);
+                		storageManager.getMultipartObject(reply, parts, request.getIsCompressed(), byteRangeStart, byteRangeEnd);
+                	} else {
+                		storageManager.getObject(bucketName, objectName, reply, byteRangeStart, byteRangeEnd + 1, request.getIsCompressed());
+                	}
                 }
                 reply.setEtag(etag);
                 reply.setLastModified(lastModified);
