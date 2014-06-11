@@ -120,6 +120,8 @@ public interface StorageManager {
     public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException;
 
     public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException;
+    
+    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd) throws WalrusException;
 
     public void disable() throws EucalyptusCloudException ;
 

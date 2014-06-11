@@ -562,4 +562,63 @@ public class FileSystemStorageManager implements StorageManager {
         }
     }
 
+	@Override
+	public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd)
+			throws WalrusException {
+		try {
+			List<ChunkedInput> dataStreams = new ArrayList<>();
+			isCompressed = isCompressed == null ? false : isCompressed;
+
+			Long requestedSize = byteRangeEnd - byteRangeStart + 1; // Assuming byteRangeEnd is inclusive
+			Iterator<PartInfo> partIterator = parts.iterator();
+			PartInfo part = null;
+
+			// Compute the part to begin reading from and the starting offset in that part
+			Long rangeElapsed = -1L;
+			Long startMarker = 0L;
+			while (partIterator.hasNext()) {
+				part = partIterator.next();
+				rangeElapsed += part.getSize();
+				if (byteRangeStart <= rangeElapsed) {
+					startMarker = part.getSize() - (rangeElapsed - byteRangeStart + 1);
+					break;
+				}
+			}
+
+			// Keep adding bytes from parts till the requested length is met
+			Long bytesRead = 0L;
+			Long tempLength = 0L;
+			do {
+				if (part == null & partIterator.hasNext()) {
+					part = partIterator.next();
+				}
+
+				final ChunkedInput file;
+				RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
+
+				if (requestedSize > ((part.getSize() - startMarker) + bytesRead)) { // if the part is smaller than what is required, add the part from the startMarker to end
+					tempLength = part.getSize() - startMarker;
+				} else { // if the part is larger than what is required, add the part from the startMarker to how much is necessary
+					tempLength = requestedSize - bytesRead;
+				}
+
+				if (isCompressed) {
+					file = new CompressedChunkedFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+				} else {
+					file = new ChunkedDataFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+				}
+
+				dataStreams.add(file);
+				bytesRead = bytesRead + tempLength;
+				startMarker = 0L;
+				tempLength = 0L;
+				part = null;
+			} while (bytesRead < requestedSize && partIterator.hasNext());
+
+			reply.setDataInputStream(dataStreams);
+		} catch (IOException ex) {
+			throw new WalrusException(ex.getMessage());
+		}
+	}
+
 }
