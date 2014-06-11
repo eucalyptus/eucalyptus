@@ -58,6 +58,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketStateException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
@@ -1742,7 +1743,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException("Error during bucket lookup: " + request.getBucket(), e);
         }
 
         ObjectEntity objectEntity;
@@ -1752,11 +1753,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
         } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchUploadException(request.getUploadId());
         } catch (Exception e) {
-            throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
+            throw new InternalErrorException("Error during upload lookup: " + request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(), e);
         }
-
+        
         long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize(); //No change, completion cannot increase the size of the bucket, only decrease it.
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
+			if (request.getParts() == null || request.getParts().isEmpty()) {
+				throw new InvalidRequestException(request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(),
+						"You must specify at least one part");
+			}
+        	
             try {
                 //TODO: need to add the necesary logic to hold the connection open by sending ' ' on the channel periodically
                 //The backend operation could take a while.
@@ -1776,10 +1782,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 response.setBucket(request.getBucket());
                 response.setKey(request.getKey());
                 return response;
+            } catch (S3Exception e) {
+                throw e;
             } catch (Exception e) {
             	// Wrap the error from back-end with a 500 error
             	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
-                throw new InternalErrorException(objectEntity.getResourceFullName(), e);
+                throw new InternalErrorException(request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(), e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
