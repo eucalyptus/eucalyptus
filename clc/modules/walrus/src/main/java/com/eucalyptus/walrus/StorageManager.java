@@ -108,6 +108,8 @@ public interface StorageManager {
     public void deleteAbsoluteObject(String object) throws IOException;
 
     public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
+    
+    public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception;
 
     public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
