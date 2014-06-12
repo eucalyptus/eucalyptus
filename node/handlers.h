@@ -212,6 +212,7 @@ struct nc_state_t {
 //! Hypervisor specific operation handlers
 struct handlers {
     char name[CHAR_BUFFER_SIZE];
+    void (*doInitNC) (void);
     int (*doInitialize) (struct nc_state_t * nc);
     int (*doBroadcastNetworkInfo) (struct nc_state_t * nc, ncMetadata * pMeta, char *networkInfo);
     int (*doAssignAddress) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
@@ -291,6 +292,7 @@ extern configEntry configKeysNoRestartNC[];
 
 #ifdef HANDLERS_FANOUT
 // only declare for the fanout code, not the actual handlers
+void doInitNC(void);
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
 int doPowerDown(ncMetadata * pMeta);

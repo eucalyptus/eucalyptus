@@ -229,13 +229,14 @@ static int populateOutboundMeta(ncMetadata * pMeta);
 //!
 //!
 //!
-//! @note
+//! @note this routine runs immediately when the process is started
 //!
 void doInitCC(void)
 {
     if (initialize(NULL, FALSE)) {
         LOGWARN("could not initialize\n");
     }
+    LOGINFO("component started\n");
 }
 
 //!

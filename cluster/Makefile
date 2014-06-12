@@ -100,7 +100,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Generating server stubs
 	sh $(WSDL2C) -uri $(CCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile

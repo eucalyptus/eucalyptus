@@ -100,8 +100,8 @@ generated/stubs: $(NCWSDL) $(SCWSDL)
 	mkdir -p generated
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-#	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
-	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
+#	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 	@echo Generating SCclient stubs
 	sh $(WSDL2C) -uri $(SCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Generating client stubs
