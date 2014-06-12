@@ -2720,6 +2720,20 @@ static int init(void)
 }
 
 //!
+//!
+//!
+//! @note this routine runs immediately when the process is started
+//!
+void doInitNC(void)
+{
+    if (init()) {
+        LOGWARN("could not initialize\n");
+    }
+    LOGINFO("component started\n");
+}
+
+
+//!
 //! Handles the describe instance request
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
