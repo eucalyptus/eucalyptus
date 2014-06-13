@@ -574,7 +574,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                         return reply;
                     } else {
                         // Wrap the error from back-end with a 500 error
-                    	throw new InternalErrorException(request.getBucket(), e);
+                        throw new BucketAlreadyExistsException(request.getBucket());
                     }
                 }
             } else {
@@ -597,13 +597,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public DeleteBucketResponseType deleteBucket(final DeleteBucketType request) throws S3Exception {
-		Bucket bucket;
-        try {
-            bucket = getBucketAndCheckAuthorization(request);
-        } catch(NoSuchBucketException e) {
-            //This is okay, fall through
-            bucket = null;
-        }
+		Bucket bucket = getBucketAndCheckAuthorization(request);
 
         if(bucket != null) {
             try {
