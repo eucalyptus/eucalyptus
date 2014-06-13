@@ -434,7 +434,7 @@ public class AlarmManager {
       @Nullable final Integer maxRecords,
       @Nullable final StateValue stateValue,
       @Nullable final String nextToken,
-                final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+                final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) throws CloudWatchException {
     final List<AlarmEntity> results = Lists.newArrayList();
     final EntityTransaction db = Entities.get(AlarmEntity.class);
@@ -498,7 +498,7 @@ public class AlarmManager {
     @Nullable final Integer period,
     @Nullable final Statistic statistic,
     @Nullable final Units unit,
-    @Nonnull  final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    @Nonnull  final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) {
     final List<AlarmEntity> results = Lists.newArrayList();
     final EntityTransaction db = Entities.get(AlarmEntity.class);
