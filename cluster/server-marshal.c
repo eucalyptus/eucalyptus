@@ -157,6 +157,9 @@
 //!
 void adb_InitService(void)
 {
+    if (getenv("EUCALYPTUS_CC") == NULL) {
+        return;
+    }
     doInitCC();
 }
 

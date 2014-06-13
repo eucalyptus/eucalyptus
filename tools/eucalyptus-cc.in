@@ -106,6 +106,7 @@ fi
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export EUCALYPTUS_CC="Y"
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
 EUCA_USER="eucalyptus"

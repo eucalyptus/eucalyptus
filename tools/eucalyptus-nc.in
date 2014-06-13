@@ -106,6 +106,7 @@ fi
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export EUCALYPTUS_NC="Y"
 DESC="Eucalyptus services"
 NAME=eucalyptus-nc
 BRCTL="`which brctl 2> /dev/null`"
