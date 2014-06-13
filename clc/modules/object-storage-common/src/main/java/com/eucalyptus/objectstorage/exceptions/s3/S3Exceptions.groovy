@@ -347,6 +347,12 @@ class InvalidArgumentException extends S3Exception {
         this();
         this.resource = resource;
     }
+	
+	def InvalidArgumentException(String resource, String message) {
+		this();
+		this.resource = resource;
+		this.message = message;
+	}
 }
 
 class InvalidBucketNameException extends S3Exception {
