@@ -143,6 +143,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -1178,9 +1179,23 @@ public class ObjectStorageGateway implements ObjectStorageService {
             Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
             Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
 
-            if (metadataDirective == null || "".equals(metadataDirective)) {
-                metadataDirective = "COPY";
-            }
+            if (Strings.isNullOrEmpty(metadataDirective)) {
+				metadataDirective = MetadataDirective.COPY.toString();
+			} else {
+				try {
+					metadataDirective = (MetadataDirective.valueOf(metadataDirective)).toString();
+				} catch (IllegalArgumentException e) {
+					throw new InvalidArgumentException(ObjectStorageProperties.METADATA_DIRECTIVE, "Unknown metadata directive: " + metadataDirective);
+				}
+			}
+
+			// If the object is copied on to itself (without version ID), metadata directive must be REPLACE
+			if (request.getSourceBucket().equals(request.getDestinationBucket()) && request.getSourceObject().equals(destinationKey)
+					&& Strings.isNullOrEmpty(request.getSourceVersionId()) && !MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+				throw new InvalidRequestException(
+						request.getDestinationBucket() + "/" + destinationKey,
+						"This copy request is illegal because it is trying to copy an object to itself without changing the object's metadata, storage class, website redirect location or encryption attributes.");
+			}
 
             long newBucketSize = ( destBucket.getBucketSize() == null ? 0l : destBucket.getBucketSize().longValue() )
                     + srcObject.getSize().longValue();
