@@ -927,7 +927,7 @@ int instNetReassignAddrs(ccInstance * inst, void *in)
     if (!strcmp(inst->ccnet.publicIp, "0.0.0.0") || !strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
         LOGWARN("ignoring instance with unset publicIp/privateIp\n");
     } else {
-        rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
+        rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan);
         if (rc) {
             LOGERROR("cannot reassign address\n");
             ret = 1;

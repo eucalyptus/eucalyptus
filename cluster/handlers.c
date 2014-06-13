@@ -1732,7 +1732,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
             } else if (myInstance) {
                 LOGDEBUG("found local instance, applying %s->%s mapping\n", src, dst);
                 sem_mywait(VNET);
-                rc = vnetReassignAddress(vnetconfig, uuid, src, dst);
+                rc = vnetReassignAddress(vnetconfig, uuid, src, dst, myInstance->ccnet.vlan);
                 if (rc) {
                     LOGERROR("vnetReassignAddress() failed rc=%d\n", rc);
                     ret = 1;
@@ -1867,10 +1867,9 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         ret = 0;
     } else {
-
         sem_mywait(VNET);
 
-        ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0");
+        ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0", 0);
         if (ret) {
             LOGERROR("vnetReassignAddress() failed ret=%d\n", ret);
             ret = 1;
@@ -4413,7 +4412,7 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
                         snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        
+
                         if (rmdir(cdir)) {
                             LOGWARN("rmdir failed: unable to remove directory '%s', check permissions\n", cdir);
                         }
