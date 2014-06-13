@@ -139,9 +139,6 @@ public class BucketFactoryImpl implements BucketFactory {
 
             //Delete all parts and pending MPU uploads
             MpuPartMetadataManagers.getInstance().flushAllParts(bucketToDelete);
-
-            // Delete the lifecycle configuration
-            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucketToDelete.getBucketUuid());
         } catch(Exception e) {
             LOG.warn("Error flushing MPU parts during bucket deletion operation", e);
             throw new InternalErrorException(e);
