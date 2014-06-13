@@ -76,6 +76,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.log4j.Logger;
 
@@ -101,8 +103,10 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.OrderlyTransitionException;
@@ -134,7 +138,7 @@ public class Topology {
   @ConfigurableField( description = "Backoff between service state checks (in seconds)." )
   public static Integer                                         LOCAL_CHECK_BACKOFF_SECS       = 10;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services                       = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
-  
+
   private enum Queue implements Function<Callable, Future> {
     INTERNAL( 1 ) {
       ServiceConfiguration internal;
@@ -181,43 +185,60 @@ public class Topology {
     }
     
   }
-  
+
+  public static <T> T doTopologyWork( final Callable<T> callable ) throws Exception {
+    return TopologyTimer.INSTANCE.doWork( callable );
+  }
+
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
     private static final AtomicInteger counter = new AtomicInteger( 0 );
     private static final AtomicBoolean busy    = new AtomicBoolean( false );
-    
+    private static final ReadWriteLock lock    = new ReentrantReadWriteLock( );
+
     @Override
     public void fireEvent( final ClockTick event ) {
       final int backoff = Hosts.isCoordinator( ) ? COORDINATOR_CHECK_BACKOFF_SECS : LOCAL_CHECK_BACKOFF_SECS;
+
       Callable<Object> call = new Callable<Object>( ) {
         @Override
         public Object call( ) {
           try {
-            TimeUnit.SECONDS.sleep( backoff );
             return RunChecks.INSTANCE.call( );
-          } catch ( InterruptedException ex ) {
-            return Exceptions.maybeInterrupted( ex );
           } finally {
             busy.set( false );
           }
         }
       };
-      if ( Hosts.isCoordinator( ) && busy.compareAndSet( false, true ) ) {
+
+      if ( busy.compareAndSet( false, true ) ) {
         try {
-          Queue.INTERNAL.enqueue( call );
-        } catch ( Exception ex ) {
+          TimeUnit.SECONDS.sleep( backoff );
+        } catch ( InterruptedException ex ) {
           busy.set( false );
+          return;
         }
-      } else if ( counter.incrementAndGet( ) % 5 == 0 && busy.compareAndSet( false, true ) ) {
-        try {
-          Queue.INTERNAL.enqueue( call );
-        } catch ( Exception ex ) {
+
+        if ( lock.writeLock( ).tryLock( ) && ( Hosts.isCoordinator( ) || counter.incrementAndGet( ) % 5 == 0 ) ) {
+          // Write lock acquisition is to ensure no other tasks in progress
+          // we don't want to block others from running
+          lock.writeLock( ).unlock( );
+          try {
+            Queue.INTERNAL.enqueue( call );
+          } catch ( Exception ex ) {
+            busy.set( false );
+          }
+        } else {
           busy.set( false );
         }
       }
     }
-    
+
+    public <T> T doWork( final Callable<T> callable ) throws Exception {
+      try ( final LockResource lockResource = LockResource.lock( lock.readLock( ) ) ) {
+        return callable.call( );
+      }
+    }
   }
   
   private Topology( final int i ) {
@@ -444,18 +465,29 @@ public class Topology {
       Logs.extreme( ).debug( ex, ex );
     }
     if ( Hosts.isCoordinator( ) ) {
-      DestroyServiceType msg = new DestroyServiceType( );
       try {
-        msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+        final ServiceId service = TypeMappers.transform( config, ServiceId.class );
+        final List<CheckedListenableFuture<?>> futures = Lists.newArrayList( );
         for ( Host h : Hosts.list( ) ) {
           if ( !h.isLocalHost( ) && h.hasBootstrapped( ) ) {
             try {
-              AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
+              DestroyServiceType msg = new DestroyServiceType( );
+              msg.getServices( ).add( service );
+              futures.add( AsyncRequests.dispatch( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress() ), msg ) );
             } catch ( Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               LOG.error( ex );
               Logs.extreme( ).debug( ex, ex );
             }
+          }
+        }
+        for ( CheckedListenableFuture<?> future : futures ) {
+          try {
+            future.get( );
+          } catch ( Exception ex ) {
+            Exceptions.maybeInterrupted( ex );
+            LOG.error( ex );
+            Logs.extreme( ).debug( ex, ex );
           }
         }
       } catch ( Exception ex ) {
