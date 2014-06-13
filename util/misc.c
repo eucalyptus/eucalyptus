@@ -77,7 +77,7 @@
 #define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
-#define _GNU_SOURCE
+#define __USE_GNU
 #include <string.h>                    // strlen, strcpy
 #include <ctype.h>                     // isspace
 #include <assert.h>
@@ -1993,7 +1993,7 @@ void log_argv(char ** argv)
 //!
 //! Eucalyptus wrapper function around exec with file-descriptor support and argv[]
 //!
-//! This is the low-level function that actually sets up file descriptors, forks, 
+//! This is the low-level function that actually sets up file descriptors, forks,
 //! and calls execvp(). The function does not wait for the child process to finish:
 //! that can and probably should be done with the complementary low-level function:
 //! euca_waitpid().  Consider higher-level alternatives, too:
@@ -2447,7 +2447,7 @@ int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *da
 //!
 //! Returns username of the real user ID of the calling process
 //!
-//! @return on success, a pointer to a string (in static memory, 
+//! @return on success, a pointer to a string (in static memory,
 //!         no need to free it) or NULL on failure
 //!
 char *get_username(void)
