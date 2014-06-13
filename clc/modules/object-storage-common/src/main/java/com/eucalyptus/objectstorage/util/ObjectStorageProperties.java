@@ -283,6 +283,10 @@ public class ObjectStorageProperties {
     public enum CopyHeaders {
         CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
     }
+    
+    public enum MetadataDirective {
+    	COPY, REPLACE
+    }
 
     public enum SubResource {
         //Per the S3 Dev guide, these must be included in the canonicalized resource:
