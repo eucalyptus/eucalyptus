@@ -1682,6 +1682,23 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //Not known. Content-Length is required by S3-spec.
             throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
         }
+        
+        int partNumber = 0;
+        if (!Strings.isNullOrEmpty(request.getPartNumber())) {
+			try {
+				partNumber = Integer.parseInt(request.getPartNumber());
+				if (partNumber < ObjectStorageProperties.MIN_PART_NUMBER || partNumber > ObjectStorageProperties.MAX_PART_NUMBER) {
+					throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER
+							+ " and " + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+				}
+			} catch (NumberFormatException e) {
+				throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+						+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+			}
+		} else {
+			throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+					+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+		}
 
         long objectSize = 0;
         try {
@@ -1697,14 +1714,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
             partEntity = PartEntity.newInitializedForCreate(bucket,
                     request.getKey(),
                     request.getUploadId(),
-                    Integer.parseInt(request.getPartNumber()),
+                    partNumber,
                     objectSize,
                     requestUser);
         } catch (Exception e) {
             LOG.error("Error initializing entity for persisting part metadata for "
                     + request.getBucket() + "/" + request.getKey()
                     + " uploadId: " + request.getUploadId()
-                    + " partNumber: " + request.getPartNumber());
+                    + " partNumber: " + partNumber);
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, objectSize)) {

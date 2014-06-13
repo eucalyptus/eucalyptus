@@ -82,6 +82,8 @@ public class ObjectStorageProperties {
     public static boolean enableTorrents = false;
     public static final String NAMESPACE_VERSION = "2006-03-01";
     public static int MAX_KEYS = 1000;
+    public static int MIN_PART_NUMBER = 1;
+    public static int MAX_PART_NUMBER = 10000;
 
     public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
 
