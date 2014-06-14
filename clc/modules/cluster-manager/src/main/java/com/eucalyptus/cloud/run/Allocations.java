@@ -218,9 +218,9 @@ public class Allocations {
       this.reservationId = reservationId;
       this.reservationIndex = -1l;
       this.instanceIds = Maps.newHashMap();
-      this.instanceIds.put(0, instanceId);
+      this.instanceIds.put(launchIndex, instanceId);
       this.instanceUuids = Maps.newHashMap();
-      this.instanceUuids.put(0, instanceUuid);
+      this.instanceUuids.put(launchIndex, instanceUuid);
       this.allocationTokens.add( new ResourceToken( this, launchIndex ) );
       this.context = null;
       this.monitoring = false;
@@ -504,16 +504,15 @@ public class Allocations {
     }
 
     public String getInstanceId(int index) {
-      while (this.instanceIds.size() <= index) {
-        this.instanceIds.put(index,
-            VmInstances.getId((long) this.getReservationIndex(), index));
+      if ( !this.instanceIds.containsKey( index ) ) {
+        this.instanceIds.put( index, VmInstances.getId( this.getReservationIndex( ), index ) );
       }
       return this.instanceIds.get(index);
     }
 
     public String getInstanceUuid(int index) {
-      while (this.instanceUuids.size() <= index) {
-        this.instanceUuids.put(index, UUID.randomUUID().toString());
+      if ( !this.instanceUuids.containsKey( index ) ) {
+        this.instanceUuids.put( index, UUID.randomUUID().toString() );
       }
       return this.instanceUuids.get(index);
     }
