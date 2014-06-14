@@ -216,6 +216,11 @@ public class Entities {
     }
   }
   
+  /**
+   * @deprecated Use #transactionFor(Object) instead (try-with-resources)
+   * @see #transactionFor(Object)
+   */
+  @Deprecated
   public static EntityTransaction get( final Object obj ) {
     if ( hasTransaction( obj ) ) {
       final CascadingTx tx = getTransaction( obj );
@@ -1337,14 +1342,23 @@ public class Entities {
     }
   }
   
-  public static void commit( EntityTransaction tx ) {
+  /**
+   * Commit the transaction if possible, else rollback.
+   *
+   * @param tx The transaction
+   * @return True if committed
+   */
+  public static boolean commit( EntityTransaction tx ) {
+    boolean committed = false;
     if ( tx.getRollbackOnly( ) ) {
       tx.rollback( );
     } else if ( Databases.isVolatile( ) ) {
       tx.rollback( );
     } else {
       tx.commit( );
+      committed = true;
     }
+    return committed;
   }
 
   private static void ensureDistinct( final Object type ) {
