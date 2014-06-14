@@ -2015,7 +2015,7 @@ static int init(void)
     //Set the SC client policy file path
     char policyFile[EUCA_MAX_PATH];
     bzero(policyFile, EUCA_MAX_PATH);
-    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", nc_state.home);
+    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_POLICIES_DIR "/sc-client-policy.xml", nc_state.home);
     euca_strncpy(nc_state.config_sc_policy_file, policyFile, EUCA_MAX_PATH);
 
     // set the minimum log for now

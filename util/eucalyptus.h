@@ -152,6 +152,7 @@
 //! @}
 
 #define EUCALYPTUS_FAULT_DIR                     EUCALYPTUS_DATA_DIR "/faults"
+#define EUCALYPTUS_POLICIES_DIR                  EUCALYPTUS_DATA_DIR "/policies"
 #define EUCALYPTUS_CUSTOM_FAULT_DIR              EUCALYPTUS_CONF_DIR "/faults"
 #define EUCALYPTUS_KEYS_DIR                      EUCALYPTUS_STATE_DIR "/keys"
 #define EUCALYPTUS_NC_STATE_FILE                 EUCALYPTUS_STATE_DIR "/nc_state.xml"

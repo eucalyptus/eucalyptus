@@ -1215,7 +1215,7 @@ int main(int argc, char *argv[])
     }
 
     snprintf(sConfigFile, sizeof(sConfigFile), EUCALYPTUS_CONF_LOCATION, psEucaHomePath);
-    snprintf(sPolicyFile, sizeof(sPolicyFile), EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", psEucaHomePath);
+    snprintf(sPolicyFile, sizeof(sPolicyFile), EUCALYPTUS_POLICIES_DIR "/nc-client-policy.xml", psEucaHomePath);
     if ((rc = get_conf_var(sConfigFile, "ENABLE_WS_SECURITY", &psTmpBuffer)) != 1) {
         // Default to enabled
         useWSSEC = 1;
