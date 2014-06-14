@@ -156,8 +156,4 @@ public class PEMFiles {
     }
     return keyPair;
   }
-
-  public static void main( String[] args ) throws IOException {
-    System.out.println( getCert( Files.toByteArray( new File( "/home/steve/Work/ec2/cloud-cert.pem" ) ) ).getSubjectX500Principal() );
-  }
 }
