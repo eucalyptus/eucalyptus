@@ -712,13 +712,13 @@ public class DatabaseAccountProxy implements Account {
       Cipher cipher = Ciphers.AES_GCM.get();
       final byte[] iv = new byte[32];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(pk.getBytes());
       encPk = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
       
       final PublicKey euarePublicKey = SystemCredentials.lookup(Euare.class).getCertificate().getPublicKey();
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.WRAP_MODE, euarePublicKey);
+      cipher.init(Cipher.WRAP_MODE, euarePublicKey, Crypto.getSecureRandomSupplier( ).get( ));
       byte[] wrappedKeyBytes = cipher.wrap(symmKey);
       sessionKey = new String(Base64.encode(wrappedKeyBytes));
     } catch ( final Exception e ) {

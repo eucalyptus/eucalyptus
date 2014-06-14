@@ -78,14 +78,14 @@ public class EuareServerCertificateUtil {
       Cipher cipher = Ciphers.AES_CBC.get();
       final byte[] iv = new byte[16];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(Base64.encode( targetCert.getPrivateKey().getBytes() ));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
 
       // encrypt the symmetric key using the certPem
       X509Certificate x509Cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.ENCRYPT_MODE, x509Cert.getPublicKey());
+      cipher.init(Cipher.ENCRYPT_MODE, x509Cert.getPublicKey(), Crypto.getSecureRandomSupplier( ).get( ));
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
       final String b64SymKey = new String(Base64.encode(symmkey));
       

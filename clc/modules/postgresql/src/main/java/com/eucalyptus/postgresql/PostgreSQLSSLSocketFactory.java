@@ -77,6 +77,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import com.eucalyptus.component.id.Database;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.net.SSLSocketFactoryWrapper;
 import com.eucalyptus.net.SimpleClientX509TrustManager;
 import com.google.common.base.Suppliers;
@@ -126,7 +127,7 @@ public class PostgreSQLSSLSocketFactory extends SSLSocketFactoryWrapper {
           SSLContext.getInstance( protocol );
       final TrustManager trustManager =
           new SimpleClientX509TrustManager(lookup(Database.class).getCertificate(), false);
-      sslContext.init( null, new TrustManager[]{ trustManager }, null );
+      sslContext.init( null, new TrustManager[]{ trustManager }, Crypto.getSecureRandomSupplier( ).get( ) );
       return sslContext.getSocketFactory();
     } catch ( NoSuchAlgorithmException e ) {
       throw propagate(e);

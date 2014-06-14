@@ -66,6 +66,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
@@ -181,7 +182,7 @@ public class OSGUtil {
         try {
             PublicKey clcPublicKey = SystemCredentials.lookup(componentClass).getCertificate().getPublicKey();
             Cipher cipher = Ciphers.RSA_PKCS1.get();
-            cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey);
+            cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
             return new String(Base64.encode(cipher.doFinal(data.getBytes("UTF-8"))));
         } catch ( Exception e ) {
             throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
@@ -193,7 +194,7 @@ public class OSGUtil {
         PrivateKey clcPrivateKey = SystemCredentials.lookup(componentClass).getPrivateKey();
         try {
             Cipher cipher = Ciphers.RSA_PKCS1.get();
-            cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey);
+            cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey, Crypto.getSecureRandomSupplier( ).get( ));
             return new String(cipher.doFinal(Base64.decode(data)));
         } catch(Exception ex) {
             throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);

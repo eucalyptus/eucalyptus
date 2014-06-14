@@ -337,20 +337,20 @@ public class ClusterAllocator implements Runnable {
       Cipher cipher = Ciphers.AES_GCM.get();
       final byte[] iv = new byte[12];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(Base64.encode(PEMFiles.getBytes(kp.getPrivate())));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
       
       // encrypt the token from EUARE
       cipher = Ciphers.AES_GCM.get();
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] byteToken = cipher.doFinal(token.getBytes());
       final String encToken = new String(Base64.encode(Arrays.concatenate(iv, byteToken)));
       
       // encrypt the symmetric key
       X509Certificate nodeCert = this.allocInfo.getPartition().getNodeCertificate();
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.ENCRYPT_MODE, nodeCert.getPublicKey());
+      cipher.init(Cipher.ENCRYPT_MODE, nodeCert.getPublicKey(), Crypto.getSecureRandomSupplier( ).get( ));
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
       final String encSymmKey = new String(Base64.encode(symmkey));
       

@@ -50,6 +50,7 @@ import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.imaging.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
@@ -284,11 +285,11 @@ public class DownloadManifestFactory {
 		// Decrypt key and IV with Eucalyptus
 		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 		Cipher cipher = Ciphers.RSA_PKCS1.get();
-		cipher.init(Cipher.DECRYPT_MODE, pk);
+		cipher.init(Cipher.DECRYPT_MODE, pk, Crypto.getSecureRandomSupplier( ).get( ));
 		byte[] key = cipher.doFinal(Hashes.hexToBytes(in.getKey()));
 		byte[] iv = cipher.doFinal(Hashes.hexToBytes(in.getIV()));
 		//Encrypt key and IV with NC
-		cipher.init(Cipher.ENCRYPT_MODE, keyToUse);
+		cipher.init(Cipher.ENCRYPT_MODE, keyToUse, Crypto.getSecureRandomSupplier( ).get( ));
 		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
 	}
 	

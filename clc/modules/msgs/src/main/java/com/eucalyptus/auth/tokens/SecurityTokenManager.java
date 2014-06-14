@@ -504,7 +504,7 @@ public class SecurityTokenManager {
         final Cipher cipher = Ciphers.AES_GCM.get();
         final byte[] iv = new byte[32];
         randomSupplier.get().nextBytes(iv);
-        cipher.init( Cipher.ENCRYPT_MODE, key, new IvParameterSpec( iv ) );
+        cipher.init( Cipher.ENCRYPT_MODE, key, new IvParameterSpec( iv ), randomSupplier.get( ) );
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write( TOKEN_PREFIX );
         out.write( iv );
@@ -526,7 +526,12 @@ public class SecurityTokenManager {
           throw new GeneralSecurityException("Invalid token format");
         }
 
-        cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec( securityTokenBytes, TOKEN_PREFIX.length, 32 ));
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            key,
+            new IvParameterSpec( securityTokenBytes, TOKEN_PREFIX.length, 32 ),
+            randomSupplier.get( )
+        );
         final int offset = TOKEN_PREFIX.length + 32;
         final SecurityTokenInput in = new SecurityTokenInput(
             cipher.doFinal( securityTokenBytes, offset, securityTokenBytes.length-offset ) );

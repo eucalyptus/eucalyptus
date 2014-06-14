@@ -38,6 +38,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -135,11 +136,11 @@ public class ServerCertificates {
         final PrivateKey euarePk = SystemCredentials.lookup(Euare.class)
             .getPrivateKey();
         Cipher cipher = Ciphers.RSA_PKCS1.get();
-        cipher.init(Cipher.UNWRAP_MODE, euarePk);
+        cipher.init(Cipher.UNWRAP_MODE, euarePk, Crypto.getSecureRandomSupplier().get( ));
         SecretKey sessionKey = (SecretKey) cipher.unwrap(symKeyWrapped,
             "AES/GCM/NoPadding", Cipher.SECRET_KEY);
         cipher = Ciphers.AES_GCM.get();
-        cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv));
+        cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv), Crypto.getSecureRandomSupplier( ).get( ) );
         cert.setPrivateKey(new String(cipher.doFinal(encPk)));
         return cert;
       } catch (final Exception ex) {

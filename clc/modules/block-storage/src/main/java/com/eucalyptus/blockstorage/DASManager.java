@@ -101,6 +101,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -910,7 +911,7 @@ public class DASManager implements LogicalStorageManager {
 				ServiceConfiguration clusterConfig = partitionConfigs.get( 0 );
 				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
-				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 			} catch ( Exception e ) {
 				LOG.error( "Unable to encrypt storage target password" );
