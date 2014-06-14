@@ -183,7 +183,7 @@ int main(int argc, char **argv)
         euca_home = "";
     }
     snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
+    snprintf(policyFile, 1024, EUCALYPTUS_POLICIES_DIR "/cc-client-policy.xml", euca_home);
     snprintf(logFile, 1024, EUCALYPTUS_LOG_DIR "/shutdownCC_axis2c.log", euca_home);
 
     if (argc != 2 || !argv[1]) {
