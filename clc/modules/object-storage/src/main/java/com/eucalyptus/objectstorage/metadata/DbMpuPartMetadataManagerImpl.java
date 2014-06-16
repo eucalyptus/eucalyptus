@@ -33,6 +33,7 @@ import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
 import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartOrderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
@@ -412,6 +413,10 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
         int numPartsProcessed = 0;
         for (Part partInManifest : partsInManifest) {
             Integer partNumber = partInManifest.getPartNumber();
+            if (partNumber < ObjectStorageProperties.MIN_PART_NUMBER || partNumber > ObjectStorageProperties.MAX_PART_NUMBER) {
+				throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+						+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+            }
             if (partNumber <= lastPartNumber) {
                 throw new InvalidPartOrderException("partNumber: " + partNumber);
             }

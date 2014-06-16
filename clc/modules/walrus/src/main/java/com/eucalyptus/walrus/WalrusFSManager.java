@@ -68,7 +68,6 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -85,15 +84,7 @@ import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
-
-import com.eucalyptus.walrus.entities.PartInfo;
-import com.eucalyptus.walrus.exceptions.InternalErrorException;
-import com.eucalyptus.walrus.exceptions.InvalidPartException;
-import com.eucalyptus.walrus.exceptions.NoSuchUploadException;
 import org.apache.commons.lang.StringUtils;
-
-import com.eucalyptus.walrus.exceptions.NoSuchLifecycleConfigurationException;
-
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -123,6 +114,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.msgs.BucketLogData;
@@ -135,26 +127,25 @@ import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry;
 import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
+import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.Status;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.VersionEntry;
-import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Lookups;
-import com.eucalyptus.walrus.bittorrent.TorrentClient;
-import com.eucalyptus.walrus.bittorrent.Torrents;
 import com.eucalyptus.walrus.entities.BucketInfo;
 import com.eucalyptus.walrus.entities.GrantInfo;
 import com.eucalyptus.walrus.entities.ImageCacheInfo;
 import com.eucalyptus.walrus.entities.MetaDataInfo;
 import com.eucalyptus.walrus.entities.ObjectInfo;
-import com.eucalyptus.walrus.entities.TorrentInfo;
+import com.eucalyptus.walrus.entities.PartInfo;
 import com.eucalyptus.walrus.entities.WalrusInfo;
 import com.eucalyptus.walrus.entities.WalrusSnapshotInfo;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
@@ -165,17 +156,24 @@ import com.eucalyptus.walrus.exceptions.EntityTooLargeException;
 import com.eucalyptus.walrus.exceptions.HeadNoSuchBucketException;
 import com.eucalyptus.walrus.exceptions.HeadNoSuchEntityException;
 import com.eucalyptus.walrus.exceptions.InlineDataTooLargeException;
+import com.eucalyptus.walrus.exceptions.InternalErrorException;
+import com.eucalyptus.walrus.exceptions.InvalidArgumentException;
 import com.eucalyptus.walrus.exceptions.InvalidBucketNameException;
+import com.eucalyptus.walrus.exceptions.InvalidPartException;
 import com.eucalyptus.walrus.exceptions.InvalidRangeException;
 import com.eucalyptus.walrus.exceptions.InvalidTargetBucketForLoggingException;
 import com.eucalyptus.walrus.exceptions.NoSuchBucketException;
 import com.eucalyptus.walrus.exceptions.NoSuchEntityException;
+import com.eucalyptus.walrus.exceptions.NoSuchUploadException;
 import com.eucalyptus.walrus.exceptions.NotModifiedException;
 import com.eucalyptus.walrus.exceptions.PreconditionFailedException;
-import com.eucalyptus.walrus.exceptions.InvalidArgumentException;
 import com.eucalyptus.walrus.exceptions.WalrusException;
+import com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.walrus.msgs.AbortMultipartUploadType;
 import com.eucalyptus.walrus.msgs.AddObjectResponseType;
 import com.eucalyptus.walrus.msgs.AddObjectType;
+import com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.walrus.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.walrus.msgs.CopyObjectResponseType;
 import com.eucalyptus.walrus.msgs.CopyObjectType;
 import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
@@ -202,6 +200,8 @@ import com.eucalyptus.walrus.msgs.GetObjectResponseType;
 import com.eucalyptus.walrus.msgs.GetObjectType;
 import com.eucalyptus.walrus.msgs.HeadBucketResponseType;
 import com.eucalyptus.walrus.msgs.HeadBucketType;
+import com.eucalyptus.walrus.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.walrus.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.walrus.msgs.ListAllMyBucketsType;
 import com.eucalyptus.walrus.msgs.ListBucketResponseType;
@@ -228,14 +228,6 @@ import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.UploadPartResponseType;
 import com.eucalyptus.walrus.msgs.UploadPartType;
-import com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType;
-import com.eucalyptus.walrus.msgs.AbortMultipartUploadType;
-import com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType;
-import com.eucalyptus.walrus.msgs.CompleteMultipartUploadType;
-import com.eucalyptus.walrus.msgs.InitiateMultipartUploadResponseType;
-import com.eucalyptus.walrus.msgs.InitiateMultipartUploadType;
-import com.eucalyptus.storage.msgs.s3.Part;
-
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
 import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
 import com.eucalyptus.walrus.msgs.WalrusDataQueue;
@@ -252,6 +244,8 @@ public class WalrusFSManager extends WalrusManager {
     private StorageManager storageManager;
     private static ExecutorService MPU_EXECUTOR;
 
+    private static final FastDateFormat copyObjectFormat = FastDateFormat.getInstance(DateUtils.ALT_ISO8601_DATE_PATTERN);
+    
     public static void configure() {
     }
 
@@ -2436,7 +2430,12 @@ public class WalrusFSManager extends WalrusManager {
                     versionId = objectInfo.getVersionId() != null ? objectInfo.getVersionId() : WalrusProperties.NULL_VERSION_ID;
                 }
                 if (request.getGetData()) {
-                    storageManager.getObject(bucketName, objectName, reply, byteRangeStart, byteRangeEnd + 1, request.getIsCompressed());
+                	if (objectInfo.isMultipart()) {
+                    	List<PartInfo> parts = getOrderedListOfParts(objectInfo);
+                		storageManager.getMultipartObject(reply, parts, request.getIsCompressed(), byteRangeStart, byteRangeEnd);
+                	} else {
+                		storageManager.getObject(bucketName, objectName, reply, byteRangeStart, byteRangeEnd + 1, request.getIsCompressed());
+                	}
                 }
                 reply.setEtag(etag);
                 reply.setLastModified(lastModified);
@@ -2476,25 +2475,7 @@ public class WalrusFSManager extends WalrusManager {
 
     private String getMultipartData(ObjectInfo objectInfo, GetObjectType request, GetObjectResponseType response) throws WalrusException {
         //get all parts
-        PartInfo searchPart = new PartInfo(request.getBucket(), request.getKey());
-        searchPart.setCleanup(false);
-        searchPart.setUploadId(objectInfo.getUploadId());
-        List<PartInfo> parts;
-        EntityTransaction db = Entities.get(PartInfo.class);
-        try {
-            Criteria partCriteria = Entities.createCriteria(PartInfo.class);
-            partCriteria.setReadOnly(true);
-            partCriteria.add(Example.create(searchPart));
-            partCriteria.add(Restrictions.isNotNull("partNumber"));
-            partCriteria.addOrder(Order.asc("partNumber"));
-
-            parts = partCriteria.list();
-            if(parts.size() == 0) {
-                throw new InternalErrorException("No parts found corresponding to uploadId: " + objectInfo.getUploadId());
-            }
-        } finally {
-            db.rollback();
-        }
+    	List<PartInfo> parts = getOrderedListOfParts(objectInfo);
 
         if (request.getInlineData()) {
             if ((objectInfo.getSize() * 4) > WalrusProperties.MAX_INLINE_DATA_SIZE) {
@@ -2561,8 +2542,6 @@ public class WalrusFSManager extends WalrusManager {
         db.commit();
         return reply;
     }
-
-    private static final FastDateFormat copyObjectFormat = FastDateFormat.getInstance(DateUtils.ALT_ISO8601_DATE_PATTERN);
 
     @Override
     public CopyObjectResponseType copyObject(CopyObjectType request)
@@ -2702,7 +2681,12 @@ public class WalrusFSManager extends WalrusManager {
                         destinationObjectName = destinationObjectInfo.getObjectName();
 
                         try {
-                            storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+                        	if (sourceObjectInfo.isMultipart()) {
+                        		List<PartInfo> parts = getOrderedListOfParts(sourceObjectInfo);
+                                storageManager.copyMultipartObject(parts, destinationBucket, destinationObjectName);
+                        	} else {
+                        		storageManager.copyObject(sourceBucket, sourceObjectName, destinationBucket, destinationObjectName);
+                        	}
                         } catch (Exception ex) {
                             LOG.error(ex);
                             db.rollback();
@@ -3902,5 +3886,38 @@ public class WalrusFSManager extends WalrusManager {
         }
 
     }
+    
+	/**
+	 * Utility method for fetching ordered listing of parts that make up an object. Use this method against objects that have been previously created and
+	 * persisted to the database.
+	 * 
+	 * @param objectInfo
+	 * @return
+	 * @throws InternalErrorException
+	 */
+	private List<PartInfo> getOrderedListOfParts(ObjectInfo objectInfo) throws InternalErrorException {
 
+		if (objectInfo != null && !Strings.isNullOrEmpty(objectInfo.getUploadId())) {
+			PartInfo searchPart = new PartInfo(objectInfo.getBucketName(), objectInfo.getObjectKey());
+			searchPart.setCleanup(false);
+			searchPart.setUploadId(objectInfo.getUploadId());
+			List<PartInfo> parts = null;
+			try (TransactionResource tr = Entities.transactionFor(PartInfo.class)){
+				Criteria partCriteria = Entities.createCriteria(PartInfo.class);
+				partCriteria.setReadOnly(true);
+				partCriteria.add(Example.create(searchPart));
+				partCriteria.add(Restrictions.isNotNull("partNumber"));
+				partCriteria.addOrder(Order.asc("partNumber"));
+				parts = partCriteria.list();
+				tr.commit();
+
+				if (parts == null || parts.isEmpty()) {
+					throw new InternalErrorException("No parts found for object " + objectInfo.getObjectKey());
+				}
+				return parts;
+			} 
+		} else {
+			throw new InternalErrorException("Object " + objectInfo.getObjectKey() + " may not be uploaded using multipart upload");
+		}
+	}
 }

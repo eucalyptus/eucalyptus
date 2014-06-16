@@ -58,6 +58,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketStateException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
@@ -142,6 +143,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -1183,9 +1185,23 @@ public class ObjectStorageGateway implements ObjectStorageService {
             Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
             Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
 
-            if (metadataDirective == null || "".equals(metadataDirective)) {
-                metadataDirective = "COPY";
-            }
+            if (Strings.isNullOrEmpty(metadataDirective)) {
+				metadataDirective = MetadataDirective.COPY.toString();
+			} else {
+				try {
+					metadataDirective = (MetadataDirective.valueOf(metadataDirective)).toString();
+				} catch (IllegalArgumentException e) {
+					throw new InvalidArgumentException(ObjectStorageProperties.METADATA_DIRECTIVE, "Unknown metadata directive: " + metadataDirective);
+				}
+			}
+
+			// If the object is copied on to itself (without version ID), metadata directive must be REPLACE
+			if (request.getSourceBucket().equals(request.getDestinationBucket()) && request.getSourceObject().equals(destinationKey)
+					&& Strings.isNullOrEmpty(request.getSourceVersionId()) && !MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+				throw new InvalidRequestException(
+						request.getDestinationBucket() + "/" + destinationKey,
+						"This copy request is illegal because it is trying to copy an object to itself without changing the object's metadata, storage class, website redirect location or encryption attributes.");
+			}
 
             long newBucketSize = ( destBucket.getBucketSize() == null ? 0l : destBucket.getBucketSize().longValue() )
                     + srcObject.getSize().longValue();
@@ -1681,6 +1697,23 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //Not known. Content-Length is required by S3-spec.
             throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
         }
+        
+        int partNumber = 0;
+        if (!Strings.isNullOrEmpty(request.getPartNumber())) {
+			try {
+				partNumber = Integer.parseInt(request.getPartNumber());
+				if (partNumber < ObjectStorageProperties.MIN_PART_NUMBER || partNumber > ObjectStorageProperties.MAX_PART_NUMBER) {
+					throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER
+							+ " and " + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+				}
+			} catch (NumberFormatException e) {
+				throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+						+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+			}
+		} else {
+			throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+					+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+		}
 
         long objectSize = 0;
         try {
@@ -1696,14 +1729,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
             partEntity = PartEntity.newInitializedForCreate(bucket,
                     request.getKey(),
                     request.getUploadId(),
-                    Integer.parseInt(request.getPartNumber()),
+                    partNumber,
                     objectSize,
                     requestUser);
         } catch (Exception e) {
             LOG.error("Error initializing entity for persisting part metadata for "
                     + request.getBucket() + "/" + request.getKey()
                     + " uploadId: " + request.getUploadId()
-                    + " partNumber: " + request.getPartNumber());
+                    + " partNumber: " + partNumber);
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, objectSize)) {
@@ -1748,7 +1781,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException("Error during bucket lookup: " + request.getBucket(), e);
         }
 
         ObjectEntity objectEntity;
@@ -1758,11 +1791,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
         } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchUploadException(request.getUploadId());
         } catch (Exception e) {
-            throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
+            throw new InternalErrorException("Error during upload lookup: " + request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(), e);
         }
-
+        
         long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize(); //No change, completion cannot increase the size of the bucket, only decrease it.
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
+			if (request.getParts() == null || request.getParts().isEmpty()) {
+				throw new InvalidRequestException(request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(),
+						"You must specify at least one part");
+			}
+        	
             try {
                 //TODO: need to add the necesary logic to hold the connection open by sending ' ' on the channel periodically
                 //The backend operation could take a while.
@@ -1782,10 +1820,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 response.setBucket(request.getBucket());
                 response.setKey(request.getKey());
                 return response;
+            } catch (S3Exception e) {
+                throw e;
             } catch (Exception e) {
             	// Wrap the error from back-end with a 500 error
             	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
-                throw new InternalErrorException(objectEntity.getResourceFullName(), e);
+                throw new InternalErrorException(request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(), e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());

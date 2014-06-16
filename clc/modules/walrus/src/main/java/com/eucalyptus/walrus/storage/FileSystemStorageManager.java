@@ -66,44 +66,33 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-import com.eucalyptus.walrus.entities.PartInfo;
-import com.eucalyptus.walrus.exceptions.WalrusException;
-import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.StorageManager;
-import com.eucalyptus.walrus.WalrusBucketLogger;
-import com.eucalyptus.walrus.entities.WalrusInfo;
-import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
-import com.eucalyptus.walrus.util.WalrusProperties;
-
-import edu.ucsb.eucalyptus.util.StreamConsumer;
-import edu.ucsb.eucalyptus.util.SystemUtil;
-
 import com.eucalyptus.storage.common.ChunkedDataFile;
 import com.eucalyptus.storage.common.CompressedChunkedFile;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.common.fs.FileReader;
 import com.eucalyptus.storage.common.fs.FileWriter;
-import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.walrus.StorageManager;
+import com.eucalyptus.walrus.entities.PartInfo;
+import com.eucalyptus.walrus.entities.WalrusInfo;
+import com.eucalyptus.walrus.exceptions.WalrusException;
+import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
+
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class FileSystemStorageManager implements StorageManager {
 
@@ -308,6 +297,87 @@ public class FileSystemStorageManager implements StorageManager {
             }
         }
     }
+    
+	@Override
+	public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception {
+		Iterator<PartInfo> partIterator = null;
+
+		if (parts != null && (partIterator = parts.iterator()) != null && partIterator.hasNext()) {
+			try {
+				File newObjectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR
+						+ destinationObject);
+				FileInputStream fileInputStream = null;
+				FileChannel fileIn = null;
+				FileOutputStream fileOutputStream = null;
+				FileChannel fileOut = null;
+				try {
+					fileOutputStream = new FileOutputStream(newObjectFile);
+					fileOut = fileOutputStream.getChannel();
+					PartInfo part = null;
+					File partFile = null;
+
+					do {
+						part = partIterator.next();
+						partFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + part.getBucketName() + FILE_SEPARATOR
+								+ part.getObjectName());
+						fileInputStream = new FileInputStream(partFile);
+						fileIn = fileInputStream.getChannel();
+						fileIn.transferTo(0, fileIn.size(), fileOut);
+
+						// Get ready for next iteration
+						try {
+							fileIn.close();
+							fileIn = null;
+						} catch (IOException e) {
+							LOG.warn("Failed to close channel", e);
+						}
+						try {
+							fileInputStream.close();
+							fileInputStream = null;
+						} catch (IOException e) {
+							LOG.warn("Failed to close stream", e);
+						}
+						partFile = null;
+						part = null;
+					} while (partIterator.hasNext());
+				} finally {
+					if (fileIn != null) {
+						try {
+							fileIn.close();
+						} catch (IOException e) {
+							LOG.warn("Failed to close channel", e);
+						}
+					}
+					if (fileInputStream != null) {
+						try {
+							fileInputStream.close();
+						} catch (IOException e) {
+							LOG.warn("Failed to close stream", e);
+						}
+					}
+					if (fileOut != null) {
+						try {
+							fileOut.close();
+						} catch (IOException e) {
+							LOG.warn("Failed to close channel", e);
+						}
+					}
+					if (fileOutputStream != null) {
+						try {
+							fileOutputStream.close();
+						} catch (IOException e) {
+							LOG.warn("Failed to close stream", e);
+						}
+					}
+				}
+			} catch (Exception e) {
+				LOG.error("Failed to copy multipart source object to " + destinationObject, e);
+				throw e;
+			}
+		} else {
+			LOG.warn("No parts to copy content from and create " + destinationObject);
+		}
+	}
 
     public String getObjectPath(String bucket, String object) {
         return WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
@@ -491,5 +561,64 @@ public class FileSystemStorageManager implements StorageManager {
             throw new WalrusException(ex.getMessage());
         }
     }
+
+	@Override
+	public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd)
+			throws WalrusException {
+		try {
+			List<ChunkedInput> dataStreams = new ArrayList<>();
+			isCompressed = isCompressed == null ? false : isCompressed;
+
+			Long requestedSize = byteRangeEnd - byteRangeStart + 1; // Assuming byteRangeEnd is inclusive
+			Iterator<PartInfo> partIterator = parts.iterator();
+			PartInfo part = null;
+
+			// Compute the part to begin reading from and the starting offset in that part
+			Long rangeElapsed = -1L;
+			Long startMarker = 0L;
+			while (partIterator.hasNext()) {
+				part = partIterator.next();
+				rangeElapsed += part.getSize();
+				if (byteRangeStart <= rangeElapsed) {
+					startMarker = part.getSize() - (rangeElapsed - byteRangeStart + 1);
+					break;
+				}
+			}
+
+			// Keep adding bytes from parts till the requested length is met
+			Long bytesRead = 0L;
+			Long tempLength = 0L;
+			do {
+				if (part == null & partIterator.hasNext()) {
+					part = partIterator.next();
+				}
+
+				final ChunkedInput file;
+				RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
+
+				if (requestedSize > ((part.getSize() - startMarker) + bytesRead)) { // if the part is smaller than what is required, add the part from the startMarker to end
+					tempLength = part.getSize() - startMarker;
+				} else { // if the part is larger than what is required, add the part from the startMarker to how much is necessary
+					tempLength = requestedSize - bytesRead;
+				}
+
+				if (isCompressed) {
+					file = new CompressedChunkedFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+				} else {
+					file = new ChunkedDataFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+				}
+
+				dataStreams.add(file);
+				bytesRead = bytesRead + tempLength;
+				startMarker = 0L;
+				tempLength = 0L;
+				part = null;
+			} while (bytesRead < requestedSize && partIterator.hasNext());
+
+			reply.setDataInputStream(dataStreams);
+		} catch (IOException ex) {
+			throw new WalrusException(ex.getMessage());
+		}
+	}
 
 }
