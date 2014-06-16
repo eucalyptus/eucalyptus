@@ -2210,8 +2210,8 @@ static int init(void)
 
     // read in .pem files
     if (euca_init_cert()) {
-        LOGERROR("failed to find cryptographic certificates\n");
-        return (EUCA_FATAL_ERROR);
+        LOGWARN("no cryptographic certificates found: waiting for node to be registered...\n");
+        //        return (EUCA_FATAL_ERROR);
     }
     // check on dependencies (3rd-party programs that NC invokes)
     if (diskutil_init(FALSE)) {        // NC does not need GRUB for now
