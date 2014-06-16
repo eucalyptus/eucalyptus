@@ -217,7 +217,7 @@ static void init_url_regex(void);
 //!
 int euca_init_cert(void)
 {
-#define ERR_MSG "Error: required file %s not found by euca_init_cert(). Is $EUCALYPTUS set?\n"
+#define ERR_MSG "Error: required file %s not found by euca_init_cert(). Is component registered and $EUCALYPTUS set?\n"
 #define OK_MSG  "using file %s\n"
 #define CHK_FILE(_n)                           \
 {                                              \
