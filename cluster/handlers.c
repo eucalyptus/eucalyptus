@@ -1603,7 +1603,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         LOGDEBUG("bad input params\n");
         return (1);
     }
-
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
@@ -1642,9 +1641,11 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                         rc = find_instanceCacheIP(strptrb, &myInstance);
                         if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
                             if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId,
+                                         myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
                             } else {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n",
+                                         myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
                                 rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
                             }
                         }
@@ -1733,7 +1734,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
             } else if (myInstance) {
                 LOGDEBUG("found local instance, applying %s->%s mapping\n", src, dst);
                 sem_mywait(VNET);
-                rc = vnetReassignAddress(vnetconfig, uuid, src, dst);
+                rc = vnetReassignAddress(vnetconfig, uuid, src, dst, myInstance->ccnet.vlan);
                 if (rc) {
                     LOGERROR("vnetReassignAddress() failed rc=%d\n", rc);
                     ret = 1;
@@ -1841,9 +1842,10 @@ int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int 
 //!
 int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 {
-    int rc, ret;
+    int rc = 0;
+    int ret = 0;
     ccInstance *myInstance = NULL;
-    ccResourceCache resourceCacheLocal;
+    ccResourceCache resourceCacheLocal = { {{{0}}} };
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1865,28 +1867,25 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
-        ret = 0;
-    } else {
+    if ((rc = find_instanceCacheIP(src, &myInstance)) == 0) {
+        LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+        // found the instance in the cache
+        if (myInstance) {
+            if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
+                ret = 0;
+            } else {
+                sem_mywait(VNET);
 
-        sem_mywait(VNET);
+                ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0", myInstance->ccnet.vlan);
+                if (ret) {
+                    LOGERROR("vnetReassignAddress() failed ret=%d\n", ret);
+                    ret = 1;
+                }
 
-        ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0");
-        if (ret) {
-            LOGERROR("vnetReassignAddress() failed ret=%d\n", ret);
-            ret = 1;
-        }
+                sem_mypost(VNET);
+            }
 
-        sem_mypost(VNET);
-    }
-
-    if (!ret) {
-
-        rc = find_instanceCacheIP(src, &myInstance);
-        if (!rc) {
-            LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
-            // found the instance in the cache
-            if (myInstance) {
+            if (!ret) {
                 //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
                 rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
                                   resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
@@ -1896,14 +1895,14 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
                 } else {
                     ret = 0;
                 }
-                EUCA_FREE(myInstance);
+                // refresh instance cache
+                rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
+                if (rc) {
+                    LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
+                }
             }
         }
-        // refresh instance cache
-        rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
-        if (rc) {
-            LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
-        }
+        EUCA_FREE(myInstance);
     }
 
     LOGTRACE("done\n");
@@ -4022,19 +4021,19 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                     while (rc && ((time(NULL) - startRun) < ncRunTimeout)) {
 
                         boolean is_windows = (strstr(platform, "windows") != NULL) ? TRUE : FALSE;
-                        boolean has_creds = (credential != NULL && strlen(credential)>0) ? TRUE : FALSE;
+                        boolean has_creds = (credential != NULL && strlen(credential) > 0) ? TRUE : FALSE;
                         boolean is_res_node = (strstr(res->ncURL, "EucalyptusNC") != NULL) ? TRUE : FALSE;
 
                         // if this resource is not a node (but a co-located Broker)
                         // and the guest is either Windows or Linux needing credentials,
                         // then we'll have to create a floppy to pass to the instance
-                        if (! is_res_node && (is_windows || has_creds)) {
+                        if (!is_res_node && (is_windows || has_creds)) {
 
                             //! @TODO: remove the 'windows' subdir or change something more generic
                             char cdir[EUCA_MAX_PATH];
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
                             if (check_directory(cdir)) {
-                                if(mkdir(cdir, 0700)) {
+                                if (mkdir(cdir, 0700)) {
                                     LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
                                 }
                             }
@@ -4100,7 +4099,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                                 rc = 1; // child crashed
                             }
                         } else {
-                            rc = 1; // timeout or error
+                            rc = 1;    // timeout or error
                         }
                     }
                     LOGDEBUG("call complete (pid/rc): %d/%d\n", pid, rc);
@@ -4414,7 +4413,7 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
                         snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        
+
                         if (rmdir(cdir)) {
                             LOGWARN("rmdir failed: unable to remove directory '%s', check permissions\n", cdir);
                         }

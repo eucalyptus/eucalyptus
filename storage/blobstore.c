@@ -6065,17 +6065,15 @@ static int do_delete(const char *bs_path, const char *bb_id)
         return 1;
     }
 
-    blockblob * bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
+    blockblob *bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
     if (bb == NULL) {
-        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id,
-                blobstore_get_error_str(_blobstore_errno));
+        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id, blobstore_get_error_str(_blobstore_errno));
         return 1;
     }
 
     int ret = blockblob_delete(bb, 1000000, 0);
     if (ret != 0) {
-        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id,
-                blobstore_get_error_str(_blobstore_errno));
+        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id, blobstore_get_error_str(_blobstore_errno));
         blockblob_close(bb);
     }
 

@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _GNU_SOURCE // for %ms in sscanf
+#define _GNU_SOURCE                    // for %ms in sscanf
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -246,9 +246,7 @@ static int try_stage_dir(const char *dir)
     return (EUCA_INVALID_ERROR);
 }
 
-int imaging_init(const char *new_euca_home_path,
-                 const char *new_cloud_cert_path,
-                 const char *new_service_key_path)
+int imaging_init(const char *new_euca_home_path, const char *new_cloud_cert_path, const char *new_service_key_path)
 {
     assert(new_euca_home_path);
     assert(new_cloud_cert_path);
@@ -587,7 +585,7 @@ int diskutil_get_parts(const char *path, struct partition_table_entry entries[],
 {
     assert(path);
     assert(entries);
-    assert(num_entries>0);
+    assert(num_entries > 0);
     bzero(entries, sizeof(struct partition_table_entry) * num_entries);
 
     // output of 'parted DEV unit s print' looks roughly like:
@@ -608,34 +606,34 @@ int diskutil_get_parts(const char *path, struct partition_table_entry entries[],
         return -1;
     }
 
-    char * s = strstr(output, "Number");
-    if (s==NULL) {
+    char *s = strstr(output, "Number");
+    if (s == NULL) {
         LOGERROR("cannot parse 'parted print' output for device %s (no 'Number')\n", path);
         free(output);
         return -1;
     }
     s = strstr(output, "Flags\n");
-    if (s==NULL) {
+    if (s == NULL) {
         LOGERROR("cannot parse 'parted print' output for device %s (no 'Flags')\n", path);
         free(output);
         return -1;
     }
-    s += strlen("Flags\n"); // onto the next line
+    s += strlen("Flags\n");            // onto the next line
 
     // parse the partitions lines thatfollow the headers returned by 'parted print'
-    char * pline = strtok(s, "\n");  // split by semicolon
+    char *pline = strtok(s, "\n");     // split by semicolon
     for (int p = 0; pline != NULL; p++) {
         int index;
         long long start;
         long long end;
         long long size;
-        char * type;
-        char * filesystem;
+        char *type;
+        char *filesystem;
 
         // expect syntax like: 1      204863s  3072062s  2867200s  primary  ext3
         if (sscanf(pline, "%d %llds %llds %llds %ms %ms", &index, &start, &end, &size, &type, &filesystem) == 6) {
             int n = index - 1;
-            if (n >= num_entries) { // do not have room for this entry
+            if (n >= num_entries) {    // do not have room for this entry
                 break;
             }
             entries[n].start_sector = start;
@@ -651,7 +649,7 @@ int diskutil_get_parts(const char *path, struct partition_table_entry entries[],
 
     // run through the entries[], ensure they are contiguous, starting with [0]
     int count = 0;
-    for (int n=0; n<num_entries; n++) {
+    for (int n = 0; n < num_entries; n++) {
         if (entries[n].end_sector > 0) {
             count++;
         } else {
@@ -1886,12 +1884,12 @@ int main(int argc, char *argv[])
     output = execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL);
     assert(output == NULL);
 
-    { // test diskutil_get_parts()
+    {                                  // test diskutil_get_parts()
         struct partition_table_entry parts[5];
         int n = diskutil_get_parts("/dev/sda", parts, 5);
         assert(n > 0);
-        for (int i=0; i<n; i++) {
-            struct partition_table_entry * p = parts + i;
+        for (int i = 0; i < n; i++) {
+            struct partition_table_entry *p = parts + i;
             assert(p->start_sector >= 0L);
             assert(p->end_sector > p->start_sector);
             assert(p->type[0] != '\0');

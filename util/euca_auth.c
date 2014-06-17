@@ -522,7 +522,6 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
             goto cleanup;
         }
     }
-
     //Base64 decode the string inbuffer, null terminator deducted from buffer size
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &in_len);
     if (dec64_in == NULL) {

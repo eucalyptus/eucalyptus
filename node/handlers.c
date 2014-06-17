@@ -539,22 +539,21 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
     }
 
     if (error->code == VIR_ERR_NO_DOMAIN) {
-        char * instanceId = euca_strestr(error->message, "'", "'"); // try to find instance ID in the message
+        char *instanceId = euca_strestr(error->message, "'", "'");  // try to find instance ID in the message
         if (instanceId) {
             // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
             ncInstance *instance = find_instance(&global_instances, instanceId);
-            if (instance
-                && (instance->terminationRequestedTime // termination of this instance was requested
-                    || (instance->state == BOOTING) // it is booting or rebooting
-                    || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
-                    || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
+            if (instance && (instance->terminationRequestedTime // termination of this instance was requested
+                             || (instance->state == BOOTING)    // it is booting or rebooting
+                             || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
+                             || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
                 ignore_error = TRUE;
             }
             free(instanceId);
         }
     }
 
-    if (! ignore_error) {
+    if (!ignore_error) {
         EUCALOG(EUCA_LOG_ERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
     }
 }
@@ -2831,7 +2830,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "creating image", sizeof(status_str));
         } else if (instance->bootTime == 0) {
             strncpy(status_str, "staging", sizeof(status_str));
-        } // else it is "running"
+        }                              // else it is "running"
 
         LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
     }
