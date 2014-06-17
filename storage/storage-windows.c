@@ -100,10 +100,11 @@
 
 #include <eucalyptus.h>
 
-#include <storage-windows.h>
-#include <euca_auth.h>
 #include <misc.h>
-#include "data.h"
+#include <data.h>
+#include <euca_auth.h>
+#include <euca_string.h>
+#include <storage-windows.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -500,7 +501,7 @@ typedef struct _instance_creds {
     char instancePk[KEY_STRING_SIZE];  //!<instance's private key
 } instance_creds;
 
-static int decode_credential(const char *credential, instance_creds *creds)
+static int decode_credential(char *credential, instance_creds * creds)
 {
     char symm_key[512];
     char enc_key[KEY_STRING_SIZE];
