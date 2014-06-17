@@ -241,10 +241,11 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks *~* *#*
 
 install: deploy
-	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(policiesdir)
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
+	$(RM) -f $(DESTDIR)$(policiesdir)/nc-client-policy.xml
 	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
 	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

@@ -6393,7 +6393,7 @@ int init_config(void)
     snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
     snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
-    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
+    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_POLICIES_DIR "/nc-client-policy.xml", home);
     snprintf(eucahome, EUCA_MAX_PATH, "%s/", home);
 
     sem_mywait(INIT);

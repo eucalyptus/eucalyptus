@@ -121,31 +121,28 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+RUNDIR=$EUCALYPTUS/var/run/eucalyptus
 
 create_httpd_config() {
 	IPS="all"
 
-	# let's configure the common parts for both CC and NC
+	# let's configure the NC
         sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
             -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
             -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
             -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
+            -e "s|\(Listen\).*|\1 $NC_PORT|" \
+            -e "s|\(PidFile\).*|\1 $RUNDIR/eucalyptus-nc.pid|" \
+            -e "s|\(Allow from\).*|\1 $IPS|" \
+            -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
-            > $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
+            > $RUNDIR/httpd-nc.conf
 
 	# load authz if we have it (ubuntu needs it)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
+	    echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $RUNDIR/httpd-nc.conf
 	fi
-
-	# let's configure the NC
-        sed -e "s|\(Listen\).*|\1 $NC_PORT|" \
-            -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
-            -e "s|\(Allow from\).*|\1 $IPS|" \
-            -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
-            $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf \
-            > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 
 # crude way to start the axis2c services
@@ -351,7 +348,7 @@ do_start() {
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config
 
-	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+	if ! $HTTPD -f $RUNDIR/httpd-nc.conf ; then
 		echo
 		echo "Failed to start the NC!"
 		exit 1
@@ -361,7 +358,7 @@ do_start() {
 }
 
 do_status() {
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+	pidfile=$RUNDIR/eucalyptus-nc.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		if ps axww|grep $pid|grep httpd-nc.conf > /dev/null ; then
@@ -373,7 +370,7 @@ do_status() {
 }
 
 do_stop() {
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+	pidfile=$RUNDIR/eucalyptus-nc.pid
 
 	# let's be sure we are killing the right process
 	if ! do_status ; then
