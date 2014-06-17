@@ -1907,15 +1907,9 @@ static void *bundling_thread(void *arg)
                          "--emi", pInstance->imageId,
 
     if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
-        rc = euca_execlp_log(&status,
-                         _COMMON_BUNDLING_PARAMS
-                         "--eki", pParams->kernelId,
-                         "--eri", pParams->ramdiskId,
-                         NULL);
+        rc = euca_execlp_log(&status, _COMMON_BUNDLING_PARAMS "--eki", pParams->kernelId, "--eri", pParams->ramdiskId, NULL);
     } else {
-        rc = euca_execlp_log(&status,
-                         _COMMON_BUNDLING_PARAMS
-                         NULL);
+        rc = euca_execlp_log(&status, _COMMON_BUNDLING_PARAMS NULL);
     }
     if (rc == EUCA_OK) {
         cleanup_bundling_task(pInstance, pParams, BUNDLING_SUCCESS);
@@ -2013,7 +2007,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     if ((pParams = EUCA_ZALLOC(1, sizeof(struct bundling_params_t))) == NULL)
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
 
-    pParams->accountId = strdup(pInstance->accountId); //! @TODO propagate requestor's accountId through the stack
+    pParams->accountId = strdup(pInstance->accountId);  //! @TODO propagate requestor's accountId through the stack
     pParams->instance = pInstance;
     pParams->bucketName = strdup(bucketName);
     pParams->filePrefix = strdup(filePrefix);

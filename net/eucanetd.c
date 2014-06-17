@@ -361,7 +361,6 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-
         // now, perform any updates that are required
 
         // if information on sec. group rules/membership has changed, apply
@@ -657,7 +656,9 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
                     // RARP
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb, strptrb);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                             "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                             vnetinterface, strptrb, strptrb, strptrb);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
                     snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
@@ -700,7 +701,9 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
                     // RARP
-                    snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                             "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                             vnetinterface, strptrb, strptrb);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
                     snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
@@ -709,7 +712,6 @@ int update_isolation_rules(void)
                     // DROP everything else
                     snprintf(cmd, EUCA_MAX_PATH, "-o %s -j DROP", vnetinterface);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-                    
 
                 } else {
                     if (config->nc_router && !config->nc_router_ip) {
@@ -1118,7 +1120,7 @@ int update_public_ips(void)
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
     rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
     EUCA_FREE(strptra);
-    
+
     se_print(&cmds);
     rc = se_execute(&cmds);
     if (rc) {
@@ -1492,7 +1494,7 @@ int read_config(void)
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    
+
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
     snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
@@ -1547,7 +1549,7 @@ int read_config(void)
 
     if (strlen(cvals[EUCANETD_CVAL_METADATA_IP])) {
         u32 test_ip, test_localhost;
-                   
+
         test_localhost = dot2hex("127.0.0.1");
         test_ip = dot2hex(cvals[EUCANETD_CVAL_METADATA_IP]);
         if (test_ip == test_localhost) {
@@ -1567,7 +1569,7 @@ int read_config(void)
             u32 test_ip, test_localhost;
             test_localhost = dot2hex("127.0.0.1");
             test_ip = dot2hex(cvals[EUCANETD_CVAL_NC_ROUTER_IP]);
-            if ( strcmp(cvals[EUCANETD_CVAL_NC_ROUTER_IP], "AUTO") && (test_ip == test_localhost) ) {
+            if (strcmp(cvals[EUCANETD_CVAL_NC_ROUTER_IP], "AUTO") && (test_ip == test_localhost)) {
                 LOGERROR("value specified for NC_ROUTER_IP is not a valid IP or the string 'AUTO': defaulting to 'AUTO'\n");
                 snprintf(config->ncRouterIP, 32, "AUTO");
             } else {
@@ -1763,7 +1765,7 @@ int read_latest_network(void)
         ret = 1;
     } else {
         rc = gni_print(globalnetworkinfo);
-        
+
         rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
         if (rc) {
             LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
@@ -1795,13 +1797,14 @@ int read_latest_network(void)
                         ret = 1;
                     } else {
                         LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
-                        for (i=0; i<brdev_len && !found_ip; i++) {
+                        for (i = 0; i < brdev_len && !found_ip; i++) {
                             strptra = hex2dot(brdev_ips[i]);
                             strptrb = hex2dot(brdev_nms[i]);
-                            if ( (brdev_nms[i] == mycluster->private_subnet.netmask) && ( (brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet) ) {
+                            if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
                                 strptrc = hex2dot(mycluster->private_subnet.subnet);
                                 strptrd = hex2dot(mycluster->private_subnet.netmask);
-                                LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
+                                LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev,
+                                         strptrc, strptrd);
                                 config->vmGatewayIP = brdev_ips[i];
                                 LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
                                 found_ip = 1;
@@ -1814,7 +1817,9 @@ int read_latest_network(void)
                         if (!found_ip) {
                             strptra = hex2dot(mycluster->private_subnet.subnet);
                             strptrb = hex2dot(mycluster->private_subnet.netmask);
-                            LOGERROR("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n", config->bridgeDev, strptra, strptrb);
+                            LOGERROR
+                                ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                 config->bridgeDev, strptra, strptrb);
                             EUCA_FREE(strptra);
                             EUCA_FREE(strptrb);
                             ret = 1;
@@ -1824,7 +1829,7 @@ int read_latest_network(void)
                     EUCA_FREE(brdev_nms);
                 }
             }
-        }        
+        }
     }
     return (ret);
 }

@@ -501,7 +501,7 @@ typedef struct _instance_creds {
     char instancePk[KEY_STRING_SIZE];  //!<instance's private key
 } instance_creds;
 
-static int decode_credential(char *credential, instance_creds *creds)
+static int decode_credential(char *credential, instance_creds * creds)
 {
     char symm_key[512];
     char enc_key[KEY_STRING_SIZE];

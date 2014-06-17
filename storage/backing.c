@@ -596,7 +596,7 @@ static int stale_blob_examiner(const blockblob * bb)
 int save_instance_struct(const ncInstance * instance)
 {
     if (instance->state == TEARDOWN) {
-        return EUCA_OK; // instance is without disk state => nowhere to write metadata
+        return EUCA_OK;                // instance is without disk state => nowhere to write metadata
     } else {
         return gen_instance_xml(instance);
     }
@@ -699,18 +699,18 @@ ncInstance *load_instance_struct(const char *instanceId)
         memcpy(instance, &instance33, sizeof(ncInstance33));
         LOGINFO("[%s] upgraded instance checkpoint from v3.3\n", instance->instanceId);
     } else {                           // no binary checkpoint, so we expect an XML-formatted checkpoint
-	char * xmlFP;
-	if ((xmlFP = EUCA_ALLOC(sizeof(instance->xmlFilePath), sizeof(char))) == NULL) {
+        char *xmlFP;
+        if ((xmlFP = EUCA_ALLOC(sizeof(instance->xmlFilePath), sizeof(char))) == NULL) {
             LOGERROR("out of memory (for temporary string allocation)\n");
             goto free;
         }
-	euca_strncpy(xmlFP, instance->xmlFilePath, sizeof(instance->xmlFilePath));
+        euca_strncpy(xmlFP, instance->xmlFilePath, sizeof(instance->xmlFilePath));
         if (read_instance_xml(xmlFP, instance) != EUCA_OK) {
             LOGERROR("failed to read instance XML\n");
-	    EUCA_FREE(xmlFP);
+            EUCA_FREE(xmlFP);
             goto free;
         }
-	EUCA_FREE(xmlFP);
+        EUCA_FREE(xmlFP);
     }
 
     // Reset some fields for safety since they would now be wrong
@@ -776,7 +776,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    } else if (instance->credential && strlen(instance->credential)) { // TODO: credential floppy is limited to Linux instances ATM
+    } else if (instance->credential && strlen(instance->credential)) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance->instancePath, instance->credential)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);

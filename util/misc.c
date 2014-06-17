@@ -1940,15 +1940,15 @@ int check_for_string_in_list(char *string, char **list, int count)
     return (FALSE);
 }
 
-char ** build_argv(const char * first, va_list va)
+char **build_argv(const char *first, va_list va)
 {
     if (first == NULL) {
         LOGDEBUG("internal error: build_argv called with NULL\n");
         return NULL;
     }
 
-    int args = 1; // count 'first' as one
-    char ** argv = EUCA_ZALLOC(args + 1, sizeof(char *)); // one more for NULL
+    int args = 1;                      // count 'first' as one
+    char **argv = EUCA_ZALLOC(args + 1, sizeof(char *));    // one more for NULL
     if (argv == NULL) {
         LOGERROR("out of memory\n");
         return NULL;
@@ -1962,22 +1962,22 @@ char ** build_argv(const char * first, va_list va)
             return NULL;
         }
         argv[args] = strdup(s);
-        argv[args+1] = (char *)NULL;
+        argv[args + 1] = (char *)NULL;
     }
 
     return argv;
 }
 
-void log_argv(char ** argv)
+void log_argv(char **argv)
 {
     char cmd[10240];
     int args = 0;
 
-    for (char ** s = argv; * s != NULL; s++, args++) {
+    for (char **s = argv; *s != NULL; s++, args++) {
         char formatted[1024];
-        char * arg = * s;
+        char *arg = *s;
         if (args > 0) {
-            if (arg[0]=='-') {
+            if (arg[0] == '-') {
                 snprintf(formatted, sizeof(formatted), " %s", arg);
             } else {
                 snprintf(formatted, sizeof(formatted), " '%s'", arg);
@@ -2023,7 +2023,7 @@ void log_argv(char ** argv)
 //!
 //! @note
 //!
-int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv)
+int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv)
 {
     int result = 0;
     int stdin_p[2];
@@ -2031,38 +2031,37 @@ int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, c
     int stderr_p[2];
 
     assert(ppid);
-    * ppid = -1;
+    *ppid = -1;
 
     // set up the pipes, if requested
     if (stdin_fd) {
-        * stdin_fd = -1;
+        *stdin_fd = -1;
         if (pipe(stdin_p) != 0) {
             LOGERROR("pipe() failed\n");
             return (EUCA_ERROR);
         }
     }
     if (stdout_fd) {
-        * stdout_fd = -1;
+        *stdout_fd = -1;
         if (pipe(stdout_p) != 0) {
             LOGERROR("pipe() failed: %s\n", strerror(errno));
             return (EUCA_ERROR);
         }
     }
     if (stderr_fd) {
-        * stderr_fd = -1;
+        *stderr_fd = -1;
         if (pipe(stderr_p) != 0) {
             LOGERROR("pipe() failed: %s\n", strerror(errno));
             return (EUCA_ERROR);
         }
     }
-
     // Fork the work
-    if ((* ppid = fork()) == -1) {
+    if ((*ppid = fork()) == -1) {
         LOGDEBUG("failed to create a child process\n");
         return (EUCA_THREAD_ERROR);
     }
     // child?
-    if (* ppid == 0) {
+    if (*ppid == 0) {
         // arrange the file descriptors
         if (stdin_fd) {
             close(stdin_p[1]);
@@ -2085,7 +2084,6 @@ int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, c
                 exit(1);
             }
         }
-
         // print the command we are about to execute
         log_argv(argv);
 
@@ -2093,19 +2091,18 @@ int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, c
         result = execvp(argv[0], argv);
         exit(result);
     }
-
     // close the file descriptors on the parent appropriately
     if (stdin_fd) {
         close(stdin_p[0]);
-        * stdin_fd = stdin_p[1];
+        *stdin_fd = stdin_p[1];
     }
     if (stdout_fd) {
         close(stdout_p[1]);
-        * stdout_fd = stdout_p[0];
+        *stdout_fd = stdout_p[0];
     }
     if (stderr_fd) {
         close(stderr_p[1]);
-        * stderr_fd = stderr_p[0];
+        *stderr_fd = stderr_p[0];
     }
 
     return EUCA_OK;
@@ -2181,20 +2178,21 @@ int euca_waitpid(pid_t pid, int *pStatus)
 //!
 //! @note
 //!
-int euca_execlp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...)
+int euca_execlp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...)
 {
     char **argv = NULL;
     int result;
 
     assert(ppid);
-    * ppid = -1;
+    *ppid = -1;
 
-    { // turn variable arguments into a array of strings for the execvp()
+    {                                  // turn variable arguments into a array of strings for the execvp()
         va_list va;
         va_start(va, file);
         argv = build_argv(file, va);
         va_end(va);
-        if (argv == NULL) return EUCA_INVALID_ERROR;
+        if (argv == NULL)
+            return EUCA_INVALID_ERROR;
     }
 
     result = euca_execvp_fd(ppid, stdin_fd, stdout_fd, stderr_fd, argv);
@@ -2231,12 +2229,13 @@ int euca_execlp(int *pStatus, const char *file, ...)
     if (pStatus != NULL)
         (*pStatus) = -1;
 
-    { // turn variable arguments into a array of strings for the execvp()
+    {                                  // turn variable arguments into a array of strings for the execvp()
         va_list va;
         va_start(va, file);
         argv = build_argv(file, va);
         va_end(va);
-        if (argv == NULL) return EUCA_INVALID_ERROR;
+        if (argv == NULL)
+            return EUCA_INVALID_ERROR;
     }
 
     pid_t pid;
@@ -2249,7 +2248,7 @@ int euca_execlp(int *pStatus, const char *file, ...)
     return result;
 }
 
-static void log_line_child (const char *line, int(*custom_parser)(const char *line, void *data), void *parser_data)
+static void log_line_child(const char *line, int (*custom_parser) (const char *line, void *data), void *parser_data)
 {
     if (line == NULL) {
         return;
@@ -2261,14 +2260,14 @@ static void log_line_child (const char *line, int(*custom_parser)(const char *li
     }
 }
 
-int euca_run_workflow_parser (const char *line, void *data)
+int euca_run_workflow_parser(const char *line, void *data)
 {
-    char * instance_id = (char *)data;
+    char *instance_id = (char *)data;
     long long received_bytes;
     long long total_bytes;
-    char * s;
+    char *s;
 
-    LOGTRACE("%s\n", line); // log all output at TRACE level
+    LOGTRACE("%s\n", line);            // log all output at TRACE level
     if (instance_id == NULL) {
         instance_id = "?";
     }
@@ -2276,22 +2275,16 @@ int euca_run_workflow_parser (const char *line, void *data)
     if ((s = strstr(line, "Wrote bytes"))
         && (sscanf(s, "Wrote bytes:%lld/%lld,", &received_bytes, &total_bytes) == 2)
         && (total_bytes > 0LL)) {
-        LOGINFO("[%s] download progress: %lld/%lld bytes (%.1f%%)\n",
-                instance_id,
-                received_bytes,
-                total_bytes,
-                ((double)received_bytes/(double)total_bytes)*100);
+        LOGINFO("[%s] download progress: %lld/%lld bytes (%.1f%%)\n", instance_id, received_bytes, total_bytes, ((double)received_bytes / (double)total_bytes) * 100);
 
     } else if ((s = strstr(line, "S3 request header: Content-Length: "))
                && sscanf(s, "S3 request header: Content-Length: %lld", &received_bytes) == 1) {
-        LOGINFO("[%s] upload progress: %lld new bytes (total unknown)\n",
-                instance_id,
-                received_bytes);
+        LOGINFO("[%s] upload progress: %lld new bytes (total unknown)\n", instance_id, received_bytes);
 
     } else if (strcasestr(line, "error")) { // any line with 'error'
         LOGERROR("%s\n", line);
 
-    } else if (strcasestr(line, "warn")) { // any line with 'warn'
+    } else if (strcasestr(line, "warn")) {  // any line with 'warn'
         LOGWARN("%s\n", line);
     }
 
@@ -2301,22 +2294,22 @@ int euca_run_workflow_parser (const char *line, void *data)
 // to accommodate potentially large JSON-formatted status lines
 #define LINEBUFSIZE 10240
 
-static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, void *data), void *parser_data)
+static int log_fds(int nfds, int fds[], int (*custom_parser) (const char *line, void *data), void *parser_data)
 {
-    assert(nfds<=FD_SETSIZE);
+    assert(nfds <= FD_SETSIZE);
     int ret = EUCA_ERROR;
 
-    char * buf = malloc(FD_SETSIZE * LINEBUFSIZE); // do not use array to avoid blowing the stack
+    char *buf = malloc(FD_SETSIZE * LINEBUFSIZE);   // do not use array to avoid blowing the stack
     if (buf == NULL) {
         LOGERROR("output logger failed to allocate memory: %s\n", strerror(errno));
         goto close_fds;
     }
     int wpos[FD_SETSIZE];
-    for (int i=0; i<nfds; i++) {
+    for (int i = 0; i < nfds; i++) {
         wpos[i] = 0;
     }
 
-    while (TRUE) { // we bail on error on any descriptor or EOF on all
+    while (TRUE) {                     // we bail on error on any descriptor or EOF on all
         struct timeval tv;
         tv.tv_sec = 1;
         tv.tv_usec = 0;
@@ -2326,7 +2319,7 @@ static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, vo
         int highest_fd = 0;
         fd_set rfds;
         FD_ZERO(&rfds);
-        for (int i=0; i<nfds; i++) {
+        for (int i = 0; i < nfds; i++) {
             if (fds[i] > -1) {
                 if (highest_fd < fds[i])
                     highest_fd = fds[i];
@@ -2334,7 +2327,7 @@ static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, vo
                 fds_to_poll++;
             }
         }
-        if (fds_to_poll < 1) // all have been closed, so bail
+        if (fds_to_poll < 1)           // all have been closed, so bail
             break;
 
         int retval = select(highest_fd + 1, &rfds, NULL, NULL, &tv);
@@ -2344,34 +2337,34 @@ static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, vo
         }
 
         if (retval > 0) {
-            for (int i=0; i<nfds; i++) {
+            for (int i = 0; i < nfds; i++) {
                 if ((fds[i] > -1) && FD_ISSET(fds[i], &rfds)) {
-                    char * linebuf = buf + i * LINEBUFSIZE;
-                    char * wptr = linebuf + wpos[i];
-                    int read_bytes = read(fds[i], wptr, LINEBUFSIZE-wpos[i]-1); // reserve 1 byte for '\0'
-                    if (read_bytes == 0) { // EOF, so close and mark as such
+                    char *linebuf = buf + i * LINEBUFSIZE;
+                    char *wptr = linebuf + wpos[i];
+                    int read_bytes = read(fds[i], wptr, LINEBUFSIZE - wpos[i] - 1); // reserve 1 byte for '\0'
+                    if (read_bytes == 0) {  // EOF, so close and mark as such
                         close(fds[i]);
                         fds[i] = -1;
                     } else if (read_bytes == -1) {
                         LOGERROR("failed to read a file descriptor: %s\n", strerror(errno));
                         goto close_fds;
-                    } else { // new bytes were read on the fd
+                    } else {           // new bytes were read on the fd
                         int rpos = 0;
-                        for (int j=0; j<read_bytes; j++) {
-                            if (wptr[j]=='\n') { // we have a new line to print!
-                                wptr[j]='\0';
+                        for (int j = 0; j < read_bytes; j++) {
+                            if (wptr[j] == '\n') {  // we have a new line to print!
+                                wptr[j] = '\0';
                                 log_line_child(linebuf + rpos, custom_parser, parser_data);
                                 rpos = wpos[i] + j + 1;
                             }
                         }
                         int unprinted = (wpos[i] + read_bytes) - rpos;
-                        if (unprinted == LINEBUFSIZE-1) { // if buffer is full, dump it without waiting for a newline
-                            linebuf[LINEBUFSIZE-1] = '\0';
+                        if (unprinted == LINEBUFSIZE - 1) { // if buffer is full, dump it without waiting for a newline
+                            linebuf[LINEBUFSIZE - 1] = '\0';
                             log_line_child(linebuf, custom_parser, parser_data);
                             unprinted = 0;
                         }
-                        if (rpos > 0 && unprinted > 0) { // some bytes were printed
-                            memmove(linebuf, linebuf + rpos, unprinted); // shift unprinted chars to front
+                        if (rpos > 0 && unprinted > 0) {    // some bytes were printed
+                            memmove(linebuf, linebuf + rpos, unprinted);    // shift unprinted chars to front
                         }
                         wpos[i] = unprinted;
                     }
@@ -2381,8 +2374,8 @@ static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, vo
     }
     ret = EUCA_OK;
 
- close_fds:
-    for (int i=0; i<nfds; i++) {
+close_fds:
+    for (int i = 0; i < nfds; i++) {
         if (fds[i] > -1) {
             close(fds[i]);
             fds[i] = -1;
@@ -2414,7 +2407,7 @@ static int log_fds(int nfds, int fds[], int(*custom_parser)(const char *line, vo
 //!
 //! @note
 //!
-int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *data), void *parser_data, const char *file, ...)
+int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...)
 {
     char **argv = NULL;
     int result;
@@ -2423,12 +2416,13 @@ int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *da
     if (pStatus != NULL)
         (*pStatus) = -1;
 
-    { // turn variable arguments into a array of strings for the execvp()
+    {                                  // turn variable arguments into a array of strings for the execvp()
         va_list va;
         va_start(va, file);
         argv = build_argv(file, va);
         va_end(va);
-        if (argv == NULL) return EUCA_INVALID_ERROR;
+        if (argv == NULL)
+            return EUCA_INVALID_ERROR;
     }
 
     pid_t pid;
@@ -2443,7 +2437,6 @@ int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *da
     return result;
 }
 
-
 //!
 //! Returns username of the real user ID of the calling process
 //!
@@ -2453,7 +2446,7 @@ int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *da
 char *get_username(void)
 {
     struct passwd *passwd = getpwuid(getuid());
-    assert(passwd!=NULL);
+    assert(passwd != NULL);
     return passwd->pw_name;
 }
 
@@ -2462,12 +2455,12 @@ char *get_username(void)
 //! Helper function to read from a file descriptor until EOF,
 //! printing characters preceded by 'prefix'
 //!
-static void drain_fd(const char * prefix, int fd)
+static void drain_fd(const char *prefix, int fd)
 {
     char buf;
 
     printf("%s ", prefix);
-    while (read(fd, &buf, 1)==1) {
+    while (read(fd, &buf, 1) == 1) {
         printf("%c", buf);
     }
     printf("\n");
@@ -2481,19 +2474,19 @@ static void drain_fd(const char * prefix, int fd)
 static void *competitor_function(void *arg)
 {
     int status;
-    for (int i=0; i<COMPETITOR_ITERATIONS; i++) {
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "/", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL)==EUCA_ERROR);
-        assert (status!=0);
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/passwd", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", NULL)==EUCA_OK);
-        assert (status==0);
-        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", "/foo", "/etc/mime.types", NULL)==EUCA_ERROR);
-        assert (status!=0);
+    for (int i = 0; i < COMPETITOR_ITERATIONS; i++) {
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "/", NULL) == EUCA_OK);
+        assert(status == 0);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", NULL) == EUCA_OK);
+        assert(status == 0);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/ls", "-l", "/", "/foo", "/bin", "/bar", "/tmp", NULL) == EUCA_ERROR);
+        assert(status != 0);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/passwd", NULL) == EUCA_OK);
+        assert(status == 0);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", NULL) == EUCA_OK);
+        assert(status == 0);
+        assert(euca_execlp_log(&status, NULL, NULL, "/bin/cat", "/etc/mime.types", "/foo", "/etc/mime.types", NULL) == EUCA_ERROR);
+        assert(status != 0);
     }
 
     return NULL;
@@ -2521,7 +2514,7 @@ int main(int argc, char **argv)
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
     struct stat estat = { 0 };
 
-    logfile(TEST_LOG, EUCA_LOG_DEBUG, 4); // bump up the log level
+    logfile(TEST_LOG, EUCA_LOG_DEBUG, 4);   // bump up the log level
     sem *log_sem = NULL;
     log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     if (log_sem_set(log_sem) != 0) {
@@ -2665,20 +2658,20 @@ int main(int argc, char **argv)
     {
         printf("testing execlp_fd\n");
         pid_t pid;
-        assert(euca_execlp_fd(&pid, NULL, NULL, NULL, "/bin/echo", "echo from stdout", NULL)==EUCA_OK);
+        assert(euca_execlp_fd(&pid, NULL, NULL, NULL, "/bin/echo", "echo from stdout", NULL) == EUCA_OK);
         waitpid(pid, NULL, 0);
 
         int ifd, ofd, efd;
-        assert(euca_execlp_fd(&pid, NULL, &ofd, NULL, "/bin/echo", "echo from stdout", NULL)==EUCA_OK);
+        assert(euca_execlp_fd(&pid, NULL, &ofd, NULL, "/bin/echo", "echo from stdout", NULL) == EUCA_OK);
         drain_fd("stdout:", ofd);
         waitpid(pid, NULL, 0);
 
-        assert(euca_execlp_fd(&pid, NULL, &ofd, &efd, "/bin/ls", "/bin/sh", "/bin/foo", NULL)==EUCA_OK);
+        assert(euca_execlp_fd(&pid, NULL, &ofd, &efd, "/bin/ls", "/bin/sh", "/bin/foo", NULL) == EUCA_OK);
         drain_fd("stdout:", ofd);
         drain_fd("stderr:", efd);
         waitpid(pid, NULL, 0);
 
-        assert(euca_execlp_fd(&pid, &ifd, &ofd, NULL, "sort", NULL)==EUCA_OK);
+        assert(euca_execlp_fd(&pid, &ifd, &ofd, NULL, "sort", NULL) == EUCA_OK);
         write(ifd, "e\nc\nh\no\n", 8);
         close(ifd);
         drain_fd("stdout:", ofd);

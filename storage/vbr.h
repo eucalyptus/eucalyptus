@@ -177,7 +177,8 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
                     int (*creator) (artifact * a), virtualBootRecord * vbr);
 
 void art_set_instanceId(const char *instanceId);
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean *bail_flag, const char *instanceId);
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
+                         const char *instanceId);
 int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, long long timeout_usec);
 
 /*----------------------------------------------------------------------------*\
