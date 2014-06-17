@@ -3282,6 +3282,7 @@ int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip)
 //! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
 //! @param[in] src
 //! @param[in] dst
+//! @param[in] vlan the VLAN identifier under which the dst address reside
 //!
 //! @return EUCA_OK on success or the following error codes:
 //!         \li EUCA_ERROR: if we fail to assign the address
@@ -3289,7 +3290,7 @@ int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip)
 //!
 //! @pre \p vnetconfig, \p src and \p dst must not be NULL.
 //!
-int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
+int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
 {
     int rc = 0;
     int slashnet = 0;
@@ -3324,9 +3325,9 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             ret = EUCA_ERROR;
         }
 
-        slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
-        network = hex2dot(vnetconfig->nw);
-        snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+        slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+        network = hex2dot(vnetconfig->networks[vlan].nw);
+        snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s ! -d %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
         EUCA_FREE(network);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
@@ -3439,6 +3440,7 @@ int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, 
 //! @param[in] uuid
 //! @param[in] src
 //! @param[in] dst
+//! @param[in] vlan the VLAN identifier under which the dst address reside
 //!
 //! @return EUCA_OK on success; or the result of vnetUnassignAddress(), vnetAssignAddress(); or the
 //!         following error codes:
@@ -3450,7 +3452,7 @@ int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, 
 //!
 //! @pre \p vnetconfig, \p uuid, \p src and \p dst must not be NULL.
 //!
-int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst)
+int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst, int vlan)
 {
     int i = 0;
     int isallocated = 0;
@@ -3485,7 +3487,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     LOGDEBUG("deciding what to do: src=%s dst=%s allocated=%d currdst=%s\n", SP(src), SP(dst), isallocated, SP(currdst));
     // determine if reassign must happen
     if (isallocated && strcmp(currdst, dst)) {
-        if ((rc = vnetUnassignAddress(vnetconfig, src, currdst)) != 0) {
+        if ((rc = vnetUnassignAddress(vnetconfig, src, currdst, vlan)) != 0) {
             EUCA_FREE(currdst);
             return (EUCA_ERROR);
         }
@@ -3494,11 +3496,11 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     EUCA_FREE(currdst);
 
     // do the (re)assign
-    if (!dst || !strcmp(dst, "0.0.0.0")) {
+    if (!dst || !strcmp(dst, "0.0.0.0") || !vlan) {
         vnetconfig->publicips[pubidx].dstip = 0;
         vnetconfig->publicips[pubidx].allocated = 0;
     } else {
-        if ((rc = vnetAssignAddress(vnetconfig, src, dst)) != 0) {
+        if ((rc = vnetAssignAddress(vnetconfig, src, dst, vlan)) != 0) {
             return (EUCA_ERROR);
         }
         vnetconfig->publicips[pubidx].dstip = dot2hex(dst);
@@ -3518,6 +3520,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
 //! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
 //! @param[in] src
 //! @param[in] dst
+//! @param[in] vlan the VLAN identifier under which the dst address reside
 //!
 //! @return EUCA_OK on success or the following error codes:
 //!         \li EUCA_ERROR: if we fail to unassign the IP address.
@@ -3525,7 +3528,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
 //!
 //! @pre \p vnetconfig, \p src and \p dst must not be NULL.
 //!
-int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
+int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
 {
     int rc = 0;
     int count = 0;
@@ -3577,9 +3580,9 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             //            ret = EUCA_ERROR;
         }
 
-        slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
-        network = hex2dot(vnetconfig->nw);
-        snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+        slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
+        network = hex2dot(vnetconfig->networks[vlan].nw);
+        snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s ! -d %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
         EUCA_FREE(network);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
