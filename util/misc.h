@@ -175,13 +175,13 @@ int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen);
 int check_for_string_in_list(char *string, char **list, int count);
-char ** build_argv(const char * first, va_list va);
-int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv);
+char **build_argv(const char *first, va_list va);
+int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv);
 int euca_waitpid(pid_t pid, int *pStatus);
-int euca_execlp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
+int euca_execlp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
 int euca_execlp(int *pStatus, const char *file, ...);
-int euca_run_workflow_parser (const char *line, void *data);
-int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *data), void *parser_data, const char *file, ...);
+int euca_run_workflow_parser(const char *line, void *data);
+int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
 
 /*----------------------------------------------------------------------------*\

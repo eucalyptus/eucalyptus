@@ -441,11 +441,11 @@ typedef struct ncInstance_t {
     //! @}
     //
 
-    char credential[10240];   //!< credential string to be passed into the instance via floppy
+    char credential[10240];            //!< credential string to be passed into the instance via floppy
 
     //! @{
     //! @name field added in 4.0 for faster termination
-    boolean bail_flag; //!< instance termination was requested
+    boolean bail_flag;                 //!< instance termination was requested
     //! @}
 } ncInstance;
 

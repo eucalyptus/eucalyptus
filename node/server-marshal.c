@@ -165,7 +165,7 @@ void adb_InitService(void)
         return;
     }
     pthread_mutex_lock(&ncHandlerLock);
-    doInitNC();    
+    doInitNC();
     pthread_mutex_unlock(&ncHandlerLock);
 }
 
