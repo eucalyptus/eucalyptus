@@ -1087,7 +1087,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public String registerEBSImageAsUser(final String userId, final String snapshotId, 
-	    final String imageName, String architecture, final String platform, final String description){
+	    final String imageName, String architecture, final String platform, final String description, final boolean deleteOnTermination){
 	  if(userId==null || userId.length()<=0)
 	    throw new IllegalArgumentException("User ID is required");
 	  if(snapshotId==null || snapshotId.length()<=0)
@@ -1103,6 +1103,7 @@ public class EucalyptusActivityTasks {
 	    task.setPlatform(platform);
 	  if(description!=null)
 	    task.setDescription(description);
+	  task.setDeleteOnTermination(deleteOnTermination);
 	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
     try{
       if(result.get())
@@ -1205,6 +1206,7 @@ public class EucalyptusActivityTasks {
 	  private String architecture = null;
 	  private String platform = null;
 	  private String imageId = null;
+	  private boolean deleteOnTermination = false;
 	  private static final String ROOT_DEVICE_NAME = "/dev/sda";
 	  private EucalyptusRegisterEBSImageTask(final String snapshotId, final String name, 
 	      final String architecture){
@@ -1219,6 +1221,9 @@ public class EucalyptusActivityTasks {
 	  private void setPlatform(final String platform){
 	    this.platform = platform;
 	  }
+	  private void setDeleteOnTermination(final boolean deleteOnTermination){
+	    this.deleteOnTermination = deleteOnTermination;
+	  }
 	  private RegisterImageType register(){
 	    final RegisterImageType req = new RegisterImageType();
 	    req.setRootDeviceName(ROOT_DEVICE_NAME);
@@ -1226,6 +1231,7 @@ public class EucalyptusActivityTasks {
       device.setDeviceName(ROOT_DEVICE_NAME);
       final EbsDeviceMapping ebsMap = new EbsDeviceMapping();
       ebsMap.setSnapshotId(this.snapshotId);
+      ebsMap.setDeleteOnTermination(this.deleteOnTermination);
       device.setEbs(ebsMap);
       req.setBlockDeviceMappings(Lists.newArrayList(device));
       req.setArchitecture(this.architecture);
