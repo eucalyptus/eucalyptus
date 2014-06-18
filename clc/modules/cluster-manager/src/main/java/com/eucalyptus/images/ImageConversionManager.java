@@ -220,7 +220,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         throw new Exception("Failed to check the existing buckets", ex);
       }
     }
-    
+
+    String newBucket = null;
     for(final ImageInfo image: images){
       try{
         if(!(image instanceof MachineImageInfo))
@@ -231,8 +232,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         final String[] tokens = manifestLocation.split("/");
         final String bucketName = tokens[0];
         final String prefix = tokens[1].replace(".manifest.xml", "");
-
-        String newBucket = null;
         do{
           newBucket = String.format("%s-%s-%s", 
               BUCKET_PREFIX, Crypto.generateAlphanumericId(5, ""), bucketName);
@@ -261,11 +260,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           throw new Exception("Failed to update run manifest location");
         }
       }catch(final Exception ex){
-        try{
-          Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
-        }catch(final Exception ex2){
-          ;
-        }
+        LOG.error(String.format("Unable to create the bucket %s for image %s", newBucket, image.getDisplayName()));
+        resetImagePendingAvailable(image.getDisplayName(), "Failed to create bucket");
         throw ex;
       }
     }
@@ -346,8 +342,10 @@ public class ImageConversionManager implements EventListener<ClockTick> {
        final MachineImageInfo machineImage = (MachineImageInfo) image;
        final String kernelId = machineImage.getKernelId();
        final String ramdiskId = machineImage.getRamdiskId();
-       if(kernelId==null || ramdiskId ==null)
-         throw new Exception("Kernel and ramdisk are not found for the image");
+       if(kernelId==null || ramdiskId ==null){
+         LOG.warn(String.format("Kernel and ramdisk are not found for the image %s", image.getDisplayName()));
+         continue;
+       }
        
        final KernelImageInfo kernel = Images.lookupKernel(kernelId);
        final RamdiskImageInfo ramdisk = Images.lookupRamdisk(ramdiskId);
@@ -385,16 +383,17 @@ public class ImageConversionManager implements EventListener<ClockTick> {
          throw new Exception("ImportImage Task id is null");
        Images.setConversionTaskId(machineImage.getDisplayName(), taskId);
      }catch(final Exception ex) {
-       LOG.error("Failed to convert the image "+image.getDisplayName(), ex);
+       LOG.error("Failed to convert the image: "+image.getDisplayName(), ex);
        try{
          this.cleanupBuckets(Lists.newArrayList(image), false);
+         resetImagePendingAvailable(image.getDisplayName(), "Failed to request conversion");
        }catch(final Exception ex2){
-         ;
-       }
-       try{
-         Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
-       }catch(final Exception ex2){
-         ;
+         LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
+         try{
+           Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+         }catch(final Exception ex3){
+           ;
+         }
        }
      }
    }
@@ -453,25 +452,27 @@ public class ImageConversionManager implements EventListener<ClockTick> {
            }
           }
        }else{
-         Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.failed);
+         LOG.warn("Conversion task for image " + image.getDisplayName()+ " has failed: "+ errorMessage);
          try{
            this.cleanupBuckets(Lists.newArrayList(image), false);
+           this.resetImagePendingAvailable(image.getDisplayName(), null);
          }catch(final Exception ex){
-           ;
+           LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
+           Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.failed);
          }
-         LOG.error("Failed to convert partitioned image: "+errorMessage);
        }
       }catch(final Exception ex){
+        LOG.warn("Conversion task for image " + image.getDisplayName()+ " has failed: ", ex);
         try{
-          Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+          this.cleanupBuckets(Lists.newArrayList(image), false);
+          this.resetImagePendingAvailable(image.getDisplayName(), "Failed to check conversion status");
+        }catch(final Exception ex2){
+          LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
           try{
-            this.cleanupBuckets(Lists.newArrayList(image), false);
-          }catch(final Exception ex2){
+            Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+          }catch(final Exception ex3){
             ;
           }
-          LOG.error("Failed to convert partitioned image", ex);
-        }catch(final Exception ex1){
-          ;
         }
       }
     }
@@ -584,36 +585,45 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           }finally{
             taggedImages.remove(imageId);
           }
-        }else if (ImageMetadata.State.failed.equals(imgState) && taggedImages.contains(imageId)){
-          String message = "";
-          try{
-            conversionTaskCache.invalidate(taskId);
-            Optional<DiskImageConversionTask> task = 
-               conversionTaskCache.get(taskId);
-            if(task.isPresent())
-              message = task.get().getStatusMessage();
-          }catch(final Exception ex){
-            ;
-          }finally{
-            taggedImages.remove(imageId);
-          }
-          this.tagResources(imageId, "failed", message);
-          try ( final TransactionResource db =
-              Entities.transactionFor( ImageInfo.class ) ) {
-            try{
-              final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-              entity.setState(ImageMetadata.State.pending_available);
-              entity.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
-              ((MachineImageInfo)entity).setImageConversionId(null);
-              Entities.persist(entity);
-              db.commit();
-            }catch(final Exception ex){
-              LOG.error("Failed to mark the image state available for conversion", ex);
-            }
-          }
         }
       }catch(final Exception ex){
         LOG.error("Failed to update tags for resources in conversion", ex);
+      }
+    }
+  }
+  
+  private void resetImagePendingAvailable(final String imageId, final String reason){
+    String taskMessage = "";
+    /// tag image and instances with proper message
+    try{
+      final ImageInfo image = Images.lookupImage(imageId);
+      final String taskId = ((MachineImageInfo) image).getImageConversionId();
+      if(taskId!=null){
+        conversionTaskCache.invalidate(taskId);
+        Optional<DiskImageConversionTask> task = 
+           conversionTaskCache.get(taskId);
+        if(task.isPresent())
+          taskMessage = task.get().getStatusMessage();
+      }
+      final String tagMessage = reason !=null ? reason : taskMessage;
+      this.tagResources(imageId, "failed", tagMessage);
+    }catch(final Exception ex){
+      ;
+    }finally{
+      taggedImages.remove(imageId);
+    }
+    
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        entity.setState(ImageMetadata.State.pending_available);
+        entity.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
+        ((MachineImageInfo)entity).setImageConversionId(null);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        LOG.error("Failed to mark the image state available for conversion: "+imageId, ex);
       }
     }
   }
