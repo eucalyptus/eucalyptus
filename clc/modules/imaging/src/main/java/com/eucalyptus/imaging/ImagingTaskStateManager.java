@@ -268,7 +268,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
             try{
               imageId = 
                   EucalyptusActivityTasks.getInstance().registerEBSImageAsUser(instanceTask.getOwnerUserId(), 
-                      snapshotId, imageName, architecture, platform, description);
+                      snapshotId, imageName, architecture, platform, description, false);
               if(imageId==null)
                 throw new Exception("Null image id");
               ImagingTasks.setImageId(instanceTask, imageId);
