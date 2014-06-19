@@ -81,7 +81,7 @@
   <endpoint name="KeyPairWS" address="vm://KeyPair" exchange-pattern="request-response" />
   <endpoint name="GroupsWS" address="vm://Groups" exchange-pattern="request-response" />
   <endpoint name="TagsWS" address="vm://Tags" exchange-pattern="request-response" />
-  <endpoint name="PrivateNetworksWS" address="vm://PrivateNetworks" exchange-pattern="request-response" />
+  <endpoint name="VpcWS" address="vm://Vpcs" exchange-pattern="request-response" />
   <endpoint name="SpotWS" address="vm://Spot" exchange-pattern="request-response" />
   <endpoint name="ReservedWS" address="vm://Reserved" exchange-pattern="request-response" />
   <endpoint name="VmTypesWS" address="vm://VmTypes" exchange-pattern="request-response" />

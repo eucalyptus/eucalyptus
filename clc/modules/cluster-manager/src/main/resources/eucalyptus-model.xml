@@ -98,8 +98,8 @@
                 <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmExportMessage" />
             </filtering-router>
             <filtering-router>
-                <outbound-endpoint ref="PrivateNetworksWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
+                <outbound-endpoint ref="VpcWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VpcMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="SpotWS" />

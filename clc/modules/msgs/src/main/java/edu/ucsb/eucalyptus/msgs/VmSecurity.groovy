@@ -102,6 +102,14 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
+class AuthorizeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  IpPermissionSetType ipPermissions;
+  AuthorizeSecurityGroupEgressType() {  }
+}
+class AuthorizeSecurityGroupEgressResponseType extends VmSecurityMessage {
+}
+/** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
   String groupId;
 }
@@ -134,6 +142,14 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   String groupId;
   @HttpEmbedded( multiple=true )
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+}
+/** *******************************************************************************/
+class RevokeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  IpPermissionSetType ipPermissions;
+  RevokeSecurityGroupEgressType() {  }
+}
+class RevokeSecurityGroupEgressResponseType extends VmSecurityMessage {
 }
 /** *******************************************************************************/
 public class DescribeSecurityGroupsResponseType extends VmSecurityMessage {

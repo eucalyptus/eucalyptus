@@ -62,6 +62,14 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
+class AuthorizeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  @HttpEmbedded( multiple=true )
+  ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+}
+class AuthorizeSecurityGroupEgressResponseType extends VmSecurityMessage {
+}
+/** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
   String groupId;
 }
@@ -96,6 +104,14 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
+class RevokeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  @HttpEmbedded( multiple=true )
+  ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+}
+class RevokeSecurityGroupEgressResponseType extends VmSecurityMessage {
+}
+/** *******************************************************************************/
 public class DescribeSecurityGroupsResponseType extends VmSecurityMessage {
   ArrayList<SecurityGroupItemType> securityGroupInfo = new ArrayList<SecurityGroupItemType>();
 }
@@ -113,7 +129,9 @@ public class SecurityGroupItemType extends EucalyptusData {
   String groupName;
   String groupDescription;
   String groupId;
+  String vpcId;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+  ArrayList<IpPermissionType> ipPermissionsEgress = new ArrayList<IpPermissionType>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   
   public SecurityGroupItemType( ) {

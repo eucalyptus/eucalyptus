@@ -97,11 +97,11 @@
             <component class="com.eucalyptus.tags.TagManager"/>
         </service>
 
-        <service name="PrivateNetworks">
+        <service name="Vpcs">
             <inbound>
-                <inbound-endpoint ref="PrivateNetworksWS"/>
+                <inbound-endpoint ref="VpcWS"/>
             </inbound>
-            <component class="com.eucalyptus.vpc.PrivateNetworksManager"/>
+            <component class="com.eucalyptus.compute.vpc.VpcManager"/>
         </service>
     </model>
 

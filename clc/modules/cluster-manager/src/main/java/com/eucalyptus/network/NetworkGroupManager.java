@@ -104,6 +104,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupEgressResponseType;
+import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupEgressType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -114,6 +116,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupEgressResponseType;
+import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupEgressType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
@@ -313,6 +317,16 @@ public class NetworkGroupManager {
     } finally {
       if ( db.isActive() ) db.rollback();
     }
+  }
+
+  public AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgress(AuthorizeSecurityGroupEgressType request) throws EucalyptusCloudException {
+    AuthorizeSecurityGroupEgressResponseType reply = request.getReply();
+    return reply;
+  }
+
+  public RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgress(RevokeSecurityGroupEgressType request) throws EucalyptusCloudException {
+    RevokeSecurityGroupEgressResponseType reply = request.getReply( );
+    return reply;
   }
 
   private List<IpPermissionType> handleOldAndNewIpPermissions(String cidrIp, String ipProtocol,

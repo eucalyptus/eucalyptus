@@ -43,6 +43,11 @@
     <mapping name="DescribeAccountAttributesType" class="com.eucalyptus.compute.common.DescribeAccountAttributesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="accountAttributeNameSet" field="accountAttributeNameSet" usage="optional" type="com.eucalyptus.compute.common.AccountAttributeNameSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeAccountAttributesResponseType" class="com.eucalyptus.compute.common.DescribeAccountAttributesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -323,6 +328,11 @@
     <mapping name="DescribeCustomerGatewaysType" class="com.eucalyptus.compute.common.DescribeCustomerGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="customerGatewaySet" field="customerGatewaySet" usage="optional" type="com.eucalyptus.compute.common.CustomerGatewayIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeCustomerGatewaysResponseType" class="com.eucalyptus.compute.common.DescribeCustomerGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -348,6 +358,11 @@
     <mapping name="DescribeVpnGatewaysType" class="com.eucalyptus.compute.common.DescribeVpnGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="vpnGatewaySet" field="vpnGatewaySet" usage="optional" type="com.eucalyptus.compute.common.VpnGatewayIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeVpnGatewaysResponseType" class="com.eucalyptus.compute.common.DescribeVpnGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -396,6 +411,11 @@
     <mapping name="DescribeVpnConnectionsType" class="com.eucalyptus.compute.common.DescribeVpnConnectionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="vpnConnectionSet" field="vpnConnectionSet" usage="optional" type="com.eucalyptus.compute.common.VpnConnectionIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeVpnConnectionsResponseType" class="com.eucalyptus.compute.common.DescribeVpnConnectionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -431,6 +451,11 @@
     <mapping name="DescribeVpcsType" class="com.eucalyptus.compute.common.DescribeVpcsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="vpcSet" field="vpcSet" usage="optional" type="com.eucalyptus.compute.common.VpcIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeVpcsResponseType" class="com.eucalyptus.compute.common.DescribeVpcsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -457,6 +482,11 @@
     <mapping name="DescribeSubnetsType" class="com.eucalyptus.compute.common.DescribeSubnetsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="subnetSet" field="subnetSet" usage="optional" type="com.eucalyptus.compute.common.SubnetIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeSubnetsResponseType" class="com.eucalyptus.compute.common.DescribeSubnetsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -481,6 +511,11 @@
     <mapping name="DescribeDhcpOptionsType" class="com.eucalyptus.compute.common.DescribeDhcpOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="dhcpOptionsSet" field="dhcpOptionsSet" usage="optional" type="com.eucalyptus.compute.common.DhcpOptionsIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping name="DescribeDhcpOptionsResponseType" class="com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -545,6 +580,11 @@
     <mapping name="DescribeInternetGatewaysType" class="com.eucalyptus.compute.common.DescribeInternetGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="internetGatewayIdSet" field="internetGatewayIdSet" usage="required" type="com.eucalyptus.compute.common.InternetGatewayIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.InternetGatewaySetType" abstract="true">
         <collection field="item">
@@ -645,6 +685,11 @@
     <mapping name="DescribeRouteTablesType" class="com.eucalyptus.compute.common.DescribeRouteTablesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="routeTableIdSet" field="routeTableIdSet" usage="required" type="com.eucalyptus.compute.common.RouteTableIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.RouteTableSetType" abstract="true">
         <collection field="item">
@@ -802,6 +847,11 @@
     <mapping name="DescribeNetworkAclsType" class="com.eucalyptus.compute.common.DescribeNetworkAclsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="networkAclIdSet" field="networkAclIdSet" usage="required" type="com.eucalyptus.compute.common.NetworkAclIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkAclSetType" abstract="true">
         <collection field="item">
@@ -893,6 +943,11 @@
     <mapping name="DescribeNetworkInterfacesType" class="com.eucalyptus.compute.common.DescribeNetworkInterfacesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="networkInterfaceIdSet" field="networkInterfaceIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkInterfaceType" abstract="true">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -1053,6 +1108,11 @@
     <mapping name="DescribeVpcPeeringConnectionsType" class="com.eucalyptus.compute.common.DescribeVpcPeeringConnectionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="vpcPeeringConnectionIdSet" field="vpcPeeringConnectionIdSet" usage="optional" type="com.eucalyptus.compute.common.VpcPeeringConnectionIdSetType"/>
+        <structure name="filterSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+            </collection>
+        </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionType" abstract="true">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>

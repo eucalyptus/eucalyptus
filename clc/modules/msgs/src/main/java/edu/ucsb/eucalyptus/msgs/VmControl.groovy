@@ -258,6 +258,7 @@ public class RunInstancesType extends VmControlMessage {
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
   String clientToken;
+  InstanceNetworkInterfaceSetRequestType networkInterfaceSet;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
   String iamInstanceProfileArn
   @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
@@ -371,6 +372,86 @@ public class GroupItemType extends EucalyptusData implements Comparable<GroupIte
     return (groupId?:'').compareTo( o.groupId?:'' )
   }
 }
+class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
+  InstanceNetworkInterfaceSetRequestType() {  }
+  ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = new ArrayList<InstanceNetworkInterfaceSetItemRequestType>();
+}
+class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
+  String networkInterfaceId;
+  Integer deviceIndex;
+  String subnetId;
+  String description;
+  String privateIpAddress;
+  SecurityGroupIdSetType groupSet;
+  Boolean deleteOnTermination;
+  PrivateIpAddressesSetRequestType privateIpAddressesSet;
+  Integer secondaryPrivateIpAddressCount;
+  Boolean associatePublicIpAddress;
+  InstanceNetworkInterfaceSetItemRequestType() {  }
+}
+class SecurityGroupIdSetType extends EucalyptusData {
+  SecurityGroupIdSetType() {  }
+  ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
+}
+class SecurityGroupIdSetItemType extends EucalyptusData {
+  String groupId;
+  SecurityGroupIdSetItemType() {  }
+}
+class PrivateIpAddressesSetRequestType extends EucalyptusData {
+  PrivateIpAddressesSetRequestType() {  }
+  ArrayList<PrivateIpAddressesSetItemRequestType> item = new ArrayList<PrivateIpAddressesSetItemRequestType>();
+}
+class PrivateIpAddressesSetItemRequestType extends EucalyptusData {
+  String privateIpAddress;
+  Boolean primary;
+  PrivateIpAddressesSetItemRequestType() {  }
+}
+public class InstanceNetworkInterfaceSetType extends EucalyptusData {
+  InstanceNetworkInterfaceSetType() {  }
+  ArrayList<InstanceNetworkInterfaceSetItemType> item = new ArrayList<InstanceNetworkInterfaceSetItemType>();
+}
+class InstanceNetworkInterfaceSetItemType extends EucalyptusData {
+  String networkInterfaceId;
+  String subnetId;
+  String vpcId;
+  String description;
+  String ownerId;
+  String status;
+  String macAddress;
+  String privateIpAddress;
+  String privateDnsName;
+  Boolean sourceDestCheck;
+  GroupSetType groupSet;
+  InstanceNetworkInterfaceAttachmentType attachment;
+  InstanceNetworkInterfaceAssociationType association;
+  InstancePrivateIpAddressesSetType privateIpAddressesSet;
+  InstanceNetworkInterfaceSetItemType() {  }
+}
+class InstanceNetworkInterfaceAttachmentType extends EucalyptusData {
+  String attachmentId;
+  Integer deviceIndex;
+  String status;
+  Date attachTime;
+  Boolean deleteOnTermination;
+  InstanceNetworkInterfaceAttachmentType() {  }
+}
+class InstanceNetworkInterfaceAssociationType extends EucalyptusData {
+  String publicIp;
+  String publicDnsName;
+  String ipOwnerId;
+  InstanceNetworkInterfaceAssociationType() {  }
+}
+class InstancePrivateIpAddressesSetType extends EucalyptusData {
+  InstancePrivateIpAddressesSetType() {  }
+  ArrayList<InstancePrivateIpAddressesSetItemType> item = new ArrayList<InstancePrivateIpAddressesSetItemType>();
+}
+class InstancePrivateIpAddressesSetItemType extends EucalyptusData {
+  String privateIpAddress;
+  String privateDnsName;
+  Boolean primary;
+  InstanceNetworkInterfaceAssociationType association;
+  InstancePrivateIpAddressesSetItemType() {  }
+}
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
   String instanceId;
   String imageId;
@@ -402,6 +483,10 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   ArrayList<GroupItemType> groupSet = Lists.newArrayList()
+  String subnetId;
+  String vpcId;
+  Boolean sourceDestCheck;
+  InstanceNetworkInterfaceSetType networkInterfaceSet;
 
   @Override
   public int compareTo( RunningInstancesItemType that ) {

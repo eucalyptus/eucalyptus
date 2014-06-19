@@ -104,8 +104,11 @@
         <structure name="monitoring" usage="optional">
             <value name="state" field="monitoring" />
         </structure>
+        <value name="subnetId" field="subnetId" usage="optional" />
+        <value name="vpcId" field="vpcId" usage="optional" />
         <value name="privateIpAddress" field="privateIpAddress" usage="required" />
         <value name="ipAddress" field="ipAddress" usage="required" />
+        <value name="sourceDestCheck" field="sourceDestCheck" usage="optional" />
         <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
         </collection>
@@ -122,6 +125,7 @@
                 <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
             </collection>
         </structure>
+        <structure name="networkInterfaceSet" field="networkInterfaceSet" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetType"/>
     </mapping>
 
     <mapping name="RunInstancesResponse" class="com.eucalyptus.compute.common.RunInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -172,6 +176,7 @@
         <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
         <!-- 2010-08-31 -->
         <value name="clientToken" field="clientToken" usage="optional" />
+        <structure name="networkInterfaceSet" field="networkInterfaceSet" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType"/>
     </mapping>
 
 
@@ -384,7 +389,67 @@
             <value name="state" field="monitoringState" />
         </structure>
     </mapping>
-    <!-- TODO:ADDED -->
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType" abstract="true">
+        <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+        <value name="deviceIndex" field="deviceIndex" usage="required"/>
+        <value name="subnetId" field="subnetId" usage="optional"/>
+        <value name="description" field="description" usage="optional"/>
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdSetType"/>
+        <value name="deleteOnTermination" field="deleteOnTermination" usage="optional"/>
+        <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType"/>
+        <value name="secondaryPrivateIpAddressCount" field="secondaryPrivateIpAddressCount" usage="optional"/>
+        <value name="associatePublicIpAddress" field="associatePublicIpAddress" usage="optional"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType" abstract="true">
+        <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+        <value name="subnetId" field="subnetId" usage="optional"/>
+        <value name="vpcId" field="vpcId" usage="optional"/>
+        <value name="description" field="description" usage="optional"/>
+        <value name="ownerId" field="ownerId" usage="required"/>
+        <value name="status" field="status" usage="required"/>
+        <value name="macAddress" field="macAddress" usage="optional"/>
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+        <value name="sourceDestCheck" field="sourceDestCheck" usage="optional"/>
+        <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.GroupSetType"/>
+        <structure name="attachment" field="attachment" usage="required" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAttachmentType"/>
+        <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType"/>
+        <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetItemType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetItemType" abstract="true">
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+        <value name="primary" field="primary" usage="optional"/>
+        <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceAttachmentType" abstract="true">
+        <value name="attachmentId" field="attachmentId" usage="required"/>
+        <value name="deviceIndex" field="deviceIndex" usage="required"/>
+        <value name="status" field="status" usage="required"/>
+        <value name="attachTime" field="attachTime" usage="required"/>
+        <value name="deleteOnTermination" field="deleteOnTermination" usage="required"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType" abstract="true">
+        <value name="publicIp" field="publicIp" usage="required"/>
+        <value name="publicDnsName" field="publicDnsName" usage="optional"/>
+        <value name="ipOwnerId" field="ipOwnerId" usage="optional"/>
+    </mapping>
     <mapping name="StopInstances" class="com.eucalyptus.compute.common.StopInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"

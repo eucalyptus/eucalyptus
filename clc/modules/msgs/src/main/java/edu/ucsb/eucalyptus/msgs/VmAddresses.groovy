@@ -83,16 +83,19 @@ public class VmAddressMessage extends EucalyptusMessage{
 /** *******************************************************************************/
 
 public class AllocateAddressType extends VmAddressMessage {
-  
+  String domain;
 } //** added 2008-02-01  **/
 public class AllocateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
+  String domain;
+  String allocationId;
 }
 /** *******************************************************************************/
 
 public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
-  
+  String allocationId;
+
   def ReleaseAddressType(final publicIp) {
     this.publicIp = publicIp;
   }
@@ -121,6 +124,9 @@ public class DescribeAddressesResponseType extends VmAddressMessage { //** added
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
+  String allocationId
+  String networkInterfaceId
+  String privateIpAddress
   Boolean allowReassociation = Boolean.FALSE
   
   def AssociateAddressType(final publicIp, final instanceId) {
@@ -137,13 +143,20 @@ public class AssociateAddressResponseType extends VmAddressMessage { //** added 
 
 public class DisassociateAddressType extends VmAddressMessage {  //** added 2008-02-01  **/
   String publicIp;
+  String associationId;
 }
 public class DisassociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
 }
 /** *******************************************************************************/
 public class AddressInfoType extends EucalyptusData {  //** added 2008-02-01  **/
   String publicIp;
+  String allocationId
+  String domain
   String instanceId;
+  String associationId
+  String networkInterfaceId
+  String networkInterfaceOwnerId
+  String privateIpAddress
   
   def AddressInfoType(final publicIp, final instanceId)
   {

@@ -94,7 +94,11 @@
     <value name="groupId" field="groupId" usage="optional"/>
     <value name="groupName" field="groupName" />
     <value name="groupDescription" field="groupDescription" />
+    <value name="vpcId" field="vpcId" usage="optional"/>
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+    <collection name="ipPermissionsEgress" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissionsEgress" usage="optional">
       <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
     </collection>
     <structure name="tagSet" usage="optional">
@@ -152,6 +156,36 @@
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
       <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
     </collection>
+  </mapping>
+
+  <mapping name="AuthorizeSecurityGroupEgressType" class="com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="groupId" field="groupId" usage="required"/>
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+  <mapping name="AuthorizeSecurityGroupEgressResponseType" class="com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="RevokeSecurityGroupEgressType" class="com.eucalyptus.compute.common.RevokeSecurityGroupEgressType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="groupId" field="groupId" usage="required"/>
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+  <mapping name="RevokeSecurityGroupEgressResponseType" class="com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
 
 </binding>
