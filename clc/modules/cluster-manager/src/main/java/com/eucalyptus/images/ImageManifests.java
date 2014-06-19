@@ -373,7 +373,7 @@ public class ImageManifests {
       }
     }
     
-    private boolean checkManifest( User user ) throws EucalyptusCloudException {
+    public boolean checkManifest( User user ) throws EucalyptusCloudException {
       String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
       String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" )
                                                  .replaceAll( "</machine_configuration>.*",
