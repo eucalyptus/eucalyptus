@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.ws.protocol
 
+import com.eucalyptus.binding.HttpValue
+
 import static org.junit.Assert.*
 import org.junit.Test
 import com.eucalyptus.binding.Binding
@@ -107,11 +109,22 @@ class BaseQueryBindingTest {
   }
 
   @Test
+  void testNestedData() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
+
+    Object nestedDataObject = bind( binding, "/service?Operation=NestedData&Data.1.child.member.1=a&Data.1.child.member.2=b&Data.1.child.member.3=c&Data.1.child.ints.1=3&Data.1.child.ints.2=2&Data.1.child.ints.3=1" +
+                                                                                                "&Data.2.child.member.1=z&Data.2.child.member.2=y&Data.2.child.member.3=x&Data.2.child.ints.1=1&Data.2.child.ints.2=2&Data.2.child.ints.3=3")
+    assertTrue( "Multiple bound value", nestedDataObject instanceof NestedData )
+    NestedData nestedData = (NestedData) nestedDataObject
+    assertEquals( "Data value", [ new NestedDataChild( child: new NestedDataGrandChild( member: [ new NestedDataGrandChildValue(value: "a"),new NestedDataGrandChildValue(value: "b"),new NestedDataGrandChildValue(value: "c")], ints: [3,2,1] ) ), new NestedDataChild( child: new NestedDataGrandChild( member: [new NestedDataGrandChildValue(value: "z"),new NestedDataGrandChildValue(value: "y"),new NestedDataGrandChildValue(value: "x")], ints: [1,2,3] ) ) ], nestedData.data )
+  }
+
+  @Test
   void testHttpEmbeddedAnnotation() {
     BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
 
-    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.1.embedded.member.1=a&Data.1.embedded.member.2=b&Data.1.embedded.member.3=c&Data.1.embedded.ints.1=3&Data.1.embedded.ints.2=2&Data.1.embedded.ints.3=1" +
-                                                                                                "&Data.2.embedded.member.1=z&Data.2.embedded.member.2=y&Data.2.embedded.member.3=x&Data.2.embedded.ints.1=1&Data.2.embedded.ints.2=2&Data.2.embedded.ints.3=3")
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.1.embeddedMember.1=a&Data.1.embeddedMember.2=b&Data.1.embeddedMember.3=c&Data.1.embeddedInts.1=3&Data.1.embeddedInts.2=2&Data.1.embeddedInts.3=1" +
+        "&Data.2.embeddedMember.1=z&Data.2.embeddedMember.2=y&Data.2.embeddedMember.3=x&Data.2.embeddedInts.1=1&Data.2.embeddedInts.2=2&Data.2.embeddedInts.3=3")
     assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedAnnotated )
     HttpEmbeddedAnnotated httpEmbeddedAnnotated = (HttpEmbeddedAnnotated) HttpEmbeddedAnnotatedObject
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
@@ -121,8 +134,8 @@ class BaseQueryBindingTest {
   void testHttpEmbeddedAnnotationZeroIndex() {
     BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
 
-    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0.embedded.member.0=a&Data.0.embedded.member.1=b&Data.0.embedded.member.2=c&Data.0.embedded.ints.0=3&Data.0.embedded.ints.1=2&Data.0.embedded.ints.2=1" +
-        "&Data.1.embedded.member.0=z&Data.1.embedded.member.1=y&Data.1.embedded.member.2=x&Data.1.embedded.ints.0=1&Data.1.embedded.ints.1=2&Data.1.embedded.ints.2=3")
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0.embeddedMember.0=a&Data.0.embeddedMember.1=b&Data.0.embeddedMember.2=c&Data.0.embeddedInts.0=3&Data.0.embeddedInts.1=2&Data.0.embeddedInts.2=1" +
+        "&Data.1.embeddedMember.0=z&Data.1.embeddedMember.1=y&Data.1.embeddedMember.2=x&Data.1.embeddedInts.0=1&Data.1.embeddedInts.1=2&Data.1.embeddedInts.2=3")
     assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedAnnotated )
     HttpEmbeddedAnnotated httpEmbeddedAnnotated = (HttpEmbeddedAnnotated) HttpEmbeddedAnnotatedObject
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
@@ -132,8 +145,8 @@ class BaseQueryBindingTest {
   void testHttpEmbeddedAnnotationLeadingZeroIndex() {
     BaseQueryBinding binding = new TestQueryBinding( new TestBinding() );
 
-    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0000001.embedded.member.01=a&Data.001.embedded.member.002=b&Data.001.embedded.member.003=c&Data.001.embedded.ints.001=3&Data.001.embedded.ints.002=2&Data.001.embedded.ints.003=1" +
-        "&Data.002.embedded.member.001=z&Data.002.embedded.member.002=y&Data.002.embedded.member.003=x&Data.002.embedded.ints.001=1&Data.002.embedded.ints.002=2&Data.002.embedded.ints.003=3")
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedAnnotated&Data.0000001.embeddedMember.01=a&Data.001.embeddedMember.002=b&Data.001.embeddedMember.003=c&Data.001.embeddedInts.001=3&Data.001.embeddedInts.002=2&Data.001.embeddedInts.003=1" +
+        "&Data.002.embeddedMember.001=z&Data.002.embeddedMember.002=y&Data.002.embeddedMember.003=x&Data.002.embeddedInts.001=1&Data.002.embeddedInts.002=2&Data.002.embeddedInts.003=3")
     assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedAnnotated )
     HttpEmbeddedAnnotated httpEmbeddedAnnotated = (HttpEmbeddedAnnotated) HttpEmbeddedAnnotatedObject
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
@@ -146,7 +159,7 @@ class BaseQueryBindingTest {
       @Override String getNamespace() { "A" }
     };
 
-    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&embedded.member.1=a&embedded.member.2=b&embedded.member.3=c&embedded.ints.1=3&embedded.ints.2=2&embedded.ints.3=1")
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&embeddedMember.1=a&embeddedMember.2=b&embeddedMember.3=c&embeddedInts.1=3&embeddedInts.2=2&embeddedInts.3=1")
     assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedVersioned )
     HttpEmbeddedVersioned httpEmbeddedAnnotated = (HttpEmbeddedVersioned) HttpEmbeddedAnnotatedObject
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ) ], httpEmbeddedAnnotated.data )
@@ -159,8 +172,8 @@ class BaseQueryBindingTest {
       @Override String getNamespace() { "B" }
     };
 
-    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&Data.1.embedded.member.1=a&Data.1.embedded.member.2=b&Data.1.embedded.member.3=c&Data.1.embedded.ints.1=3&Data.1.embedded.ints.2=2&Data.1.embedded.ints.3=1" +
-        "&Data.2.embedded.member.1=z&Data.2.embedded.member.2=y&Data.2.embedded.member.3=x&Data.2.embedded.ints.1=1&Data.2.embedded.ints.2=2&Data.2.embedded.ints.3=3")
+    Object HttpEmbeddedAnnotatedObject = bind( binding, "/service?Operation=HttpEmbeddedVersioned&Data.1.embeddedMember.1=a&Data.1.embeddedMember.2=b&Data.1.embeddedMember.3=c&Data.1.embeddedInts.1=3&Data.1.embeddedInts.2=2&Data.1.embeddedInts.3=1" +
+        "&Data.2.embeddedMember.1=z&Data.2.embeddedMember.2=y&Data.2.embeddedMember.3=x&Data.2.embeddedInts.1=1&Data.2.embeddedInts.2=2&Data.2.embeddedInts.3=3")
     assertTrue( "Multiple bound value", HttpEmbeddedAnnotatedObject instanceof HttpEmbeddedVersioned )
     HttpEmbeddedVersioned httpEmbeddedAnnotated = (HttpEmbeddedVersioned) HttpEmbeddedAnnotatedObject
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
@@ -179,6 +192,7 @@ class BaseQueryBindingTest {
         HttpEmbeddedData.class,
         HttpEmbeddedData2.class,
         HttpEmbeddedVersioned.class,
+        NestedData.class,
     ]
 
     TestBinding() {
@@ -224,9 +238,9 @@ class HttpParameterAnnotated extends EucalyptusMessage {
 }
 
 class HttpEmbeddedData2 extends EucalyptusData {
-  @HttpParameterMapping(parameter="member")
+  @HttpParameterMapping(parameter="embeddedMember")
   ArrayList<String> member = Lists.newArrayList()
-  @HttpParameterMapping(parameter="ints")
+  @HttpParameterMapping(parameter="embeddedInts")
   ArrayList<Integer> ints = Lists.newArrayList()
 
   boolean equals(final o) {
@@ -251,7 +265,6 @@ class HttpEmbeddedData2 extends EucalyptusData {
 
 class HttpEmbeddedData extends EucalyptusData {
   @HttpEmbedded
-  @HttpParameterMapping(parameter="embedded")
   HttpEmbeddedData2 httpEmbeddedData2
 
   boolean equals(final o) {
@@ -310,5 +323,92 @@ class HttpEmbeddedVersioned extends EucalyptusMessage {
 
   int hashCode() {
     return data.hashCode()
+  }
+}
+
+class NestedData extends EucalyptusMessage {
+  @HttpEmbedded(multiple=true)
+  ArrayList<NestedDataChild> data = Lists.newArrayList()
+
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final NestedData that = (NestedData) o
+
+    if (data != that.data) return false
+
+    return true
+  }
+
+  int hashCode() {
+    return data.hashCode()
+  }
+}
+
+class NestedDataChild extends EucalyptusData {
+  @HttpParameterMapping(parameter="child")
+  NestedDataGrandChild child
+
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final NestedDataChild that = (NestedDataChild) o
+
+    if (child != that.child) return false
+
+    return true
+  }
+
+  int hashCode() {
+    return (child != null ? child.hashCode() : 0)
+  }
+}
+
+class NestedDataGrandChild extends EucalyptusData {
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple = true)
+  ArrayList<NestedDataGrandChildValue> member = Lists.newArrayList()
+  @HttpParameterMapping(parameter="ints")
+  ArrayList<Integer> ints = Lists.newArrayList()
+
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final NestedDataGrandChild that = (NestedDataGrandChild) o
+
+    if (ints != that.ints) return false
+    if (member != that.member) return false
+
+    return true
+  }
+
+  int hashCode() {
+    int result
+    result = member.hashCode()
+    result = 31 * result + ints.hashCode()
+    return result
+  }
+}
+
+class NestedDataGrandChildValue extends EucalyptusData {
+  @HttpValue
+  String value
+
+  boolean equals(final o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    final NestedDataGrandChildValue that = (NestedDataGrandChildValue) o
+
+    if (value != that.value) return false
+
+    return true
+  }
+
+  int hashCode() {
+    return value.hashCode()
   }
 }

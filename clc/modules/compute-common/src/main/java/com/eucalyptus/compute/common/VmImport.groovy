@@ -54,7 +54,6 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "GroupName")
   ArrayList<String> groupName = new ArrayList<String>();
-  @HttpEmbedded
   UserData userData;
   String instanceType;
   InstancePlacement placement;

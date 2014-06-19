@@ -36,18 +36,15 @@ import com.google.common.collect.Lists;
 public class GetMetricStatisticsType extends CloudWatchBackendMessage {
   String namespace;
   String metricName;
-  @HttpEmbedded
   Dimensions dimensions;
   Date startTime;
   Date endTime;
   Integer period;
-  @HttpEmbedded
   Statistics statistics;
   String unit;
   public GetMetricStatisticsType() {  }
 }
 public class DescribeAlarmsType extends CloudWatchBackendMessage {
-  @HttpEmbedded
   AlarmNames alarmNames;
   String alarmNamePrefix;
   String stateValue;
@@ -84,7 +81,6 @@ public class PutMetricDataType extends CloudWatchBackendMessage {
 }
 public class EnableAlarmActionsResponseType extends CloudWatchBackendMessage {
   public EnableAlarmActionsResponseType() {  }
-  @HttpEmbedded
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class ResponseMetadata extends EucalyptusData {
@@ -110,17 +106,13 @@ public class PutMetricAlarmType extends CloudWatchBackendMessage {
   String alarmName;
   String alarmDescription;
   Boolean actionsEnabled;
-  @HttpEmbedded
   @HttpParameterMapping(parameter="OKActions")
   ResourceList okActions;
-  @HttpEmbedded
   ResourceList alarmActions;
-  @HttpEmbedded
   ResourceList insufficientDataActions;
   String metricName;
   String namespace;
   String statistic;
-  @HttpEmbedded
   Dimensions dimensions;
   Integer period;
   String unit;
@@ -171,7 +163,6 @@ public class MetricData extends EucalyptusData {
   ArrayList<MetricDatum> member = new ArrayList<MetricDatum>();
 }
 public class EnableAlarmActionsType extends CloudWatchBackendMessage {
-  @HttpEmbedded
   AlarmNames alarmNames;
   public EnableAlarmActionsType() {  }
 }
@@ -193,7 +184,6 @@ public class DescribeAlarmsForMetricType extends CloudWatchBackendMessage {
   String metricName;
   String namespace;
   String statistic;
-  @HttpEmbedded
   Dimensions dimensions;
   Integer period;
   String unit;
@@ -213,11 +203,9 @@ public class ResourceList extends EucalyptusData {
 }
 public class MetricDatum extends EucalyptusData {
   String metricName;
-  @HttpEmbedded
   Dimensions dimensions;
   Date timestamp;
   Double value;
-  @HttpEmbedded
   StatisticSet statisticValues;
   String unit;
   public MetricDatum() {  }
@@ -247,7 +235,6 @@ public class Datapoints extends EucalyptusData {
   ArrayList<Datapoint> member = new ArrayList<Datapoint>();
 }
 public class DeleteAlarmsType extends CloudWatchBackendMessage {
-  @HttpEmbedded
   AlarmNames alarmNames;
   public DeleteAlarmsType() {  }
 }
@@ -284,7 +271,6 @@ public class Statistics extends EucalyptusData {
 public class ListMetricsType extends CloudWatchBackendMessage {
   String namespace;
   String metricName;
-  @HttpEmbedded
   DimensionFilters dimensions;
   String nextToken;
   public ListMetricsType() {  }
@@ -311,7 +297,6 @@ public class AlarmHistoryItems extends EucalyptusData {
   ArrayList<AlarmHistoryItem> member = new ArrayList<AlarmHistoryItem>();
 }
 public class DisableAlarmActionsType extends CloudWatchBackendMessage {
-  @HttpEmbedded
   AlarmNames alarmNames;
   public DisableAlarmActionsType() {  }
 }

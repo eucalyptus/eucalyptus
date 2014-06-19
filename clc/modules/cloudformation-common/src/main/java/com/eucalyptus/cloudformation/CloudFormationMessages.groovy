@@ -485,19 +485,16 @@ public class CancelUpdateStackResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class CreateStackType extends CloudFormationMessage {
-  @HttpEmbedded
   @JsonProperty("Capabilities")
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
   @JsonProperty("DisableRollback")
   Boolean disableRollback;
-  @HttpEmbedded
   @JsonProperty("NotificationARNs")
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList notificationARNs;
   @JsonProperty("OnFailure")
   String onFailure;
-  @HttpEmbedded
   @JsonProperty("Parameters")
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
@@ -507,7 +504,6 @@ public class CreateStackType extends CloudFormationMessage {
   String stackPolicyBody;
   @JsonProperty("StackPolicyURL")
   String stackPolicyURL;
-  @HttpEmbedded
   @JsonProperty("Tags")
   @JsonSerialize(using = TagsRemoveMemberSerializer.class, as=Tags.class)
   Tags tags;
@@ -597,7 +593,6 @@ public class DescribeStacksResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class EstimateTemplateCostType extends CloudFormationMessage {
-  @HttpEmbedded
   @JsonProperty("Parameters")
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
@@ -655,7 +650,6 @@ public class ListStackResourcesResponseType extends CloudFormationMessage {
 public class ListStacksType extends CloudFormationMessage {
   @JsonProperty("NextToken")
   String nextToken;
-  @HttpEmbedded
   @JsonProperty("StackStatusFilter")
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList stackStatusFilter;
@@ -683,11 +677,9 @@ public class SetStackPolicyResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class UpdateStackType extends CloudFormationMessage {
-  @HttpEmbedded
   @JsonProperty("Capabilities")
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
-  @HttpEmbedded
   @JsonProperty("Parameters")
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;

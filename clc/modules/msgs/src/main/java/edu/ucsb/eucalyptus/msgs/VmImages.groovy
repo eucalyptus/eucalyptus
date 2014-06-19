@@ -170,7 +170,6 @@ public class ModifyImageAttributeType extends VmImageMessage {
   ArrayList<String> productCodes = Lists.newArrayList()
 
   // Post 2010-06-15
-  @HttpEmbedded
   LaunchPermissionOperationType launchPermission
   @HttpParameterMapping( parameter = "Description.Value")
   String description

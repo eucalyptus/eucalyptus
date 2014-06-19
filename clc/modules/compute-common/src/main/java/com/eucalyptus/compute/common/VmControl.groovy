@@ -187,7 +187,6 @@ public class RunInstancesType extends VmControlMessage {
   ArrayList<String> groupSet = Lists.newArrayList() // Query binding
   @HttpParameterMapping (parameter = "SecurityGroupId")
   ArrayList<String> groupIdSet = Lists.newArrayList()  // Query binding and also SOAP binding before 2011-01-01
-  @HttpEmbedded
   ArrayList<GroupItemType> securityGroups = Lists.newArrayList() // Used in SOAP binding since 2011-01-01
   String additionalInfo;
   String userData;

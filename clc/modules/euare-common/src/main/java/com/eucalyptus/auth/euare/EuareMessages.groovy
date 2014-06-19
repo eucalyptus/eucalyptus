@@ -289,7 +289,6 @@ public class ListGroupsResponseType extends EuareMessage {
   public ListGroupsResponseType() {  }
 }
 public class ServerCertificateType extends EucalyptusData {
-  @HttpEmbedded
   ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   String certificateBody;
   String certificateChain;
