@@ -20,7 +20,8 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.eucalyptus.http.MappingHttpRequest
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import groovy.transform.CompileStatic;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -123,4 +124,42 @@ public class ObjectStorageRESTBindingTest {
 
 
     }
+	
+	@Test
+	public void testGetTarget() throws Exception {
+		String [] target = OSGUtil.getTarget("/bucket/object");
+		assert(target.length == 2);
+		assert("bucket".equals(target[0]));
+		assert("object".equals(target[1]));
+		
+		target = OSGUtil.getTarget("///bucket/object");
+		assert(target.length == 2);
+		assert("bucket".equals(target[0]));
+		assert("object".equals(target[1]));
+		
+		target = OSGUtil.getTarget("/bucket//object");
+		assert(target.length == 2);
+		assert("bucket".equals(target[0]));
+		assert("/object".equals(target[1]));
+		
+		target = OSGUtil.getTarget("//bucket/object//");
+		assert(target.length == 2);
+		assert("bucket".equals(target[0]));
+		assert("object//".equals(target[1]));
+		
+		target = OSGUtil.getTarget("///bucket///object//");
+		assert(target.length == 2);
+		assert("bucket".equals(target[0]));
+		assert("//object//".equals(target[1]));
+		
+		target = OSGUtil.getTarget("///bucket/");
+		assert(target.length == 1);
+		assert("bucket".equals(target[0]));
+		
+		target = OSGUtil.getTarget("///");
+		assert(target == null);
+		
+		target = OSGUtil.getTarget("/");
+		assert(target == null);
+	}
 }

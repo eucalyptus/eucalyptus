@@ -63,18 +63,17 @@
 package com.eucalyptus.objectstorage.util;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
+import com.google.common.base.Strings;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
@@ -84,7 +83,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Date;
 
 
 public class OSGUtil {
@@ -126,10 +124,19 @@ public class OSGUtil {
     }
 
     public static String[] getTarget(String operationPath) {
-        operationPath = operationPath.replaceAll("/{2,}", "/");
-        if (operationPath.startsWith("/"))
-            operationPath = operationPath.substring(1);
-        return operationPath.split("/");
+    	operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
+		if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
+			operationPath = operationPath.substring(1);
+		}
+		String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
+		if (parts != null) {
+			if(parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
+				return null;
+			} else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty, send only bucket
+				return new String [] {parts[0]};
+			}
+		}
+		return parts;
     }
 
     /**
