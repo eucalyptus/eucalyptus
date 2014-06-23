@@ -176,10 +176,7 @@ public class Upgrades {
     v3_4_0,
     v3_4_1,
     v3_4_2,
-<<<<<<< HEAD
-=======
     v3_4_3,
->>>>>>> origin/dev/mmunn1/EUCA-9569
     v4_0_0,
     v4_0_1;
     
