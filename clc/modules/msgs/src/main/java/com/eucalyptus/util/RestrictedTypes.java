@@ -232,11 +232,11 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( 1, allocator ).get( 0 );
   }
-  
+
   /**
    * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
    * the allocated resource cannot be parameterized in any way.
-   * 
+   *
    * @param <T> type to be allocated
    * @param quantity quantity to be allocated
    * @param allocator Supplier which performs allocation of a single unit.
@@ -244,9 +244,23 @@ public class RestrictedTypes {
    */
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocateUnitlessResources( findResourceClass( allocator ), quantity, allocator );
+  }
+
+  /**
+   * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   * 
+   * @param <T> type to be allocated
+   * @param rscType class for type to be allocated
+   * @param quantity quantity to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources( Class<?> rscType, Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
-    Class<?> rscType = findResourceClass( allocator );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
       Ats ats = findPolicyAnnotations( rscType, msgType );

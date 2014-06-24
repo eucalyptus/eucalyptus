@@ -138,6 +138,8 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
     }
   }
 
+  protected abstract AOP exampleWithUuid( String uuid );
+
   private String getNameFromScopeNameOrArn( final String scopeNameOrArn ) {
     final String scopeName;
     if ( scopeNameOrArn != null &&

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.compute.vpc;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import java.util.List;
+import java.util.Map;
+import org.hibernate.criterion.Criterion;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 /**
- * Groovy local AST annotation for addition of synthetic UUID field to classes in source unit.
+ *
  */
-@Target( ElementType.PACKAGE )
-@Retention( RetentionPolicy.RUNTIME )
-@GroovyASTTransformationClass( classes = GroovyAddClassUUIDASTTransformation.class )
-public @interface GroovyAddClassUUID {
+public interface Lister<AP extends AbstractPersistent & RestrictedType> {
+  <T> List<T> list( OwnerFullName ownerFullName,
+                    Criterion criterion,
+                    Map<String,String> aliases,
+                    Predicate<? super AP> filter,
+                    Function<? super AP,T> transform ) throws VpcMetadataException;
 }

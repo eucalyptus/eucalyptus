@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,27 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.compute.vpc;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
- * Groovy local AST annotation for addition of synthetic UUID field to classes in source unit.
+ *
  */
-@Target( ElementType.PACKAGE )
-@Retention( RetentionPolicy.RUNTIME )
-@GroovyASTTransformationClass( classes = GroovyAddClassUUIDASTTransformation.class )
-public @interface GroovyAddClassUUID {
+public class PersistenceVpcs extends VpcPersistenceSupport<CloudMetadata.VpcMetadata, Vpc> implements Vpcs {
+
+  public PersistenceVpcs( ) {
+    super( "vpc" );
+  }
+
+  @Override
+  protected Vpc exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return Vpc.exampleWithOwner( ownerFullName );
+  }
+
+  @Override
+  protected Vpc exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return Vpc.exampleWithName( ownerFullName, name );
+  }
 }

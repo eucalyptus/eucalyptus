@@ -66,12 +66,19 @@ package edu.ucsb.eucalyptus.msgs;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpValue
+import com.google.common.base.Function
+import com.google.common.collect.Lists
+import groovy.transform.Canonical
 
 class VpcMessage extends EucalyptusMessage {
 }
 // ****************************** TODO ************************************
 // * Everything below should be exactly the same in the common VPC.groovy *
 // ****************************** TODO ************************************
+interface VpcTagged {
+  ResourceTagSetType getTagSet( )
+  void setTagSet( ResourceTagSetType tags )
+}
 class DescribeVpcAttributeType extends VpcMessage {
   String vpcId;
   DescribeVpcAttributeType() {  }
@@ -98,6 +105,22 @@ class NetworkInterfaceAttachmentType extends EucalyptusData {
   Date attachTime;
   Boolean deleteOnTermination;
   NetworkInterfaceAttachmentType() {  }
+
+  NetworkInterfaceAttachmentType(
+      final String attachmentId,
+      final String instanceId,
+      final String instanceOwnerId,
+      final Integer deviceIndex,
+      final Date attachTime,
+      final Boolean deleteOnTermination) {
+    this.attachmentId = attachmentId
+    this.instanceId = instanceId
+    this.instanceOwnerId = instanceOwnerId
+    this.deviceIndex = deviceIndex
+    this.status = 'attached'
+    this.attachTime = attachTime
+    this.deleteOnTermination = deleteOnTermination
+  }
 }
 class DescribeSubnetsResponseType extends VpcMessage {
   SubnetSetType subnetSet = new SubnetSetType();
@@ -189,7 +212,7 @@ class DeleteInternetGatewayType extends VpcMessage {
   String internetGatewayId;
   DeleteInternetGatewayType() {  }
 }
-class VpcType extends VpcMessage {
+class VpcType extends EucalyptusData implements VpcTagged {
   String vpcId;
   String state;
   String cidrBlock;
@@ -197,7 +220,24 @@ class VpcType extends VpcMessage {
   ResourceTagSetType tagSet;
   String instanceTenancy;
   Boolean isDefault;
-  VpcType() {  }
+  VpcType () { }
+
+  VpcType( final String vpcId,
+           final String state,
+           final String cidrBlock,
+           final String dhcpOptionsId,
+           final Boolean isDefault ) {
+    this.vpcId = vpcId
+    this.state = state
+    this.cidrBlock = cidrBlock
+    this.dhcpOptionsId = dhcpOptionsId
+    this.instanceTenancy = 'default'
+    this.isDefault = isDefault
+  }
+
+  static Function<VpcType, String> id( ) {
+    { VpcType vpc -> vpc.vpcId } as Function<VpcType, String>
+  }
 }
 class RouteSetType extends EucalyptusData {
   RouteSetType() {  }
@@ -249,6 +289,14 @@ class NetworkAclAssociationType extends VpcMessage {
   String networkAclId;
   String subnetId;
   NetworkAclAssociationType() {  }
+
+  NetworkAclAssociationType(final String networkAclAssociationId,
+                            final String networkAclId,
+                            final String subnetId) {
+    this.networkAclAssociationId = networkAclAssociationId
+    this.networkAclId = networkAclId
+    this.subnetId = subnetId
+  }
 }
 class DescribeDhcpOptionsResponseType extends VpcMessage {
   DhcpOptionsSetType dhcpOptionsSet = new DhcpOptionsSetType();
@@ -283,7 +331,7 @@ class DescribeInternetGatewaysResponseType extends VpcMessage {
   InternetGatewaySetType internetGatewaySet = new InternetGatewaySetType();
   DescribeInternetGatewaysResponseType() {  }
 }
-class SubnetType extends VpcMessage {
+class SubnetType extends EucalyptusData implements VpcTagged {
   String subnetId;
   String state;
   String vpcId;
@@ -293,7 +341,31 @@ class SubnetType extends VpcMessage {
   Boolean defaultForAz;
   Boolean mapPublicIpOnLaunch;
   ResourceTagSetType tagSet;
+
   SubnetType() {  }
+
+  SubnetType(
+      final String subnetId,
+      final String state,
+      final String vpcId,
+      final String cidrBlock,
+      final Integer availableIpAddressCount,
+      final String availabilityZone,
+      final Boolean defaultForAz,
+      final Boolean mapPublicIpOnLaunch ) {
+    this.subnetId = subnetId
+    this.state = state
+    this.vpcId = vpcId
+    this.cidrBlock = cidrBlock
+    this.availableIpAddressCount = availableIpAddressCount
+    this.availabilityZone = availabilityZone
+    this.defaultForAz = defaultForAz
+    this.mapPublicIpOnLaunch = mapPublicIpOnLaunch
+  }
+
+  static Function<SubnetType, String> id( ) {
+    { SubnetType subnet -> subnet.subnetId } as Function<SubnetType, String>
+  }
 }
 class DescribeRouteTablesResponseType extends VpcMessage {
   RouteTableSetType routeTableSet = new RouteTableSetType();
@@ -494,11 +566,15 @@ class DescribeNetworkAclsType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeNetworkAclsType() {  }
+
+  Collection<String> networkAclIds( ) {
+    networkAclIdSet?.item?.collect{ NetworkAclIdSetItemType item -> item?.networkAclId }?:[]
+  }
 }
 class DeleteCustomerGatewayResponseType extends VpcMessage {
   DeleteCustomerGatewayResponseType() {  }
 }
-class NetworkInterfaceType extends VpcMessage {
+class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
   String networkInterfaceId;
   String subnetId;
   String vpcId;
@@ -512,12 +588,46 @@ class NetworkInterfaceType extends VpcMessage {
   String privateIpAddress;
   String privateDnsName;
   Boolean sourceDestCheck;
-  GroupSetType groupSet;
+  GroupSetType groupSet = new GroupSetType();
   NetworkInterfaceAttachmentType attachment;
   NetworkInterfaceAssociationType association;
   ResourceTagSetType tagSet;
-  NetworkInterfacePrivateIpAddressesSetType privateIpAddressesSet;
+  NetworkInterfacePrivateIpAddressesSetType privateIpAddressesSet = new NetworkInterfacePrivateIpAddressesSetType( );
   NetworkInterfaceType() {  }
+
+  NetworkInterfaceType(
+      final String networkInterfaceId,
+      final String subnetId,
+      final String vpcId,
+      final String availabilityZone,
+      final String description,
+      final String ownerId,
+      final String requesterId,
+      final Boolean requesterManaged,
+      final String status,
+      final String macAddress,
+      final String privateIpAddress,
+      final String privateDnsName,
+      final Boolean sourceDestCheck,
+      final NetworkInterfaceAttachmentType attachment ) {
+    this.networkInterfaceId = networkInterfaceId
+    this.subnetId = subnetId
+    this.vpcId = vpcId
+    this.availabilityZone = availabilityZone
+    this.description = description
+    this.ownerId = ownerId
+    this.requesterId = requesterId
+    this.requesterManaged = requesterManaged
+    this.status = status
+    this.macAddress = macAddress
+    this.privateIpAddress = privateIpAddress
+    this.privateDnsName = privateDnsName
+    this.sourceDestCheck = sourceDestCheck
+    this.attachment = attachment;
+  }
+  static Function<NetworkInterfaceType, String> id( ) {
+    { NetworkInterfaceType networkInterface -> networkInterface.networkInterfaceId } as Function<NetworkInterfaceType, String>
+  }
 }
 class CustomerGatewayIdSetItemType extends EucalyptusData {
   @HttpValue
@@ -550,6 +660,10 @@ class DescribeNetworkInterfacesType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeNetworkInterfacesType() {  }
+
+  Collection<String> networkInterfaceIds( ) {
+    networkInterfaceIdSet?.item?.collect{ NetworkInterfaceIdSetItemType item -> item?.networkInterfaceId }?:[]
+  }
 }
 class ReplaceRouteTableAssociationResponseType extends VpcMessage {
   String newAssociationId;
@@ -642,6 +756,10 @@ class DescribeSubnetsType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeSubnetsType() {  }
+
+  Collection<String> subnetIds( ) {
+    subnetSet?.item?.collect{ SubnetIdSetItemType item -> item?.subnetId }?:[]
+  }
 }
 class AccountAttributeSetType extends EucalyptusData {
   AccountAttributeSetType() {  }
@@ -676,6 +794,29 @@ class NetworkAclEntryType extends VpcMessage {
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
   NetworkAclEntryType() {  }
+
+  NetworkAclEntryType(
+      final Integer ruleNumber,
+      final String protocol,
+      final String ruleAction,
+      final Boolean egress,
+      final String cidrBlock,
+      final Integer icmpCode,
+      final Integer icmpType,
+      final Integer portRangeFrom,
+      final Integer portRangeTo ) {
+    this.ruleNumber = ruleNumber
+    this.protocol = protocol
+    this.ruleAction = ruleAction
+    this.egress = egress
+    this.cidrBlock = cidrBlock
+    if ( icmpCode ) {
+      this.icmpTypeCode = new IcmpTypeCodeType( code: icmpCode, type: icmpType )
+    }
+    if ( portRangeFrom ) {
+      this.portRange = new PortRangeType( from: portRangeFrom, to: portRangeTo )
+    }
+  }
 }
 class VpnConnectionOptionsResponseType extends EucalyptusData {
   Boolean staticRoutesOnly;
@@ -686,6 +827,7 @@ class VpcPeeringConnectionStateReasonType extends EucalyptusData {
   String message;
   VpcPeeringConnectionStateReasonType() {  }
 }
+@Canonical
 class ResourceTagSetItemType extends EucalyptusData {
   String key;
   String value;
@@ -717,8 +859,16 @@ class InternetGatewayIdSetType extends EucalyptusData {
 }
 class DhcpConfigurationItemType extends EucalyptusData {
   String key;
+  @HttpEmbedded
   DhcpValueSetType valueSet;
   DhcpConfigurationItemType() {  }
+  DhcpConfigurationItemType( String key, List<String> values ) {
+    this.key = key
+    this.valueSet = new DhcpValueSetType( item: Lists.newArrayList( values.collect{ String value -> new DhcpValueType( value: value ) } ) )
+  }
+  List<String> values( ) {
+    valueSet?.item?.collect{ DhcpValueType valueType -> valueType.value }?:[]
+  }
 }
 class PropagatingVgwType extends EucalyptusData {
   String gatewayId;
@@ -749,6 +899,10 @@ class DescribeDhcpOptionsType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeDhcpOptionsType() {  }
+
+  Collection<String> dhcpOptionsIds( ) {
+    dhcpOptionsSet?.item?.collect{ DhcpOptionsIdSetItemType item -> item?.dhcpOptionsId }?:[]
+  }
 }
 class NetworkAclSetType extends EucalyptusData {
   NetworkAclSetType() {  }
@@ -781,6 +935,10 @@ class DescribeInternetGatewaysType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeInternetGatewaysType() {  }
+
+  Collection<String> internetGatewayIds( ) {
+    internetGatewayIdSet?.item?.collect{ InternetGatewayIdSetItemType item -> item?.internetGatewayId }?:[]
+  }
 }
 class ModifyNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
@@ -795,17 +953,29 @@ class DhcpOptionsIdSetItemType extends EucalyptusData {
   String dhcpOptionsId;
   DhcpOptionsIdSetItemType() {  }
 }
-class InternetGatewayType extends VpcMessage {
+class InternetGatewayType extends EucalyptusData implements VpcTagged {
   String internetGatewayId;
-  InternetGatewayAttachmentSetType attachmentSet;
+  InternetGatewayAttachmentSetType attachmentSet = new InternetGatewayAttachmentSetType( );
   ResourceTagSetType tagSet;
-  InternetGatewayType() {  }
+  InternetGatewayType( ) {  }
+  InternetGatewayType( String internetGatewayId, String attachedVpcId ) {
+    this.internetGatewayId = internetGatewayId
+    if ( attachedVpcId ) {
+      attachmentSet.item.add(
+          new InternetGatewayAttachmentType( vpcId: attachedVpcId, state: 'available')
+      )
+    }
+  }
+  static Function<InternetGatewayType, String> id( ) {
+    { InternetGatewayType internetGateway -> internetGateway.internetGatewayId } as Function<InternetGatewayType, String>
+  }
 }
 class VpnConnectionSetType extends EucalyptusData {
   VpnConnectionSetType() {  }
   ArrayList<VpnConnectionType> item = new ArrayList<VpnConnectionType>();
 }
 class CreateDhcpOptionsType extends VpcMessage {
+  @HttpEmbedded
   DhcpConfigurationItemSetType dhcpConfigurationSet;
   CreateDhcpOptionsType() {  }
 }
@@ -822,6 +992,8 @@ class DeleteDhcpOptionsResponseType extends VpcMessage {
 }
 class DhcpValueSetType extends EucalyptusData {
   DhcpValueSetType() {  }
+  @HttpEmbedded( multiple = true )
+  @HttpParameterMapping( parameter = "Value" )
   ArrayList<DhcpValueType> item = new ArrayList<DhcpValueType>();
 }
 class RouteTableAssociationType extends VpcMessage {
@@ -830,6 +1002,17 @@ class RouteTableAssociationType extends VpcMessage {
   String subnetId;
   Boolean main;
   RouteTableAssociationType() {  }
+
+  RouteTableAssociationType(
+      final String routeTableAssociationId,
+      final String routeTableId,
+      final String subnetId,
+      final Boolean main ) {
+    this.routeTableAssociationId = routeTableAssociationId
+    this.routeTableId = routeTableId
+    this.subnetId = subnetId
+    this.main = main
+  }
 }
 class DeleteRouteTableType extends VpcMessage {
   String routeTableId;
@@ -859,11 +1042,19 @@ class AccountAttributeValueSetType extends EucalyptusData {
   AccountAttributeValueSetType() {  }
   ArrayList<AccountAttributeValueSetItemType> item = new ArrayList<AccountAttributeValueSetItemType>();
 }
-class DhcpOptionsType extends VpcMessage {
+class DhcpOptionsType extends EucalyptusData implements VpcTagged {
   String dhcpOptionsId;
   DhcpConfigurationItemSetType dhcpConfigurationSet;
   ResourceTagSetType tagSet;
   DhcpOptionsType() {  }
+  DhcpOptionsType( String dhcpOptionsId, Collection<DhcpConfigurationItemType> configuration ) {
+    this.dhcpOptionsId = dhcpOptionsId
+    this.dhcpConfigurationSet = new DhcpConfigurationItemSetType( configuration )
+  }
+
+  static Function<DhcpOptionsType, String> id( ) {
+    { DhcpOptionsType dhcpOptionsType -> dhcpOptionsType.dhcpOptionsId } as Function<DhcpOptionsType, String>
+  }
 }
 class ModifyVpcAttributeType extends VpcMessage {
   String vpcId;
@@ -880,7 +1071,7 @@ class AttributeValueType extends EucalyptusData {
   String value;
   AttributeValueType() {  }
 }
-class NetworkAclType extends VpcMessage {
+class NetworkAclType extends EucalyptusData implements VpcTagged {
   String networkAclId;
   String vpcId;
   Boolean _default;
@@ -888,6 +1079,22 @@ class NetworkAclType extends VpcMessage {
   NetworkAclAssociationSetType associationSet;
   ResourceTagSetType tagSet;
   NetworkAclType() {  }
+
+  NetworkAclType( final String networkAclId,
+                  final String vpcId,
+                  final Boolean _default,
+                  final Collection<NetworkAclEntryType> entries,
+                  final Collection<NetworkAclAssociationType> associations ) {
+    this.networkAclId = networkAclId
+    this.vpcId = vpcId
+    this._default = _default
+    this.entrySet = new NetworkAclEntrySetType( item: Lists.newArrayList( entries ) )
+    this.associationSet = new NetworkAclAssociationSetType( item: Lists.newArrayList( associations ) )
+  }
+
+  static Function<NetworkAclType, String> id( ) {
+    { NetworkAclType networkAcl -> networkAcl.networkAclId } as Function<NetworkAclType, String>
+  }
 }
 class CreateCustomerGatewayType extends VpcMessage {
   String type;
@@ -1001,7 +1208,7 @@ class CreateNetworkAclType extends VpcMessage {
   String vpcId;
   CreateNetworkAclType() {  }
 }
-class RouteTableType extends VpcMessage {
+class RouteTableType extends EucalyptusData implements VpcTagged {
   String routeTableId;
   String vpcId;
   RouteSetType routeSet;
@@ -1009,6 +1216,22 @@ class RouteTableType extends VpcMessage {
   PropagatingVgwSetType propagatingVgwSet;
   ResourceTagSetType tagSet;
   RouteTableType() {  }
+
+  RouteTableType( final String routeTableId,
+                  final String vpcId,
+                  final Collection<RouteType> routes,
+                  final Collection<RouteTableAssociationType> associations ) {
+    this.routeTableId = routeTableId
+    this.vpcId = vpcId
+    this.routeSet = new RouteSetType( item: Lists.newArrayList( routes ) )
+    this.associationSet = new RouteTableAssociationSetType( item: Lists.newArrayList( associations ) )
+    this.propagatingVgwSet = new PropagatingVgwSetType( )
+  }
+
+  static Function<RouteTableType, String> id( ) {
+    { RouteTableType routeTable -> routeTable.routeTableId } as Function<RouteTableType, String>
+  }
+
 }
 class AccountAttributeNameSetItemType extends EucalyptusData {
   String attributeName;
@@ -1102,6 +1325,7 @@ class CreateVpcPeeringConnectionResponseType extends VpcMessage {
   CreateVpcPeeringConnectionResponseType() {  }
 }
 class DhcpValueType extends EucalyptusData {
+  @HttpValue
   String value;
   DhcpValueType() {  }
 }
@@ -1112,6 +1336,10 @@ class DescribeRouteTablesType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeRouteTablesType() {  }
+
+  Collection<String> routeTableIds( ) {
+    routeTableIdSet?.item?.collect{ RouteTableIdSetItemType item -> item?.routeTableId }?:[]
+  }
 }
 class VpnGatewayIdSetType extends EucalyptusData {
   VpnGatewayIdSetType() {  }
@@ -1168,6 +1396,10 @@ class DescribeVpcsType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeVpcsType() {  }
+
+  Collection<String> vpcIds( ) {
+    vpcSet?.item?.collect{ VpcIdSetItemType item -> item?.vpcId }?:[]
+  }
 }
 class DeleteVpnGatewayType extends VpcMessage {
   String vpnGatewayId;
@@ -1256,6 +1488,16 @@ class RouteType extends VpcMessage {
   String state;
   String origin;
   RouteType() {  }
+
+  RouteType(final String destinationCidrBlock,
+            final String gatewayId,
+            final String state,
+            final String origin) {
+    this.destinationCidrBlock = destinationCidrBlock
+    this.gatewayId = gatewayId
+    this.state = state
+    this.origin = origin
+  }
 }
 class ValueSetType extends EucalyptusData {
   ValueSetType() {  }
@@ -1263,5 +1505,10 @@ class ValueSetType extends EucalyptusData {
 }
 class DhcpConfigurationItemSetType extends EucalyptusData {
   DhcpConfigurationItemSetType() {  }
+  DhcpConfigurationItemSetType( final Collection<DhcpConfigurationItemType> configuration ) {
+    item.addAll( configuration );
+  }
+  @HttpEmbedded( multiple = true )
+  @HttpParameterMapping( parameter = "DhcpConfiguration" )
   ArrayList<DhcpConfigurationItemType> item = new ArrayList<DhcpConfigurationItemType>();
 }

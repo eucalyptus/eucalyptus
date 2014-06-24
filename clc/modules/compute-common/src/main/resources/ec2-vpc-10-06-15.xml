@@ -185,7 +185,6 @@
         <value name="acceptedRouteCount" field="acceptedRouteCount" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.VpcType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="vpcId" field="vpcId" usage="required"/>
         <value name="state" field="state" usage="optional"/>
         <value name="cidrBlock" field="cidrBlock" usage="optional"/>
@@ -195,7 +194,6 @@
         <value name="isDefault" field="isDefault" usage="optional"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.SubnetType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="subnetId" field="subnetId" usage="required"/>
         <value name="state" field="state" usage="optional"/>
         <value name="vpcId" field="vpcId" usage="optional"/>
@@ -294,7 +292,6 @@
         <structure name="valueSet" field="valueSet" usage="required" type="com.eucalyptus.compute.common.DhcpValueSetType"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.DhcpOptionsType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="dhcpOptionsId" field="dhcpOptionsId" usage="required"/>
         <structure name="dhcpConfigurationSet" field="dhcpConfigurationSet" usage="required" type="com.eucalyptus.compute.common.DhcpConfigurationItemSetType"/>
         <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
@@ -560,7 +557,6 @@
         <value name="state" field="state" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.InternetGatewayType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
         <structure name="attachmentSet" field="attachmentSet" usage="required" type="com.eucalyptus.compute.common.InternetGatewayAttachmentSetType"/>
         <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
@@ -662,7 +658,6 @@
         <value name="gatewayId" field="gatewayId" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.RouteTableType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="routeTableId" field="routeTableId" usage="required"/>
         <value name="vpcId" field="vpcId" usage="required"/>
         <structure name="routeSet" field="routeSet" usage="required" type="com.eucalyptus.compute.common.RouteSetType"/>
@@ -824,7 +819,6 @@
         <value name="subnetId" field="subnetId" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkAclType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="networkAclId" field="networkAclId" usage="required"/>
         <value name="vpcId" field="vpcId" usage="required"/>
         <value name="default" field="_default" usage="required"/>
@@ -950,7 +944,6 @@
         </structure>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkInterfaceType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
         <value name="subnetId" field="subnetId" usage="optional"/>
         <value name="vpcId" field="vpcId" usage="optional"/>

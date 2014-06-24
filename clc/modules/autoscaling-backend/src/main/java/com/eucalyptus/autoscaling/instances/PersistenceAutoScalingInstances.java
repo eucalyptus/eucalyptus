@@ -303,11 +303,6 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
     }
 
     @Override
-    protected AutoScalingInstance exampleWithUuid( final String uuid ) {
-      return AutoScalingInstance.withUuid( uuid );
-    }
-
-    @Override
     protected AutoScalingInstance exampleWithOwner( final OwnerFullName ownerFullName ) {
       return AutoScalingInstance.withOwner( ownerFullName );
     }

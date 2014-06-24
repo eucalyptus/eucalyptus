@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.compute.vpc;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AbstractPersistentSupport;
+import com.eucalyptus.util.RestrictedType;
 
 /**
- * Groovy local AST annotation for addition of synthetic UUID field to classes in source unit.
+ *
  */
-@Target( ElementType.PACKAGE )
-@Retention( RetentionPolicy.RUNTIME )
-@GroovyASTTransformationClass( classes = GroovyAddClassUUIDASTTransformation.class )
-public @interface GroovyAddClassUUID {
+public abstract class VpcPersistenceSupport<RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType> extends AbstractPersistentSupport<RT, AP, VpcMetadataException> {
+
+  protected VpcPersistenceSupport( final String typeDescription ) {
+    super( typeDescription );
+  }
+
+  @Override
+  protected VpcMetadataException notFoundException( final String message, final Throwable cause ) {
+    return new VpcMetadataNotFoundException( message, cause );
+  }
+
+  @Override
+  protected VpcMetadataException metadataException( final String message, final Throwable cause ) {
+    return new VpcMetadataException( message, cause );
+  }
+
 }

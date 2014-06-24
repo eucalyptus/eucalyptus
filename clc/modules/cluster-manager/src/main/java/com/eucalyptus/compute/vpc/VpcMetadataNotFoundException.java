@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package edu.ucsb.eucalyptus.msgs;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+package com.eucalyptus.compute.vpc;
 
 /**
- * Groovy local AST annotation for addition of synthetic UUID field to classes in source unit.
+ *
  */
-@Target( ElementType.PACKAGE )
-@Retention( RetentionPolicy.RUNTIME )
-@GroovyASTTransformationClass( classes = GroovyAddClassUUIDASTTransformation.class )
-public @interface GroovyAddClassUUID {
+public class VpcMetadataNotFoundException extends VpcMetadataException {
+  private static final long serialVersionUID = 1L;
+
+  public VpcMetadataNotFoundException( final String message ) {
+    super( message );
+  }
+
+  public VpcMetadataNotFoundException( final String message, final Throwable cause ) {
+    super( message, cause );
+  }
 }

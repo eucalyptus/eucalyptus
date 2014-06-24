@@ -134,11 +134,6 @@ public class PersistenceScalingActivities extends ScalingActivities {
     }
 
     @Override
-    protected ScalingActivity exampleWithUuid( final String uuid ) {
-      return ScalingActivity.withUuid( uuid );
-    }
-
-    @Override
     protected ScalingActivity exampleWithOwner( final OwnerFullName ownerFullName ) {
       return ScalingActivity.withOwner( ownerFullName );
     }
