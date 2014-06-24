@@ -81,9 +81,14 @@ import edu.ucsb.eucalyptus.util.ConfigParser;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class StorageProperties {
+    private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
-	private static Logger LOG = Logger.getLogger( StorageProperties.class );
-
+    /*
+    Threshold after which the SC will cleanup the failed volume record by deleting it.
+    This value ensures that the SC can send the volume state to the CLC possibly multiple times so that
+    a single missed message will not cause the CLC to hit its much longer timeout for volume state (2 hrs).
+     */
+    public static final long FAILED_STATE_CLEANUP_THRESHOLD_MS = 10 * 60 * 1000l; //10 minutes
 	public static final String SERVICE_NAME = "StorageController";
 	public static final String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";

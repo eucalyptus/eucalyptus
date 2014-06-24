@@ -74,7 +74,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -83,11 +82,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
-import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.entities.VolumeExportRecord;
@@ -171,7 +167,19 @@ public class BlockStorageController {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
-	
+
+    //Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
+    static boolean setUseTestingDelegateManager(boolean enableDelegate) {
+        if(enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to use delegating storage manager for testing");
+            blockManager = new StorageManagerTestingProxy(blockManager);
+        } else if(!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to NOT use delegating storage manager anymore");
+            blockManager = ((StorageManagerTestingProxy)blockManager).getDelegateStorageManager();
+        }
+        return enableDelegate;
+    }
+
 	//TODO: zhill, this can be added later for snapshot abort capabilities
 	//static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
@@ -183,7 +191,8 @@ public class BlockStorageController {
 		StorageProperties.updateStorageHost();
 
 		try {
-			blockManager = StorageManagers.getInstance();
+            blockManager = StorageManagers.getInstance();
+
 			if(blockManager != null) {
 				blockManager.initialize();
 			}
@@ -1127,15 +1136,18 @@ public class BlockStorageController {
 			}
 		}
 
+
 		ArrayList<StorageVolume> volumes = reply.getVolumeSet();
 		for(VolumeInfo volumeInfo: volumeInfos) {
 			volumes.add(convertVolumeInfo(volumeInfo));
-			if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
+            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
+                    (System.currentTimeMillis() - volumeInfo.getLastUpdateTimestamp().getTime() > StorageProperties.FAILED_STATE_CLEANUP_THRESHOLD_MS)) {
 				LOG.warn( "Failed volume, cleaning it: " + volumeInfo.getVolumeId() );
 				checker.cleanFailedVolume(volumeInfo.getVolumeId());
-			} 
+			}
 		}
-		db.commit();
+
+        db.commit();
 		return reply;
 	}
 
@@ -1686,7 +1698,7 @@ public class BlockStorageController {
 						}
 
 						// Create the volume from the snapshot, this can happen in parallel.
-						size = blockManager.createVolume(volumeId, snapshotId, size);
+                        size = blockManager.createVolume(volumeId, snapshotId, size);
 					} else {
 						// Snapshot does exist on this SC. Repeated logic, fix it!
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
