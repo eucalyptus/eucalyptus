@@ -82,6 +82,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.persistence.RollbackException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
@@ -1286,6 +1287,8 @@ public class WalrusImageManager {
 											throw new NoSuchEntityException(objectKey);
 										}
 										db2.commit();
+									} catch (RollbackException re) {
+										logWithContext("Failed to commit ImageCacheInfo UseCount, record may already be updated or removed: " + re.getMessage(), Level.DEBUG, correlationId, accountNumber);
 									} finally {
 										db2.rollback();
 									}
