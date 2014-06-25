@@ -99,7 +99,9 @@ public class HmacHandler extends MessageStackHandler {
       final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       final Map<String,String> parameters = httpRequest.getParameters();
       final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+      httpRequest.getContent( ).markReaderIndex( );
       httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
+      httpRequest.getContent( ).resetReaderIndex( );
       final String body = bos.toString();
       bos.close( );
       final Function<String,List<String>> headerLookup = SignatureHandlerUtils.headerLookup( httpRequest );
