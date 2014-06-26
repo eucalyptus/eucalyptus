@@ -92,6 +92,7 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -700,6 +701,24 @@ public class VmControl {
         } catch ( final EucalyptusCloudException ex ) {
           throw ex;
         }
+      }
+
+      for(final String instanceId : identifiers){
+        final VmInstance vm = VmInstances.lookup( instanceId );
+        // EUCA-9596: forget windows password
+        if(ImageMetadata.Platform.windows.name().equals(vm.getPlatform())){
+          try ( final TransactionResource db =
+              Entities.transactionFor( VmInstance.class )){
+            try{
+              final VmInstance updatedVm = Entities.uniqueResult(vm);
+              updatedVm.updatePasswordData(null);
+              Entities.persist(updatedVm);
+              db.commit();
+            }catch(final Exception ex){
+              throw new EucalyptusCloudException("Failed to erase Windows password");
+            }
+          }
+        }   
       }
       
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
