@@ -63,19 +63,21 @@
 package com.eucalyptus.walrus.entities;
 
 import java.io.File;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
-import com.eucalyptus.configurable.ConfigurableFieldType;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
 @Entity
@@ -209,48 +211,62 @@ public class WalrusInfo extends AbstractPersistent {
 	}
 
 	private static int estimateWalrusCapacity() {
-    //Load the defaults.
-    //Try to determine available space on the bucket root directory.
-    int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
-    try {
-      long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); //keep 1GB at least reserved.            
+		// Load the defaults.
+		// Try to determine available space on the bucket root directory.
+		int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
+		try {
+			long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); // keep 1GB at least reserved.
 
-      //Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
-      //zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while 
-      capacity = (int)(bytesAvailable / WalrusProperties.G);
-      capacity = (capacity > 1 ? capacity - 1 : capacity);
-      
-    } catch(Exception e) {
-      LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using WalrusBackend default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
-    }
-    return capacity;
+			// Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
+			// zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while
+			capacity = (int) (bytesAvailable / WalrusProperties.G);
+			capacity = (capacity > 1 ? capacity - 1 : capacity);
+
+		} catch (Exception e) {
+			LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage()
+					+ ". Using WalrusBackend default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+		}
+		return capacity;
+	}
+	
+	@PreUpdate
+	public void preUpdateChecks() {
+		// cover the upgrade case
+		if (this.getStorageMaxTotalCapacity() == null) {
+			this.setStorageMaxTotalCapacity(estimateWalrusCapacity());
+		}
+		if (this.getBucketNamesRequireDnsCompliance() == null) {
+			this.setBucketNamesRequireDnsCompliance(new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
+		}
+	}
+	
+	private static WalrusInfo generateDefault() {
+		return new WalrusInfo(WalrusProperties.NAME, WalrusProperties.bucketRootDirectory, WalrusProperties.MAX_BUCKETS_PER_ACCOUNT,
+				(int) (WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M), WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE, estimateWalrusCapacity(),
+				new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
 	}
 	
 	public static WalrusInfo getWalrusInfo() {
-		EntityWrapper<WalrusInfo> db = EntityWrapper.get(WalrusInfo.class);
 		WalrusInfo walrusInfo = null;
 		try {
-			walrusInfo = db.getUnique(new WalrusInfo());
-			// cover the upgrade case
-			if (walrusInfo.getStorageMaxTotalCapacity() == null) {
-			  walrusInfo.setStorageMaxTotalCapacity(estimateWalrusCapacity());
+			walrusInfo = Transactions.find(new WalrusInfo());
+		} catch (Exception e) {
+			LOG.warn("Walrus configuration not found. Loading defaults.");
+			try {
+				walrusInfo = Transactions.saveDirect(generateDefault());
+			} catch (Exception e1) {
+				try {
+					walrusInfo = Transactions.find(new WalrusInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve WalrusInfo entity");
+				}
 			}
-            if (walrusInfo.getBucketNamesRequireDnsCompliance() == null) {
-                walrusInfo.setBucketNamesRequireDnsCompliance(
-                        new Boolean( WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE ));
-            }
-		} catch(Exception ex) {
-			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
-					WalrusProperties.bucketRootDirectory, 
-					WalrusProperties.MAX_BUCKETS_PER_ACCOUNT, 
-					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
-					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,
-					estimateWalrusCapacity(),
-                    new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
-			db.add(walrusInfo);     
-		} finally {
-			db.commit();
 		}
+
+		if (walrusInfo == null) {
+			walrusInfo = generateDefault();
+		}
+
 		return walrusInfo;
 	}
 }
