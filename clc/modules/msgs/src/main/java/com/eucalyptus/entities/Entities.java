@@ -110,6 +110,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -1274,7 +1276,26 @@ public class Entities {
     }
     
   }
-  
+  public static <T> Supplier<T> asTransaction( final Supplier<T> supplier ) {
+    final List<Class> generics = Classes.genericsToClasses( supplier );
+    for ( final Class<?> type : generics ) {
+      if ( PersistenceContexts.isPersistentClass( type ) ) {
+        return asTransaction( type, supplier );
+      }
+    }
+    throw new IllegalArgumentException( "Failed to find generics for provided supplier, cannot make into transaction: " + Threads.currentStackString( ) );
+  }
+
+  public static <E, T> Supplier<T> asTransaction( final Class<E> type, final Supplier<T> supplier ) {
+    return asTransaction( type, supplier, CONCURRENT_UPDATE_RETRIES );
+  }
+
+  public static <E, T> Supplier<T> asTransaction( final Class<E> type, final Supplier<T> supplier, final Integer retries ) {
+    final Function<Object, T> functionalized = Functions.forSupplier( supplier );
+    final Function<Object, T> transactionalized = Entities.asTransaction( type, functionalized, retries );
+    return Suppliers.compose( transactionalized, Suppliers.ofInstance( Void.class ) );
+  }
+
   public static <E, T> Predicate<T> asTransaction( final Predicate<T> predicate ) {
     final List<Class> generics = Classes.genericsToClasses( predicate );
     for ( final Class<?> type : generics ) {
