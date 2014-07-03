@@ -81,7 +81,7 @@ public class WorkflowType extends UserMetadata<WorkflowType.Status> implements W
   @Column( name = "default_child_policy" )
   private String defaultChildPolicy;
 
-  @Column( name = "deprecation_date" )
+  @Column( name = "deprecation_timestamp" )
   @Temporal( TemporalType.TIMESTAMP )
   private Date deprecationTimestamp;
 

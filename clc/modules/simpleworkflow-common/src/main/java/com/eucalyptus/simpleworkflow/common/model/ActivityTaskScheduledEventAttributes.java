@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskScheduled</code> event.
  * </p>
  */
-public class ActivityTaskScheduledEventAttributes implements Serializable {
+public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The type of the activity task.
@@ -577,6 +577,11 @@ public class ActivityTaskScheduledEventAttributes implements Serializable {
     public ActivityTaskScheduledEventAttributes withHeartbeatTimeout(String heartbeatTimeout) {
         this.heartbeatTimeout = heartbeatTimeout;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskScheduledEventAttributes( this );
     }
 
     /**

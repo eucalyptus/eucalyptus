@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>DecisionTaskScheduled</code> event.
  * </p>
  */
-public class DecisionTaskScheduledEventAttributes implements Serializable {
+public class DecisionTaskScheduledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The name of the task list in which the decision task was scheduled.
@@ -161,7 +161,12 @@ public class DecisionTaskScheduledEventAttributes implements Serializable {
         return this;
     }
 
-    /**
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+      historyEvent.setDecisionTaskScheduledEventAttributes( this );
+    }
+
+   /**
      * Returns a string representation of this object; useful for testing and
      * debugging.
      *

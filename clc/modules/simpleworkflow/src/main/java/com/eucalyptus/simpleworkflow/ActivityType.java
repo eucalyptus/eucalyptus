@@ -84,7 +84,7 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
   @Column( name = "default_task_start_to_close_timeout", updatable = false  )
   private Integer defaultTaskStartToCloseTimeout;
 
-  @Column( name = "deprecation_date" )
+  @Column( name = "deprecation_timestamp" )
   @Temporal( TemporalType.TIMESTAMP )
   private Date deprecationTimestamp;
 

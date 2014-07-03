@@ -44,7 +44,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class WorkflowExecutionCompletedEventAttributes implements Serializable {
+public class WorkflowExecutionCompletedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The result produced by the workflow execution upon successful
@@ -167,6 +167,11 @@ public class WorkflowExecutionCompletedEventAttributes implements Serializable {
     public WorkflowExecutionCompletedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionCompletedEventAttributes( this );
     }
 
     /**

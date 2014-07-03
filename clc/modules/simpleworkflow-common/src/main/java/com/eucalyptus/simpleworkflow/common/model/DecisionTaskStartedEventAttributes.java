@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>DecisionTaskStarted</code> event.
  * </p>
  */
-public class DecisionTaskStartedEventAttributes implements Serializable {
+public class DecisionTaskStartedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * Identity of the decider making the request. This enables diagnostic
@@ -166,6 +166,11 @@ public class DecisionTaskStartedEventAttributes implements Serializable {
     public DecisionTaskStartedEventAttributes withScheduledEventId(Long scheduledEventId) {
         this.scheduledEventId = scheduledEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setDecisionTaskStartedEventAttributes( this );
     }
 
     /**

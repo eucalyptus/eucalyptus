@@ -17,33 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common;
+package com.eucalyptus.simpleworkflow;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import java.util.List;
+import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 /**
  *
  */
-@PolicyVendor( SimpleWorkflowMetadata.VENDOR )
-public interface SimpleWorkflowMetadata extends RestrictedType {
+public interface ActivityTasks {
 
-  String VENDOR = "swf";
+  <T> List<T> listByExample( ActivityTask example,
+                             Predicate<? super ActivityTask> filter,
+                             Function<? super ActivityTask,T> transform ) throws SwfMetadataException;
 
-  @PolicyResourceType( "domain" )
-  interface DomainMetadata extends SimpleWorkflowMetadata {}
+  <T> T updateByExample( ActivityTask example,
+                         OwnerFullName ownerFullName,
+                         String activityId,
+                         Function<? super ActivityTask,T> updateTransform ) throws SwfMetadataException;
 
-  @PolicyResourceType( "activity-task" ) // Not an AWS/SWF type
-  interface ActivityTaskMetadata extends SimpleWorkflowMetadata {}
 
-  @PolicyResourceType( "activity-type" ) // Not an AWS/SWF type
-  interface ActivityTypeMetadata extends SimpleWorkflowMetadata {}
+  ActivityTask save( ActivityTask activityTask ) throws SwfMetadataException;
 
-  @PolicyResourceType( "workflow-type" ) // Not an AWS/SWF type
-  interface WorkflowTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
-  interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
-
+  List<ActivityTask> deleteByExample( ActivityTask example ) throws SwfMetadataException;
 }

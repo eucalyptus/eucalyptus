@@ -17,33 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common;
+package com.eucalyptus.simpleworkflow.persist;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
+import com.eucalyptus.simpleworkflow.WorkflowExecution;
+import com.eucalyptus.simpleworkflow.WorkflowExecutions;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-@PolicyVendor( SimpleWorkflowMetadata.VENDOR )
-public interface SimpleWorkflowMetadata extends RestrictedType {
+public class PersistenceWorkflowExecutions extends SwfPersistenceSupport<WorkflowExecutionMetadata,WorkflowExecution> implements WorkflowExecutions {
 
-  String VENDOR = "swf";
+  public PersistenceWorkflowExecutions( ) {
+    super( "workflow-execution" );
+  }
 
-  @PolicyResourceType( "domain" )
-  interface DomainMetadata extends SimpleWorkflowMetadata {}
+  @Override
+  protected WorkflowExecution exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return WorkflowExecution.exampleWithOwner( ownerFullName );
+  }
 
-  @PolicyResourceType( "activity-task" ) // Not an AWS/SWF type
-  interface ActivityTaskMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-type" ) // Not an AWS/SWF type
-  interface ActivityTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-type" ) // Not an AWS/SWF type
-  interface WorkflowTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
-  interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
-
+  @Override
+  protected WorkflowExecution exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return WorkflowExecution.exampleWithName( ownerFullName, name );
+  }
 }

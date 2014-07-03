@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskStarted</code> event.
  * </p>
  */
-public class ActivityTaskStartedEventAttributes implements Serializable {
+public class ActivityTaskStartedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * Identity of the worker that was assigned this task. This aids
@@ -166,6 +166,11 @@ public class ActivityTaskStartedEventAttributes implements Serializable {
     public ActivityTaskStartedEventAttributes withScheduledEventId(Long scheduledEventId) {
         this.scheduledEventId = scheduledEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskStartedEventAttributes( this );
     }
 
     /**

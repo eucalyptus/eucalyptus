@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>DecisionTaskCompleted</code> event.
  * </p>
  */
-public class DecisionTaskCompletedEventAttributes implements Serializable {
+public class DecisionTaskCompletedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * User defined context for the workflow execution.
@@ -211,6 +211,11 @@ public class DecisionTaskCompletedEventAttributes implements Serializable {
     public DecisionTaskCompletedEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setDecisionTaskCompletedEventAttributes( this );
     }
 
     /**
