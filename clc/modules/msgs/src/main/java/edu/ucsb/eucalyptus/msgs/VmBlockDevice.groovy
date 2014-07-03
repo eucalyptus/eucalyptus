@@ -64,7 +64,8 @@
 package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpEmbedded
+import com.google.common.collect.Lists;
 
 public class BlockVolumeMessage extends EucalyptusMessage {
   
@@ -273,34 +274,182 @@ public class Snapshot extends EucalyptusData {
   String description;
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 }
+
 //TODO:ADDED
-public class ModifySnapshotAttributeType extends BlockSnapshotMessage {
-  String snapshotId;
-  ArrayList<VolumePermissionType> removeVolumePermission = new ArrayList<VolumePermissionType>();
-  ArrayList<VolumePermissionType> addVolumePermission = new ArrayList<VolumePermissionType>();
-  public ModifySnapshotAttributeType() {  }
+public class CreateVolumePermissionOperationType extends EucalyptusData {
+    @HttpEmbedded( multiple = true )
+    ArrayList<CreateVolumePermissionItemType> add = Lists.newArrayList()
+    @HttpEmbedded( multiple = true )
+    ArrayList<CreateVolumePermissionItemType> remove = Lists.newArrayList()
+
+    def CreateVolumePermissionOperationType() {
+    }
 }
-public class VolumePermissionType extends EucalyptusData {
-  String userId;
-  String group;
-  public CreateVolumePermissionItemType() {  }
+
+public class CreateVolumePermissionItemType extends EucalyptusData {
+
+    String userId;
+    String group;
+
+    def CreateVolumePermissionItemType() {
+    }
+
+    def CreateVolumePermissionItemType(final String userId, final String group) {
+        this.userId = userId;
+        this.group = group;
+    }
+
+    public static CreateVolumePermissionItemType newUserCreateVolumePermission(String userId) {
+        return new CreateVolumePermissionItemType(userId, null);
+    }
+
+    public static CreateVolumePermissionItemType newGroupCreateVolumePermission() {
+        return new CreateVolumePermissionItemType(null, "all" );
+    }
+
+    public boolean user() {
+        return this.userId != null
+    }
+
+    public boolean group() {
+        return this.group != null
+    }
+
+    boolean equals(final o) {
+        if (this.is(o)) return true
+        if (getClass() != o.class) return false
+
+        final CreateVolumePermissionItemType that = (CreateVolumePermissionItemType) o
+
+        if (getGroup() != that.getGroup()) return false
+        if (userId != that.userId) return false
+
+        return true
+    }
+
+    int hashCode() {
+        int result
+        result = (userId != null ? userId.hashCode() : 0)
+        result = 31 * result + (getGroup() != null ? getGroup().hashCode() : 0)
+        return result
+    }
 }
+
 public class ModifySnapshotAttributeResponseType extends BlockSnapshotMessage {
-  public ModifySnapshotAttributeResponseType() {  }
 }
+
+public class ModifySnapshotAttributeType extends BlockSnapshotMessage {
+    enum SnapshotAttribute { CreateVolumePermission, ProductCode }
+
+    String snapshotId;
+
+    @HttpParameterMapping (parameter = "ProductCode")
+    ArrayList<String> productCodes = Lists.newArrayList()
+
+    CreateVolumePermissionOperationType createVolumePermission
+
+    @HttpParameterMapping( parameter = "UserId")
+    ArrayList<String> queryUserId = Lists.newArrayList()
+    @HttpParameterMapping (parameter = ["Group"])
+    ArrayList<String> queryUserGroup = Lists.newArrayList()
+    String attribute;
+    String operationType;
+
+    SnapshotAttribute snapshotAttribute( ) {
+        if ( attribute ) {
+            'createVolumePermission'.equals( attribute ) ?
+                    SnapshotAttribute.CreateVolumePermission :
+                    SnapshotAttribute.ProductCode
+        } else {
+            createVolumePermission && (!createVolumePermission.getAdd().isEmpty() || !createVolumePermission.getRemove().isEmpty()) ?
+                    SnapshotAttribute.CreateVolumePermission :
+                    !productCodes.isEmpty() ?
+                            SnapshotAttribute.ProductCode : null
+        }
+    }
+
+    boolean add() {
+        !asAddCreateVolumePermissionsItemTypes().isEmpty()
+    }
+
+    boolean remove() {
+        !asRemoveCreateVolumePermissionsItemTypes().isEmpty()
+    }
+
+    List<String> addUserIds() {
+        add() ?
+                asAddCreateVolumePermissionsItemTypes().collect { CreateVolumePermissionItemType add -> add.userId }.findAll { String id -> id } as List<String> :
+                Lists.newArrayList()
+    }
+
+    List<String> removeUserIds() {
+        remove() ?
+                asRemoveCreateVolumePermissionsItemTypes().collect{ CreateVolumePermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String> :
+                Lists.newArrayList()
+    }
+
+    boolean addGroupAll() {
+        asAddCreateVolumePermissionsItemTypes().find{ CreateVolumePermissionItemType add -> 'all'.equals( add.getGroup() ) }
+    }
+
+    boolean removeGroupAll() {
+        asRemoveCreateVolumePermissionsItemTypes().find{ CreateVolumePermissionItemType add -> 'all'.equals( add.getGroup() ) }
+    }
+
+    List<CreateVolumePermissionItemType> asAddCreateVolumePermissionsItemTypes() {
+        attribute ?
+                'add'.equals( operationType ) ? asCreateVolumePermissionItemTypes() : Lists.newArrayList() :
+                createVolumePermission.getAdd()
+    }
+
+    List<CreateVolumePermissionItemType> asRemoveCreateVolumePermissionsItemTypes() {
+        attribute ?
+                'add'.equals( operationType ) ? Lists.newArrayList() : asCreateVolumePermissionItemTypes() :
+                createVolumePermission.getRemove()
+    }
+
+    private List<CreateVolumePermissionItemType> asCreateVolumePermissionItemTypes() {
+        queryUserId.isEmpty() ?
+                queryUserGroup.collect{ String group -> new CreateVolumePermissionItemType( group: group ) } :
+                queryUserId.collect{ String userId -> new CreateVolumePermissionItemType( userId: userId ) }
+    }
+
+}
+
 public class DescribeSnapshotAttributeResponseType extends BlockSnapshotMessage {
-  String snapshotId;
-  ArrayList<VolumePermissionType> createVolumePermission = new ArrayList<VolumePermissionType>();
-  public DescribeSnapshotAttributeResponseType() {  }
+    String snapshotId
+    ArrayList<CreateVolumePermissionItemType> createVolumePermission = Lists.newArrayList( )
+    ArrayList<String> productCodes = Lists.newArrayList( )
+
+    boolean hasCreateVolumePermissions() {
+        this.createVolumePermission
+    }
+
+    boolean hasProductCodes() {
+        this.productCodes
+    }
 }
+
 public class DescribeSnapshotAttributeType extends BlockSnapshotMessage {
-  String snapshotId;
-  public DescribeSnapshotAttributeType() {  }
+
+    String snapshotId;
+    String createVolumePermission = "hi";
+    String productCodes = "hi";
+    String attribute;
+
+    public void applyAttribute() {
+        this.createVolumePermission = null;
+        this.productCodes = null;
+        this.setProperty(attribute, "hi");
+    }
 }
+
 public class ResetSnapshotAttributeResponseType extends BlockSnapshotMessage {
-  public ResetSnapshotAttributeResponseType() {  }
+    public ResetSnapshotAttributeResponseType() {  }
 }
+
 public class ResetSnapshotAttributeType extends BlockSnapshotMessage {
-  String snapshotId;
-  public ResetSnapshotAttributeType() {  }
+    String snapshotId;
+    @HttpParameterMapping (parameter = "Attribute")
+    String createVolumePermission;
 }

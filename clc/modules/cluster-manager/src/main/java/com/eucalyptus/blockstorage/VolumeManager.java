@@ -74,6 +74,7 @@ import javax.persistence.EntityTransaction;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
+import com.google.common.base.Predicates;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -165,7 +166,7 @@ public class VolumeManager {
       try {
         Snapshot snap = Transactions.find( Snapshot.named( null, normalizeOptionalSnapshotIdentifier( snapId ) ) );
         snapSize = snap.getVolumeSize( );
-        if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
+        if ( !Predicates.and(Snapshots.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner()).apply(snap)) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
         }
         // Volume created from a snapshot cannot be smaller than the size of the snapshot

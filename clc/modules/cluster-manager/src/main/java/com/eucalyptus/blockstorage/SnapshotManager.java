@@ -66,6 +66,7 @@ import static com.eucalyptus.compute.common.ImageMetadata.State.available;
 import static com.eucalyptus.compute.common.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +75,15 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.entities.TransactionResource;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -116,27 +122,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
-import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class SnapshotManager {
   
@@ -320,20 +311,122 @@ public class SnapshotManager {
     return reply;
   }
   
-  public ResetSnapshotAttributeResponseType resetSnapshotAttribute( ResetSnapshotAttributeType request ) {
-    ResetSnapshotAttributeResponseType reply = request.getReply( );
-    return reply;
-  }
-  
-  public ModifySnapshotAttributeResponseType modifySnapshotAttribute( ModifySnapshotAttributeType request ) {
-    ModifySnapshotAttributeResponseType reply = request.getReply( );
-    return reply;
-  }
-  
-  public DescribeSnapshotAttributeResponseType describeSnapshotAttribute( DescribeSnapshotAttributeType request ) {
-    DescribeSnapshotAttributeResponseType reply = request.getReply( );
-    return reply;
-  }
+    public ResetSnapshotAttributeResponseType resetSnapshotAttribute( ResetSnapshotAttributeType request ) throws EucalyptusCloudException {
+        ResetSnapshotAttributeResponseType reply = request.getReply( );
+        return reply;
+    }
+
+    private boolean validateGroup(String groupName) {
+        return "all".equals(groupName);
+    }
+
+    private static List<String> verifyAccountIds(final List<String> accountIds) throws EucalyptusCloudException {
+        final Set<String> validUserIds = Sets.newHashSet( );
+        for ( String userId : accountIds ) {
+            try {
+                validUserIds.add( Accounts.lookupAccountById( userId ).getAccountNumber() );
+            } catch ( final Exception e ) {
+                throw new EucalyptusCloudException( "Not a valid userId : " + userId );
+            }
+        }
+        return Lists.newArrayList( validUserIds );
+    }
+
+    private static boolean canModifySnapshot( final Snapshot snap ) {
+        final Context ctx = Contexts.lookup( );
+        final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+        return
+                ( ctx.isAdministrator( ) || snap.getOwnerAccountNumber( ).equals( requestAccountId ) ) &&
+                        RestrictedTypes.filterPrivileged( ).apply( snap );
+    }
+
+    public ModifySnapshotAttributeResponseType modifySnapshotAttribute( final ModifySnapshotAttributeType request ) throws EucalyptusCloudException {
+        ModifySnapshotAttributeResponseType reply = request.getReply( );
+        final Context ctx = Contexts.lookup();
+        final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
+        Function<Snapshot, Boolean> modifySnapshotAttribute = Functions.forPredicate(new Predicate<Snapshot>( ) {
+
+            @Override
+            public boolean apply( Snapshot snap ) {
+                //Can only modify attributes of snapshots in 'creating' or 'available' state
+                if ( !State.EXTANT.equals( snap.getState( ) ) && !State.GENERATING.equals( snap.getState( ) ) ) {
+                    return false;
+                } else if ( !canModifySnapshot(snap)) {
+                    throw Exceptions.toUndeclared( new EucalyptusCloudException( "Not authorized to modify attribute for snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) ) );
+                } else {
+                    switch ( request.snapshotAttribute() ) {
+                        case CreateVolumePermission:
+                            //do adds
+                            try {
+                                snap.addPermissions(verifyAccountIds(request.addUserIds()));
+                            } catch (EucalyptusCloudException e) {
+                                LOG.warn("Failed validating accountIds", e);
+                                throw Exceptions.toUndeclared(e);
+                            }
+                            if (request.addGroupAll()) {
+                                snap.setSnapshotPublic(true);
+                            }
+
+
+                            //do removes
+                            snap.removePermissions(request.removeUserIds());
+                            if (request.removeGroupAll()) {
+                                snap.setSnapshotPublic(false);
+                            }
+                            break;
+                        case ProductCode:
+                            for ( String productCode : request.getProductCodes( ) ) {
+                                snap.addProductCode( productCode );
+                            }
+                            break;
+                    }
+                    return true;
+                }
+            }
+        });
+
+        boolean result = false;
+        try {
+            result = Transactions.one(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId ), modifySnapshotAttribute);
+        } catch ( NoSuchElementException ex2 ) {
+            throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
+        } catch ( ExecutionException ex1 ) {
+            throw new EucalyptusCloudException( ex1.getCause( ) );
+        }
+        reply.set_return( result );
+        return reply;
+    }
+
+    public DescribeSnapshotAttributeResponseType describeSnapshotAttribute( DescribeSnapshotAttributeType request ) throws EucalyptusCloudException {
+        DescribeSnapshotAttributeResponseType reply = request.getReply( );
+        reply.setSnapshotId(request.getSnapshotId());
+        final Context ctx = Contexts.lookup( );
+        final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
+        try (TransactionResource db = Entities.transactionFor(Snapshot.class)) {
+            Snapshot result = Entities.uniqueResult(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId));
+            if( !RestrictedTypes.filterPrivileged( ).apply( result ) ) {
+                throw new EucalyptusCloudException("Not authorized to describe attributes for snapshot " + request.getSnapshotId());
+            }
+
+            ArrayList<CreateVolumePermissionItemType> permissions = Lists.newArrayList();
+            for(String id : result.getPermissions()) {
+                permissions.add(new CreateVolumePermissionItemType(id, null));
+            }
+            if(result.getSnapshotPublic()) {
+                permissions.add(new CreateVolumePermissionItemType(null, "all"));
+            }
+
+            if(result.getProductCodes() != null) {
+                reply.setProductCodes(new ArrayList<String>(result.getProductCodes()));
+            }
+            reply.setCreateVolumePermission(permissions);
+        } catch ( NoSuchElementException ex2 ) {
+            throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
+        } catch ( ExecutionException ex1 ) {
+            throw new EucalyptusCloudException( ex1.getCause( ) );
+        }
+        return reply;
+    }
 
   private static boolean isReservedSnapshot( final String snapshotId ) {
 	// Fix for EUCA-4932. Any snapshot associated with an (available or pending) image as a root/non-root device is a reserved snapshot

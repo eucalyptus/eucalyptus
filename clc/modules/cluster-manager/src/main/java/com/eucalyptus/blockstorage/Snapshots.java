@@ -76,6 +76,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
@@ -374,7 +378,40 @@ public class Snapshots {
         }
       }
     };
-  }  
+  }
+
+    /** True if owner, euca administrator,
+     * snap is public, or
+     * granted explicit permission by snap owner via ModifySnapshotAttributes
+     */
+    public enum FilterPermissions implements Predicate<Snapshot> {
+        INSTANCE;
+
+        @Override
+        public boolean apply( Snapshot input ) {
+            try {
+                Context ctx = Contexts.lookup();
+                if ( ctx.isAdministrator( ) ) {
+                    return true;
+                } else {
+                    UserFullName luser = ctx.getUserFullName( );
+                    if ( input.getSnapshotPublic( ) ) {
+                        // Granted by 'all' permission on the snapshot
+                        return true;
+                    } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {
+                        // Owning account
+                        return true;
+                    } else if ( input.hasPermission( luser.getAccountNumber( ) ) ) {
+                        //Explicitly granted via createVolumePermission
+                        return true;
+                    }
+                    return false;
+                }
+            } catch ( Exception ex ) {
+                return false;
+            }
+        }
+    }
 
   private enum FilterFunctions implements Function<Snapshot,String> {
     DESCRIPTION {
