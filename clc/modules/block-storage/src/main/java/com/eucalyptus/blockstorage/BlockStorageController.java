@@ -84,10 +84,6 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
@@ -174,6 +170,18 @@ public class BlockStorageController {
     //static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
     public static Random randomGenerator = new Random();
+
+    //Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
+    static boolean setUseTestingDelegateManager(boolean enableDelegate) {
+        if(enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to use delegating storage manager for testing");
+            blockManager = new StorageManagerTestingProxy(blockManager);
+        } else if(!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to NOT use delegating storage manager anymore");
+            blockManager = ((StorageManagerTestingProxy)blockManager).getDelegateStorageManager();
+        }
+        return enableDelegate;
+    }
 
     public static void configure() throws EucalyptusCloudException {
     	BlockStorageGlobalConfiguration.getInstance();
@@ -1058,13 +1066,16 @@ public class BlockStorageController {
         ArrayList<StorageVolume> volumes = reply.getVolumeSet();
         for(VolumeInfo volumeInfo: volumeInfos) {
             volumes.add(convertVolumeInfo(volumeInfo));
-            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
+            if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
+                    (System.currentTimeMillis() - volumeInfo.getLastUpdateTimestamp().getTime() > StorageProperties.FAILED_STATE_CLEANUP_THRESHOLD_MS)) {
                 LOG.warn( "Failed volume, cleaning it: " + volumeInfo.getVolumeId() );
                 checker.cleanFailedVolume(volumeInfo.getVolumeId());
             }
         }
+
         db.commit();
         return reply;
+
     }
 
     public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
