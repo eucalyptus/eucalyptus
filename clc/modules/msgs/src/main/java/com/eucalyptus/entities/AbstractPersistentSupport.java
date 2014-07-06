@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.entities;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -133,6 +134,19 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
     }
   }
 
+  public <T> T updateByExample( final AP example,
+                                final OwnerFullName ownerFullName,
+                                final String key,
+                                final Function<? super AP,T> updateTransform ) throws PE {
+    try {
+      return Transactions.one( example, updateTransform );
+    } catch ( NoSuchElementException e ) {
+      throw notFoundException( qualifyOwner( "Unable to find "+typeDescription+" '"+key+"'", ownerFullName ), e );
+    } catch ( Exception e ) {
+      throw metadataException( qualifyOwner( "Error updating "+typeDescription+" '"+key+"'", ownerFullName ), e );
+    }
+  }
+
   public AP save( final AP metadata ) throws PE {
     try {
       return Transactions.saveDirect( metadata );
@@ -165,8 +179,8 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
   }
 
   public List<AP> deleteByExample( final AP example,
-                                    final Criterion criterion,
-                                    final Map<String,String> aliases ) throws PE {
+                                   final Criterion criterion,
+                                   final Map<String,String> aliases ) throws PE {
     try {
       return Transactions.each( example, criterion, aliases, new Callback<AP>(){
         @Override
@@ -195,4 +209,34 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
   protected final String qualifyOwner( final String text, final OwnerFullName ownerFullName ) {
     return ownerFullName == null ? text : text + " for " + ownerFullName;
   }
+
+  public static Function<AbstractPersistent,Date> creation( ) {
+    return AbstractPersistentDateFunctions.CREATION;
+  }
+
+  public static Function<AbstractPersistent,Date> lastUpdate( ) {
+    return AbstractPersistentDateFunctions.LAST_UPDATE;
+  }
+
+  private enum AbstractPersistentDateFunctions implements Function<AbstractPersistent,Date> {
+    CREATION {
+      @Nullable
+      @Override
+      public Date apply( @Nullable final AbstractPersistent abstractPersistent ) {
+        return abstractPersistent == null ?
+            null :
+            abstractPersistent.getCreationTimestamp( );
+      }
+    },
+    LAST_UPDATE {
+      @Nullable
+      @Override
+      public Date apply( @Nullable final AbstractPersistent abstractPersistent ) {
+        return abstractPersistent == null ?
+            null :
+            abstractPersistent.getLastUpdateTimestamp( );
+      }
+    },
+  }
+
 }

@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskCompleted</code> event.
  * </p>
  */
-public class ActivityTaskCompletedEventAttributes implements Serializable {
+public class ActivityTaskCompletedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The results of the activity task (if any).
@@ -211,6 +211,11 @@ public class ActivityTaskCompletedEventAttributes implements Serializable {
     public ActivityTaskCompletedEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskCompletedEventAttributes( this );
     }
 
     /**

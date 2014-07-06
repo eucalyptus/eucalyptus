@@ -56,6 +56,20 @@ public class Strings {
     }
   }
 
+  /**
+   * Remove optional suffix from the given text.
+   *
+   * @param text The text to trim
+   * @return The trimmed text or null if text was null
+   */
+  public static String trimSuffix( @Nonnull  final String suffix,
+                                   @Nullable final String text ) {
+    if ( text != null && text.endsWith( suffix ) ) {
+      return text.substring( 0, text.length( ) - suffix.length( ) );
+    } else {
+      return text;
+    }
+  }
 
   /**
    * Get a Function for trimming a String.

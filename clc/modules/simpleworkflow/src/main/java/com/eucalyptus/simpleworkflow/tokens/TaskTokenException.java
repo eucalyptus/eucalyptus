@@ -17,33 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common;
-
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+package com.eucalyptus.simpleworkflow.tokens;
 
 /**
  *
  */
-@PolicyVendor( SimpleWorkflowMetadata.VENDOR )
-public interface SimpleWorkflowMetadata extends RestrictedType {
+public class TaskTokenException extends Exception {
+  private static final long serialVersionUID = 1L;
 
-  String VENDOR = "swf";
+  public TaskTokenException( final String message ) {
+    super( message );
+  }
 
-  @PolicyResourceType( "domain" )
-  interface DomainMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-task" ) // Not an AWS/SWF type
-  interface ActivityTaskMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-type" ) // Not an AWS/SWF type
-  interface ActivityTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-type" ) // Not an AWS/SWF type
-  interface WorkflowTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
-  interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
-
+  public TaskTokenException( final String message, final Throwable cause ) {
+    super( message, cause );
+  }
 }

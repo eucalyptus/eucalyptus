@@ -17,33 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common;
+package com.eucalyptus.simpleworkflow.persist;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTaskMetadata;
+import com.eucalyptus.simpleworkflow.ActivityTask;
+import com.eucalyptus.simpleworkflow.ActivityTasks;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-@PolicyVendor( SimpleWorkflowMetadata.VENDOR )
-public interface SimpleWorkflowMetadata extends RestrictedType {
+public class PersistenceActivityTasks extends SwfPersistenceSupport<ActivityTaskMetadata,ActivityTask> implements ActivityTasks {
 
-  String VENDOR = "swf";
+  public PersistenceActivityTasks( ) {
+    super( "activity-task" );
+  }
 
-  @PolicyResourceType( "domain" )
-  interface DomainMetadata extends SimpleWorkflowMetadata {}
+  @Override
+  protected ActivityTask exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return ActivityTask.exampleWithOwner( ownerFullName );
+  }
 
-  @PolicyResourceType( "activity-task" ) // Not an AWS/SWF type
-  interface ActivityTaskMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-type" ) // Not an AWS/SWF type
-  interface ActivityTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-type" ) // Not an AWS/SWF type
-  interface WorkflowTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
-  interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
-
+  @Override
+  protected ActivityTask exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return ActivityTask.exampleWithName( ownerFullName, name );
+  }
 }

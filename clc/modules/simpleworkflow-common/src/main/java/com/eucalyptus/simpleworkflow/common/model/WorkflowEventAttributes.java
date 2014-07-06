@@ -17,33 +17,14 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common;
+package com.eucalyptus.simpleworkflow.common.model;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import java.io.Serializable;
 
 /**
  *
  */
-@PolicyVendor( SimpleWorkflowMetadata.VENDOR )
-public interface SimpleWorkflowMetadata extends RestrictedType {
+public interface WorkflowEventAttributes extends Serializable {
 
-  String VENDOR = "swf";
-
-  @PolicyResourceType( "domain" )
-  interface DomainMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-task" ) // Not an AWS/SWF type
-  interface ActivityTaskMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "activity-type" ) // Not an AWS/SWF type
-  interface ActivityTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-type" ) // Not an AWS/SWF type
-  interface WorkflowTypeMetadata extends SimpleWorkflowMetadata {}
-
-  @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
-  interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
-
+  void attach( HistoryEvent historyEvent );
 }

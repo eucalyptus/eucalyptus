@@ -84,6 +84,12 @@ public class Domain extends UserMetadata<Domain.Status> implements DomainMetadat
     return new Domain( owner, name );
   }
 
+  public static Domain exampleWithUuid( final OwnerFullName owner, final String uuid ) {
+    final Domain domain = new Domain( owner, null );
+    domain.setNaturalId( uuid );
+    return domain;
+  }
+
   @Override
   public String getPartition( ) {
     return "eucalyptus";

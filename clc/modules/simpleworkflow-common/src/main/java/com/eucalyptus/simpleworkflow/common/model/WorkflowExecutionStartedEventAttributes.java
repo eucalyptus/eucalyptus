@@ -36,14 +36,12 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
-import java.io.Serializable;
-
 /**
  * <p>
  * Provides details of <code>WorkflowExecutionStarted</code> event.
  * </p>
  */
-public class WorkflowExecutionStartedEventAttributes implements Serializable {
+public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The input provided to the workflow execution (if any).
@@ -811,6 +809,11 @@ public class WorkflowExecutionStartedEventAttributes implements Serializable {
     public WorkflowExecutionStartedEventAttributes withParentInitiatedEventId(Long parentInitiatedEventId) {
         this.parentInitiatedEventId = parentInitiatedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionStartedEventAttributes( this );
     }
 
     /**
