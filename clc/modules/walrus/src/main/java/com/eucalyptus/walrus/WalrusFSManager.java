@@ -3917,7 +3917,7 @@ public class WalrusFSManager extends WalrusManager {
 				return parts;
 			} 
 		} else {
-			throw new InternalErrorException("Object " + objectInfo.getObjectKey() + " may not be uploaded using multipart upload");
+			throw new InternalErrorException("Object may not be uploaded using multipart upload");
 		}
 	}
 }
