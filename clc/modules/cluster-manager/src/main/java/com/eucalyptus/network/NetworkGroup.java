@@ -72,12 +72,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -98,7 +100,9 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
@@ -136,8 +140,16 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   @Column( name = "metadata_network_group_description" )
   private String           description;
-  
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true ) //, fetch = FetchType.EAGER )
+
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_vpc", updatable = false )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Vpc              vpc;
+
+  @Column( name = "metadata_vpc_id", updatable = false )
+  private String           vpcId;
+
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
@@ -149,21 +161,43 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )
   private Collection<NetworkGroupTag> tags;
 
-  NetworkGroup( ) {}
+  protected NetworkGroup( ) {}
   
-  NetworkGroup( final OwnerFullName ownerFullName ) {
+  protected NetworkGroup( final OwnerFullName ownerFullName ) {
     super( ownerFullName );
   }
-  
-  NetworkGroup( final OwnerFullName ownerFullName, final String groupName ) {
+
+  protected NetworkGroup( final OwnerFullName ownerFullName, final String groupName ) {
     super( ownerFullName, groupName );
   }
-  
-  NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
+
+  protected NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
     this( ownerFullName, groupName );
     checkParam( groupDescription, notNullValue() );
     this.description = groupDescription;
     this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
+  }
+
+  protected NetworkGroup( final OwnerFullName ownerFullName,
+                          final Vpc vpc,
+                          final String groupName,
+                          final String groupDescription ) {
+    this( ownerFullName, groupName );
+    checkParam( groupDescription, notNullValue() );
+    this.vpc = vpc;
+    this.vpcId = CloudMetadatas.toDisplayName( ).apply( vpc );
+    this.description = groupDescription;
+    this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
+  }
+
+  public static NetworkGroup create( final OwnerFullName ownerFullName,
+                                     final Vpc vpc,
+                                     final String groupId,
+                                     final String groupName,
+                                     final String groupDescription ) {
+    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName, vpc, groupName, groupDescription );
+    networkGroup.setGroupId( groupId );
+    return networkGroup;
   }
 
   public static NetworkGroup withOwner( final OwnerFullName ownerFullName ) {
@@ -171,7 +205,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
 
   public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
-    return new NetworkGroup( ownerFullName, groupName );
+    return withUniqueName( ownerFullName, null, groupName ); //TODO:STEVE: verify it is OK to require owner here
   }
   
   public static NetworkGroup withNaturalId( final String naturalId ) {
@@ -181,7 +215,23 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public static NetworkGroup withGroupId( final OwnerFullName ownerFullName, final String groupId ) {
       return networkGroupWithGroupId(ownerFullName, groupId);
   }
-  
+
+  public static NetworkGroup withUniqueName( final OwnerFullName ownerFullName,
+                                             @Nullable final String vpcId,
+                                             final String groupName ) {
+    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName );
+    networkGroup.setUniqueName( createUniqueName( ownerFullName.getAccountNumber( ), vpcId, groupName ) );
+    return networkGroup;
+  }
+
+  public static NetworkGroup namedForVpc( final OwnerFullName ownerFullName,
+                                          @Nullable final String vpcId,
+                                          final String groupName ) {
+    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName, groupName );
+    networkGroup.setVpcId( vpcId );
+    return networkGroup;
+  }
+
   private NetworkGroup( final String naturalId ) {
     this.setNaturalId( naturalId );
   }
@@ -191,7 +241,20 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       findGroupWithId.setGroupId(groupId);
       return findGroupWithId;
   }
-  
+
+  private static String createUniqueName( final String accountNumber,
+                                          final String vpcId,
+                                          final String groupName ) {
+    return vpcId == null ?
+        accountNumber + ":" + groupName :
+        accountNumber + "\u05c3" + vpcId + "\u05c3" + groupName; // non-ascii punctuation guarantees no collisions as group name must be ascii
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return createUniqueName( getOwnerAccountNumber( ), getVpcId( ), getDisplayName( ) );
+  }
+
   @PreRemove
   private void preRemove( ) {
     if ( this.extantNetwork != null && this.extantNetwork.teardown( ) ) {
@@ -208,7 +271,25 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
     
   }
-  
+
+  @Nullable
+  public Vpc getVpc( ) {
+    return vpc;
+  }
+
+  protected void setVpc( final Vpc vpc ) {
+    this.vpc = vpc;
+  }
+
+  @Nullable
+  public String getVpcId( ) {
+    return vpcId;
+  }
+
+  protected void setVpcId( final String vpcId ) {
+    this.vpcId = vpcId;
+  }
+
   public String getDescription( ) {
     return this.description;
   }

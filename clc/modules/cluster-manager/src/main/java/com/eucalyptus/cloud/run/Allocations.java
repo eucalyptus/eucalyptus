@@ -85,6 +85,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -136,6 +137,7 @@ public class Allocations {
     private SshKeyPair sshKeyPair;
     private BootableSet bootSet;
     private VmType vmType;
+    private Subnet subnet;
     private NetworkGroup primaryNetwork;
     private Map<String, NetworkGroup> networkGroups = Maps.newHashMap( );
     private String iamInstanceProfileArn;
@@ -361,6 +363,14 @@ public class Allocations {
 
     public void setVmType(final VmType vmType) {
       this.vmType = vmType;
+    }
+
+    public Subnet getSubnet() {
+      return subnet;
+    }
+
+    public void setSubnet( final Subnet subnet ) {
+      this.subnet = subnet;
     }
 
     public UserFullName getOwnerFullName() {

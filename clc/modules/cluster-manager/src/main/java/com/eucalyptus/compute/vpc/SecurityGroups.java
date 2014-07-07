@@ -19,25 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
-import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.util.OwnerFullName;
+import static com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
+import com.eucalyptus.network.NetworkGroup;
+import com.google.common.base.Function;
 
 /**
  *
  */
-public class PersistenceInternetGateways extends VpcPersistenceSupport<CloudMetadata.InternetGatewayMetadata, InternetGateway> implements InternetGateways {
+public interface SecurityGroups {
 
-  public PersistenceInternetGateways( ) {
-    super( "internet-gateway" );
-  }
+  <T> T lookupDefault( String vpcId,
+                       Function<? super NetworkGroup,T> transform ) throws VpcMetadataException;
 
-  @Override
-  protected InternetGateway exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return InternetGateway.exampleWithOwner( ownerFullName );
-  }
+  NetworkGroup save( NetworkGroup networkGroup ) throws VpcMetadataException;
 
-  @Override
-  protected InternetGateway exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return InternetGateway.exampleWithName( ownerFullName, name );
-  }
+  boolean delete( NetworkGroup networkGroup ) throws VpcMetadataException;
+
 }

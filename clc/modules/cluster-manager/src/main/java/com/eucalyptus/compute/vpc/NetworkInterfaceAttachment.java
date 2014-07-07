@@ -23,6 +23,10 @@ import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.PostLoad;
+import javax.persistence.Transient;
+import org.hibernate.annotations.Parent;
+import com.eucalyptus.vm.VmInstance;
 
 /**
  *
@@ -43,6 +47,7 @@ public class NetworkInterfaceAttachment implements Serializable {
   }
 
   protected NetworkInterfaceAttachment( final String attachmentId,
+                                        final VmInstance instance,
                                         final String instanceId,
                                         final String instanceOwnerId,
                                         final Integer deviceIndex,
@@ -50,6 +55,7 @@ public class NetworkInterfaceAttachment implements Serializable {
                                         final Date attachTime,
                                         final Boolean deleteOnTerminate ) {
     this.attachmentId = attachmentId;
+    this.instance = instance;
     this.instanceId = instanceId;
     this.instanceOwnerId = instanceOwnerId;
     this.deviceIndex = deviceIndex;
@@ -58,15 +64,17 @@ public class NetworkInterfaceAttachment implements Serializable {
     this.deleteOnTerminate = deleteOnTerminate;
   }
 
-  public NetworkInterfaceAttachment create( final String attachmentId,
-                                            final String instanceId,
-                                            final String instanceOwnerId,
-                                            final Integer deviceIndex,
-                                            final Status status,
-                                            final Date attachTime,
-                                            final Boolean deleteOnTerminate ) {
+  public static NetworkInterfaceAttachment create( final String attachmentId,
+                                                   final VmInstance instance,
+                                                   final String instanceId,
+                                                   final String instanceOwnerId,
+                                                   final Integer deviceIndex,
+                                                   final Status status,
+                                                   final Date attachTime,
+                                                   final Boolean deleteOnTerminate ) {
     return new NetworkInterfaceAttachment(
         attachmentId,
+        instance,
         instanceId,
         instanceOwnerId,
         deviceIndex,
@@ -75,6 +83,13 @@ public class NetworkInterfaceAttachment implements Serializable {
         deleteOnTerminate
     );
   }
+
+  @Parent
+  private NetworkInterface networkInterface;
+
+  // Persisted by field in parent NetworkInterface
+  @Transient
+  private VmInstance instance;
 
   @Column( name = "metadata_attachment_id" )
   private String attachmentId;
@@ -97,12 +112,28 @@ public class NetworkInterfaceAttachment implements Serializable {
   @Column( name = "metadata_att_delete_on_term" )
   private Boolean deleteOnTerminate;
 
+  protected NetworkInterface getNetworkInterface() {
+    return networkInterface;
+  }
+
+  protected void setNetworkInterface( final NetworkInterface networkInterface ) {
+    this.networkInterface = networkInterface;
+  }
+
   public String getAttachmentId() {
     return attachmentId;
   }
 
   public void setAttachmentId( final String attachmentId ) {
     this.attachmentId = attachmentId;
+  }
+
+  public VmInstance getInstance() {
+    return instance;
+  }
+
+  public void setInstance( final VmInstance instance ) {
+    this.instance = instance;
   }
 
   public String getInstanceId() {
@@ -151,5 +182,10 @@ public class NetworkInterfaceAttachment implements Serializable {
 
   public void setDeleteOnTerminate( final Boolean deleteOnTerminate ) {
     this.deleteOnTerminate = deleteOnTerminate;
+  }
+
+  @PostLoad
+  protected void postLoad( ) {
+    this.instance = networkInterface.getInstance( );
   }
 }
