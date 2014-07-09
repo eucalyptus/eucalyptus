@@ -85,7 +85,7 @@ import com.google.common.collect.Lists;
 @ConfigurableClass( root = "dns.spoof_regions",
                     description = "Options controlling DNS domain spoofing for AWS regions." )
 public class RegionSpoofingResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the spoofing resolver which allows for AWS DNS name emulation for instances." )
   public static Boolean             enabled                   = Boolean.FALSE;
   @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller." )
   public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.FALSE;
