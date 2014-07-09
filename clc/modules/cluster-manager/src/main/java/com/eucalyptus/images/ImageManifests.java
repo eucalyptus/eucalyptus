@@ -401,24 +401,23 @@ public class ImageManifests {
           }
         }
       };
-      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> euareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
-        
+      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> activeEuareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
         @Override
         public X509Certificate apply( com.eucalyptus.auth.principal.Certificate input ) {
-          return input.getX509Certificate( );
+          return input.isActive() ? input.getX509Certificate( ) : null;
         }
       };
       
       try {
-        if ( Iterables.any( Lists.transform( user.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+        if ( Iterables.any( Lists.transform( user.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) ) {
           return true;
         } else if ( tryVerifyWithCert.apply( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
           return true;
         } else {
-          for ( User u : Accounts.listAllUsers( ) ) {
-            if ( Iterables.any( Lists.transform( u.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+          // check other users from the same account
+          for ( User u : user.getAccount().getUsers() ) {
+            if ( Iterables.any( Lists.transform( u.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) )
               return true;
-            }
           }
         }
       } catch ( AuthException e ) {
