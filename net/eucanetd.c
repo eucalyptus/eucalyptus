@@ -928,14 +928,30 @@ int update_sec_groups(void)
             // then put all the group specific IPT rules (temporary one here)
             if (secgroup->max_grouprules) {
                 for (j = 0; j < secgroup->max_grouprules; j++) {
+
+                    // workaround for EUCA-9627 - should be re-done to use proper ref_counts from ipset itself
+                    {
+                        char *rulecopy=NULL, *tok=NULL, *term=NULL;
+                        rulecopy = strdup(secgroup->grouprules[j].name);
+                        if (rulecopy) {
+                            tok = strstr(rulecopy, "--set EU");
+                            if (tok && strlen(tok) > strlen("--set")+1) {
+                                tok = tok + strlen("--set")+1;
+                                term = strchr(tok, ' ');
+                                if (term) {
+                                    *term = '\0';
+                                }
+                                LOGTRACE("found rule (%s) that references empty or non-existant set (%s): adding placeholder\n", secgroup->grouprules[j].name, SP(tok));
+                                ips_handler_add_set(config->ips, tok);
+                                ips_set_add_ip(config->ips, tok, "127.0.0.1");
+                            }
+                            EUCA_FREE(rulecopy);
+                        }
+                    }
                     snprintf(rule, 1024, "-A %s %s -j ACCEPT", chainname, secgroup->grouprules[j].name);
                     ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                 }
             }
-            // this ones needs to be last: DAN removed in lieu of new method (DROP after all FWD chains have been tried)
-            //            snprintf(rule, 1024, "-A %s -j DROP", chainname);
-            //            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-
             EUCA_FREE(chainname);
         }
     }
