@@ -95,7 +95,9 @@
 //! @{
 //! @name Definition of the boolean values TRUE and FALSE
 
+#undef TRUE
 #define TRUE                                     1  //!< Defines the "TRUE" boolean value
+#undef FALSE
 #define FALSE                                    0  //!< Defines the "FALSE" boolean value
 
 //! @}
