@@ -3313,13 +3313,13 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-A PREROUTING ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-A OUTPUT ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
