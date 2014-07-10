@@ -36,6 +36,8 @@ import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
+import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
+import com.eucalyptus.compute.common.network.VpcResource
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.google.common.collect.Iterators
@@ -43,7 +45,7 @@ import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
-import static com.eucalyptus.compute.common.network.NetworkingFeature.ElasticIPs
+import static com.eucalyptus.compute.common.network.NetworkingFeature.*
 
 /**
  * NetworkingService implementation for EDGE mode
@@ -60,13 +62,26 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   @Override
   protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
                                                                      final List<NetworkResource> resources ) {
-    request.getResources( ).each { NetworkResource networkResource ->
+    boolean vpc = request.resources.find{ it instanceof VpcResource } != null
+    request.resources.each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:
-          resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
+          //TODO:STEVE: prepare the IP correctly for VPC vs EC2-Classic
+          //
+          // Currently we allocate one public IP for the instance, we should support
+          // optional allocation of a public IP for the default network interface
+          if ( networkResource.ownerId.startsWith( 'i-' ) ) {
+            resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
+          }
           break
         case PrivateIPResource:
-          resources.addAll( preparePrivateIp( request, (PrivateIPResource) networkResource ) )
+          if ( !vpc ) {
+            resources.addAll( preparePrivateIp( request, (PrivateIPResource) networkResource ) )
+          }
+          break
+        case VpcResource:
+        case VpcNetworkInterfaceResource:
+          resources.addAll( networkResource )
           break
       }
     }
@@ -108,7 +123,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   DescribeNetworkingFeaturesResponseType describeFeatures(final DescribeNetworkingFeaturesType request) {
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: Lists.newArrayList( ElasticIPs )
+            networkingFeatures: Lists.newArrayList( ElasticIPs, Vpc )
         )
     ) ) )
   }

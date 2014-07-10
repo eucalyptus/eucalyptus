@@ -17,30 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.AbstractPersistentSupport;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.compute.vpc.InternetGateway;
+import com.eucalyptus.compute.vpc.InternetGateways;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public abstract class VpcPersistenceSupport<RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType> extends AbstractPersistentSupport<RT, AP, VpcMetadataException> {
+@ComponentNamed
+public class PersistenceInternetGateways extends VpcPersistenceSupport<CloudMetadata.InternetGatewayMetadata, InternetGateway> implements InternetGateways {
 
-  protected VpcPersistenceSupport( final String typeDescription ) {
-    super( typeDescription );
+  public PersistenceInternetGateways( ) {
+    super( "internet-gateway" );
   }
 
   @Override
-  protected VpcMetadataException notFoundException( final String message, final Throwable cause ) {
-    return new VpcMetadataNotFoundException( message, cause );
+  protected InternetGateway exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return InternetGateway.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected VpcMetadataException metadataException( final String message, final Throwable cause ) {
-    return new VpcMetadataException( message, cause );
+  protected InternetGateway exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return InternetGateway.exampleWithName( ownerFullName, name );
   }
-
 }

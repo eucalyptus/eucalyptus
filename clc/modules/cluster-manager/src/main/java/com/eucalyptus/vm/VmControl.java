@@ -76,12 +76,9 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
-import com.eucalyptus.auth.AccessKeys;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.ComputeException;
@@ -243,8 +240,7 @@ public class VmControl {
 
       reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-        VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
-        reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
+        reservation.getInstancesSet( ).add( VmInstances.transform( allocToken.getVmInstance( ) ) );
       }
       db.commit( );
     } catch ( Exception ex ) {

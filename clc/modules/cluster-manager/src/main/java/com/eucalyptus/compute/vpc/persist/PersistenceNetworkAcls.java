@@ -17,12 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
 import static com.eucalyptus.compute.common.CloudMetadata.NetworkAclMetadata;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.vpc.NetworkAcl;
+import com.eucalyptus.compute.vpc.NetworkAcls;
+import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
@@ -31,6 +36,7 @@ import com.google.common.collect.Iterables;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceNetworkAcls extends VpcPersistenceSupport<NetworkAclMetadata, NetworkAcl> implements NetworkAcls {
 
   public PersistenceNetworkAcls() {

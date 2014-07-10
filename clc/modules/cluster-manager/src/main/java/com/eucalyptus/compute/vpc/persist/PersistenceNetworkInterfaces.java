@@ -17,28 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
-import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.entities.AbstractPersistentSupport;
+import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.vpc.NetworkInterface;
+import com.eucalyptus.compute.vpc.NetworkInterfaces;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public class PersistenceSubnets extends VpcPersistenceSupport<CloudMetadata.SubnetMetadata, Subnet> implements Subnets {
+@ComponentNamed
+public class PersistenceNetworkInterfaces extends VpcPersistenceSupport<NetworkInterfaceMetadata, NetworkInterface> implements NetworkInterfaces {
 
-  public PersistenceSubnets( ) {
-    super( "subnet" );
+  public PersistenceNetworkInterfaces( ) {
+    super( "network-interfaces" );
   }
 
   @Override
-  protected Subnet exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return Subnet.exampleWithOwner( ownerFullName );
+  protected NetworkInterface exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return NetworkInterface.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected Subnet exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return Subnet.exampleWithName( ownerFullName, name );
+  protected NetworkInterface exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return NetworkInterface.exampleWithName( ownerFullName, name );
   }
 }

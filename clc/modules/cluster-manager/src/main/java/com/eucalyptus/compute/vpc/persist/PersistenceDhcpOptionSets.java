@@ -17,27 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
-import com.eucalyptus.compute.common.CloudMetadata;
+import static com.eucalyptus.compute.common.CloudMetadata.DhcpOptionSetMetadata;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.vpc.DhcpOptionSet;
+import com.eucalyptus.compute.vpc.DhcpOptionSets;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public class PersistenceVpcs extends VpcPersistenceSupport<CloudMetadata.VpcMetadata, Vpc> implements Vpcs {
+@ComponentNamed
+public class PersistenceDhcpOptionSets extends VpcPersistenceSupport<DhcpOptionSetMetadata, DhcpOptionSet> implements DhcpOptionSets {
 
-  public PersistenceVpcs( ) {
-    super( "vpc" );
+  public PersistenceDhcpOptionSets( ) {
+    super( "dhcp-options" );
   }
 
   @Override
-  protected Vpc exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return Vpc.exampleWithOwner( ownerFullName );
+  protected DhcpOptionSet exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return DhcpOptionSet.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected Vpc exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return Vpc.exampleWithName( ownerFullName, name );
+  protected DhcpOptionSet exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return DhcpOptionSet.exampleWithName( ownerFullName, name );
   }
 }

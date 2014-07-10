@@ -23,10 +23,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadata;
@@ -35,9 +37,12 @@ import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.NetworkPeer;
+import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.tags.*;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
@@ -55,6 +60,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.msgs.Filter;
 
@@ -62,17 +68,38 @@ import edu.ucsb.eucalyptus.msgs.Filter;
  *
  */
 @SuppressWarnings( "UnnecessaryLocalVariable" )
+@ComponentNamed
 public class VpcManager {
 
   private static final Logger logger = Logger.getLogger( VpcManager.class );
 
-  private final Vpcs vpcs = new PersistenceVpcs( ); //TODO:STEVE: injection
-  private final Subnets subnets = new PersistenceSubnets( );
-  private final InternetGateways internetGateways = new PersistenceInternetGateways( );
-  private final DhcpOptionSets dhcpOptionSets = new PersistenceDhcpOptionSets( );
-  private final NetworkAcls networkAcls = new PersistenceNetworkAcls( );
-  private final RouteTables routeTables = new PersistenceRouteTables( );
-  private final NetworkInterfaces networkInterfaces = new PersistenceNetworkInterfaces( );
+  private final DhcpOptionSets dhcpOptionSets;
+  private final InternetGateways internetGateways;
+  private final NetworkAcls networkAcls;
+  private final NetworkInterfaces networkInterfaces;
+  private final RouteTables routeTables;
+  private final SecurityGroups securityGroups;
+  private final Subnets subnets;
+  private final Vpcs vpcs;
+
+  @Inject
+  public VpcManager( final DhcpOptionSets dhcpOptionSets,
+                     final InternetGateways internetGateways,
+                     final NetworkAcls networkAcls,
+                     final NetworkInterfaces networkInterfaces,
+                     final RouteTables routeTables,
+                     final SecurityGroups securityGroups,
+                     final Subnets subnets,
+                     final Vpcs vpcs ) {
+    this.dhcpOptionSets = dhcpOptionSets;
+    this.internetGateways = internetGateways;
+    this.networkAcls = networkAcls;
+    this.networkInterfaces = networkInterfaces;
+    this.routeTables = routeTables;
+    this.securityGroups = securityGroups;
+    this.subnets = subnets;
+    this.vpcs = vpcs;
+  }
 
   public AcceptVpcPeeringConnectionResponseType acceptVpcPeeringConnection(AcceptVpcPeeringConnectionType request) throws EucalyptusCloudException {
     AcceptVpcPeeringConnectionResponseType reply = request.getReply( );
@@ -333,7 +360,21 @@ public class VpcManager {
               vpcs.save( Vpc.create( userFullName, Identifier.vpc.generate( ), options, request.getCidrBlock( ), false ) );
           routeTables.save( RouteTable.create( userFullName, vpc, Identifier.rtb.generate( ), vpc.getCidr( ), true ) );
           networkAcls.save( NetworkAcl.create( userFullName, vpc, Identifier.acl.generate( ), true ) );
-          //TODO:STEVE: create default security group with rules alowing intra-group traffic
+          final NetworkGroup group = NetworkGroup.create(
+              userFullName,
+              vpc,
+              ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
+              NetworkGroups.defaultNetworkName(),
+              "default VPC security group" );
+          //TODO:STEVE: update when security group protocol support is updated for VPC
+          final Collection<NetworkPeer> peers = Lists.newArrayList( NetworkPeer.create( group.getGroupId( ) ) );
+          group.getNetworkRules( ).addAll( Lists.newArrayList(
+              NetworkRule.create( NetworkRule.Protocol.icmp, -1, -1, peers, null ),
+              NetworkRule.create( NetworkRule.Protocol.tcp, 0, 65535, peers, null ),
+              NetworkRule.create( NetworkRule.Protocol.udp, 0, 65535, peers, null )
+          ) );
+          securityGroups.save( group );
+          //TODO:STEVE: rules
           return vpc;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -541,9 +582,11 @@ public class VpcManager {
         try {
           final Vpc vpc = vpcs.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<Vpc>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
-            //TODO:STEVE: delete default security group
             networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() ) );
             routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() ) );
+            try {
+              securityGroups.delete( securityGroups.lookupDefault( vpc.getDisplayName(), Functions.<NetworkGroup>identity() ) );
+            } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             vpcs.delete( vpc );
           } // else treat this as though the vpc does not exist
           return null;
@@ -748,6 +791,32 @@ public class VpcManager {
     return reply;
   }
 
+  public ModifySubnetAttributeResponseType modifySubnetAttribute( final ModifySubnetAttributeType request ) throws EucalyptusCloudException {
+    final ModifySubnetAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      subnets.updateByExample(
+          Subnet.exampleWithName( ctx.isAdministrator( ) ? null : accountFullName, Identifier.subnet.normalize( request.getSubnetId( ) ) ),
+          accountFullName,
+          request.getSubnetId( ),
+          new Callback<Subnet>() {
+            @Override
+            public void fire( final Subnet subnet ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) {
+                final AttributeBooleanValueType value = request.getMapPublicIpOnLaunch( );
+                if ( value != null && value.getValue( ) != null ) {
+                  subnet.setMapPublicIpOnLaunch( value.getValue( ) );
+                }
+              }
+            }
+          } );
+    } catch( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
+  }
+
   public ModifyVpcAttributeResponseType modifyVpcAttribute(ModifyVpcAttributeType request) throws EucalyptusCloudException {
     ModifyVpcAttributeResponseType reply = request.getReply( );
     return reply;
@@ -813,7 +882,7 @@ public class VpcManager {
     }
 
     public String generate( ) {
-      return Crypto.generateId( name( ) );
+      return ResourceIdentifiers.generateString( name( ) );
     }
 
     public String normalize( final String identifier ) throws EucalyptusCloudException {
@@ -926,7 +995,7 @@ public class VpcManager {
     }
   }
 
-  private static void handleException( final Exception e ) throws ComputeException {
+  private static ComputeException handleException( final Exception e ) throws ComputeException {
     throw handleException( e, false );
   }
 

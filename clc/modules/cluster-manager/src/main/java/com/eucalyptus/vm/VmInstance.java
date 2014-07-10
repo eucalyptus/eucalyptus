@@ -140,6 +140,8 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.vpc.NetworkInterface;
+import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -204,8 +206,15 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.GroupItemType;
+import edu.ucsb.eucalyptus.msgs.GroupSetType;
 import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceAssociationType;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceAttachmentType;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetType;
+import edu.ucsb.eucalyptus.msgs.InstancePrivateIpAddressesSetItemType;
+import edu.ucsb.eucalyptus.msgs.InstancePrivateIpAddressesSetType;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusDetailsSetType;
@@ -867,6 +876,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
                                                                   allocInfo.getVmType( ), 
+                                                                  allocInfo.getSubnet( ),
                                                                   allocInfo.isMonitoring(),
                                                                   allocInfo.getIamInstanceProfileArn(),
                                                                   allocInfo.getIamInstanceProfileId(),
@@ -960,11 +970,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                final byte[] userData,
                                final SshKeyPair sshKeyPair,
                                final VmType vmType,
+                               final Subnet subnet,
                                final boolean monitoring,
                                @Nullable final String iamInstanceProfileArn,
                                @Nullable final String iamInstanceProfileId,
                                @Nullable final String iamInstanceRoleArn ) {
-      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring, iamInstanceProfileArn, iamInstanceProfileId, iamInstanceRoleArn );
+      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, subnet, monitoring, iamInstanceProfileArn, iamInstanceProfileId, iamInstanceRoleArn );
       return this;
     }
 
@@ -1060,9 +1071,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void clearReferences( ) {
     if (bootRecord.getArchitecture() == null) bootRecord.setArchitecture(bootRecord.getMachine().getArchitecture());
     bootRecord.setMachine( );
-    bootRecord.setKernel( );
-    bootRecord.setRamdisk( );
-    clearRunReferences( );
+    bootRecord.setKernel();
+    bootRecord.setRamdisk();
+    bootRecord.setVpc( null );
+    bootRecord.setSubnet( null );
+    clearRunReferences();
   }
 
   /**
@@ -1419,6 +1432,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   public String getMacAddress( ) {
     return this.getNetworkConfig( ).getMacAddress( );
+  }
+
+  public List<NetworkInterface> getNetworkInterfaces( ) {
+    return this.getNetworkConfig().getNetworkInterfaces( );
   }
 
   public String getPasswordData( ) {
@@ -2018,6 +2035,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           runningInstance.setClientToken( input.getClientToken() );
 
+          runningInstance.setVpcId( input.getBootRecord( ).getVpcId() );
+          runningInstance.setSubnetId( input.getBootRecord( ).getSubnetId( ) );
+
           if ( !Strings.isNullOrEmpty( input.getIamInstanceProfileId( ) ) ) {
             runningInstance.setIamInstanceProfile( new IamInstanceProfile(
                 input.getIamInstanceProfileArn( ),
@@ -2096,6 +2116,50 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                                     attachedVol.getAttachTime( ),
                                                                                     attachedVol.getDeleteOnTerminate( ) ) );
           }
+
+          for ( final NetworkInterface networkInterface : input.getNetworkInterfaces( ) ) {
+            if ( runningInstance.getNetworkInterfaceSet( ) == null ) {
+              runningInstance.setNetworkInterfaceSet( new InstanceNetworkInterfaceSetType( ) );
+            }
+            runningInstance.getNetworkInterfaceSet( ).getItem( ).add( new InstanceNetworkInterfaceSetItemType(
+              networkInterface.getDisplayName( ),
+              networkInterface.getSubnet( ).getDisplayName( ),
+              networkInterface.getVpc( ).getDisplayName( ),
+              networkInterface.getDescription( ),
+              networkInterface.getOwnerAccountNumber( ),
+              String.valueOf( networkInterface.getState( ) ),
+              networkInterface.getMacAddress( ),
+              networkInterface.getPrivateIpAddress( ),
+              null,
+              networkInterface.getSourceDestCheck( ),
+              new GroupSetType( runningInstance.getGroupSet( ) ), //TODO:STEVE: groups/associations/private ips only correct for the primary
+              new InstanceNetworkInterfaceAttachmentType(
+                networkInterface.getAttachment( ).getAttachmentId( ),
+                networkInterface.getAttachment( ).getDeviceIndex(),
+                String.valueOf( networkInterface.getAttachment( ).getStatus( ) ),
+                networkInterface.getAttachment( ).getAttachTime( ),
+                networkInterface.getAttachment( ).getDeleteOnTerminate( )
+              ),
+              new InstanceNetworkInterfaceAssociationType(
+                runningInstance.getIpAddress( ),
+                null,
+                networkInterface.getOwnerAccountNumber( )
+              ),
+              new InstancePrivateIpAddressesSetType( Lists.newArrayList(
+                new InstancePrivateIpAddressesSetItemType(
+                    networkInterface.getPrivateIpAddress( ),
+                    null,
+                    true,
+                    new InstanceNetworkInterfaceAssociationType(
+                        runningInstance.getIpAddress( ),
+                        null,
+                        networkInterface.getOwnerAccountNumber( )
+                    )
+                )
+              ) )
+            ) );
+          }
+
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {
           throw ex;
