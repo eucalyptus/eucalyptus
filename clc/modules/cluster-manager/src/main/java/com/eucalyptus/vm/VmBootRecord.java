@@ -401,7 +401,7 @@ public class VmBootRecord {
     this.vpc = vpc;
   }
 
-  String getVpcId( ) {
+  public String getVpcId( ) {
     return vpcId;
   }
 
@@ -417,7 +417,7 @@ public class VmBootRecord {
     this.subnet = subnet;
   }
 
-  String getSubnetId( ) {
+  public String getSubnetId( ) {
     return subnetId;
   }
 

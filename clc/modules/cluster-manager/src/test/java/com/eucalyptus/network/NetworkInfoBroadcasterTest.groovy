@@ -55,6 +55,15 @@ class NetworkInfoBroadcasterTest {
     discovery.processClass( NetworkInfoBroadcaster.NetworkConfigurationToNetworkInfo )
     discovery.processClass( NetworkInfoBroadcaster.NetworkGroupToNetworkGroupNetworkView )
     discovery.processClass( NetworkInfoBroadcaster.VmInstanceToVmInstanceNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.VpcToVpcNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.SubnetToSubnetNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.DhcpOptionSetToDhcpOptionSetNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.RouteTableToRouteTableNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.NetworkAclToNetworkAclNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.VpcNetworkInterfaceToNetworkInterfaceNetworkView )
+    discovery.processClass( NetworkInfoBroadcaster.RouteNetworkViewToNIRoute )
+    discovery.processClass( NetworkInfoBroadcaster.NetworkAclEntryNetworkViewToNINetworkAclRule )
+    discovery.processClass( NetworkInfoBroadcaster.InternetGatewayToInternetGatewayNetworkView )
   }
 
   @Test
@@ -88,9 +97,36 @@ class NetworkInfoBroadcasterTest {
               )
           ]
       ) ),
+      new NetworkInfoBroadcaster.NetworkInfoSource( ) {
+        @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+          [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
+        }
+        @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+          [ group( 'sg-00000001', '000000000002', [] ) ]
+        }
+        @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+         []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+         []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          []
+        }
+      },
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
-      { [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ] } as Supplier<List<NetworkInfoBroadcaster.VmInstanceNetworkView>>,
-      { [ group( 'sg-00000001', '000000000002', [] ) ] } as Supplier<List<NetworkInfoBroadcaster.NetworkGroupNetworkView>>,
       { '1.1.1.1' } as Supplier<String>,
       { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
     )
@@ -170,9 +206,36 @@ class NetworkInfoBroadcasterTest {
                 )
             ]
         ) ),
+        new NetworkInfoBroadcaster.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+            [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            []
+          }
+        },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
-        { [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ] } as Supplier<List<NetworkInfoBroadcaster.VmInstanceNetworkView>>,
-        { [ ] } as Supplier<List<NetworkInfoBroadcaster.NetworkGroupNetworkView>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
     )
@@ -234,6 +297,8 @@ class NetworkInfoBroadcasterTest {
       id,
       VmState.RUNNING,
       ownerAccountNumber,
+      null,
+      null,
       mac,
       privateAddress,
       publicAddress,

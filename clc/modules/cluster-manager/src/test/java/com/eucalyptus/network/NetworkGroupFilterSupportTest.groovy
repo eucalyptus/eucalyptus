@@ -40,8 +40,8 @@ class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTestSuppor
     assertMatch( true, "group-id", "sg-00000000", new NetworkGroup( groupId: "sg-00000000" ) )
     assertMatch( false, "group-id", "sg-00000000", new NetworkGroup( groupId: "sg-00000001" ) )
 
-    assertMatch( true, "group-name", "test", NetworkGroup.named( null, "test" ) )
-    assertMatch( false, "group-name", "test", NetworkGroup.named( null, "not test" ) )
+    assertMatch( true, "group-name", "test", new NetworkGroup( null, "test" ) )
+    assertMatch( false, "group-name", "test", new NetworkGroup( null, "not test" ) )
 
     assertMatch( true, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [ "0.0.0.0/0" ] ) ] as Set ) )
     assertMatch( false, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [ "1.1.1.1/32" ] ) ] as Set ) )
@@ -67,8 +67,8 @@ class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTestSuppor
 
   @Test
   void testWildcardPredicateFilter() {
-    assertMatch( true, "group-name", "te*", NetworkGroup.named( null, "test" ) )
-    assertMatch( false, "group-name", "te*", NetworkGroup.named( null, "not test" ) )
+    assertMatch( true, "group-name", "te*", new NetworkGroup( null, "test" ) )
+    assertMatch( false, "group-name", "te*", new NetworkGroup( null, "not test" ) )
   }
 
   void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final NetworkGroup target) {

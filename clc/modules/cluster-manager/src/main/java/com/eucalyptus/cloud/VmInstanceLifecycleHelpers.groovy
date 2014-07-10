@@ -520,7 +520,7 @@ class VmInstanceLifecycleHelpers {
       final Set<String> networkNames = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupNames( ) )
       final Set<String> networkIds = Sets.newLinkedHashSet( allocation.getRequest().securityGroupsIds() )
       final String vpcId = allocation?.subnet?.vpc?.displayName
-      final boolean isVpc = vpcId
+      final boolean isVpc = vpcId != null
       if ( networkNames.isEmpty( ) && networkIds.isEmpty( ) ) {
         Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
           NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )

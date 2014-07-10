@@ -367,7 +367,8 @@ public class VpcManager {
               NetworkGroups.defaultNetworkName(),
               "default VPC security group" );
           //TODO:STEVE: update when security group protocol support is updated for VPC
-          final Collection<NetworkPeer> peers = Lists.newArrayList( NetworkPeer.create( group.getGroupId( ) ) );
+          final Collection<NetworkPeer> peers = Lists.newArrayList( 
+              NetworkPeer.create( group.getOwnerAccountNumber( ), group.getName( ), group.getGroupId( ) ) );
           group.getNetworkRules( ).addAll( Lists.newArrayList(
               NetworkRule.create( NetworkRule.Protocol.icmp, -1, -1, peers, null ),
               NetworkRule.create( NetworkRule.Protocol.tcp, 0, 65535, peers, null ),

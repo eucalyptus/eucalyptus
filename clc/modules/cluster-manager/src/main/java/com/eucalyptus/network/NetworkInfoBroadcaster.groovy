@@ -27,17 +27,36 @@ import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
+import com.eucalyptus.cluster.NIDhcpOptionSet
 import com.eucalyptus.cluster.NIInstance
+import com.eucalyptus.cluster.NIInternetGateway
+import com.eucalyptus.cluster.NINetworkAcl
+import com.eucalyptus.cluster.NINetworkAclEntry
+import com.eucalyptus.cluster.NINetworkInterface
 import com.eucalyptus.cluster.NINode
 import com.eucalyptus.cluster.NINodes
 import com.eucalyptus.cluster.NIProperty
+import com.eucalyptus.cluster.NIRoute
+import com.eucalyptus.cluster.NIRouteTable
 import com.eucalyptus.cluster.NISecurityGroup
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
+import com.eucalyptus.cluster.NIVpc
+import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback
 import com.eucalyptus.component.Topology
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.compute.vpc.DhcpOption
+import com.eucalyptus.compute.vpc.DhcpOptionSet
+import com.eucalyptus.compute.vpc.InternetGateway
+import com.eucalyptus.compute.vpc.NetworkAcl
+import com.eucalyptus.compute.vpc.NetworkAclEntry
+import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.vpc.Route
+import com.eucalyptus.compute.vpc.RouteTable
+import com.eucalyptus.compute.vpc.Vpc
+import com.eucalyptus.compute.vpc.Subnet as VpcSubnet
 import com.eucalyptus.entities.EntityCache
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
@@ -46,6 +65,7 @@ import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.network.config.Subnet
+import com.eucalyptus.system.BaseDirectory
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Strings as EucaStrings
 import com.eucalyptus.util.TypeMapper
@@ -56,17 +76,23 @@ import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
+import com.google.common.base.Charsets
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
 import com.google.common.base.Suppliers
+import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.HashMultimap
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.Iterables
+import com.google.common.collect.ListMultimap
+import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
+import com.google.common.io.Files as GFiles
 import edu.ucsb.eucalyptus.cloud.NodeInfo
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import groovy.transform.CompileStatic
@@ -74,7 +100,10 @@ import groovy.transform.Immutable
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
 
+import javax.annotation.Nullable
 import javax.xml.bind.JAXBContext
+import java.nio.file.Files as JFiles
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.TimeUnit
@@ -93,6 +122,40 @@ class NetworkInfoBroadcaster {
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.<String,Long>newConcurrentMap( ) as ConcurrentMap<String, Long>
   private static final EntityCache<VmInstance,VmInstanceNetworkView> instanceCache = new EntityCache<>( VmInstance.named(null), TypeMappers.lookup( VmInstance, VmInstanceNetworkView )  );
   private static final EntityCache<NetworkGroup,NetworkGroupNetworkView> securityGroupCache = new EntityCache<>( NetworkGroup.withNaturalId( null ), TypeMappers.lookup( NetworkGroup, NetworkGroupNetworkView )  );
+
+  private static final EntityCache<Vpc,VpcNetworkView> vpcCache = new EntityCache<>( Vpc.exampleWithOwner( null ), TypeMappers.lookup( Vpc, VpcNetworkView )  );
+  private static final EntityCache<VpcSubnet,SubnetNetworkView> subnetCache = new EntityCache<>( VpcSubnet.exampleWithOwner( null ), TypeMappers.lookup( VpcSubnet, SubnetNetworkView )  );
+  private static final EntityCache<DhcpOptionSet,DhcpOptionSetNetworkView> dhcpOptionsCache = new EntityCache<>( DhcpOptionSet.exampleWithOwner( null ), TypeMappers.lookup( DhcpOptionSet, DhcpOptionSetNetworkView )  );
+  private static final EntityCache<NetworkAcl,NetworkAclNetworkView> networkAclCache = new EntityCache<>( NetworkAcl.exampleWithOwner( null ), TypeMappers.lookup( NetworkAcl, NetworkAclNetworkView )  );
+  private static final EntityCache<RouteTable,RouteTableNetworkView> routeTableCache = new EntityCache<>( RouteTable.exampleWithOwner( null ), TypeMappers.lookup( RouteTable, RouteTableNetworkView )  );
+  private static final EntityCache<InternetGateway,InternetGatewayNetworkView> internetGatewayCache = new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway, InternetGatewayNetworkView )  );
+  private static final EntityCache<VpcNetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache = new EntityCache<>( VpcNetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( VpcNetworkInterface, NetworkInterfaceNetworkView )  );
+
+  interface NetworkInfoSource {
+    Iterable<VmInstanceNetworkView> getInstances( );
+    Iterable<NetworkGroupNetworkView> getSecurityGroups( );
+    Iterable<VpcNetworkView> getVpcs( );
+    Iterable<SubnetNetworkView> getSubnets( );
+    Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( );
+    Iterable<NetworkAclNetworkView> getNetworkAcls( );
+    Iterable<RouteTableNetworkView> getRouteTables( );
+    Iterable<InternetGatewayNetworkView> getInternetGateways( );
+    Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( );
+  }
+
+  private static NetworkInfoSource cacheSource( ) {
+    new NetworkInfoSource( ) {
+      @Override Iterable<VmInstanceNetworkView> getInstances( ) { instanceCache.get( ) }
+      @Override Iterable<NetworkGroupNetworkView> getSecurityGroups( ) { securityGroupCache.get( ) }
+      @Override Iterable<VpcNetworkView> getVpcs( ) { vpcCache.get( ) }
+      @Override Iterable<SubnetNetworkView> getSubnets( ) { subnetCache.get( ) }
+      @Override Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( ) { dhcpOptionsCache.get( ) }
+      @Override Iterable<NetworkAclNetworkView> getNetworkAcls( ) { networkAclCache.get( ) }
+      @Override Iterable<RouteTableNetworkView> getRouteTables( ) { routeTableCache.get( ) }
+      @Override Iterable<InternetGatewayNetworkView> getInternetGateways( ) { internetGatewayCache.get( ) }
+      @Override Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( ) { networkInterfaceCache.get( ) }
+    }
+  }
 
   static void requestNetworkInfoBroadcast( ) {
     final long requestedTime = System.currentTimeMillis( )
@@ -131,9 +194,8 @@ class NetworkInfoBroadcaster {
 
     final NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
         networkConfiguration,
+        cacheSource( ),
         Suppliers.ofInstance( clusters ) as Supplier<List<Cluster>>,
-        instanceCache as Supplier<Iterable<VmInstanceNetworkView>>,
-        securityGroupCache as Supplier<Iterable<NetworkGroupNetworkView>>,
         { Topology.lookup(Eucalyptus).inetAddress.hostAddress } as Supplier<String>,
         NetworkConfigurations.&loadSystemNameservers as Function<List<String>,List<String>> )
 
@@ -145,6 +207,11 @@ class NetworkInfoBroadcaster {
     if ( logger.isTraceEnabled( ) ) {
       logger.trace( "Broadcasting network information:\n${networkInfo}" )
     }
+
+    final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.xml.temp" )
+    if ( !newView.delete( ) ) logger.warn( "Error deleting stale network view ${newView.getAbsolutePath()}" )
+    GFiles.write( networkInfo, newView, Charsets.UTF_8 )
+    JFiles.move( newView.toPath( ), BaseDirectory.RUN.getChildFile( "global_network_info.xml" ).toPath( ), StandardCopyOption.REPLACE_EXISTING )
 
     final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( networkInfo )
     clusters.each { Cluster cluster ->
@@ -170,9 +237,8 @@ class NetworkInfoBroadcaster {
 
   @PackageScope
   static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
+                                                final NetworkInfoSource networkInfoSource,
                                                 final Supplier<List<Cluster>> clusterSupplier,
-                                                final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier,
-                                                final Supplier<Iterable<NetworkGroupNetworkView>> securityGroupSupplier,
                                                 final Supplier<String> clcHostSupplier,
                                                 final Function<List<String>,List<String>> systemNameserverLookup ) {
     Iterable<Cluster> clusters = clusterSupplier.get( )
@@ -214,14 +280,15 @@ class NetworkInfoBroadcaster {
     )
 
     // populate dynamic properties
+    List<String> dnsServers = networkConfiguration.orNull()?.instanceDnsServers?:systemNameserverLookup.apply(['127.0.0.1'])
     info.configuration.properties.addAll( [
         new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
-        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:systemNameserverLookup.apply(['127.0.0.1'])),
+        new NIProperty( name: 'instanceDNSServers', values: dnsServers ),
     ]  )
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(
-        instanceSupplier.get( ),
+        networkInfoSource.instances,
         { VmInstanceNetworkView instance -> !TORNDOWN.contains(instance.state) } as Predicate<VmInstanceNetworkView> )
 
     // populate nodes
@@ -240,15 +307,104 @@ class NetworkInfoBroadcaster {
       }
     }
 
+    // populate vpcs
+    Iterable<VpcNetworkView> vpcs = networkInfoSource.vpcs
+    Iterable<SubnetNetworkView> subnets = networkInfoSource.subnets
+    Iterable<NetworkAclNetworkView> networkAcls = networkInfoSource.networkAcls
+    Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
+    Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
+    Map<String,List<String>> vpcIdToInternetGatewayIds = (Map<String,List<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
+      ArrayListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
+        map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
+        map
+    }).asMap( )
+    info.vpcs.addAll( vpcs.collect{ VpcNetworkView vpc ->
+      new NIVpc(
+        vpc.vpcId,
+        vpc.ownerAccountNumber,
+        vpc.cidr,
+        vpc.dhcpOptionSetId,
+        subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.vpcId }.collect{ SubnetNetworkView subnet ->
+          new NIVpcSubnet(
+              name: subnet.subnetId,
+              ownerId: subnet.ownerAccountNumber,
+              cidr: subnet.cidr,
+              cluster: subnet.availabilityZone,
+              networkAcl: subnet.networkAcl,
+              routeTable: subnet.routeTable
+          )
+        },
+        networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.vpcId }.collect { NetworkAclNetworkView networkAcl ->
+          new NINetworkAcl(
+              name: networkAcl.networkAclId,
+              ownerId: networkAcl.ownerAccountNumber,
+              ingressEntries: Lists.transform( networkAcl.ingressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>,
+              egressEntries: Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>
+          )
+        },
+        routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.vpcId }.collect { RouteTableNetworkView routeTable ->
+          new NIRouteTable(
+              name: routeTable.routeTableId,
+              ownerId: routeTable.ownerAccountNumber,
+              routes: Lists.transform( routeTable.routes, TypeMappers.lookup( RouteNetworkView, NIRoute ) ) as List<NIRoute>
+          )
+        },
+        vpcIdToInternetGatewayIds.get( vpc.vpcId )?:[] as List<String>
+      )
+    } )
+
     // populate instances
+    Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
+    Map<String,List<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,List<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
+      ListMultimap<String,NetworkInterfaceNetworkView> map, NetworkInterfaceNetworkView networkInterface ->
+        if ( networkInterface.instanceId ) map.put( networkInterface.instanceId, networkInterface )
+        map
+    }).asMap( )
     info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
       new NIInstance(
           name: instance.instanceId,
           ownerId: instance.ownerAccountNumber,
+          vpc: instance.vpcId,
+          subnet: instance.subnetId,
           macAddress: Strings.emptyToNull( instance.macAddress ),
           publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
           privateIp: instance.privateAddress,
-          securityGroups: instance.securityGroupIds
+          securityGroups: instance.securityGroupIds,
+          networkInterfaces: instanceIdToNetworkInterfaces.get( instance.instanceId )?.collect{ NetworkInterfaceNetworkView networkInterface ->
+            new NINetworkInterface(
+                name: networkInterface.networkInterfaceId,
+                ownerId: networkInterface.ownerAccountNumber,
+                deviceIndex: networkInterface.deviceIndex,
+                macAddress: networkInterface.macAddress,
+                privateIp: networkInterface.privateIp,
+                sourceDestCheck: networkInterface.sourceDestCheck,
+                securityGroups: instance.securityGroupIds //TODO:STEVE: use network interface security groups here
+            )
+          } ?: [ ] as List<NINetworkInterface>
+      )
+    } )
+
+    // populate dhcp option sets
+    Iterable<DhcpOptionSetNetworkView> dhcpOptionSets = networkInfoSource.dhcpOptionSets
+    info.dhcpOptionSets.addAll( dhcpOptionSets.collect { DhcpOptionSetNetworkView dhcpOptionSet ->
+      new NIDhcpOptionSet(
+          name: dhcpOptionSet.dhcpOptionSetId,
+          ownerId: dhcpOptionSet.ownerAccountNumber,
+          properties: dhcpOptionSet.options.collect{ DhcpOptionNetworkView option ->
+            if ( 'domain-name-servers' == option.key && 'AmazonProvidedDNS' == option.values?.getAt( 0 ) ) {
+              new NIProperty( 'domain-name-servers', dnsServers )
+            } else {
+              new NIProperty( option.key, option.values )
+            }
+          }
+      )
+    } )
+
+    // populate internet gateways
+    info.internetGateways.addAll( internetGateways.collect { InternetGatewayNetworkView internetGateway ->
+      new NIInternetGateway(
+          name: internetGateway.internetGatewayId,
+          ownerId: internetGateway.ownerAccountNumber,
       )
     } )
 
@@ -256,7 +412,7 @@ class NetworkInfoBroadcaster {
     Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
       Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
     }
-    Iterable<NetworkGroupNetworkView> groups = securityGroupSupplier.get( )
+    Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
     info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.groupId ) }.collect{ NetworkGroupNetworkView group ->
       new NISecurityGroup(
           name: group.groupId,
@@ -324,6 +480,8 @@ class NetworkInfoBroadcaster {
     String instanceId
     VmState state
     String ownerAccountNumber
+    String vpcId
+    String subnetId
     String macAddress
     String privateAddress
     String publicAddress
@@ -342,6 +500,8 @@ class NetworkInfoBroadcaster {
           instance.instanceId,
           instance.state,
           instance.ownerAccountNumber,
+          instance.bootRecord.vpcId,
+          instance.bootRecord.subnetId,
           instance.macAddress,
           instance.privateAddress,
           instance.publicAddress,
@@ -371,6 +531,270 @@ class NetworkInfoBroadcaster {
           group.groupId,
           group.ownerAccountNumber,
           group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>
+      )
+    }
+  }
+
+  @Immutable
+  static class VpcNetworkView {
+    String vpcId
+    String ownerAccountNumber
+    String cidr
+    String dhcpOptionSetId
+  }
+
+  @TypeMapper
+  enum VpcToVpcNetworkView implements Function<Vpc,VpcNetworkView> {
+    INSTANCE;
+
+    @Override
+    VpcNetworkView apply( final Vpc vpc ) {
+      new VpcNetworkView(
+          vpc.displayName,
+          vpc.ownerAccountNumber,
+          vpc.cidr,
+          vpc.dhcpOptionSet.displayName
+      )
+    }
+  }
+
+  @Immutable
+  static class SubnetNetworkView {
+    String subnetId
+    String ownerAccountNumber
+    String vpcId
+    String cidr
+    String availabilityZone
+    String networkAcl
+    String routeTable
+  }
+
+  @TypeMapper
+  enum SubnetToSubnetNetworkView implements Function<VpcSubnet,SubnetNetworkView> {
+    INSTANCE;
+
+    @Override
+    SubnetNetworkView apply( final VpcSubnet subnet ) {
+      new SubnetNetworkView(
+          subnet.displayName,
+          subnet.ownerAccountNumber,
+          subnet.vpc.displayName,
+          subnet.cidr,
+          subnet.availabilityZone,
+          subnet.networkAcl.displayName,
+          subnet.routeTable.displayName
+      )
+    }
+  }
+
+  @Immutable
+  static class DhcpOptionSetNetworkView {
+    String dhcpOptionSetId
+    String ownerAccountNumber
+    List<DhcpOptionNetworkView> options
+  }
+
+  @Immutable
+  static class DhcpOptionNetworkView {
+    String key
+    List<String> values
+  }
+
+  @TypeMapper
+  enum DhcpOptionSetToDhcpOptionSetNetworkView implements Function<DhcpOptionSet,DhcpOptionSetNetworkView> {
+    INSTANCE;
+
+    @Override
+    DhcpOptionSetNetworkView apply( final DhcpOptionSet dhcpOptionSet ) {
+      new DhcpOptionSetNetworkView(
+          dhcpOptionSet.displayName,
+          dhcpOptionSet.ownerAccountNumber,
+          ImmutableList.copyOf( dhcpOptionSet.dhcpOptions.collect{ DhcpOption option -> new DhcpOptionNetworkView(
+              option.key,
+              ImmutableList.copyOf( option.values )
+          ) } )
+      )
+    }
+  }
+
+  @Immutable
+  static class NetworkAclNetworkView {
+    String networkAclId
+    String ownerAccountNumber
+    String vpcId
+    List<NetworkAclEntryNetworkView> ingressRules
+    List<NetworkAclEntryNetworkView> egressRules
+  }
+
+  @Immutable
+  static class NetworkAclEntryNetworkView {
+    Integer number
+    Integer protocol
+    String action
+    String cidr
+    Integer icmpCode
+    Integer icmpType
+    Integer portRangeFrom
+    Integer portRangeTo
+  }
+
+  @TypeMapper
+  enum NetworkAclToNetworkAclNetworkView implements Function<NetworkAcl,NetworkAclNetworkView> {
+    INSTANCE;
+
+    @Override
+    NetworkAclNetworkView apply( final NetworkAcl networkAcl ) {
+      new NetworkAclNetworkView(
+          networkAcl.displayName,
+          networkAcl.ownerAccountNumber,
+          networkAcl.vpc.displayName,
+          ImmutableList.copyOf( networkAcl.entries.findAll{ NetworkAclEntry entry -> !entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } ),
+          ImmutableList.copyOf( networkAcl.entries.findAll{ NetworkAclEntry entry -> entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } )
+      )
+    }
+  }
+
+  @TypeMapper
+  enum NetworkAclEntryToNetworkAclEntryNetworkView implements Function<NetworkAclEntry,NetworkAclEntryNetworkView> {
+    INSTANCE;
+
+    @Override
+    NetworkAclEntryNetworkView apply( final NetworkAclEntry networkAclEntry ) {
+      new NetworkAclEntryNetworkView(
+          networkAclEntry.ruleNumber,
+          networkAclEntry.protocol,
+          String.valueOf( networkAclEntry.ruleAction ),
+          networkAclEntry.cidr,
+          networkAclEntry.icmpCode,
+          networkAclEntry.icmpType,
+          networkAclEntry.portRangeFrom,
+          networkAclEntry.portRangeTo
+      )
+    }
+  }
+
+  @TypeMapper
+  enum NetworkAclEntryNetworkViewToNINetworkAclRule implements Function<NetworkAclEntryNetworkView,NINetworkAclEntry> {
+    INSTANCE;
+
+    @Override
+    NINetworkAclEntry apply(@Nullable final NetworkAclEntryNetworkView networkAclEntry ) {
+      new NINetworkAclEntry(
+        networkAclEntry.number,
+        networkAclEntry.protocol,
+        networkAclEntry.action,
+        networkAclEntry.cidr,
+        networkAclEntry.icmpCode,
+        networkAclEntry.icmpType,
+        networkAclEntry.portRangeFrom,
+        networkAclEntry.portRangeTo
+      )
+    }
+  }
+
+  @Immutable
+  static class RouteTableNetworkView {
+    String routeTableId
+    String ownerAccountNumber
+    String vpcId
+    List<RouteNetworkView> routes
+  }
+
+  @Immutable
+  static class RouteNetworkView {
+    String destinationCidr
+    String gatewayId
+  }
+
+  @TypeMapper
+  enum RouteTableToRouteTableNetworkView implements Function<RouteTable,RouteTableNetworkView> {
+    INSTANCE;
+
+    @Override
+    RouteTableNetworkView apply( final RouteTable routeTable ) {
+      new RouteTableNetworkView(
+          routeTable.displayName,
+          routeTable.ownerAccountNumber,
+          routeTable.vpc.displayName,
+          ImmutableList.copyOf( routeTable.routes.collect{ Route route -> TypeMappers.transform( route, RouteNetworkView ) } ),
+      )
+    }
+  }
+
+  @TypeMapper
+  enum RouteToRouteNetworkView implements Function<Route,RouteNetworkView> {
+    INSTANCE;
+
+    @Override
+    RouteNetworkView apply(@Nullable final Route route) {
+      new RouteNetworkView(
+          route.destinationCidr,
+          route.getInternetGateway()?.displayName ?: 'local'
+      )
+    }
+  }
+
+  @TypeMapper
+  enum RouteNetworkViewToNIRoute implements Function<RouteNetworkView,NIRoute> {
+    INSTANCE;
+
+    @Override
+    NIRoute apply(@Nullable final RouteNetworkView routeNetworkView) {
+      new NIRoute(
+          routeNetworkView.destinationCidr,
+          routeNetworkView.gatewayId
+      )
+    }
+  }
+
+  @Immutable
+  static class InternetGatewayNetworkView {
+    String internetGatewayId
+    String ownerAccountNumber
+    String vpcId
+  }
+
+  @TypeMapper
+  enum InternetGatewayToInternetGatewayNetworkView implements Function<InternetGateway,InternetGatewayNetworkView> {
+    INSTANCE;
+
+    @Override
+    InternetGatewayNetworkView apply( final InternetGateway internetGateway ) {
+      new InternetGatewayNetworkView(
+          internetGateway.displayName,
+          internetGateway.ownerAccountNumber,
+          internetGateway.vpc.displayName
+      )
+    }
+  }
+
+  @Immutable
+  static class NetworkInterfaceNetworkView {
+    String networkInterfaceId
+    String ownerAccountNumber
+    String instanceId
+    Integer deviceIndex
+    String macAddress
+    String privateIp
+    Boolean sourceDestCheck
+    List<String> securityGroupIds
+  }
+
+  @TypeMapper
+  enum VpcNetworkInterfaceToNetworkInterfaceNetworkView implements Function<VpcNetworkInterface,NetworkInterfaceNetworkView> {
+    INSTANCE;
+
+    @Override
+    NetworkInterfaceNetworkView apply( final VpcNetworkInterface networkInterface ) {
+      new NetworkInterfaceNetworkView(
+          networkInterface.displayName,
+          networkInterface.ownerAccountNumber,
+          networkInterface.attachment?.instanceId,
+          networkInterface.attachment?.deviceIndex,
+          networkInterface.macAddress,
+          networkInterface.privateIpAddress,
+          networkInterface.sourceDestCheck,
+          [ ] as List<String> //TODO:STEVE: security groups for network interfaces
       )
     }
   }

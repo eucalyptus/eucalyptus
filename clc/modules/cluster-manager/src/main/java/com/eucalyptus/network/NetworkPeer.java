@@ -102,8 +102,8 @@ public class NetworkPeer implements Serializable {
     this.groupId = groupId;
   }
 
-  public static NetworkPeer create( final String groupId) {
-    return new NetworkPeer( null, null, groupId );
+  public static NetworkPeer create( final String userQueryKey, final String groupName, final String groupId ) {
+    return new NetworkPeer( userQueryKey, groupName, groupId );
   }
 
   public String getUserQueryKey( ) {

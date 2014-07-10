@@ -39,7 +39,10 @@ import javax.xml.bind.annotation.XmlRootElement
 @XmlAccessorType( XmlAccessType.NONE )
 class NetworkInfo {
   @XmlElement NIConfiguration configuration = new NIConfiguration()
+  @XmlElementWrapper @XmlElement(name="vpc") List<NIVpc> vpcs = Lists.newArrayList()
   @XmlElementWrapper @XmlElement(name="instance") List<NIInstance> instances = Lists.newArrayList()
+  @XmlElementWrapper @XmlElement(name="dhcpOptionSet") List<NIDhcpOptionSet> dhcpOptionSets = Lists.newArrayList()
+  @XmlElementWrapper @XmlElement(name="internetGateway") List<NIInternetGateway> internetGateways = Lists.newArrayList()
   @XmlElementWrapper @XmlElement(name="securityGroup") List<NISecurityGroup> securityGroups = Lists.newArrayList()
 }
 
@@ -119,7 +122,108 @@ class NIInstance {
   @XmlElement String macAddress
   @XmlElement String publicIp
   @XmlElement String privateIp
-  @XmlElementWrapper @XmlElement(name="value") List<String> securityGroups = Lists.newArrayList()
+  @XmlElement String vpc
+  @XmlElement String subnet
+  @XmlElementWrapper @XmlElement(name="networkInterface") List<NINetworkInterface> networkInterfaces = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="value") List<String> securityGroups = Lists.newArrayList( )
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIVpc {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElement String cidr
+  @XmlElement String dhcpOptionSet
+  @XmlElementWrapper @XmlElement(name="subnet") List<NIVpcSubnet> subnets = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="networkAcl") List<NINetworkAcl> networkAcls = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="routeTable") List<NIRouteTable> routeTables = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="value") List<String> internetGateways = Lists.newArrayList( )
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIVpcSubnet {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElement String cidr
+  @XmlElement String cluster
+  @XmlElement String networkAcl
+  @XmlElement String routeTable
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NINetworkInterface {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElement Integer deviceIndex
+  @XmlElement String macAddress
+  @XmlElement String privateIp
+  @XmlElementWrapper @XmlElement(name="value") List<String> privateIpAddresses = Lists.newArrayList( )
+  @XmlElement Boolean sourceDestCheck
+  @XmlElementWrapper @XmlElement(name="value") List<String> securityGroups = Lists.newArrayList( )
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NINetworkAcl {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElementWrapper @XmlElement(name="entry") List<NINetworkAclEntry> ingressEntries = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="entry") List<NINetworkAclEntry> egressEntries = Lists.newArrayList( )
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NINetworkAclEntry {
+  @XmlAttribute Integer number
+  @XmlElement Integer protocol
+  @XmlElement String action
+  @XmlElement String cidr
+  @XmlElement Integer icmpCode
+  @XmlElement Integer icmpType
+  @XmlElement Integer portRangeFrom
+  @XmlElement Integer portRangeTo
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIRouteTable {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElementWrapper @XmlElement(name="route") List<NIRoute> routes = Lists.newArrayList( )
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIRoute {
+  @XmlElement String gatewayId
+  @XmlElement String destinationCidr
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIDhcpOptionSet {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIInternetGateway {
+  @XmlAttribute String name
+  @XmlElement String ownerId
 }
 
 @Canonical
