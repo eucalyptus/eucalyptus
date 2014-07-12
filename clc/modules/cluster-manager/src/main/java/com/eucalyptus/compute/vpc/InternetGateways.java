@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -51,6 +52,10 @@ public interface InternetGateways extends Lister<InternetGateway> {
 
   InternetGateway save( InternetGateway internetGateway ) throws VpcMetadataException;
 
+  InternetGateway updateByExample( InternetGateway example,
+                                   OwnerFullName ownerFullName,
+                                   String key,
+                                   Callback<InternetGateway> updateCallback ) throws VpcMetadataException;
 
   @TypeMapper
   public enum InternetGatewayToInternetGatewayTypeTransform implements Function<InternetGateway,InternetGatewayType> {

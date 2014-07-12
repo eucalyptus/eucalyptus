@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpValue
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import groovy.transform.TupleConstructor
@@ -258,6 +259,7 @@ public class RunInstancesType extends VmControlMessage {
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
   String clientToken;
+  @HttpEmbedded
   InstanceNetworkInterfaceSetRequestType networkInterfaceSet;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
   String iamInstanceProfileArn
@@ -374,6 +376,8 @@ public class GroupItemType extends EucalyptusData implements Comparable<GroupIte
 }
 class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
   InstanceNetworkInterfaceSetRequestType() {  }
+  @HttpParameterMapping(parameter = "NetworkInterface")
+  @HttpEmbedded(multiple = true)
   ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = new ArrayList<InstanceNetworkInterfaceSetItemRequestType>();
 }
 class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
@@ -382,8 +386,10 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
   String subnetId;
   String description;
   String privateIpAddress;
+  @HttpEmbedded
   SecurityGroupIdSetType groupSet;
   Boolean deleteOnTermination;
+  @HttpEmbedded
   PrivateIpAddressesSetRequestType privateIpAddressesSet;
   Integer secondaryPrivateIpAddressCount;
   Boolean associatePublicIpAddress;
@@ -391,14 +397,19 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
 }
 class SecurityGroupIdSetType extends EucalyptusData {
   SecurityGroupIdSetType() {  }
+  @HttpParameterMapping(parameter = "SecurityGroupId")
+  @HttpEmbedded(multiple = true)
   ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
 }
 class SecurityGroupIdSetItemType extends EucalyptusData {
+  @HttpValue
   String groupId;
   SecurityGroupIdSetItemType() {  }
 }
 class PrivateIpAddressesSetRequestType extends EucalyptusData {
   PrivateIpAddressesSetRequestType() {  }
+  @HttpParameterMapping(parameter = "PrivateIpAddresses")
+  @HttpEmbedded(multiple = true)
   ArrayList<PrivateIpAddressesSetItemRequestType> item = new ArrayList<PrivateIpAddressesSetItemRequestType>();
 }
 class PrivateIpAddressesSetItemRequestType extends EucalyptusData {

@@ -71,6 +71,8 @@ abstract class NetworkResource extends EucalyptusData {
   @Override String getType( ){ "network-interface" }
   String mac
   String privateIp
+  String description
+  Boolean deleteOnTerminate
 }
 
 abstract class NetworkFeature extends EucalyptusData {}

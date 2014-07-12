@@ -47,6 +47,10 @@ public interface Subnets extends Lister<Subnet> {
                     Predicate<? super Subnet> filter,
                     Function<? super Subnet,T> transform ) throws VpcMetadataException;
 
+  <T> List<T> listByExample( Subnet example,
+                             Predicate<? super Subnet> filter,
+                             Function<? super Subnet,T> transform ) throws VpcMetadataException;
+
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
                       Function<? super Subnet,T> transform ) throws VpcMetadataException;

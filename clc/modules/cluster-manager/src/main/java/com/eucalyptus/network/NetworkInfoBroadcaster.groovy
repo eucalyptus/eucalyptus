@@ -314,8 +314,8 @@ class NetworkInfoBroadcaster {
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
     Map<String,List<String>> vpcIdToInternetGatewayIds = (Map<String,List<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
-      ArrayListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
-        map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
+      ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
+        if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
         map
     }).asMap( )
     info.vpcs.addAll( vpcs.collect{ VpcNetworkView vpc ->
@@ -763,7 +763,7 @@ class NetworkInfoBroadcaster {
       new InternetGatewayNetworkView(
           internetGateway.displayName,
           internetGateway.ownerAccountNumber,
-          internetGateway.vpc.displayName
+          internetGateway.vpc?.displayName
       )
     }
   }

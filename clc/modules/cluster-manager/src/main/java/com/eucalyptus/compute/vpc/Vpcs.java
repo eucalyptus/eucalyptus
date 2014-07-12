@@ -29,6 +29,7 @@ import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Tag;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
@@ -56,6 +57,10 @@ public interface Vpcs extends Lister<Vpc> {
 
   Vpc save( Vpc vpc ) throws VpcMetadataException;
 
+  Vpc updateByExample( Vpc example,
+                       OwnerFullName ownerFullName,
+                       String key,
+                       Callback<Vpc> updateCallback ) throws VpcMetadataException;
   @TypeMapper
   public enum VpcToVpcTypeTransform implements Function<Vpc,VpcType> {
     INSTANCE;

@@ -82,7 +82,7 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     subnet.setAvailableIpAddressCount( ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5 ); // 5 reserved
     subnet.setDefaultForAz( false );
     subnet.setMapPublicIpOnLaunch( false );
-    subnet.setState( State.pending );
+    subnet.setState( State.available );
     return subnet;
   }
 
@@ -92,6 +92,18 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   public static Subnet exampleWithName( final OwnerFullName owner, final String name ) {
     return new Subnet( owner, name );
+  }
+
+  public static Subnet exampleWithRouteTableAssociation( final OwnerFullName owner, final String associationId ) {
+    final Subnet subnet = new Subnet( owner, null );
+    subnet.setRouteTableAssociationId( associationId );
+    return subnet;
+  }
+
+  public static Subnet exampleWithNetworkAclAssociation( final OwnerFullName owner, final String associationId ) {
+    final Subnet subnet = new Subnet( owner, null );
+    subnet.setNetworkAclAssociationId( associationId );
+    return subnet;
   }
 
   @ManyToOne( optional = false )

@@ -42,6 +42,7 @@ interface VpcTagged {
 }
 class DescribeVpcAttributeType extends VpcMessage {
   String vpcId;
+  String attribute //TODO:STEVE: SOAP binding for this
   DescribeVpcAttributeType() {  }
 }
 class DhcpOptionsIdSetType extends EucalyptusData {

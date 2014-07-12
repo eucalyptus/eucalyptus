@@ -2121,6 +2121,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             if ( runningInstance.getNetworkInterfaceSet( ) == null ) {
               runningInstance.setNetworkInterfaceSet( new InstanceNetworkInterfaceSetType( ) );
             }
+            final boolean hasPublicAddress = runningInstance.getIpAddress( ) != null &&
+                !runningInstance.getIpAddress( ).equals( runningInstance.getPrivateIpAddress() );
             runningInstance.getNetworkInterfaceSet( ).getItem( ).add( new InstanceNetworkInterfaceSetItemType(
               networkInterface.getDisplayName( ),
               networkInterface.getSubnet( ).getDisplayName( ),
@@ -2140,21 +2142,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                 networkInterface.getAttachment( ).getAttachTime( ),
                 networkInterface.getAttachment( ).getDeleteOnTerminate( )
               ),
-              new InstanceNetworkInterfaceAssociationType(
+              hasPublicAddress ? new InstanceNetworkInterfaceAssociationType(
                 runningInstance.getIpAddress( ),
                 null,
                 networkInterface.getOwnerAccountNumber( )
-              ),
+              ) : null,
               new InstancePrivateIpAddressesSetType( Lists.newArrayList(
                 new InstancePrivateIpAddressesSetItemType(
                     networkInterface.getPrivateIpAddress( ),
                     null,
                     true,
-                    new InstanceNetworkInterfaceAssociationType(
+                    hasPublicAddress ? new InstanceNetworkInterfaceAssociationType(
                         runningInstance.getIpAddress( ),
                         null,
                         networkInterface.getOwnerAccountNumber( )
-                    )
+                    ) : null
                 )
               ) )
             ) );
