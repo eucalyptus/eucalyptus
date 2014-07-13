@@ -3554,7 +3554,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
         // If a rule cannot be removed, the assumption is it's not present,
         // so failure to remove it will not be treated as a fatal error.
         // (Fixes EUCA-7945.)
-        snprintf(cmd, EUCA_MAX_PATH, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-D PREROUTING ! -s %s -d %s -j DNAT --to-destination %s", dest, src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
@@ -3567,7 +3567,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             //            ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
