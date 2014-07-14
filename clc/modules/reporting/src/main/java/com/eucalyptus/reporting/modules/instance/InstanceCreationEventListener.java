@@ -28,11 +28,14 @@ import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
+import com.eucalyptus.reporting.service.ReportingService;
 import com.google.common.base.Preconditions;
+import org.apache.log4j.Logger;
 
 public class InstanceCreationEventListener implements
     EventListener<InstanceCreationEvent> {
 
+  private static final Logger LOG = Logger.getLogger(InstanceCreationEventListener.class);
   public static void register() {
     Listeners.register( InstanceCreationEvent.class,
         new InstanceCreationEventListener() );
@@ -40,7 +43,12 @@ public class InstanceCreationEventListener implements
 
   @Override
   public void fireEvent( @Nonnull final InstanceCreationEvent event ) {
-    Preconditions.checkNotNull( event, "Event is required" );
+    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service disabled....InstanceCreationEvent discarded");
+      return;
+    }
+    Preconditions.checkNotNull(event, "Event is required");
 
     final long timestamp = getCurrentTimeMillis();
 

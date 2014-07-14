@@ -22,6 +22,7 @@ package com.eucalyptus.reporting.modules.s3;
 
 import javax.annotation.Nonnull;
 
+import com.eucalyptus.reporting.service.ReportingService;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -46,6 +47,11 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
 
     @Override
     public void fireEvent( @Nonnull final S3ObjectEvent event ) {
+      if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+        ReportingService.faultDisableReportingServiceIfNecessary();
+        LOG.trace("Reporting service disabled....S3ObjectEvent discarded");
+        return;
+      }
       Preconditions.checkNotNull(event, "Event is required");
 
       final long timeInMs = getCurrentTimeMillis();

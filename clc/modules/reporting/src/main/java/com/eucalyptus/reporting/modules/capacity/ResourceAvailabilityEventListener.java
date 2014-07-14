@@ -33,22 +33,30 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.domain.ReportingComputeDomainModel;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.reporting.service.ReportingService;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.log4j.Logger;
 
 /**
  * Resource availability listener that updates the compute capacity domain model.
  */
 public class ResourceAvailabilityEventListener implements EventListener<ResourceAvailabilityEvent> {
 
+  private static final Logger LOG = Logger.getLogger(ResourceAvailabilityEventListener.class);
   public static void register( ) {
     Listeners.register( ResourceAvailabilityEvent.class, new ResourceAvailabilityEventListener() );
   }
 
   @Override
   public void fireEvent( @Nonnull final ResourceAvailabilityEvent event ) {
+    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service disabled....ResourceAvailabilityEvent discarded");
+      return;
+    }
     Preconditions.checkNotNull(event, "Event is required");
 
     final ModelComputeUpdater<ReportingComputeZoneDomainModel> zoneSetter = zoneSetters.get( event.getType() );

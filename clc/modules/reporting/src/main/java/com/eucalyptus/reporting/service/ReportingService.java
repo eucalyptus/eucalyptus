@@ -28,6 +28,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Permissions;
@@ -49,9 +54,20 @@ import com.google.common.base.Objects;
 /**
  *
  */
+@ConfigurableClass(root="reporting", description = "Reporting only parameters")
 public class ReportingService {
 
   private static final Logger logger = Logger.getLogger( ReportingService.class );
+  @ConfigurableField(initial = "true", description = "Set this to false to stop reporting from populating new data")
+  public static Boolean REPORTING_SERVICE_ENABLED = true;
+  private static final int DISABLED_SERVICE_FAULT_ID = 1501;
+  private static boolean alreadyFaulted = false;
+  public synchronized static void faultDisableReportingServiceIfNecessary() {
+    if (!alreadyFaulted) {
+      Faults.forComponent(Reporting.class).havingId(DISABLED_SERVICE_FAULT_ID).withVar("component", "reporting").log();
+      alreadyFaulted = true;
+    }
+  }
 
   public ExportReportDataResponseType exportData( final ExportReportDataType request ) throws EucalyptusCloudException {
     final ExportReportDataResponseType reply = request.getReply();

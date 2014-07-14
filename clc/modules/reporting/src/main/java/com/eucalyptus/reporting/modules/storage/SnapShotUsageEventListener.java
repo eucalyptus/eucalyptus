@@ -23,6 +23,7 @@ package com.eucalyptus.reporting.modules.storage;
 import static com.eucalyptus.reporting.event.SnapShotEvent.CreateActionInfo;
 import javax.annotation.Nonnull;
 
+import com.eucalyptus.reporting.service.ReportingService;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -47,6 +48,11 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
   @Override
   public void fireEvent( @Nonnull final SnapShotEvent event ) {
+    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service disabled....SnapShotEvent discarded");
+      return;
+    }
     Preconditions.checkNotNull(event, "Event is required");
 
     final long timeInMs = getCurrentTimeMillis();

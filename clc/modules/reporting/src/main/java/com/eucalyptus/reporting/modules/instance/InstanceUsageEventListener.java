@@ -30,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
+
+import com.eucalyptus.reporting.service.ReportingService;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 
@@ -63,6 +65,11 @@ public class InstanceUsageEventListener implements
 
     @Override
     public void fireEvent(@Nonnull final InstanceUsageEvent event) {
+      if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+        ReportingService.faultDisableReportingServiceIfNecessary();
+        log.trace("Reporting service disabled....InstanceUsageEvent discarded");
+        return;
+      }
 
 	if (log.isDebugEnabled()) {
 	    log.debug("Received instance usage event:" + event);
