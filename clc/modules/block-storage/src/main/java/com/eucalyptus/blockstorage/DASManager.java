@@ -80,17 +80,14 @@ import java.util.regex.Pattern;
 import javax.crypto.Cipher;
 import javax.persistence.EntityNotFoundException;
 
+import com.eucalyptus.blockstorage.entities.*;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
-import com.eucalyptus.blockstorage.entities.DASInfo;
-import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
-import com.eucalyptus.blockstorage.entities.ISCSIVolumeInfo;
-import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
-import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -766,11 +763,11 @@ public class DASManager implements LogicalStorageManager {
 		}
 	}
 
-	protected class VolumeEntityWrapperManager {
-		private EntityWrapper entityWrapper;
+	protected static class VolumeEntityWrapperManager {
+		private TransactionResource transaction;
 
 		protected VolumeEntityWrapperManager() {
-			entityWrapper = StorageProperties.getEntityWrapper();
+			transaction = Entities.transactionFor(VolumeInfo.class);
 		}
 
 		/**
@@ -856,20 +853,20 @@ public class DASManager implements LogicalStorageManager {
 
 		protected void finish() {
 			try {
-				entityWrapper.commit();
+				transaction.commit();
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
-				entityWrapper.rollback();
+				transaction.rollback();
 			}
 		}
 
 		protected void abort() {
-			entityWrapper.rollback();
+			transaction.rollback();
 		}
 
 		protected LVMVolumeInfo getVolumeInfo(String volumeId) {
 			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo(volumeId);
-			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = Entities.query(ISCSIVolumeInfo);
 			if(ISCSIVolumeInfos.size() > 0) {
 				return ISCSIVolumeInfos.get(0);
 			}
@@ -880,7 +877,7 @@ public class DASManager implements LogicalStorageManager {
 			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
 			ISCSIVolumeInfo.setSnapshotOf(volumeId);
 			ISCSIVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
-			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = Entities.query(ISCSIVolumeInfo);
 			if(ISCSIVolumeInfos.size() > 0) {
 				return true;
 			}
@@ -893,16 +890,16 @@ public class DASManager implements LogicalStorageManager {
 
 		protected List<LVMVolumeInfo> getAllVolumeInfos() {
 			List<LVMVolumeInfo> volumeInfos = new ArrayList<LVMVolumeInfo>();
-			volumeInfos.addAll(entityWrapper.query(new ISCSIVolumeInfo()));	
+			volumeInfos.addAll(Entities.query(new ISCSIVolumeInfo()));
 			return volumeInfos;
 		}
 
 		protected void add(LVMVolumeInfo volumeInfo) {
-			entityWrapper.add(volumeInfo);
+			Entities.persist(volumeInfo);
 		}
 
 		protected void remove(LVMVolumeInfo volumeInfo) {
-			entityWrapper.delete(volumeInfo);
+			Entities.delete(volumeInfo);
 		}
 
 		protected String encryptTargetPassword(String password) throws EucalyptusCloudException {

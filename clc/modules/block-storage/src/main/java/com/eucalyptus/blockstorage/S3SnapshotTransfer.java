@@ -192,7 +192,12 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		this.keyName = keyName;
 	}
 
-	public String getSnapshotId() {
+    // for using in unit tests
+    protected S3SnapshotTransfer(boolean mock) {
+        // for mocking, do not initialize s3 client
+    }
+
+    public String getSnapshotId() {
 		return snapshotId;
 	}
 
@@ -498,22 +503,22 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	}
 
 	private void initializeEucaS3Client() throws SnapshotTransferException {
-		if (role == null) {
-			try {
-				role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
-			} catch (Exception e) {
-				LOG.error("Failed to initialize account for snapshot transfers due to " + e);
-				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
-			}
-		}
+        if (role == null) {
+            try {
+                role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
+            } catch (Exception e) {
+                LOG.error("Failed to initialize account for snapshot transfers due to " + e);
+                throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
+            }
+        }
 
-		try {
-			SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
-			eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
-		} catch (Exception e) {
-			LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
-			throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
-		}
+        try {
+            SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
+            eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
+        } catch (Exception e) {
+            LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
+            throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
+        }
 	}
 
 	private void loadTransferConfig() {
