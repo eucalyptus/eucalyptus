@@ -20,8 +20,8 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1500"
-    message="Reporting service has been enabled.  This means no new data.  Existing data can be queried.">
+    id="1501"
+    message="Reporting service has been disabled.  This means no new reporting data will be populated.  Existing data can still be queried.">
 
     <condition
       message="Property reporting.enable_reporting_service=false"/>
