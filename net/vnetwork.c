@@ -3572,7 +3572,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             //            ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT %s -d %s -j DNAT --to-destination %s", src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
