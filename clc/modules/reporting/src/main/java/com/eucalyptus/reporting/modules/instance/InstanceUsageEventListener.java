@@ -65,9 +65,9 @@ public class InstanceUsageEventListener implements
 
     @Override
     public void fireEvent(@Nonnull final InstanceUsageEvent event) {
-      if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+      if (!ReportingService.DATA_COLLECTION_ENABLED) {
         ReportingService.faultDisableReportingServiceIfNecessary();
-        log.trace("Reporting service disabled....InstanceUsageEvent discarded");
+        log.trace("Reporting service data collection disabled....InstanceUsageEvent discarded");
         return;
       }
 

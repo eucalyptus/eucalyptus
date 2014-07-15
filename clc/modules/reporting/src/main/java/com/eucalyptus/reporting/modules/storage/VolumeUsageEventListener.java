@@ -54,9 +54,9 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
   @Override
   public void fireEvent(@Nonnull final VolumeEvent event) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....VolumeEvent discarded");
+      LOG.trace("Reporting service data collection disabled....VolumeEvent discarded");
       return;
     }
     Preconditions.checkNotNull(event, "Event is required");

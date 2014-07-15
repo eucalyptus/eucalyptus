@@ -21,13 +21,13 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1501"
-    message="Reporting service has been disabled.  This means no new reporting data will be populated.  Existing data can still be queried.">
+    message="Reporting service data collection has been disabled.  This means no new reporting data will be populated.  Existing data can still be queried.">
 
     <condition
-      message="Property reporting.enable_reporting_service=false"/>
+      message="Property reporting.data_collection_enabled=false"/>
 
     <cause
-      message="Property reporting.enable_reporting_service=false"/>
+      message="Property reporting.data_collection_enabled=false"/>
 
     <initiator
       message="Reporting"/>
@@ -37,7 +37,7 @@
 
     <resolution>
       <message>
-       Run euca-modify-property -p reporting.enable_reporting_service=true
+       Run euca-modify-property -p reporting.data_collection_enabled=true
       </message>
     </resolution>
   </fault>

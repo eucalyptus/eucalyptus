@@ -43,9 +43,9 @@ public class InstanceCreationEventListener implements
 
   @Override
   public void fireEvent( @Nonnull final InstanceCreationEvent event ) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....InstanceCreationEvent discarded");
+      LOG.trace("Reporting service data collection disabled....InstanceCreationEvent discarded");
       return;
     }
     Preconditions.checkNotNull(event, "Event is required");

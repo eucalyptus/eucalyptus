@@ -47,9 +47,9 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
 
     @Override
     public void fireEvent( @Nonnull final S3ObjectEvent event ) {
-      if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+      if (!ReportingService.DATA_COLLECTION_ENABLED) {
         ReportingService.faultDisableReportingServiceIfNecessary();
-        LOG.trace("Reporting service disabled....S3ObjectEvent discarded");
+        LOG.trace("Reporting service data collection disabled....S3ObjectEvent discarded");
         return;
       }
       Preconditions.checkNotNull(event, "Event is required");

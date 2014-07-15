@@ -48,9 +48,9 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
   @Override
   public void fireEvent( @Nonnull final SnapShotEvent event ) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....SnapShotEvent discarded");
+      LOG.trace("Reporting service data collection disabled....SnapShotEvent discarded");
       return;
     }
     Preconditions.checkNotNull(event, "Event is required");

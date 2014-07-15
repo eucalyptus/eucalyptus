@@ -84,9 +84,9 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @Override
   public void fireEvent( final Hertz event ) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....DescribeSensorsEvent discarded");
+      LOG.trace("Reporting service data collection has been disabled....DescribeSensorsEvent discarded");
       return;
     }
     if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {

@@ -42,9 +42,9 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
 
   @Override
   public void fireEvent( @Nonnull final AddressEvent event ) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....AddressUsageEvent discarded");
+      LOG.trace("Reporting service data collection disabled....AddressUsageEvent discarded");
       return;
     }
     Preconditions.checkNotNull( event, "Event is required" );

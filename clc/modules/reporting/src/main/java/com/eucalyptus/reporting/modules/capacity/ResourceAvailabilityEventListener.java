@@ -52,9 +52,9 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
 
   @Override
   public void fireEvent( @Nonnull final ResourceAvailabilityEvent event ) {
-    if (!ReportingService.REPORTING_SERVICE_ENABLED) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
       ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service disabled....ResourceAvailabilityEvent discarded");
+      LOG.trace("Reporting service data collection disabled....ResourceAvailabilityEvent discarded");
       return;
     }
     Preconditions.checkNotNull(event, "Event is required");
