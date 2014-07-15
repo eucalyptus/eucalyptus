@@ -8342,8 +8342,8 @@ static void print_resourceCache(void)
 //!
 static void reconfigure_resourceCache(ccResource *res, int numHosts)
 {
-    int num_added = 0; // counter of hosts added
-    int num_deleted = 0; // counter of hosts deleted
+    int num_added = 0; // counter of nodes added
+    int num_deleted = 0; // counter of nodes deleted
 
     assert(numHosts>=0);
     if (numHosts > MAXNODES) {
@@ -8364,7 +8364,7 @@ static void reconfigure_resourceCache(ccResource *res, int numHosts)
             }
         }
 
-        // run though array of configured resources, update existing hosts or adding new ones
+        // run though array of configured resources, updating existing nodes or adding new ones
         for (int i=0; i<numHosts; i++) {
             ccResource * res_new = res + i;
             boolean found_it = FALSE;
@@ -8381,10 +8381,10 @@ static void reconfigure_resourceCache(ccResource *res, int numHosts)
 
             if (! found_it) {
                 if (resourceCache->numResources == MAXNODES) {
-                    LOGWARN("cannot add host '%s' until some old node entries are purged\n", res_new->hostname);
+                    LOGWARN("cannot add node '%s' until some old node entries are purged\n", res_new->hostname);
                     continue;
                 }
-                LOGDEBUG("added host '%s' to resource cache\n", res_new->hostname);
+                LOGDEBUG("added node '%s' to resource cache\n", res_new->hostname);
                 memcpy(resourceCache->resources + resourceCache->numResources, res_new, sizeof(ccResource));
                 resourceCache->cacheState[resourceCache->numResources] = RES_CONFIGURED;
                 resourceCache->numResources++;
@@ -8395,14 +8395,14 @@ static void reconfigure_resourceCache(ccResource *res, int numHosts)
         for (int j=0; j<resourceCache->numResources; j++) {
             ccResource * res = resourceCache->resources + j;
             if (resourceCache->cacheState[j] == RES_UNKNOWN) {
-                LOGDEBUG("host '%s' in resource cache was removed from configuration\n", res->hostname);
+                LOGDEBUG("node '%s' in resource cache was removed from configuration\n", res->hostname);
                 resourceCache->cacheState[j] = RES_UNCONFIGURED;
                 num_deleted++;
             }
         }
 
         if (num_added > 0 || num_deleted > 0) {
-            LOGINFO("node configuration change: %d host(s) added, %d removed, %d total\n", 
+            LOGINFO("node configuration change: %d node(s) added, %d removed, %d total\n", 
                     num_added, num_deleted, numHosts);
         }
     }
@@ -8424,7 +8424,7 @@ static int reindex_instanceCache(int removed_index, ccResource * removed_resourc
 
             if ((instanceCache->cacheState[i] == INSTVALID) && // a valid instance slot
                 (inst->ncHostIdx == removed_index)) { // is pointing to the host being removed
-                LOGWARN("BUG: instance struct (%s) points to host to be removed (%s)\n",
+                LOGWARN("BUG: instance struct (%s) points to node to be removed (%s)\n",
                         inst->instanceId, removed_resource->hostname);
                 ret = EUCA_ERROR;
                 break;
@@ -8466,10 +8466,13 @@ static void refresh_resourceCache(ccResourceCache *updatedResourceCache, boolean
 
                 if (strncmp(res_new->hostname, res_old->hostname, sizeof(((ccResource *)0)->hostname)) == 0) {
                     if (resourceCache->cacheState[j] == RES_UNCONFIGURED) { // no longer in configuration
-                        if (res_new->idleStart == 0) { // no instances are using the resource
+                        if ((res_new->maxCores == 0) // if maxCores is zero, CC hasn't managed to talk to the NC yet
+                            ||
+                            ((res_new->idleStart != 0) &&  // no instances on node according to ncDescribeInstances
+                             (res_new->maxCores == res_new->availCores))) { // no instances according to ncDescribeResource
                             if (reindex_instanceCache(j, res_old) == EUCA_OK) {
                                 // remove from the canonical resource cache
-                                LOGDEBUG("removing host '%s' from resource cache\n", res_old->hostname);
+                                LOGDEBUG("removing node '%s' from resource cache\n", res_old->hostname);
                                 memmove(res_old,
                                         res_old + 1,
                                         sizeof(ccResource) * (resourceCache->numResources - j));
@@ -8479,7 +8482,7 @@ static void refresh_resourceCache(ccResourceCache *updatedResourceCache, boolean
                                 resourceCache->numResources--;
                             }
                         } else {
-                            LOGWARN("host '%s' not in configuration, but with instances on it\n", res_old->hostname);
+                            LOGWARN("node '%s' not in configuration, but with instances on it (idleStart=%d max/avail=%d/%d)\n", res_old->hostname, res_new->idleStart, res_new->maxCores, res_new->availCores);
                         }
                     } else { // a configured resource, to be updated
                         memcpy(res_old, res_new, sizeof(ccResource));
@@ -8487,9 +8490,9 @@ static void refresh_resourceCache(ccResourceCache *updatedResourceCache, boolean
                     found_it = TRUE;
                     break;
                 }
-                if (! found_it) {
-                    LOGWARN("BUG: refreshing resource (%s) no longer in cache\n", res_new->hostname);
-                }
+            }
+            if (! found_it) {
+                LOGWARN("BUG: refreshing node (%s) no longer in resource cache (%d vs %d, %ld, %d vs %d)\n", res_new->hostname, res_new->maxCores, res_new->availCores, (long)res_new->idleStart, updatedResourceCache->numResources, resourceCache->numResources);
             }
         }
         sem_mypost(RESCACHE);
