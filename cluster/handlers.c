@@ -87,6 +87,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <math.h>
+#include <assert.h>
 
 #include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
@@ -171,12 +172,12 @@ int init = 0;
 //! @{
 //! @name shared (between CC processes) globals
 ccConfig *config = NULL;
-ccInstanceCache *instanceCache = NULL;
+ccInstanceCache *instanceCache = NULL; // canonical source for latest information about instances
 vnetConfig *vnetconfig = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
-ccResourceCache *resourceCache = NULL;
-ccResourceCache *resourceCacheStage = NULL;
-sensorResourceCache *ccSensorResourceCache = NULL;
+ccResourceCache *resourceCache = NULL; // canonical source for latest information about resources
+ccResourceCache *resourceCacheStage = NULL; // clone of resourceCache used for aggregating replies from NCs (via child procs)
+sensorResourceCache *ccSensorResourceCache = NULL; // canonical source for latest sensor data, both local and from NCs
 //! @}
 
 //! @{
@@ -208,6 +209,9 @@ char *SCHEDPOLICIES[SCHEDLAST] = {
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static void reconfigure_resourceCache(ccResource *res, int numHosts);
+static void refresh_resourceCache(ccResourceCache *updatedResourceCache, boolean do_purge_unconfigured);
 
 static int schedule_instance_migration(ncInstance * instance, char **includeNodes, char **excludeNodes, int includeNodeCount, int excludeNodeCount, int inresid, int *outresid,
                                        ccResourceCache * resourceCacheLocal, char **replyString);
@@ -2363,9 +2367,6 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
         }
     }
 
-    sem_mywait(RESCACHE);
-    memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
-    sem_mypost(RESCACHE);
 
     EUCA_FREE(pids);
     LOGTRACE("done\n");
@@ -2522,9 +2523,10 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
         }
     }
 
-    sem_mywait(RESCACHE);
-    memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
-    sem_mypost(RESCACHE);
+    // resourceCacheStage[] entries were updated based on replies from NC,
+    // now merge them into the canonical location: resourceCache[] (no 
+    // need to try removing hosts, since instanceCache hasn't changed)
+    refresh_resourceCache(resourceCacheStage, FALSE);
 
     EUCA_FREE(pids);
     LOGTRACE("done\n");
@@ -2859,11 +2861,10 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
     }
 
     invalidate_instanceCache();
-
-    sem_mywait(RESCACHE);
-    memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
-    sem_mypost(RESCACHE);
-
+    // update canonicle array of resources with latest changes
+    // to resourceCacheStage (.idleStart may have changed) and
+    // remove any unconfigured hosts if they have no instances
+    refresh_resourceCache(resourceCacheStage, TRUE);
     EUCA_FREE(pids);
 
     LOGTRACE("done\n");
@@ -2966,10 +2967,6 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
             LOGWARN("error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
         }
     }
-
-    sem_mywait(RESCACHE);
-    memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
-    sem_mypost(RESCACHE);
 
     EUCA_FREE(pids);
     LOGTRACE("done\n");
@@ -6290,24 +6287,12 @@ int update_config(void)
             rc = refreshNodes(config, &res, &numHosts);
             if (rc) {
                 LOGERROR("cannot read list of nodes, check your config file\n");
-                sem_mywait(RESCACHE);
-                resourceCache->numResources = 0;
-                config->schedState = 0;
-                bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
-                sem_mypost(RESCACHE);
+                reconfigure_resourceCache(NULL, 0);
                 ret = 1;
             } else {
-                sem_mywait(RESCACHE);
-                if (numHosts > MAXNODES) {
-                    LOGWARN("the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d). "
-                            "Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
-                    numHosts = MAXNODES;
-                }
-                resourceCache->numResources = numHosts;
-                config->schedState = 0;
-                memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
-                sem_mypost(RESCACHE);
+                reconfigure_resourceCache(res, numHosts);
             }
+            config->schedState = 0;
             EUCA_FREE(res);
 
             // CC Arbitrators
@@ -6920,15 +6905,10 @@ int init_config(void)
         sem_mypost(INIT);
         return (1);
     }
+
     // update resourceCache
-    sem_mywait(RESCACHE);
-    resourceCache->numResources = numHosts;
-    if (numHosts) {
-        memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
-    }
+    reconfigure_resourceCache(res, numHosts);
     EUCA_FREE(res);
-    resourceCache->lastResourceUpdate = 0;
-    sem_mypost(RESCACHE);
 
     config_init = 1;
     LOGTRACE("done\n");
@@ -8341,7 +8321,7 @@ int find_instanceCacheIP(char *ip, ccInstance ** out)
 //!
 //! @note
 //!
-void print_resourceCache(void)
+static void print_resourceCache(void)
 {
     int i;
 
@@ -8352,6 +8332,168 @@ void print_resourceCache(void)
                  res->hostname, res->ncURL, res->ip, res->state);
     }
     sem_mypost(RESCACHE);
+}
+
+//!
+//!
+//! @param[in] code
+//!
+//! @note
+//!
+static void reconfigure_resourceCache(ccResource *res, int numHosts)
+{
+    int num_added = 0; // counter of hosts added
+    int num_deleted = 0; // counter of hosts deleted
+
+    assert(numHosts>=0);
+    if (numHosts > MAXNODES) {
+        LOGWARN("NODES exceeds the maximum number of nodes that a CC can support. "
+                "Truncating list to the first %d nodes.\n", MAXNODES);
+        numHosts = MAXNODES;
+    }
+
+    sem_mywait(RESCACHE);
+    {
+        resourceCache->lastResourceUpdate = 0; // reset timestamp, since configuration has changed
+
+        // temporarily mark all previously configured resources as 'unknown'
+        // so we'll know if they were removed during this check
+        for (int i=0; i<MAXNODES; i++) {
+            if (resourceCache->cacheState[i] == RES_CONFIGURED) {
+                resourceCache->cacheState[i] = RES_UNKNOWN;
+            }
+        }
+
+        // run though array of configured resources, update existing hosts or adding new ones
+        for (int i=0; i<numHosts; i++) {
+            ccResource * res_new = res + i;
+            boolean found_it = FALSE;
+
+            for (int j=0; j<resourceCache->numResources; j++) {
+                ccResource * res_old = resourceCache->resources + j;
+
+                if (strncmp(res_new->hostname, res_old->hostname, sizeof(((ccResource *)0)->hostname)) == 0) {
+                    resourceCache->cacheState[j] = RES_CONFIGURED;
+                    found_it = TRUE;
+                    break;
+                }
+            }
+
+            if (! found_it) {
+                if (resourceCache->numResources == MAXNODES) {
+                    LOGWARN("cannot add host '%s' until some old node entries are purged\n", res_new->hostname);
+                    continue;
+                }
+                LOGDEBUG("added host '%s' to resource cache\n", res_new->hostname);
+                memcpy(resourceCache->resources + resourceCache->numResources, res_new, sizeof(ccResource));
+                resourceCache->cacheState[resourceCache->numResources] = RES_CONFIGURED;
+                resourceCache->numResources++;
+                num_added++;
+            }
+        }
+
+        for (int j=0; j<resourceCache->numResources; j++) {
+            ccResource * res = resourceCache->resources + j;
+            if (resourceCache->cacheState[j] == RES_UNKNOWN) {
+                LOGDEBUG("host '%s' in resource cache was removed from configuration\n", res->hostname);
+                resourceCache->cacheState[j] = RES_UNCONFIGURED;
+                num_deleted++;
+            }
+        }
+
+        if (num_added > 0 || num_deleted > 0) {
+            LOGINFO("node configuration change: %d host(s) added, %d removed, %d total\n", 
+                    num_added, num_deleted, numHosts);
+        }
+    }
+    sem_mypost(RESCACHE);
+}
+
+//
+// TODO: to be called with RESCACHE lock held!
+//
+static int reindex_instanceCache(int removed_index, ccResource * removed_resource)
+{
+    int ret = EUCA_OK;
+
+    { // reset the indexes of all concerned instances, atomically
+        sem_mywait(INSTCACHE);
+
+        for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
+            ccInstance * inst = instanceCache->instances + i;
+
+            if ((instanceCache->cacheState[i] == INSTVALID) && // a valid instance slot
+                (inst->ncHostIdx == removed_index)) { // is pointing to the host being removed
+                LOGWARN("BUG: instance struct (%s) points to host to be removed (%s)\n",
+                        inst->instanceId, removed_resource->hostname);
+                ret = EUCA_ERROR;
+                break;
+            }
+        }
+        if (ret == EUCA_OK) {
+            for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
+                ccInstance * inst = instanceCache->instances + i;
+                if ((instanceCache->cacheState[i] == INSTVALID) && // a valid instance slot
+                    (inst->ncHostIdx > removed_index)) { // host index bigger than one being removed
+                    inst->ncHostIdx--;
+                }
+            }
+        }
+        sem_mypost(INSTCACHE);
+    }
+
+    return ret;
+}
+
+//!
+//!
+//! @param[in] code
+//!
+//! @note
+//!
+static void refresh_resourceCache(ccResourceCache *updatedResourceCache, boolean do_purge_unconfigured)
+{
+    { // ingress updated resource information, atomically
+        sem_mywait(RESCACHE);
+
+        // run though array of updated resource information, copying it to canonical location
+        for (int i = 0; i < updatedResourceCache->numResources; i++) {
+            ccResource * res_new = updatedResourceCache->resources + i;
+            boolean found_it = FALSE;
+
+            for (int j=0; j<resourceCache->numResources; j++) {
+                ccResource * res_old = resourceCache->resources + j;
+
+                if (strncmp(res_new->hostname, res_old->hostname, sizeof(((ccResource *)0)->hostname)) == 0) {
+                    if (resourceCache->cacheState[j] == RES_UNCONFIGURED) { // no longer in configuration
+                        if (res_new->idleStart == 0) { // no instances are using the resource
+                            if (reindex_instanceCache(j, res_old) == EUCA_OK) {
+                                // remove from the canonical resource cache
+                                LOGDEBUG("removing host '%s' from resource cache\n", res_old->hostname);
+                                memmove(res_old,
+                                        res_old + 1,
+                                        sizeof(ccResource) * (resourceCache->numResources - j));
+                                memmove(resourceCache->cacheState + j,
+                                        resourceCache->cacheState + (j + 1),
+                                        sizeof(int) * (resourceCache->numResources - j));
+                                resourceCache->numResources--;
+                            }
+                        } else {
+                            LOGWARN("host '%s' not in configuration, but with instances on it\n", res_old->hostname);
+                        }
+                    } else { // a configured resource, to be updated
+                        memcpy(res_old, res_new, sizeof(ccResource));
+                    }
+                    found_it = TRUE;
+                    break;
+                }
+                if (! found_it) {
+                    LOGWARN("BUG: refreshing resource (%s) no longer in cache\n", res_new->hostname);
+                }
+            }
+        }
+        sem_mypost(RESCACHE);
+    }
 }
 
 //!
