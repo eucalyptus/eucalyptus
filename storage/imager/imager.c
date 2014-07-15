@@ -349,9 +349,9 @@ static void set_global_parameter(char *key, char *val)
     } else if (strcmp(key, "purge_cache") == 0) {
         purge_cache = parse_boolean(val);
     } else if (strcmp(key, "cloud_cert") == 0) {
-        strncpy(cloud_cert_path, val, sizeof(cloud_cert_path));
+        euca_strncpy(cloud_cert_path, val, sizeof(cloud_cert_path));
     } else if (strcmp(key, "service_key") == 0) {
-        strncpy(service_key_path, val, sizeof(service_key_path));
+        euca_strncpy(service_key_path, val, sizeof(service_key_path));
     } else {
         err("unknown global parameter '%s'", key);
     }
