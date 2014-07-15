@@ -931,12 +931,12 @@ int update_sec_groups(void)
 
                     // workaround for EUCA-9627 - should be re-done to use proper ref_counts from ipset itself
                     {
-                        char *rulecopy=NULL, *tok=NULL, *term=NULL;
+                        char *rulecopy = NULL, *tok = NULL, *term = NULL;
                         rulecopy = strdup(secgroup->grouprules[j].name);
                         if (rulecopy) {
                             tok = strstr(rulecopy, "--set EU");
-                            if (tok && strlen(tok) > strlen("--set")+1) {
-                                tok = tok + strlen("--set")+1;
+                            if (tok && strlen(tok) > strlen("--set") + 1) {
+                                tok = tok + strlen("--set") + 1;
                                 term = strchr(tok, ' ');
                                 if (term) {
                                     *term = '\0';

@@ -2732,7 +2732,6 @@ void doInitNC(void)
     LOGINFO("component started\n");
 }
 
-
 //!
 //! Handles the describe instance request
 //!
