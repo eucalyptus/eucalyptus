@@ -3313,13 +3313,13 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-A PREROUTING ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-A OUTPUT ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
@@ -3329,6 +3329,11 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
         network = hex2dot(vnetconfig->networks[vlan].nw);
         snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s ! -d %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
         EUCA_FREE(network);
+        if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
+            LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
+            ret = EUCA_ERROR;
+        }
+        snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s -d %s -j SNAT --to-source %s", dst, dst, src);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
             LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
@@ -3554,7 +3559,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
         // If a rule cannot be removed, the assumption is it's not present,
         // so failure to remove it will not be treated as a fatal error.
         // (Fixes EUCA-7945.)
-        snprintf(cmd, EUCA_MAX_PATH, "-D PREROUTING ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
@@ -3567,7 +3572,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             //            ret = EUCA_ERROR;
         }
 
-        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT ! -s %s -d %s -j DNAT --to-destination %s", dst, src, dst);
+        snprintf(cmd, EUCA_MAX_PATH, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
@@ -3584,6 +3589,14 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
         network = hex2dot(vnetconfig->networks[vlan].nw);
         snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s ! -d %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
         EUCA_FREE(network);
+        rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+        count = 0;
+        while (rc != 0 && count < 10) {
+            rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+            count++;
+        }
+
+        snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s -d %s -j SNAT --to-source %s", dst, dst, src);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {
