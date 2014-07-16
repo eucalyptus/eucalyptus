@@ -13,6 +13,7 @@ typedef struct midoname_t {
 
 void mido_free_midoname(midoname *name);
 int mido_update_midoname(midoname *name);
+void mido_copy_midoname(midoname *dst, midoname *src);
 
 int mido_create_tenant(char *name, midoname *outname);
 int mido_read_tenant(midoname *name);
@@ -40,6 +41,24 @@ int mido_print_port(midoname *name);
 int mido_delete_port(midoname *name);
 
 int mido_link_ports(midoname *a, midoname *b);
+
+int mido_link_host_port(midoname *host, char *interface, midoname *device, midoname *port);
+int mido_unlink_host_port(midoname *host, midoname *port);
+
+int mido_get_hosts(midoname **outnames, int *outnames_max);
+int mido_get_interfaces(midoname *host, midoname **outports, int *outports_max);
+
+int mido_create_chain(char *tenant, char *name, midoname *outname);
+int mido_read_chain(midoname *name);
+int mido_update_chain(midoname *name, ...);
+int mido_print_chain(midoname *name);
+int mido_delete_chain(midoname *name);
+
+int mido_create_rule(midoname *chain, char *type, char *src, char *src_slashnet, char *src_ports, char *dst, char *dst_slashnet, char *dst_ports, char *action, char *nat_target, char *nat_port_min, char *nat_port_max, midoname *outname);
+int mido_read_rule(midoname *name);
+int mido_update_rule(midoname *name, ...);
+int mido_print_rule(midoname *name);
+int mido_delete_rule(midoname *name);
 
 int mido_create_resource(midoname *parentname, midoname *newname, midoname *outname, ...);
 int mido_read_resource(char *resource_type, midoname *name);
