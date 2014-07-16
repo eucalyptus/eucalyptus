@@ -32,7 +32,7 @@ int mido_update_router(midoname *name, ...);
 int mido_print_router(midoname *name);
 int mido_delete_router(midoname *name);
 
-int mido_router_create_route(midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip);
+int mido_router_create_route(midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight);
 
 int mido_create_port(midoname *devname, char *port_type, char *ip, char *nw, char *slashnet, midoname *outname);
 int mido_read_port(midoname *name);

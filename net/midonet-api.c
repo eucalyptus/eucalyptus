@@ -926,7 +926,7 @@ int midonet_http_delete(char *url) {
     return(ret);
 }
 
-int mido_router_create_route(midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip) {
+int mido_router_create_route(midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight) {
     int rc;
     midoname myname;
     bzero(&myname, sizeof(midoname));
@@ -939,9 +939,9 @@ int mido_router_create_route(midoname *router, midoname *rport, char *src, char 
     //{"srcNetworkAddr":"0.0.0.0","srcNetworkLength":0,"dstNetworkAddr":"192.168.59.0","dstNetworkLength":24,"type":"Normal","nextHopPort":"e604e4de-b365-400d-ba13-e204483dd936","nextHopGateway":"192.168.59.1","weight":0,"position":2}
 
     if (next_hop_ip) {
-        rc = mido_create_resource(router, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", "0", "nextHopGateway", "string", next_hop_ip, NULL);
+        rc = mido_create_resource(router, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, "nextHopGateway", "string", next_hop_ip, NULL);
     } else {
-        rc = mido_create_resource(router, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", "0", NULL);
+        rc = mido_create_resource(router, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, NULL);
     }
     
     mido_free_midoname(&myname);
@@ -1038,8 +1038,8 @@ int main(int argc, char **argv) {
 //     - el. IP chain/routing setup
      - no pub IP masq chain setup
 //     - manually link up and verify pub->priv VM end-to-end
-     - DHCP and META taps and links
-     - test DHCP and META taps
+BLOCKED     - DHCP and META taps and links
+BLOCKED     - test DHCP and META taps
      - populate operations for re-pop and automation
      - euca integration begin
      - new XML parse and conversion
@@ -1047,13 +1047,14 @@ int main(int argc, char **argv) {
      - dhcp/meta tap creation and such
      - end-to-end testing
   */
-  for (j=0; j<1000; j++) {
+  for (j=0; j<1; j++) {
   midoname eucabr, eucart, eucart_brport, eucabr_rtport, eucart_gwport;
   midoname vpcbr, vpcrt, vpcrt_brport, vpcbr_rtport;
   midoname vpcrt_uplink, eucabr_downlink;
   midoname vm_port_a, vm_port_b;
-  midoname *names, vmhost, rthost;
+  midoname *names, vmhost, rthost, taphost;
   midoname vpcrt_prechain, vpcrt_postchain, vmrule_elip_dnat, vmrule_elip_snat;
+  midoname vpcbr_tapport;
   int max;
 
   { 
@@ -1071,11 +1072,15 @@ int main(int argc, char **argv) {
           if (strstr(names[i].name, "a-15.qa1")) {
               mido_copy_midoname(&rthost, &(names[i]));
           }
+          if (strstr(names[i].name, "h-41.qa1")) {
+              mido_copy_midoname(&taphost, &(names[i]));
+          }
       }
       //      exit(0);
   }
   printf("FOUND VM HOST: %s/%s\n", vmhost.name, vmhost.uuid);
   printf("FOUND RT HOST: %s/%s\n", rthost.name, rthost.uuid);
+  printf("FOUND TAP HOST: %s/%s\n", taphost.name, taphost.uuid);
 
   {
       // set up euca routing GW
@@ -1084,12 +1089,12 @@ int main(int argc, char **argv) {
       rc = mido_create_bridge("euca_tenant_0", "eucabr", &eucabr);
       rc = mido_create_port(&eucabr, "InteriorBridge", NULL, NULL, NULL, &eucabr_rtport);
       rc = mido_create_port(&eucart, "InteriorRouter", "192.168.254.1", "192.168.254.0", "24", &eucart_brport);
-      rc = mido_router_create_route(&eucart, &eucart_brport, "0.0.0.0", "0", "192.168.254.0", "24", NULL);  
+      rc = mido_router_create_route(&eucart, &eucart_brport, "0.0.0.0", "0", "192.168.254.0", "24", NULL, "0");  
       rc = mido_link_ports(&eucart_brport, &eucabr_rtport);
 
       rc = mido_create_port(&eucart, "ExteriorRouter", "10.111.5.57", "10.111.0.0", "16", &eucart_gwport);
-      rc = mido_router_create_route(&eucart, &eucart_gwport, "0.0.0.0", "0", "10.111.0.0", "16", NULL);
-      rc = mido_router_create_route(&eucart, &eucart_gwport, "0.0.0.0", "0", "0.0.0.0", "0", "10.111.5.34");
+      rc = mido_router_create_route(&eucart, &eucart_gwport, "0.0.0.0", "0", "10.111.0.0", "16", NULL, "0");
+      rc = mido_router_create_route(&eucart, &eucart_gwport, "0.0.0.0", "0", "0.0.0.0", "0", "10.111.5.34", "0");
       rc = mido_link_host_port(&rthost, "em1", &eucart, &eucart_gwport);      
   }
 
@@ -1100,7 +1105,7 @@ int main(int argc, char **argv) {
       rc = mido_create_bridge("euca_tenant_0", "vpcbr_12345678", &vpcbr);
       rc = mido_create_port(&vpcbr, "InteriorBridge", NULL, NULL, NULL, &vpcbr_rtport);
       rc = mido_create_port(&vpcrt, "InteriorRouter", "192.168.1.1", "192.168.1.0", "24", &vpcrt_brport);
-      rc = mido_router_create_route(&vpcrt, &vpcrt_brport, "0.0.0.0", "0", "192.168.1.0", "24", NULL);
+      rc = mido_router_create_route(&vpcrt, &vpcrt_brport, "0.0.0.0", "0", "192.168.1.0", "24", NULL, "0");
       rc = mido_link_ports(&vpcrt_brport, &vpcbr_rtport);
       
   }
@@ -1110,8 +1115,8 @@ int main(int argc, char **argv) {
 
       rc = mido_create_port(&eucabr, "InteriorBridge", NULL, NULL, NULL, &eucabr_downlink);
       rc = mido_create_port(&vpcrt, "InteriorRouter", "192.168.254.2", "192.168.254.0", "24", &vpcrt_uplink);
-      rc = mido_router_create_route(&vpcrt, &vpcrt_uplink, "0.0.0.0", "0", "192.168.254.0", "24", NULL);
-      rc = mido_router_create_route(&vpcrt, &vpcrt_uplink, "0.0.0.0", "0", "0.0.0.0", "0", "192.168.254.1");
+      rc = mido_router_create_route(&vpcrt, &vpcrt_uplink, "0.0.0.0", "0", "192.168.254.0", "24", NULL, "0");
+      rc = mido_router_create_route(&vpcrt, &vpcrt_uplink, "0.0.0.0", "0", "0.0.0.0", "0", "192.168.254.1", "0");
       rc = mido_link_ports(&eucabr_downlink, &vpcrt_uplink);
   }
 
@@ -1143,11 +1148,21 @@ int main(int argc, char **argv) {
       rc = mido_update_router(&vpcrt, "outboundFilterId", vpcrt_postchain.uuid, NULL);
 
       // create the EL ip route in main router
-      rc = mido_router_create_route(&eucart, &eucart_brport, "0.0.0.0", "0", "10.111.200.11", "32", "192.168.254.2");
+      rc = mido_router_create_route(&eucart, &eucart_brport, "0.0.0.0", "0", "10.111.200.11", "32", "192.168.254.2", "100");
       
   }
 
-  //scanf("%d", &i);
+
+  {
+      // configure/bind to dhcp/meta taps
+
+      //      rc = mido_create_port(&vpcbr, "ExteriorBridge", NULL, NULL, NULL, &vpcbr_tapport);
+      //      rc = mido_link_host_port(&taphost, "eutap_12345678", &vpcbr, &vpcbr_tapport);
+      //      rc = mido_link_host_port(&taphost, "em1.8", &vpcbr, &vpcbr_tapport);
+      
+  }
+
+  scanf("%d", &i);
 
   // note; must unlink before delete
   rc = mido_unlink_host_port(&rthost, &eucart_gwport);  
