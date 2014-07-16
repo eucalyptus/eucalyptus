@@ -32,6 +32,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.DhcpConfigurationItemType;
@@ -41,6 +42,20 @@ import edu.ucsb.eucalyptus.msgs.DhcpOptionsType;
  *
  */
 public interface DhcpOptionSets extends Lister<DhcpOptionSet> {
+
+  String DHCP_OPTION_DOMAIN_NAME_SERVERS = "domain-name-servers";
+  String DHCP_OPTION_DOMAIN_NAME = "domain-name";
+  String DHCP_OPTION_NTP_SERVERS = "ntp-servers";
+  String DHCP_OPTION_NETBIOS_NAME_SERVERS = "netbios-name-servers";
+  String DHCP_OPTION_NETBIOS_NODE_TYPE = "netbios-node-type";
+
+  Set<String> DHCP_OPTIONS = ImmutableSortedSet.of(
+      DHCP_OPTION_DOMAIN_NAME_SERVERS,
+      DHCP_OPTION_DOMAIN_NAME,
+      DHCP_OPTION_NTP_SERVERS,
+      DHCP_OPTION_NETBIOS_NAME_SERVERS,
+      DHCP_OPTION_NETBIOS_NODE_TYPE
+  );
 
   <T> List<T> list( OwnerFullName ownerFullName,
                     Criterion criterion,

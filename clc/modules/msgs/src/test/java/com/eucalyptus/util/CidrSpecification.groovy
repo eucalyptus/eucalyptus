@@ -96,6 +96,25 @@ class CidrSpecification extends Specification {
     '10.0.0.0/8'        | '10.1.0.1'        | true
   }
 
+  def 'should be able to check for contained cidrs'(){
+    expect: 'parsed cidr containment check has expected result'
+    Groovyness.expandoMetaClass( parse( cidr ) ).contains( Groovyness.expandoMetaClass( parse( perhapsContains ) ) ) == result
+
+    where:
+    cidr                | perhapsContains   | result
+    '0.0.0.0/0'         | '10.1.0.0/32'     | true
+    '0.0.0.0/0'         | '0.0.0.0/0'       | true
+    '0.0.0.0/0'         | '0.0.0.0/1'       | true
+    '10.1.0.0/32'       | '10.1.0.0/32'     | true
+    '10.1.0.0/16'       | '10.1.0.0/16'     | true
+    '10.1.0.0/16'       | '10.0.0.0/15'     | false
+    '10.1.0.0/16'       | '10.1.0.0/17'     | true
+    '10.1.0.0/24'       | '10.1.1.0/24'     | false
+    '10.1.0.0/32'       | '10.1.0.1/32'     | false
+    '10.0.0.0/8'        | '10.1.0.1/32'     | true
+    '10.10.0.0/16'      | '10.11.0.0/16'    | false
+  }
+
   def 'should have a string representation'(){
     expect: 'parsed cidr string conversion check'
     Groovyness.expandoMetaClass( parse( cidr ) ).toString( ) == result

@@ -101,7 +101,9 @@
             <inbound>
                 <inbound-endpoint ref="VpcWS"/>
             </inbound>
-            <component class="com.eucalyptus.compute.vpc.VpcManager"/>
+            <component>
+              <spring-object bean="vpcManager"/>
+            </component>
         </service>
     </model>
 

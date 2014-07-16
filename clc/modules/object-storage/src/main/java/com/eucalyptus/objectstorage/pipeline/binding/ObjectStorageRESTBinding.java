@@ -468,7 +468,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                         copySource = sourceParts[0];
                         String[] sourceTarget = OSGUtil.getTarget(copySource);
                         String sourceObjectKey = "";
-                        if(sourceTarget.length > 1) {
+                        if(sourceTarget != null && sourceTarget.length > 1) {
                         	sourceObjectKey = sourceTarget[1];
 
                             operationParams.put("SourceBucket", sourceTarget[0]);

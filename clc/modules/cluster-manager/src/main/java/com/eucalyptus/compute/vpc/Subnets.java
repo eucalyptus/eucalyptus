@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
@@ -46,6 +47,10 @@ public interface Subnets extends Lister<Subnet> {
                     Predicate<? super Subnet> filter,
                     Function<? super Subnet,T> transform ) throws VpcMetadataException;
 
+  <T> List<T> listByExample( Subnet example,
+                             Predicate<? super Subnet> filter,
+                             Function<? super Subnet,T> transform ) throws VpcMetadataException;
+
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
                       Function<? super Subnet,T> transform ) throws VpcMetadataException;
@@ -53,6 +58,11 @@ public interface Subnets extends Lister<Subnet> {
   boolean delete( final SubnetMetadata metadata ) throws VpcMetadataException;
 
   Subnet save( Subnet subnet ) throws VpcMetadataException;
+
+  Subnet updateByExample( Subnet example,
+                          OwnerFullName ownerFullName,
+                          String key,
+                          Callback<Subnet> updateCallback ) throws VpcMetadataException;
 
   @TypeMapper
   public enum SubnetToSubnetTypeTransform implements Function<Subnet,SubnetType> {

@@ -20,8 +20,10 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.scripting.Groovyness
+import com.eucalyptus.util.Cidr
 import spock.lang.Specification
 
+import static com.eucalyptus.network.IPRange.fromCidr
 import static com.eucalyptus.network.IPRange.fromSubnet
 import static com.eucalyptus.network.IPRange.parse
 
@@ -99,6 +101,20 @@ class IPRangeSpecification extends Specification {
     '10.10.10.40' | '255.255.255.128' |  0x0A0A0A01    | 0x0A0A0A7E
     '10.10.10.0'  | '255.255.255.252' |  0x0A0A0A01    | 0x0A0A0A02
     '10.10.10.0'  | '255.255.255.254' |  0x0A0A0A00    | 0x0A0A0A01 // range too small to shrink
+  }
+
+  def 'should be possible to generate from cidr'() {
+    expect: 'parsed range equals specified range'
+    Groovyness.expandoMetaClass( fromCidr( Cidr.parse( cidr ) ) ) == range( lower, upper )
+
+    where:
+    cidr             | lower          | upper
+    '0.0.0.0/0'      |  1             | -2
+    '10.0.0.0/8'     |  0x0A000001    | 0x0AFFFFFE
+    '10.10.10.0/24'  |  0x0A0A0A01    | 0x0A0A0AFE
+    '10.10.10.0/25'  |  0x0A0A0A01    | 0x0A0A0A7E
+    '10.10.10.0/30'  |  0x0A0A0A01    | 0x0A0A0A02
+    '10.10.10.0/31'  |  0x0A0A0A00    | 0x0A0A0A01 // range too small to shrink
   }
 
   def 'should reject invalid ranges with IllegalArgumentException'() {

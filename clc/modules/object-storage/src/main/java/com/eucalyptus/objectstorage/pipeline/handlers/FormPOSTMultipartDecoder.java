@@ -129,9 +129,11 @@ public class FormPOSTMultipartDecoder extends MessageStackHandler {
         //Populate the bucket field from the HOST header or uri path
         String operationPath = httpRequest.getServicePath().replaceFirst(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
         String[] target = OSGUtil.getTarget(operationPath);
-        String bucket = target[0];
-        if("/".equals(bucket)) {
-            //Look in HOST header
+        String bucket = null;
+        if (target != null && target.length >= 1 ) {
+        	bucket = target[0];
+        } else {
+        	//Look in HOST header
             bucket = httpRequest.getHeader(HttpHeaders.Names.HOST).split(".objectstorage",2)[0];
         }
         return bucket;

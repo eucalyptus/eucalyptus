@@ -76,6 +76,7 @@ public class CreateSecurityGroupResponseType extends VmSecurityMessage {
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
   String groupDescription;
+  String vpcId
 }
 /** *******************************************************************************/
 public class DeleteSecurityGroupResponseType extends VmSecurityMessage {

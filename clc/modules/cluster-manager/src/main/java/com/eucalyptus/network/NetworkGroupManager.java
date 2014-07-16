@@ -66,10 +66,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -77,10 +79,12 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.Filter;
@@ -134,15 +138,23 @@ public class NetworkGroupManager {
     if (!CharMatcher.ASCII.matchesAllOf(groupName)) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
     }
+    final UserFullName userFullName = ctx.getUserFullName( );
     final CreateSecurityGroupResponseType reply = request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
         
         @Override
         public NetworkGroup get( ) {
-          try {
-            return NetworkGroups.create( ctx.getUserFullName( ), groupName, request.getGroupDescription( ) );
-          } catch ( MetadataException ex ) {
+          try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
+            final Vpc vpc = request.getVpcId() == null ?
+                null :
+                Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId() ) ) );
+            final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, request.getGroupDescription( ) );
+            tx.commit();
+            return group;
+          } catch ( NoSuchElementException e ) {
+            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "The vpc ID '"+request.getVpcId( )+"' does not exist" ) );
+          } catch ( TransactionException | MetadataException ex ) {
             throw new RuntimeException( ex );
           }
         }
@@ -151,6 +163,7 @@ public class NetworkGroupManager {
       reply.setGroupId( group.getGroupId() );
       return reply;
     } catch ( final Exception ex ) {
+      Exceptions.findAndRethrow( ex, ComputeException.class );
       String cause = Exceptions.causeString( ex );
       if ( cause.contains( "DuplicateMetadataException" ) )
           throw new ClientComputeException( "InvalidGroup.Duplicate", "The security group '" + groupName + "' alread exists" );

@@ -17,27 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.vpc.Vpc;
+import com.eucalyptus.compute.vpc.Vpcs;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public class PersistenceInternetGateways extends VpcPersistenceSupport<CloudMetadata.InternetGatewayMetadata, InternetGateway> implements InternetGateways {
+@ComponentNamed
+public class PersistenceVpcs extends VpcPersistenceSupport<CloudMetadata.VpcMetadata, Vpc> implements Vpcs {
 
-  public PersistenceInternetGateways( ) {
-    super( "internet-gateway" );
+  public PersistenceVpcs( ) {
+    super( "vpc" );
   }
 
   @Override
-  protected InternetGateway exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return InternetGateway.exampleWithOwner( ownerFullName );
+  protected Vpc exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return Vpc.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected InternetGateway exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return InternetGateway.exampleWithName( ownerFullName, name );
+  protected Vpc exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return Vpc.exampleWithName( ownerFullName, name );
   }
 }

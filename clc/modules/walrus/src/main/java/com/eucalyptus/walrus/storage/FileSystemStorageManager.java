@@ -589,7 +589,7 @@ public class FileSystemStorageManager implements StorageManager {
 			Long bytesRead = 0L;
 			Long tempLength = 0L;
 			do {
-				if (part == null & partIterator.hasNext()) {
+				if (part == null && partIterator.hasNext()) {
 					part = partIterator.next();
 				}
 

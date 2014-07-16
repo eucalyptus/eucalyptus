@@ -72,7 +72,7 @@ public class Vpc extends UserMetadata<Vpc.State> implements VpcMetadata {
     vpc.setDefaultVpc( defaultVpc );
     vpc.setDnsEnabled( true );
     vpc.setDnsHostnames( defaultVpc );
-    vpc.setState( State.pending );
+    vpc.setState( State.available );
     return vpc;
   }
 

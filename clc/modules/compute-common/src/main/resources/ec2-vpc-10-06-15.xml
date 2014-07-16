@@ -489,6 +489,15 @@
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <structure name="subnetSet" field="subnetSet" usage="required" type="com.eucalyptus.compute.common.SubnetSetType"/>
     </mapping>
+    <mapping name="ModifySubnetAttributeType" class="com.eucalyptus.compute.common.ModifySubnetAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <value name="subnetId" field="subnetId" usage="required"/>
+        <structure name="mapPublicIpOnLaunch" field="mapPublicIpOnLaunch" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+    </mapping>
+    <mapping name="ModifySubnetAttributeResponseType" class="com.eucalyptus.compute.common.ModifySubnetAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <value name="return" get-method="get_return" set-method="set_return" />
+    </mapping>
     <mapping name="DeleteSubnetType" class="com.eucalyptus.compute.common.DeleteSubnetType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="subnetId" field="subnetId" usage="required"/>

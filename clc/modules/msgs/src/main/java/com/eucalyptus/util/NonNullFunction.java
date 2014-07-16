@@ -17,27 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.util;
 
-import static com.eucalyptus.compute.common.CloudMetadata.DhcpOptionSetMetadata;
-import com.eucalyptus.util.OwnerFullName;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.google.common.base.Function;
 
 /**
- *
+ * Function interface with a non-null result.
  */
-public class PersistenceDhcpOptionSets extends VpcPersistenceSupport<DhcpOptionSetMetadata, DhcpOptionSet> implements DhcpOptionSets {
+public interface NonNullFunction<F, T> extends Function<F, T> {
 
-  public PersistenceDhcpOptionSets( ) {
-    super( "dhcp-options" );
-  }
-
+  @Nonnull
   @Override
-  protected DhcpOptionSet exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return DhcpOptionSet.exampleWithOwner( ownerFullName );
-  }
-
-  @Override
-  protected DhcpOptionSet exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return DhcpOptionSet.exampleWithName( ownerFullName, name );
-  }
+  T apply( @Nullable F f );
 }

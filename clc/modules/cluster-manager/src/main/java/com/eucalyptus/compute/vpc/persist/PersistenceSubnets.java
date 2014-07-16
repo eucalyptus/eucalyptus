@@ -17,27 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.vpc.Subnet;
+import com.eucalyptus.compute.vpc.Subnets;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public class PersistenceVpcs extends VpcPersistenceSupport<CloudMetadata.VpcMetadata, Vpc> implements Vpcs {
+@ComponentNamed
+public class PersistenceSubnets extends VpcPersistenceSupport<CloudMetadata.SubnetMetadata, Subnet> implements Subnets {
 
-  public PersistenceVpcs( ) {
-    super( "vpc" );
+  public PersistenceSubnets( ) {
+    super( "subnet" );
   }
 
   @Override
-  protected Vpc exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return Vpc.exampleWithOwner( ownerFullName );
+  protected Subnet exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return Subnet.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected Vpc exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return Vpc.exampleWithName( ownerFullName, name );
+  protected Subnet exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return Subnet.exampleWithName( ownerFullName, name );
   }
 }

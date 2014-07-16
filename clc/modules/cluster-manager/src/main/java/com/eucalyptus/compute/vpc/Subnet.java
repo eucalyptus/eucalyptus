@@ -34,6 +34,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Cidr;
@@ -73,15 +74,15 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     final Subnet subnet = new Subnet( owner, name );
     subnet.setVpc( vpc );
     subnet.setNetworkAcl( networkAcl );
-    subnet.setNetworkAclAssociationId( Crypto.generateId( "aclassoc" ) );
+    subnet.setNetworkAclAssociationId( ResourceIdentifiers.generateString( "aclassoc" ) );
     subnet.setRouteTable( routeTable );
-    subnet.setRouteTableAssociationId( Crypto.generateId( "rtbassoc" ) );
+    subnet.setRouteTableAssociationId( ResourceIdentifiers.generateString( "rtbassoc" ) );
     subnet.setCidr( cidr );
     subnet.setAvailabilityZone( availabilityZone );
     subnet.setAvailableIpAddressCount( ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5 ); // 5 reserved
     subnet.setDefaultForAz( false );
     subnet.setMapPublicIpOnLaunch( false );
-    subnet.setState( State.pending );
+    subnet.setState( State.available );
     return subnet;
   }
 
@@ -91,6 +92,18 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   public static Subnet exampleWithName( final OwnerFullName owner, final String name ) {
     return new Subnet( owner, name );
+  }
+
+  public static Subnet exampleWithRouteTableAssociation( final OwnerFullName owner, final String associationId ) {
+    final Subnet subnet = new Subnet( owner, null );
+    subnet.setRouteTableAssociationId( associationId );
+    return subnet;
+  }
+
+  public static Subnet exampleWithNetworkAclAssociation( final OwnerFullName owner, final String associationId ) {
+    final Subnet subnet = new Subnet( owner, null );
+    subnet.setNetworkAclAssociationId( associationId );
+    return subnet;
   }
 
   @ManyToOne( optional = false )

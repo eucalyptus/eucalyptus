@@ -38,6 +38,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.vm.VmInstance;
 
 /**
  *
@@ -118,6 +119,13 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Subnet subnet;
 
+  // Due to an issue with mappedBy on VmNetworkConfig we define the instance
+  // reference here rather than on the embedded attachment where it belongs
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_instance_id" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private VmInstance instance;
+
   @Column( name = "metadata_zone", nullable = false, updatable = false )
   private String availabilityZone;
 
@@ -175,6 +183,10 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public void setSubnet( final Subnet subnet ) {
     this.subnet = subnet;
+  }
+
+  VmInstance getInstance() {
+    return instance;
   }
 
   public String getAvailabilityZone() {
@@ -247,5 +259,16 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public NetworkInterfaceAttachment getAttachment( ) {
     return attachment;
+  }
+
+  public void attach( final NetworkInterfaceAttachment attachment ) {
+    if ( isAttached( ) ) throw new IllegalStateException( "Already attached" );
+    this.attachment = attachment;
+    this.instance = attachment.getInstance( );
+  }
+
+  public void detach( ) {
+    this.attachment = null;
+    this.instance = null;
   }
 }

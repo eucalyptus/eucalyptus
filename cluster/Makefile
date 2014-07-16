@@ -185,9 +185,10 @@ distclean: clean
 
 install: deploy
 	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(usrdir)/lib/eucalyptus
-	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(policiesdir)
 
 uninstall:
 #	@$(RM) -f $(DESTDIR)$(sbindir)/$(SHUTDOWNCC)
-	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
+	@$(RM) -f $(DESTDIR)$(policiesdir)/cc-client-policy.xml
 	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

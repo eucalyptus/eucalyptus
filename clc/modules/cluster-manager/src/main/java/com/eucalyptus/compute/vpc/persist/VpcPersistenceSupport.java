@@ -17,15 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.compute.vpc.persist;
+
+import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AbstractPersistentSupport;
+import com.eucalyptus.util.RestrictedType;
 
 /**
- * Features supported by NetworkService implementations
+ *
  */
-public enum NetworkingFeature {
+public abstract class VpcPersistenceSupport<RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType> extends AbstractPersistentSupport<RT, AP, VpcMetadataException> {
 
-  ElasticIPs,
-  Vpc
-  ;
+  protected VpcPersistenceSupport( final String typeDescription ) {
+    super( typeDescription );
+  }
+
+  @Override
+  protected VpcMetadataException notFoundException( final String message, final Throwable cause ) {
+    return new VpcMetadataNotFoundException( message, cause );
+  }
+
+  @Override
+  protected VpcMetadataException metadataException( final String message, final Throwable cause ) {
+    return new VpcMetadataException( message, cause );
+  }
 
 }

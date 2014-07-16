@@ -3333,6 +3333,11 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
+        snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s -d %s -j SNAT --to-source %s", dst, dst, src);
+        if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
+            LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
+            ret = EUCA_ERROR;
+        }
         // For reporting traffic statistics.
         snprintf(cmd, EUCA_MAX_PATH, "-A EUCA_COUNTERS_IN -d %s", dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd)) != 0) {
@@ -3584,6 +3589,14 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
         network = hex2dot(vnetconfig->networks[vlan].nw);
         snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s ! -d %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
         EUCA_FREE(network);
+        rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+        count = 0;
+        while (rc != 0 && count < 10) {
+            rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+            count++;
+        }
+
+        snprintf(cmd, EUCA_MAX_PATH, "-D POSTROUTING -s %s -d %s -j SNAT --to-source %s", dst, dst, src);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
         while (rc != 0 && count < 10) {

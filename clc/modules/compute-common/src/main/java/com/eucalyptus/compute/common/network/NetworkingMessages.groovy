@@ -63,6 +63,18 @@ abstract class NetworkResource extends EucalyptusData {
   @Override String getType( ){ "public-ip" }
 }
 
+@Canonical class VpcResource extends NetworkResource {
+  @Override String getType( ){ "vpc" }
+}
+
+@Canonical class VpcNetworkInterfaceResource extends NetworkResource {
+  @Override String getType( ){ "network-interface" }
+  String mac
+  String privateIp
+  String description
+  Boolean deleteOnTerminate
+}
+
 abstract class NetworkFeature extends EucalyptusData {}
 
 class DnsHostNamesFeature extends NetworkFeature { }

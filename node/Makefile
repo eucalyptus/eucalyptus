@@ -191,19 +191,19 @@ $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ..
 	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
 
 test_misc: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS)
 
 test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS)
 
 test_hooks: hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS)
 
 test_xml: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o $(NC_LIBS)
 
 test_xml2: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o $(NC_LIBS)
 
 libvirt_tortura: libvirt_tortura.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
@@ -241,10 +241,11 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks *~* *#*
 
 install: deploy
-	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(policiesdir)
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
+	$(RM) -f $(DESTDIR)$(policiesdir)/nc-client-policy.xml
 	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
 	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

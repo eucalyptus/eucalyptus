@@ -119,7 +119,7 @@ test_blobstore: blobstore.o $(TEST_BLOB_OBJS)
 	$(CC) -rdynamic $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore $(TEST_BLOB_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
 test_vbr: vbr.o $(TEST_VBR_OBJS) generated/stubs $(STORAGE_CONTROLLER_OBJS) ../util/fault.o
-	$(CC) -rdynamic $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr $(TEST_VBR_OBJS) $(STORAGE_LIBS) $(EFENCE) $(SC_LIBS) ../util/euca_axis.o sc-client-marshal-adb.o ../util/fault.o generated/*.o ../util/utf8.o ../util/wc.o
+	$(CC) -rdynamic $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr $(TEST_VBR_OBJS) $(STORAGE_LIBS) $(EFENCE) ../util/euca_axis.o sc-client-marshal-adb.o ../util/fault.o generated/*.o ../util/utf8.o ../util/wc.o $(SC_LIBS)
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
@@ -181,7 +181,8 @@ install:
 	@echo installing euca-imager
 	@make -C imager install
 	@echo installing sc-client-policy.xml
-	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(policiesdir)
 
 deploy:
 	@make -C imager deploy
@@ -189,4 +190,4 @@ deploy:
 
 uninstall:
 	@make -C imager uninstall
-	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/sc-client-policy.xml
+	@$(RM) -f $(DESTDIR)$(policiesdir)/sc-client-policy.xml

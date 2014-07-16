@@ -17,15 +17,22 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.compute.vpc;
+
+import static com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
+import com.eucalyptus.network.NetworkGroup;
+import com.google.common.base.Function;
 
 /**
- * Features supported by NetworkService implementations
+ *
  */
-public enum NetworkingFeature {
+public interface SecurityGroups {
 
-  ElasticIPs,
-  Vpc
-  ;
+  <T> T lookupDefault( String vpcId,
+                       Function<? super NetworkGroup,T> transform ) throws VpcMetadataException;
+
+  NetworkGroup save( NetworkGroup networkGroup ) throws VpcMetadataException;
+
+  boolean delete( NetworkGroup networkGroup ) throws VpcMetadataException;
 
 }

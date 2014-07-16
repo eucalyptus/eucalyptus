@@ -42,6 +42,7 @@ interface VpcTagged {
 }
 class DescribeVpcAttributeType extends VpcMessage {
   String vpcId;
+  String attribute //TODO:STEVE: SOAP binding for this
   DescribeVpcAttributeType() {  }
 }
 class DhcpOptionsIdSetType extends EucalyptusData {
@@ -49,6 +50,9 @@ class DhcpOptionsIdSetType extends EucalyptusData {
   @HttpParameterMapping (parameter = "DhcpOptionsId")
   @HttpEmbedded(multiple=true)
   ArrayList<DhcpOptionsIdSetItemType> item = new ArrayList<DhcpOptionsIdSetItemType>();
+}
+class ModifySubnetAttributeResponseType extends VpcMessage {
+  ModifySubnetAttributeResponseType() {  }
 }
 class DetachInternetGatewayResponseType extends VpcMessage {
   DetachInternetGatewayResponseType() {  }
@@ -244,6 +248,11 @@ class CreateVpnConnectionResponseType extends VpcMessage {
 class DeleteVpcType extends VpcMessage {
   String vpcId;
   DeleteVpcType() {  }
+}
+class ModifySubnetAttributeType extends VpcMessage {
+  String subnetId;
+  AttributeBooleanValueType mapPublicIpOnLaunch;
+  ModifySubnetAttributeType() {  }
 }
 class NetworkAclAssociationType extends VpcMessage {
   String networkAclAssociationId;
@@ -638,7 +647,10 @@ class ModifyNetworkInterfaceAttributeResponseType extends VpcMessage {
   ModifyNetworkInterfaceAttributeResponseType() {  }
 }
 class GroupSetType extends EucalyptusData {
-  GroupSetType() {  }
+  GroupSetType( ) {  }
+  GroupSetType( Collection<GroupItemType> item ) {
+    this.item = Lists.newArrayList( item )
+  }
   ArrayList<GroupItemType> item = new ArrayList<GroupItemType>();
 }
 class VgwTelemetryType extends EucalyptusData {

@@ -1251,6 +1251,7 @@ public class VmInstances {
           .withStringSetProperty( "group-id", VmInstanceStringSetFilterFunctions.GROUP_ID )
           .withStringSetProperty( "group-name", VmInstanceStringSetFilterFunctions.GROUP_NAME )
           .withStringProperty( "image-id", VmInstanceFilterFunctions.IMAGE_ID )
+          .withStringProperty( "iam-instance-profile.arn", VmInstanceFilterFunctions.INSTANCE_PROFILE_ARN )
           .withStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
           .withConstantProperty( "instance-lifecycle", "" )
           .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
@@ -1322,6 +1323,7 @@ public class VmInstances {
           .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
+          .withPersistenceFilter( "iam-instance-profile.arn",  "bootRecord.iamInstanceProfileArn", Collections.<String>emptySet() )
           .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "instance-id", "displayName" )
           .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet("bootRecord.vmType")  )
@@ -1608,6 +1610,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return instance.getImageId();
+      }
+    },
+    INSTANCE_PROFILE_ARN {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getIamInstanceProfileArn( );
       }
     },
     INSTANCE_STATE_NAME {

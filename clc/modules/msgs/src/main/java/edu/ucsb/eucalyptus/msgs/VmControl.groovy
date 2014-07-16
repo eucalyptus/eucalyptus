@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpValue
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import groovy.transform.TupleConstructor
@@ -258,6 +259,7 @@ public class RunInstancesType extends VmControlMessage {
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
   String clientToken;
+  @HttpEmbedded
   InstanceNetworkInterfaceSetRequestType networkInterfaceSet;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
   String iamInstanceProfileArn
@@ -374,6 +376,8 @@ public class GroupItemType extends EucalyptusData implements Comparable<GroupIte
 }
 class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
   InstanceNetworkInterfaceSetRequestType() {  }
+  @HttpParameterMapping(parameter = "NetworkInterface")
+  @HttpEmbedded(multiple = true)
   ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = new ArrayList<InstanceNetworkInterfaceSetItemRequestType>();
 }
 class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
@@ -382,8 +386,10 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
   String subnetId;
   String description;
   String privateIpAddress;
+  @HttpEmbedded
   SecurityGroupIdSetType groupSet;
   Boolean deleteOnTermination;
+  @HttpEmbedded
   PrivateIpAddressesSetRequestType privateIpAddressesSet;
   Integer secondaryPrivateIpAddressCount;
   Boolean associatePublicIpAddress;
@@ -391,14 +397,19 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
 }
 class SecurityGroupIdSetType extends EucalyptusData {
   SecurityGroupIdSetType() {  }
+  @HttpParameterMapping(parameter = "SecurityGroupId")
+  @HttpEmbedded(multiple = true)
   ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
 }
 class SecurityGroupIdSetItemType extends EucalyptusData {
+  @HttpValue
   String groupId;
   SecurityGroupIdSetItemType() {  }
 }
 class PrivateIpAddressesSetRequestType extends EucalyptusData {
   PrivateIpAddressesSetRequestType() {  }
+  @HttpParameterMapping(parameter = "PrivateIpAddresses")
+  @HttpEmbedded(multiple = true)
   ArrayList<PrivateIpAddressesSetItemRequestType> item = new ArrayList<PrivateIpAddressesSetItemRequestType>();
 }
 class PrivateIpAddressesSetItemRequestType extends EucalyptusData {
@@ -422,10 +433,42 @@ class InstanceNetworkInterfaceSetItemType extends EucalyptusData {
   String privateDnsName;
   Boolean sourceDestCheck;
   GroupSetType groupSet;
-  InstanceNetworkInterfaceAttachmentType attachment;
+  InstanceNetworkInterfaceAttachmentType attachment = new InstanceNetworkInterfaceAttachmentType( )
   InstanceNetworkInterfaceAssociationType association;
   InstancePrivateIpAddressesSetType privateIpAddressesSet;
+
   InstanceNetworkInterfaceSetItemType() {  }
+
+  InstanceNetworkInterfaceSetItemType(
+      final String networkInterfaceId,
+      final String subnetId,
+      final String vpcId,
+      final String description,
+      final String ownerId,
+      final String status,
+      final String macAddress,
+      final String privateIpAddress,
+      final String privateDnsName,
+      final Boolean sourceDestCheck,
+      final GroupSetType groupSet,
+      final InstanceNetworkInterfaceAttachmentType attachment,
+      final InstanceNetworkInterfaceAssociationType association,
+      final InstancePrivateIpAddressesSetType privateIpAddressesSet) {
+    this.networkInterfaceId = networkInterfaceId
+    this.subnetId = subnetId
+    this.vpcId = vpcId
+    this.description = description
+    this.ownerId = ownerId
+    this.status = status
+    this.macAddress = macAddress
+    this.privateIpAddress = privateIpAddress
+    this.privateDnsName = privateDnsName
+    this.sourceDestCheck = sourceDestCheck
+    this.groupSet = groupSet
+    this.attachment = attachment
+    this.association = association
+    this.privateIpAddressesSet = privateIpAddressesSet
+  }
 }
 class InstanceNetworkInterfaceAttachmentType extends EucalyptusData {
   String attachmentId;
@@ -433,16 +476,41 @@ class InstanceNetworkInterfaceAttachmentType extends EucalyptusData {
   String status;
   Date attachTime;
   Boolean deleteOnTermination;
-  InstanceNetworkInterfaceAttachmentType() {  }
+  InstanceNetworkInterfaceAttachmentType( ) {  }
+
+  InstanceNetworkInterfaceAttachmentType(
+      final String attachmentId,
+      final Integer deviceIndex,
+      final String status,
+      final Date attachTime,
+      final Boolean deleteOnTermination) {
+    this.attachmentId = attachmentId
+    this.deviceIndex = deviceIndex
+    this.status = status
+    this.attachTime = attachTime
+    this.deleteOnTermination = deleteOnTermination
+  }
 }
 class InstanceNetworkInterfaceAssociationType extends EucalyptusData {
   String publicIp;
   String publicDnsName;
   String ipOwnerId;
-  InstanceNetworkInterfaceAssociationType() {  }
+  InstanceNetworkInterfaceAssociationType( ) {  }
+
+  InstanceNetworkInterfaceAssociationType( final String publicIp,
+                                           final String publicDnsName,
+                                           final String ipOwnerId ) {
+    this.publicIp = publicIp
+    this.publicDnsName = publicDnsName
+    this.ipOwnerId = ipOwnerId
+  }
 }
 class InstancePrivateIpAddressesSetType extends EucalyptusData {
-  InstancePrivateIpAddressesSetType() {  }
+  InstancePrivateIpAddressesSetType( ) {  }
+
+  InstancePrivateIpAddressesSetType( final Collection<InstancePrivateIpAddressesSetItemType> item ) {
+    this.item = Lists.newArrayList( item )
+  }
   ArrayList<InstancePrivateIpAddressesSetItemType> item = new ArrayList<InstancePrivateIpAddressesSetItemType>();
 }
 class InstancePrivateIpAddressesSetItemType extends EucalyptusData {
@@ -450,7 +518,18 @@ class InstancePrivateIpAddressesSetItemType extends EucalyptusData {
   String privateDnsName;
   Boolean primary;
   InstanceNetworkInterfaceAssociationType association;
-  InstancePrivateIpAddressesSetItemType() {  }
+  InstancePrivateIpAddressesSetItemType( ) {  }
+
+  InstancePrivateIpAddressesSetItemType(
+      final String privateIpAddress,
+      final String privateDnsName,
+      final Boolean primary,
+      final InstanceNetworkInterfaceAssociationType association) {
+    this.privateIpAddress = privateIpAddress
+    this.privateDnsName = privateDnsName
+    this.primary = primary
+    this.association = association
+  }
 }
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
   String instanceId;

@@ -214,17 +214,21 @@ class NetworkInfoTest {
                   </cluster>
               </property>
           </configuration>
+          <vpcs/>
           <instances>
               <instance name="i-AB6B409C">
                   <ownerId>856501978207</ownerId>
                   <macAddress>d0:0d:01:00:00:21</macAddress>
                   <publicIp>10.111.200.1</publicIp>
                   <privateIp>1.0.0.33</privateIp>
+                  <networkInterfaces/>
                   <securityGroups>
                       <value>c4d8e62e-ea5d-49fb-b1e9-b908e9becf8</value>
                   </securityGroups>
               </instance>
           </instances>
+          <dhcpOptionSets/>
+          <internetGateways/>
           <securityGroups>
               <securityGroup name="c4d8e62e-ea5d-49fb-b1e9-b908e9becf8">
                   <ownerId>856501978207</ownerId>

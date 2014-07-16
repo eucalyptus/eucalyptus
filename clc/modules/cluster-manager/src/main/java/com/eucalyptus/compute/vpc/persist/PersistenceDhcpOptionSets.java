@@ -17,27 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.vpc;
+package com.eucalyptus.compute.vpc.persist;
 
-import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
+import static com.eucalyptus.compute.common.CloudMetadata.DhcpOptionSetMetadata;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.vpc.DhcpOptionSet;
+import com.eucalyptus.compute.vpc.DhcpOptionSets;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-public class PersistenceNetworkInterfaces extends VpcPersistenceSupport<NetworkInterfaceMetadata, NetworkInterface> implements NetworkInterfaces {
+@ComponentNamed
+public class PersistenceDhcpOptionSets extends VpcPersistenceSupport<DhcpOptionSetMetadata, DhcpOptionSet> implements DhcpOptionSets {
 
-  public PersistenceNetworkInterfaces( ) {
-    super( "network-interfaces" );
+  public PersistenceDhcpOptionSets( ) {
+    super( "dhcp-options" );
   }
 
   @Override
-  protected NetworkInterface exampleWithOwner( final OwnerFullName ownerFullName ) {
-    return NetworkInterface.exampleWithOwner( ownerFullName );
+  protected DhcpOptionSet exampleWithOwner( final OwnerFullName ownerFullName ) {
+    return DhcpOptionSet.exampleWithOwner( ownerFullName );
   }
 
   @Override
-  protected NetworkInterface exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return NetworkInterface.exampleWithName( ownerFullName, name );
+  protected DhcpOptionSet exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+    return DhcpOptionSet.exampleWithName( ownerFullName, name );
   }
 }
