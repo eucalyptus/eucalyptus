@@ -219,7 +219,7 @@ public class Topology {
           return;
         }
 
-        if ( lock.writeLock( ).tryLock( ) && ( Hosts.isCoordinator( ) || counter.incrementAndGet( ) % 5 == 0 ) ) {
+        if ( ( Hosts.isCoordinator( ) || counter.incrementAndGet( ) % 5 == 0 ) && lock.writeLock( ).tryLock( ) ) {
           // Write lock acquisition is to ensure no other tasks in progress
           // we don't want to block others from running
           lock.writeLock( ).unlock( );
