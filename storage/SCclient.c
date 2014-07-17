@@ -263,7 +263,7 @@ int main(int argc, char **argv)
         euca_home = "";
     }
     snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", euca_home);
+    snprintf(policyFile, 1024, EUCALYPTUS_POLICIES_DIR "/sc-client-policy.xml", euca_home);
     rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
     if (rc != 1) {
         /* Default to enabled */

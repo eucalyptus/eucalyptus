@@ -90,6 +90,7 @@ usrdir		= ${prefix}/usr
 bindir		= ${prefix}/usr/bin
 sbindir		= ${prefix}/usr/sbin
 datarootdir	= ${usrdir}/share
+policiesdir     = ${datarootdir}/eucalyptus/policies
 libexecdir  = ${usrdir}/libexec
 
 # where we are going to install eucalyptus and where are the sources

@@ -204,7 +204,7 @@ public class UniqueIds implements Serializable {
     public Boolean call( ) throws Exception {
       Sql sql = null;
       try {
-        sql = Databases.getBootstrapper( ).getConnection( "eucalyptus_config" );
+        sql = Databases.getBootstrapper( ).getConnection( "eucalyptus", "eucalyptus_config" );
         sql.execute( "drop table if exists config_unique_ids" );
         return true;
       } catch ( Exception ex ) {

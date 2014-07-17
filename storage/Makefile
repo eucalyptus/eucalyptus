@@ -181,7 +181,8 @@ install:
 	@echo installing euca-imager
 	@make -C imager install
 	@echo installing sc-client-policy.xml
-	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(policiesdir)
 
 deploy:
 	@make -C imager deploy
@@ -189,4 +190,4 @@ deploy:
 
 uninstall:
 	@make -C imager uninstall
-	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/sc-client-policy.xml
+	@$(RM) -f $(DESTDIR)$(policiesdir)/sc-client-policy.xml
