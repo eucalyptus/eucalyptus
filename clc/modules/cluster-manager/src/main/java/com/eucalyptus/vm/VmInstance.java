@@ -1458,7 +1458,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         Platform.windows.name() :
         "";
   }
-  
+
+  @Nullable
+  public String getSubnetId( ) {
+    return this.bootRecord.getSubnetId( );
+  }
+
+  @Nullable
+  public String getVpcId( ) {
+    return this.bootRecord.getVpcId( );
+  }
+
   @Override
   public String getPartition( ) {
     return this.placement.getPartitionName( );
@@ -2035,8 +2045,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           runningInstance.setClientToken( input.getClientToken() );
 
-          runningInstance.setVpcId( input.getBootRecord( ).getVpcId() );
-          runningInstance.setSubnetId( input.getBootRecord( ).getSubnetId( ) );
+          runningInstance.setVpcId( input.getVpcId() );
+          runningInstance.setSubnetId( input.getSubnetId( ) );
 
           if ( !Strings.isNullOrEmpty( input.getIamInstanceProfileId( ) ) ) {
             runningInstance.setIamInstanceProfile( new IamInstanceProfile(

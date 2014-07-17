@@ -17,27 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.compute.vpc;
 
-import com.eucalyptus.cloud.util.NotEnoughResourcesException
-import com.eucalyptus.cloud.util.ResourceAllocationException
-import com.eucalyptus.vm.VmInstance
-import groovy.transform.CompileStatic
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 
 /**
  *
  */
-@CompileStatic
-interface PrivateAddressAllocator {
+public class NoSuchSubnetMetadataException extends NoSuchMetadataException {
+  private static final long serialVersionUID = -1L;
 
-  String allocate( String scope, Iterable<Integer> addresses ) throws NotEnoughResourcesException
+  public NoSuchSubnetMetadataException( final String message, final Throwable cause ) {
+    super( message, cause );
+  }
 
-  void associate( String address, VmInstance instance ) throws ResourceAllocationException
-
-  void release( String scope, String address, String ownerId )
-
-  boolean verify( String scope, String address, String ownerId )
-
-  void releasing( Iterable<String> activeAddresses, String partition )
-
+  public NoSuchSubnetMetadataException( final String message ) {
+    super( message );
+  }
 }

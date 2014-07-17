@@ -59,8 +59,8 @@ class PrivateAddresses {
    *
    * <p>There must not be an active transaction for private addresses.</p>
    */
-  static String allocate( Iterable<Integer> addresses ) throws NotEnoughResourcesException {
-    allocator.allocate( addresses )
+  static String allocate( String scope, Iterable<Integer> addresses ) throws NotEnoughResourcesException {
+    allocator.allocate( scope, addresses )
   }
 
   static void associate( String address, VmInstance instance ) throws ResourceAllocationException {
@@ -72,12 +72,12 @@ class PrivateAddresses {
    *
    * <p>There must not be an active transaction for private addresses.</p>
    */
-  static void release( String address, String ownerId ) {
-    allocator.release( address, ownerId )
+  static void release( String scope, String address, String ownerId ) {
+    allocator.release( scope, address, ownerId )
   }
 
-  static boolean verify( String address, String ownerId ) {
-    allocator.verify( address, ownerId )
+  static boolean verify( String scope, String address, String ownerId ) {
+    allocator.verify( scope, address, ownerId )
   }
 
   @PackageScope
