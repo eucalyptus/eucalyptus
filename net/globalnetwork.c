@@ -26,6 +26,10 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <linux/limits.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 #include <globalnetwork.h>
 #include <eucalyptus.h>
@@ -774,6 +778,15 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         }
         EUCA_FREE(results);
 
+        snprintf(expression, 2048, "/network-data/instances/instance[@name='%s']/vpc", gni->instances[j].name);
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            snprintf(gni->instances[j].vpc, 16, "%s", results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+
         snprintf(expression, 2048, "/network-data/instances/instance[@name='%s']/securityGroups/value", gni->instances[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         gni->instances[j].secgroup_names = EUCA_ZALLOC(max_results, sizeof(gni_name));
@@ -838,7 +851,112 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         EUCA_FREE(results);
     }
 
-    // end sec group, begin configuration
+    // begin VPC
+    snprintf(expression, 2048, "/network-data/vpcs/vpc");
+    rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
+    gni->vpcs = EUCA_ZALLOC(max_results, sizeof(gni_vpc));
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->vpcs[i].name, 128, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    gni->max_vpcs = max_results;
+    EUCA_FREE(results);
+
+    for (j = 0; j < gni->max_vpcs; j++) {
+
+      snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/ownerId", gni->vpcs[j].name);
+      rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+      for (i = 0; i < max_results; i++) {
+	LOGTRACE("after function: %d: %s\n", i, results[i]);
+	snprintf(gni->vpcs[j].accountId, 128, "%s", results[i]);
+	EUCA_FREE(results[i]);
+      }
+      EUCA_FREE(results);
+
+      snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/cidr", gni->vpcs[j].name);
+      rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+      for (i = 0; i < max_results; i++) {
+	LOGTRACE("after function: %d: %s\n", i, results[i]);
+	snprintf(gni->vpcs[j].cidr, 24, "%s", results[i]);
+	EUCA_FREE(results[i]);
+      }
+      EUCA_FREE(results);
+
+      snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/dhcpOptionSet", gni->vpcs[j].name);
+      rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+      for (i = 0; i < max_results; i++) {
+	LOGTRACE("after function: %d: %s\n", i, results[i]);
+	snprintf(gni->vpcs[j].dhcpOptionSet, 16, "%s", results[i]);
+	EUCA_FREE(results[i]);
+      }
+      EUCA_FREE(results);
+      
+      snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/*", gni->vpcs[j].name);
+      rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
+
+      gni->vpcs[j].subnets = EUCA_ZALLOC(max_results, sizeof(gni_vpcsubnet));
+      for (i = 0; i < max_results; i++) {
+	LOGTRACE("after function: %d: %s\n", i, results[i]);
+	snprintf(gni->vpcs[j].subnets[i].name, HOSTNAME_SIZE, "%s", results[i]);
+	EUCA_FREE(results[i]);
+      }
+      gni->vpcs[j].max_subnets = max_results;
+      EUCA_FREE(results);
+
+      for (k=0; k<gni->vpcs[j].max_subnets; k++) {
+
+	snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/ownerId", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+	rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+	for (i = 0; i < max_results; i++) {
+	  LOGTRACE("after function: %d: %s\n", i, results[i]);
+	  snprintf(gni->vpcs[j].subnets[k].accountId, 128, "%s", results[i]);
+	  EUCA_FREE(results[i]);
+	}
+	EUCA_FREE(results);
+
+	snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cidr", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+	rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+	for (i = 0; i < max_results; i++) {
+	  LOGTRACE("after function: %d: %s\n", i, results[i]);
+	  snprintf(gni->vpcs[j].subnets[k].cidr, 24, "%s", results[i]);
+	  EUCA_FREE(results[i]);
+	}
+	EUCA_FREE(results);
+
+	snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cluster", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+	rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+	for (i = 0; i < max_results; i++) {
+	  LOGTRACE("after function: %d: %s\n", i, results[i]);
+	  snprintf(gni->vpcs[j].subnets[k].cluster_name, HOSTNAME_SIZE, "%s", results[i]);
+	  EUCA_FREE(results[i]);
+	}
+	EUCA_FREE(results);
+
+	snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/networkAcl", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+	rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+	for (i = 0; i < max_results; i++) {
+	  LOGTRACE("after function: %d: %s\n", i, results[i]);
+	  snprintf(gni->vpcs[j].subnets[k].networkAcl_name, 16, "%s", results[i]);
+	  EUCA_FREE(results[i]);
+	}
+	EUCA_FREE(results);
+
+	snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/routeTable", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+	rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+	for (i = 0; i < max_results; i++) {
+	  LOGTRACE("after function: %d: %s\n", i, results[i]);
+	  snprintf(gni->vpcs[j].subnets[k].routeTable_name, 16, "%s", results[i]);
+	  EUCA_FREE(results[i]);
+	}
+	EUCA_FREE(results);
+
+      }
+      // TODO: networkAcls, routeTables, internetGateways
+
+    }
+
+    // begin configuration
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='enabledCLCIp']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
@@ -1010,37 +1128,6 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
         for (k = 0; k < gni->clusters[j].max_nodes; k++) {
 
-            /*
-               snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/property[@name='dhcpdPath']/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
-               rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-               for (i=0; i<max_results; i++) {
-               LOGTRACE("after function: %d: %s\n", i, results[i]);
-               snprintf(gni->clusters[j].nodes[k].dhcpdPath, EUCA_MAX_PATH, "%s", results[i]);
-               EUCA_FREE(results[i]);
-               }
-               EUCA_FREE(results);
-             */
-
-            /*
-               snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/property[@name='bridgeInterface']/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
-               rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-               for (i=0; i<max_results; i++) {
-               LOGTRACE("after function: %d: %s\n", i, results[i]);
-               snprintf(gni->clusters[j].nodes[k].bridgeInterface, 32, "%s", results[i]);
-               EUCA_FREE(results[i]);
-               }
-               EUCA_FREE(results);
-
-               snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/property[@name='publicInterface']/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
-               rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-               for (i=0; i<max_results; i++) {
-               LOGTRACE("after function: %d: %s\n", i, results[i]);
-               snprintf(gni->clusters[j].nodes[k].publicInterface, 32, "%s", results[i]);
-               EUCA_FREE(results[i]);
-               }
-               EUCA_FREE(results);
-             */
-
             snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/instanceIds/value",
                      gni->clusters[j].name, gni->clusters[j].nodes[k].name);
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
@@ -1049,6 +1136,29 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
                 EUCA_FREE(results[i]);
+
+		for (l=0; l<gni->max_instances; l++) {
+		  if (!strcmp(gni->instances[l].name, gni->clusters[j].nodes[k].instance_names[i].name)) {
+		    snprintf(gni->instances[l].node, HOSTNAME_SIZE, "%s", gni->clusters[j].nodes[k].name);
+		    {
+		      struct hostent *hent;
+		      struct in_addr addr;
+		      char *ip=NULL;
+		      
+		      ip = strdup(gni->instances[l].node);
+		      
+		      if(!inet_aton(ip, &addr)) {
+			snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", ip);
+		      } else if((hent = gethostbyaddr((char *)&(addr.s_addr), sizeof(addr.s_addr), AF_INET))) {
+			snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", hent->h_name);
+		      } else {
+			snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", gni->instances[l].node);
+		      }
+		      EUCA_FREE(ip);
+		    }
+		  }
+		}
+
             }
             gni->clusters[j].nodes[k].max_instance_names = max_results;
             EUCA_FREE(results);
@@ -1294,6 +1404,21 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
         EUCA_FREE(gni->secgroups);
     }
 
+    if (mode == GNI_ITERATE_PRINT)
+        LOGTRACE("vpcs: \n");
+    for (i = 0; i < gni->max_vpcs; i++) {
+      if (mode == GNI_ITERATE_PRINT) {
+	LOGTRACE("\tname: %s\n", gni->vpcs[i].name);
+	LOGTRACE("\taccountId: %s\n", gni->vpcs[i].accountId);
+      }
+      if (mode == GNI_ITERATE_FREE) {
+	gni_vpc_clear(&(gni->vpcs[i]));
+      }
+    }
+    if (mode == GNI_ITERATE_FREE) {
+        EUCA_FREE(gni->vpcs);
+    }
+
     if (mode == GNI_ITERATE_FREE) {
         bzero(gni, sizeof(globalNetworkInfo));
         gni->init = 1;
@@ -1490,6 +1615,17 @@ int gni_secgroup_clear(gni_secgroup * secgroup)
 
     return (0);
 }
+
+int gni_vpc_clear(gni_vpc *vpc) {
+  if (!vpc) {
+    return(0);
+  }
+
+  bzero(vpc, sizeof(gni_vpc));
+
+  return(0);
+}
+
 
 int gni_validate(globalNetworkInfo * gni)
 {
