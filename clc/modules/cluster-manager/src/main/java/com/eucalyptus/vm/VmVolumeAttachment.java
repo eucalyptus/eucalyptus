@@ -174,6 +174,8 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   private String	remoteDevice;
   @Column( name = "metadata_vm_volume_status" )
   private String	status;
+  @Column( name = "metadata_vm_volume_at_startup", columnDefinition = "boolean default false" )
+  private Boolean	attachedAtStartup;
   @Column( name = "metadata_vm_volume_attach_time" )
   private Date		attachTime;
   @Column( name = "metadata_vm_vol_delete_on_terminate" )
@@ -191,16 +193,12 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   }
   
   VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
-                              Boolean deleteOnTerminate ) {
-    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, deleteOnTerminate, Boolean.FALSE );
+                              Boolean deleteOnTerminate, Boolean attachedAtStartup ) {
+    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, deleteOnTerminate, Boolean.FALSE, attachedAtStartup );
   }
-  
-  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
-    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, Boolean.TRUE );
-  }
-  
+
   public VmVolumeAttachment(VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
-			Boolean deleteOnTerminate, Boolean rootDevice) {
+			Boolean deleteOnTerminate, Boolean rootDevice, Boolean attachedAtStartup) {
     super();
 	this.vmInstance = vmInstance;
 	this.volumeId = volumeId;
@@ -210,13 +208,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	this.attachTime = attachTime;
 	this.deleteOnTerminate = deleteOnTerminate;
 	this.isRootDevice = rootDevice;
+	this.attachedAtStartup = attachedAtStartup;
   }
   
   public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
     return new Function<AttachedVolume, VmVolumeAttachment>( ) {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
       }
     };
   }
@@ -225,7 +224,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Function<AttachedVolume, VmVolumeAttachment>( ) {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
       }
     };
   }
@@ -331,6 +330,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	
   public void setIsRootDevice(Boolean isRootDevice) {
 	this.isRootDevice = isRootDevice;
+  }
+
+  public Boolean getAttachedAtStartup() {
+	return attachedAtStartup;
+  }
+
+  public void setAttachedAtStartup(Boolean attachedAtStartup) {
+	this.attachedAtStartup = attachedAtStartup;
   }
 
 @Override

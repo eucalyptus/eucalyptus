@@ -64,6 +64,7 @@ package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Strings.isPrefixOf;
 import static com.eucalyptus.util.Strings.upper;
+
 import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -81,6 +82,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -100,6 +102,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -108,6 +111,7 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.ern.Ern;
@@ -202,6 +206,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
+
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -1253,7 +1258,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           m.put( "block-device-mapping/emi", attachment.getDevice() );
           m.put( "block-device-mapping/root", attachment.getDevice() );
         }
-        m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getDevice() );
+        // add only volumes added at start up time and don't list root see EUCA-8636
+        if (attachment.getAttachedAtStartup() && !attachment.getIsRootDevice())
+          m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getDevice() );
       }
 
       // Using ephemeral attachments for bfebs instances only, can be extended to be used by all other instances
@@ -1685,7 +1692,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       public Volume apply( final Volume input ) {
         final VmInstance entity = Entities.merge( VmInstance.this );
         final Volume volEntity = Entities.merge( vol );
-        VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, volEntity.getDisplayName( ), deviceName, remoteDevice, AttachmentState.attaching.name( ), new Date( ), false );
+        VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, volEntity.getDisplayName( ), deviceName, remoteDevice, 
+          AttachmentState.attaching.name( ), new Date( ), false, Boolean.FALSE );
         volEntity.setState( State.BUSY );
         entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
         return volEntity;
@@ -1700,7 +1708,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final VmInstance entity = Entities.merge( VmInstance.this );
         final Volume volEntity = Entities.merge( vol );
         // At this point the remote device string is not available. Setting this member to null leads to DB lookup issues later. So setting it to empty string instead
-        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), AttachmentState.attached.name( ), new Date( ), true, isRootDevice );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), AttachmentState.attached.name( ),
+          new Date( ), true, isRootDevice, Boolean.TRUE );
         entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
         return volEntity;
       }
@@ -1714,7 +1723,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final VmInstance entity = Entities.merge( VmInstance.this );
         final Volume volEntity = Entities.merge( vol );
         // At this point the remote device string is not available. Setting this member to null leads to DB lookup issues later. So setting it to empty string instead  
-        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), AttachmentState.attached.name( ), new Date( ), false, isRootDevice );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), AttachmentState.attached.name( ),
+                new Date( ), false, isRootDevice, Boolean.TRUE );
         entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
         return volEntity;
       }
