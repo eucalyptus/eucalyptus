@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,6 +28,7 @@ import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
@@ -36,6 +36,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.NetworkAclAssociationType;
 import edu.ucsb.eucalyptus.msgs.NetworkAclEntryType;
@@ -45,6 +46,10 @@ import edu.ucsb.eucalyptus.msgs.NetworkAclType;
  *
  */
 public interface NetworkAcls extends Lister<NetworkAcl> {
+
+  static Ordering<NetworkAclEntry> ENTRY_ORDERING =
+      Ordering.natural().reverse().onResultOf( NetworkAcls.NetworkAclEntryFilterBooleanFunctions.EGRESS ).compound(
+          Ordering.natural().onResultOf( NetworkAcls.NetworkAclEntryFilterIntegerFunctions.RULE_NUMBER ) );
 
   <T> List<T> list( OwnerFullName ownerFullName,
                     Criterion criterion,
@@ -63,6 +68,10 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
 
   NetworkAcl save( NetworkAcl networkAcl ) throws VpcMetadataException;
 
+  NetworkAcl updateByExample( NetworkAcl example,
+                              OwnerFullName ownerFullName,
+                              String key,
+                              Callback<NetworkAcl> updateCallback ) throws VpcMetadataException;
   @TypeMapper
   public enum NetworkAclToNetworkAclTypeTransform implements Function<NetworkAcl,NetworkAclType> {
     INSTANCE;
@@ -76,7 +85,7 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               networkAcl.getDisplayName( ),
               networkAcl.getVpc().getDisplayName( ),
               networkAcl.getDefaultForVpc( ),
-              Collections2.transform( networkAcl.getEntries(), NetworkAclEntryToNetworkAclEntryType.INSTANCE ),
+              Collections2.transform( ENTRY_ORDERING.sortedCopy( networkAcl.getEntries( ) ), NetworkAclEntryToNetworkAclEntryType.INSTANCE ),
               Collections2.transform( networkAcl.getSubnets(), SubnetToNetworkAclAssociationType.INSTANCE )
           );
     }
@@ -141,6 +150,9 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withIntegerSetProperty( "entry.rule-number", FilterIntegerSetFunctions.RULE_NUMBER )
               .withStringProperty( "network-acl-id", CloudMetadatas.toDisplayName() )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+              .withPersistenceAlias( "subnets", "subnets" )
+              .withPersistenceAlias( "entries", "entries" )
+              .withPersistenceAlias( "vpc", "vpc" )
               .withPersistenceFilter( "association.association-id", "subnets.networkAclAssociationId" )
               .withPersistenceFilter( "association.subnet-id", "subnets.displayName" )
               .withPersistenceFilter( "default", "defaultForVpc", PersistenceFilter.Type.Boolean )

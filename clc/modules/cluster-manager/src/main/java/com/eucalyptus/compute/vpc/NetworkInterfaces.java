@@ -144,6 +144,8 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "status", FilterStringFunctions.STATE )
               .withStringProperty( "subnet-id", FilterStringFunctions.SUBNET_ID )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+              .withPersistenceAlias( "vpc", "vpc" )
+              .withPersistenceAlias( "subnet", "subnet" )
               .withPersistenceFilter( "attachment.attachment-id", "attachment.attachmentId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-id", "attachment.instanceId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-owner-id", "attachment.instanceOwnerId", Collections.<String>emptySet() )

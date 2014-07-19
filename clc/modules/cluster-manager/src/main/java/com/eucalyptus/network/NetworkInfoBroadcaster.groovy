@@ -52,6 +52,7 @@ import com.eucalyptus.compute.vpc.DhcpOptionSet
 import com.eucalyptus.compute.vpc.InternetGateway
 import com.eucalyptus.compute.vpc.NetworkAcl
 import com.eucalyptus.compute.vpc.NetworkAclEntry
+import com.eucalyptus.compute.vpc.NetworkAcls
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.Route
 import com.eucalyptus.compute.vpc.RouteTable
@@ -644,12 +645,13 @@ class NetworkInfoBroadcaster {
 
     @Override
     NetworkAclNetworkView apply( final NetworkAcl networkAcl ) {
+      List<NetworkAclEntry> orderedEntries = NetworkAcls.ENTRY_ORDERING.sortedCopy( networkAcl.entries )
       new NetworkAclNetworkView(
           networkAcl.displayName,
           networkAcl.ownerAccountNumber,
           networkAcl.vpc.displayName,
-          ImmutableList.copyOf( networkAcl.entries.findAll{ NetworkAclEntry entry -> !entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } ),
-          ImmutableList.copyOf( networkAcl.entries.findAll{ NetworkAclEntry entry -> entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } )
+          ImmutableList.copyOf( orderedEntries.findAll{ NetworkAclEntry entry -> !entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } ),
+          ImmutableList.copyOf( orderedEntries.findAll{ NetworkAclEntry entry -> entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } )
       )
     }
   }

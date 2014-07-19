@@ -35,7 +35,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.FullName;

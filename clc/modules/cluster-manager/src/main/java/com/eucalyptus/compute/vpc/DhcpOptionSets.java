@@ -119,6 +119,7 @@ public interface DhcpOptionSets extends Lister<DhcpOptionSet> {
           .withStringProperty( "dhcp-options-id", CloudMetadatas.toDisplayName() )
           .withStringSetProperty( "key", FilterStringSetFunctions.KEY )
           .withStringSetProperty( "value", FilterStringSetFunctions.VALUE )
+          .withPersistenceAlias( "dhcpOptions", "dhcpOptions" )
           .withPersistenceFilter( "dhcp-options-id", "displayName")
           .withPersistenceFilter( "key", "dhcpOptions.key" )
       );
