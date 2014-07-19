@@ -628,8 +628,8 @@ public class BlockStorageController {
         } catch(NoSuchElementException e) {
             // Set the response element to false if the volume entity does not exist in the SC database
             // if record is not found, delete is idempotent
-            LOG.error("Unable to find volume in SC database: " + volumeId);
-            reply.set_return(Boolean.FALSE);
+            LOG.warn("Got delete request, but unable to find volume in SC database: " + volumeId);
+            reply.set_return(Boolean.TRUE);
         } catch(EucalyptusCloudException e) {
             LOG.error("Error marking volume " + volumeId + " for deletion: " + e.getMessage());
             throw e;
