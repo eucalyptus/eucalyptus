@@ -78,6 +78,8 @@ import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.ComponentDatabase;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.InternalService;
@@ -448,6 +450,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return this.ats.get( AwsServiceName.class ).value( );
     } else {
       return "eucalyptus";
+    }
+  }
+
+  public DatabaseNamingStrategy getDatabaseNamingStrategy( ) {
+    if ( this.ats.has( ComponentDatabase.class ) ) {
+      return this.ats.get( ComponentDatabase.class ).namingStrategy( );
+    } else {
+      return DatabaseNamingStrategy.Schema;
     }
   }
   

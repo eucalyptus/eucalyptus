@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,6 @@
 package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
-import java.io.File;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
@@ -88,25 +87,43 @@ public interface DatabaseBootstrapper {
   boolean isRunning( );
   
   void hup( );
-  
-  List<String> listDatabases();
 
-  List<String> listDatabases(InetAddress host);
+  List<String> listDatabases( );
 
-  List<String> listTables(String database);
+  List<String> listDatabases( InetAddress host );
 
-  File backupDatabase(String name, String backupIdentifier);
+  List<String> listSchemas( String database );
 
-  void createDatabase(String name);
+  List<String> listSchemas( InetAddress host, String database );
 
-  void deleteDatabase(String name);
+  List<String> listTables( String database, String schema );
 
-  void copyDatabase(String from, String to);
-  
-  void renameDatabase(String from, String to);
+  void createDatabase( String database);
 
-  Sql getConnection(String database) throws Exception;  
-  
+  void deleteDatabase( String database );
+
+  void renameDatabase( String from, String to );
+
+  /**
+   * Copy a database or a single schema.
+   */
+  void copyDatabase( String sourceDatabase,
+                     String destinationDatabase );
+
+  /**
+   * Copy a single database schema.
+   */
+  void copyDatabaseSchema( String sourceDatabase,
+                           String sourceSchema,
+                           String destinationDatabase,
+                           String destinationSchema );
+
+  Sql getConnection( String context ) throws Exception;
+
+  Sql getConnection( String database, String schema ) throws Exception;
+
+  String getDefaultSchemaName( );
+
   String getDriverName( );
   
   String getJdbcDialect( );

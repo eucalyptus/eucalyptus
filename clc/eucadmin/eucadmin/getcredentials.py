@@ -136,14 +136,14 @@ class GetCredentials(AWSQueryRequest):
 
     def get_keys(self):
         self.setup_query()
-        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_shared')
         cur1 = con1.cursor()
         cur1.execute("""select k.auth_access_key_query_id, k.auth_access_key_key 
-                          from auth_access_key k 
-                          join auth_user u on k.auth_access_key_owning_user=u.id
-                          join auth_group_has_users gu on u.id=gu.auth_user_id 
-                          join auth_group g on gu.auth_group_id=g.id 
-                          join auth_account a on g.auth_group_owning_account=a.id 
+                          from eucalyptus_auth.auth_access_key k 
+                          join eucalyptus_auth.auth_user u on k.auth_access_key_owning_user=u.id
+                          join eucalyptus_auth.auth_group_has_users gu on u.id=gu.auth_user_id 
+                          join eucalyptus_auth.auth_group g on gu.auth_group_id=g.id 
+                          join eucalyptus_auth.auth_account a on g.auth_group_owning_account=a.id 
                          where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s and k.auth_access_key_active=TRUE""",
                      params={'acctname': self.args.get('account'),
                              'grpname': '_' + self.args.get('user')})
@@ -153,13 +153,13 @@ class GetCredentials(AWSQueryRequest):
         return result[0]
 
     def get_token(self):
-        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_shared')
         cur1 = con1.cursor()
         cur1.execute("""select u.auth_user_token 
-                          from auth_user u 
-                          join auth_group_has_users gu on u.id=gu.auth_user_id
-                          join auth_group g on gu.auth_group_id=g.id 
-                          join auth_account a on g.auth_group_owning_account=a.id 
+                          from eucalyptus_auth.auth_user u 
+                          join eucalyptus_auth.auth_group_has_users gu on u.id=gu.auth_user_id
+                          join eucalyptus_auth.auth_group g on gu.auth_group_id=g.id 
+                          join eucalyptus_auth.auth_account a on g.auth_group_owning_account=a.id 
                           where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s""",
                      params={'acctname': self.account, 'grpname': '_' + self.user})
         result = cur1.fetchall()

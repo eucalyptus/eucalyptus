@@ -70,6 +70,8 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -85,6 +87,8 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+
+import java.util.NoSuchElementException;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -316,19 +320,19 @@ public class StorageInfo extends AbstractPersistent {
 	}
 
 	public static StorageInfo getStorageInfo() {
-		EntityWrapper<StorageInfo> storageDb = EntityWrapper.get(StorageInfo.class);
-		StorageInfo conf = null;
+		TransactionResource tran = Entities.transactionFor(StorageInfo.class);
+        StorageInfo conf = null;
 		try {
-			conf = storageDb.getUnique(new StorageInfo(StorageProperties.NAME));
-			storageDb.commit();
-		} catch (EucalyptusCloudException e) {
+			conf = Entities.uniqueResult(new StorageInfo(StorageProperties.NAME));
+			tran.commit();
+		} catch (NoSuchElementException e) {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf = getDefaultInstance();
-			storageDb.add(conf);
-			storageDb.commit();
+			Entities.persist(conf);
+			tran.commit();
 		} catch (Exception t) {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
+			tran.rollback();
 			return getDefaultInstance();
 		}
 		return conf;

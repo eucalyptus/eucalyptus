@@ -66,6 +66,8 @@ package com.eucalyptus.blockstorage;
 import java.net.URL;
 import java.util.List;
 
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
@@ -76,6 +78,8 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+
+import javax.persistence.EntityTransaction;
 
 public class BlockStorageChecker {
 	private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
@@ -124,80 +128,80 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanStuckVolumes() {
-		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		TransactionResource tran = Entities.transactionFor(VolumeInfo.class);
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setStatus(StorageProperties.Status.creating.toString());
-		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+		List<VolumeInfo> volumeInfos = Entities.query(volumeInfo);
 		for(VolumeInfo volInfo : volumeInfos) {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning stuck volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
 			volumeInfo.setStatus(StorageProperties.Status.failed.toString());
 		}
-		db.commit();
+		tran.commit();
 	}
 
 	public void cleanFailedVolumes() {
-		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		TransactionResource tran = Entities.transactionFor(VolumeInfo.class);
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setStatus(StorageProperties.Status.failed.toString());
-		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+		List<VolumeInfo> volumeInfos = Entities.query(volumeInfo);
 		for(VolumeInfo volInfo : volumeInfos) {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
 		}
-		db.commit();
+		tran.commit();
 	}
 
 	public void cleanFailedVolume(String volumeId) {
-		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		TransactionResource tran = Entities.transactionFor(VolumeInfo.class);
 		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
-		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+		List<VolumeInfo> volumeInfos = Entities.query(volumeInfo);
 		if(volumeInfos.size() > 0) {
 			VolumeInfo volInfo = volumeInfos.get(0);
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
 			//We don't remove deleted volumes, but failed are okay to delete.
-			db.delete(volInfo);
+			Entities.delete(volInfo);
 		}
-		db.commit();
+		tran.commit();
 	}
 
 	public void cleanStuckSnapshots() {
-		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+        EntityTransaction tran = Entities.transactionFor(SnapshotInfo.class);
 		SnapshotInfo snapshotInfo = new SnapshotInfo();
 		snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
-		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+		List<SnapshotInfo> snapshotInfos = Entities.query(snapshotInfo, false);
 		for(SnapshotInfo snapInfo : snapshotInfos) {
 			// Mark them as failed so that it gets reflected in the CLC and the clean up routine picks them up later
 			snapInfo.setStatus(StorageProperties.Status.failed.toString());
 		}
-		db.commit();
+		tran.commit();
 	}
 
 	public void cleanFailedSnapshots() {
-		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+		TransactionResource tran = Entities.transactionFor(SnapshotInfo.class);
 		SnapshotInfo snapshotInfo = new SnapshotInfo();
 		snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
-		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+		List<SnapshotInfo> snapshotInfos = Entities.query(snapshotInfo);
 		for(SnapshotInfo snapInfo : snapshotInfos) {
 			cleanSnapshot(snapInfo);
-			db.delete(snapInfo);
+			Entities.delete(snapInfo);
 		}
-		db.commit();
+		tran.commit();
 	}
 
 	public void cleanFailedSnapshot(String snapshotId) {
-		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
-		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+		TransactionResource tran = Entities.transactionFor(SnapshotInfo.class);
+        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
+		List<SnapshotInfo> snapshotInfos = Entities.query(snapshotInfo);
 		if(snapshotInfos.size() > 0) {
 			SnapshotInfo snapInfo = snapshotInfos.get(0);
 			cleanSnapshot(snapInfo);
-			db.delete(snapInfo);
+			Entities.delete(snapInfo);
 		}
-		db.commit();
+		tran.commit();
 	}
 	
 	private void cleanSnapshot(SnapshotInfo snapInfo) {
