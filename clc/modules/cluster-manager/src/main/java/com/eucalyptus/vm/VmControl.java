@@ -87,6 +87,7 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
@@ -255,6 +256,8 @@ public class VmControl {
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
       final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
       if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
+      final NoSuchSubnetMetadataException e6 = Exceptions.findCause( ex, NoSuchSubnetMetadataException.class );
+      if ( e6 != null ) throw new ClientComputeException( "InvalidSubnetID.NotFound", e6.getMessage( ) );
       LOG.error( ex, ex );
       throw ex;
     } finally {

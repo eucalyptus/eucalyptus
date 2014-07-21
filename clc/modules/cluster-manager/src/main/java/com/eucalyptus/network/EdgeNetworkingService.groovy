@@ -37,9 +37,13 @@ import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.common.network.VpcResource
+import com.eucalyptus.compute.vpc.Subnet
+import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
+import com.eucalyptus.util.Cidr
+import com.google.common.base.Function
+import com.google.common.collect.Iterables
 import com.google.common.collect.Iterators
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
@@ -62,7 +66,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   @Override
   protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
                                                                      final List<NetworkResource> resources ) {
-    boolean vpc = request.resources.find{ it instanceof VpcResource } != null
+    boolean vpc = request.vpc != null
     request.resources.each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:
@@ -79,9 +83,8 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
             resources.addAll( preparePrivateIp( request, (PrivateIPResource) networkResource ) )
           }
           break
-        case VpcResource:
         case VpcNetworkInterfaceResource:
-          resources.addAll( networkResource )
+          resources.addAll( prepareNetworkInterface( request, (VpcNetworkInterfaceResource) networkResource ) )
           break
       }
     }
@@ -108,9 +111,17 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           break
         case PrivateIPResource:
           try {
-            PrivateAddresses.release( networkResource.value, networkResource.ownerId )
+            PrivateAddresses.release( request.vpc, networkResource.value, networkResource.ownerId )
           } catch ( e ) {
             logger.error( "Error releasing private IP address: ${networkResource.value}", e )
+          }
+          break
+        case VpcNetworkInterfaceResource:
+          String ip = ((VpcNetworkInterfaceResource)networkResource).privateIp
+          try {
+            PrivateAddresses.release( request.vpc, ip, networkResource.ownerId )
+          } catch ( e ) {
+            logger.error( "Error releasing private IP address ${ip} for ${networkResource.value}", e )
           }
           break
       }
@@ -140,19 +151,42 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 
+  private Collection<NetworkResource> prepareNetworkInterface(
+      final PrepareNetworkResourcesType request,
+      final VpcNetworkInterfaceResource vpcNetworkInterfaceResource
+  ) {
+    VpcNetworkInterfaceResource resource = preparePrivateIp( request, new PrivateIPResource(
+        ownerId: vpcNetworkInterfaceResource.ownerId,
+        value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
+      vpcNetworkInterfaceResource.privateIp = value
+      vpcNetworkInterfaceResource
+    }
+
+    resource ?
+        [ resource ] :
+        [ ]
+  }
+
   private Collection<NetworkResource> preparePrivateIp( final PrepareNetworkResourcesType request,
                                                         final PrivateIPResource privateIPResource ) {
     PrivateIPResource resource = null
     final String zone = request.availabilityZone
-    final Iterable<Integer> addresses = NetworkConfigurations.getPrivateAddresses( zone )
+    final String vpcId = request.vpc
+    final String subnetId = request.subnet
+    final Iterable<Integer> addresses = vpcId != null ?
+        Iterables.skip( IPRange.fromCidr( cidrForSubnet( subnetId ) ), 3 ) :
+        NetworkConfigurations.getPrivateAddresses( zone )
+    final String scopeDescription = vpcId != null ? "subnet ${subnetId}" :  "zone ${zone}"
     if ( privateIPResource.value ) { // handle restore
-      if ( Iterators.contains( addresses.iterator( ), privateIPResource.value ) ) {
+      if ( Iterators.contains( addresses.iterator( ), PrivateAddresses.asInteger( privateIPResource.value ) ) ) {
         try {
           resource = new PrivateIPResource(
-              value: PrivateAddresses.allocate( [ PrivateAddresses.asInteger( privateIPResource.value ) ] ),
+              value: PrivateAddresses.allocate(
+                  vpcId,
+                  [ PrivateAddresses.asInteger( privateIPResource.value ) ] ),
               ownerId: privateIPResource.ownerId )
         } catch ( NotEnoughResourcesException e ) {
-          if ( PrivateAddresses.verify( privateIPResource.value, privateIPResource.ownerId ) ) {
+          if ( PrivateAddresses.verify( vpcId, privateIPResource.value, privateIPResource.ownerId ) ) {
             resource = new PrivateIPResource(
                 value: privateIPResource.value,
                 ownerId: privateIPResource.ownerId )
@@ -164,16 +198,25 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
         }
       } else {
         logger.error( "Failed to restore private address ${privateIPResource.value}" +
-            " for instance ${privateIPResource.ownerId} because address is not valid for zone ${zone}" );
+            " for instance ${privateIPResource.ownerId} because address is not valid for ${scopeDescription}" );
       }
     } else {
       resource = new PrivateIPResource(
-          value: PrivateAddresses.allocate( addresses ),
+          value: PrivateAddresses.allocate( vpcId, addresses ),
           ownerId: privateIPResource.ownerId )
     }
 
     resource ?
       [ resource ] :
       [ ]
+  }
+
+  protected Cidr cidrForSubnet( final String subnetId ) {
+    Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Cidr>( ){
+      @Override
+      Cidr apply( final Subnet subnet ) {
+        return subnet != null ? Cidr.parse( subnet.getCidr( ) ) : null;
+      }
+    } )
   }
 }

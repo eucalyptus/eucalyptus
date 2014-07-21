@@ -89,17 +89,18 @@ public interface Subnets extends Lister<Subnet> {
     public SubnetFilterSupport( ) {
       super( builderFor( Subnet.class )
           .withTagFiltering( SubnetTag.class, "subnet" )
-          .withStringProperty( "availabilityZone", FilterStringFunctions.AVAILABILITY_ZONE )
-          .withStringProperty( "available-ip-address", FilterStringFunctions.AVAILABILITY_ZONE )
-          .withStringProperty( "cidrBlock", FilterStringFunctions.CIDR ) //TODO:STEVE: filter aliases (check how AWS/EC2 handles use of multiple aliases in a request)
-          .withBooleanProperty( "defaultForAz", FilterBooleanFunctions.DEFAULT_FOR_AZ )
+          .withStringProperty( "availability-zone", FilterStringFunctions.AVAILABILITY_ZONE )
+          .withIntegerProperty( "available-ip-address-count", FilterIntegerFunctions.AVAILABLE_IP_COUNT )
+          .withStringProperty( "cidr-block", FilterStringFunctions.CIDR ) //TODO:STEVE: filter aliases (check how AWS/EC2 handles use of multiple aliases in a request)
+          .withBooleanProperty( "default-for-az", FilterBooleanFunctions.DEFAULT_FOR_AZ )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "subnet-id", CloudMetadatas.toDisplayName( ) )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
-          .withPersistenceFilter( "availabilityZone" )
-          .withPersistenceFilter( "available-ip-address", "availableIpAddressCount", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "cidrBlock", "cidr" )
-          .withPersistenceFilter( "defaultForAz", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
+          .withPersistenceAlias( "vpc", "vpc" )
+          .withPersistenceFilter( "availability-zone", "availabilityZone" )
+          .withPersistenceFilter( "available-ip-address-count", "availableIpAddressCount", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "cidr-block", "cidr" )
+          .withPersistenceFilter( "default-for-az", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "state", "state", Enums.valueOfFunction( Subnet.State.class ) )
           .withPersistenceFilter( "subnet-id", "displayName" )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
@@ -142,6 +143,15 @@ public interface Subnets extends Lister<Subnet> {
       @Override
       public String apply( final Subnet subnet ){
         return subnet.getVpc( ).getDisplayName();
+      }
+    },
+  }
+
+  public enum FilterIntegerFunctions implements Function<Subnet,Integer> {
+    AVAILABLE_IP_COUNT {
+      @Override
+      public Integer apply( final Subnet subnet ){
+        return subnet.getAvailableIpAddressCount( );
       }
     },
   }

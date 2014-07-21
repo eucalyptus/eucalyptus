@@ -80,6 +80,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType;
 import com.eucalyptus.util.OwnerFullName;
@@ -178,6 +179,10 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
       try {
         final ReleaseNetworkResourcesType releaseNetworkResourcesType = new ReleaseNetworkResourcesType( );
+        releaseNetworkResourcesType.setVpc( allocation.getSubnet( ) == null ?
+            null :
+            CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ).getVpc( ) ) );
+        releaseNetworkResourcesType.setSubnet( CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ) ) );
         releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
         Networking.getInstance( ).release( releaseNetworkResourcesType );
       } catch ( final Exception ex ) {

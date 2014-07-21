@@ -43,11 +43,11 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.common.network.VpcResource
 import com.eucalyptus.compute.identifier.ResourceIdentifiers
 import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.NetworkInterfaces
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException
 import com.eucalyptus.compute.vpc.Subnet
 import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces
 import com.eucalyptus.entities.Entities
@@ -606,22 +606,28 @@ class VmInstanceLifecycleHelpers {
    * For network interface, including mac address and private IP address
    */
   static final class VpcNetworkInterfaceVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
-    final NetworkInterfaces networkInterfaces = new PersistenceNetworkInterfaces( )
+    private static final Logger logger = Logger.getLogger( VpcNetworkInterfaceVmInstanceLifecycleHelper )
+    private static final NetworkInterfaces networkInterfaces = new PersistenceNetworkInterfaces( )
 
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final RunInstancesType runInstances = (RunInstancesType) allocation.request
-      final String subnetId = runInstances.subnetId ?: runInstances.networkInterfaceSet?.item?.getAt( 0 )?.subnetId //TODO:STEVE: this assumes deviceIndex == 0
+      final String subnetId = ResourceIdentifiers.tryNormalize( ).apply( runInstances.subnetId ?: runInstances.networkInterfaceSet?.item?.getAt( 0 )?.subnetId )//TODO:STEVE: this assumes deviceIndex == 0
       final String privateIp = runInstances.privateIpAddress ?:
           runInstances.networkInterfaceSet?.item?.getAt( 0 )?.privateIpAddress ?:
               runInstances.networkInterfaceSet?.item?.getAt( 0 )?.privateIpAddressesSet?.item?.getAt( 0 )?.privateIpAddress
       final Integer deviceIndex = runInstances.networkInterfaceSet?.item?.getAt( 0 )?.deviceIndex // required if specifying network interface
       if ( !Strings.isNullOrEmpty( subnetId ) || !Strings.isNullOrEmpty( privateIp ) || deviceIndex != null ) {
-        final Subnet subnet = Entities.transaction( Subnet ){ Entities.uniqueResult( Subnet.exampleWithName( null, subnetId ) ) }
+        final Subnet subnet;
+        try {
+          subnet = Entities.transaction( Subnet ){ Entities.uniqueResult( Subnet.exampleWithName( null, subnetId ) ) }
+        } catch ( NoSuchElementException e ) {
+          throw new NoSuchSubnetMetadataException( "Subnet (${subnetId}) not found" );
+        }
         if ( !RestrictedTypes.filterPrivileged( ).apply( subnet ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use subnet ${subnetId} for ${allocation.ownerFullName.userName}" )
         }
-        if ( !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
+        if ( privateIp && !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
           throw new MetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
         }
         allocation.subnet = subnet
@@ -636,10 +642,10 @@ class VmInstanceLifecycleHelpers {
     void prepareNetworkAllocation(
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType) {
-      if ( allocation.subnet && !prepareFromTokenResources( allocation, prepareNetworkResourcesType, VpcResource ) ) {
+      if ( allocation.subnet && !prepareFromTokenResources( allocation, prepareNetworkResourcesType, VpcNetworkInterfaceResource ) ) {
         allocation?.allocationTokens?.each{ ResourceToken token ->
           Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
-            resource instanceof VpcResource && resource.ownerId != null }
+            resource instanceof VpcNetworkInterfaceResource && resource.ownerId != null }
           if ( resources.isEmpty( ) ) {
             String identifier = ResourceIdentifiers.generateString( 'eni' )
             //TODO:STEVE: mac address prefix? use eni identifier for mac uniqueness
@@ -652,10 +658,6 @@ class VmInstanceLifecycleHelpers {
             final RunInstancesType runInstances = ((RunInstancesType)allocation.request)
             // TODO:STEVE: track address usage and update subnet free address count
             resources = [
-                new VpcResource(
-                    ownerId: token.instanceId,
-                    value: allocation.subnet.vpc.displayName
-                ),
                 new VpcNetworkInterfaceResource(
                     ownerId: token.instanceId,
                     value: identifier,
@@ -667,9 +669,6 @@ class VmInstanceLifecycleHelpers {
                     deleteOnTerminate: runInstances.networkInterfaceSet?.item?.getAt( 0 )?.deleteOnTermination ?: true,
                 )
             ] as Collection<NetworkResource>
-            if ( allocation.subnet.mapPublicIpOnLaunch ) {
-              resources << new PublicIPResource( ownerId: identifier )
-            }
           }
           token.getAttribute(NetworkResourcesKey).removeAll( resources )
           prepareNetworkResourcesType.resources.addAll( resources )
@@ -692,12 +691,14 @@ class VmInstanceLifecycleHelpers {
     @Override
     void prepareVmInstance( final ResourceToken resourceToken,
                             final VmInstanceBuilder builder ) {
+      NetworkInterfaces networkInterfaces = VpcNetworkInterfaceVmInstanceLifecycleHelper.networkInterfaces
       List<VpcNetworkInterfaceResource> resources =  resourceToken.getAttribute(NetworkResourcesKey).findAll{
         it instanceof VpcNetworkInterfaceResource } as List<VpcNetworkInterfaceResource>
       if ( resources ) {
         builder.onBuild( { VmInstance instance ->
           instance.updateMacAddress( resources[0].mac )
           instance.updatePrivateAddress( resources[0].privateIp )
+          PrivateAddresses.associate( resources[0].privateIp, instance ) //TODO:STEVE: should be associated with ENI
           int index = 0;
           for ( VpcNetworkInterfaceResource resource : resources  ) {
             VpcNetworkInterface networkInterface = networkInterfaces.save( VpcNetworkInterface.create(
@@ -732,6 +733,26 @@ class VmInstanceLifecycleHelpers {
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
         for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+          try {
+            if ( !Strings.isNullOrEmpty( networkInterface.privateIpAddress ) &&
+                !VmNetworkConfig.DEFAULT_IP.equals( networkInterface.privateIpAddress ) ) {
+              Networking.instance.release( new ReleaseNetworkResourcesType(
+                  vpc: instance.getVpcId( ),
+                  subnet: instance.getSubnetId( ),
+                  resources: [
+                      new VpcNetworkInterfaceResource(
+                          ownerId: instance.displayName,
+                          value: networkInterface.displayName,
+                          mac: networkInterface.macAddress,
+                          privateIp: networkInterface.privateIpAddress
+                      )
+                  ] as ArrayList<NetworkResource> )
+              )
+            }
+          } catch ( final Exception ex ) {
+            logger.error( "Error releasing private address '${networkInterface.privateIpAddress}' for interface '${networkInterface.displayName}' clean up.", ex )
+          }
+
           if ( networkInterface?.attachment?.deleteOnTerminate ) {
             Entities.delete( networkInterface )
           }

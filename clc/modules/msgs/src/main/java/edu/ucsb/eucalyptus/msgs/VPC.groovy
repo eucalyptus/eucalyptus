@@ -431,8 +431,9 @@ class ReplaceNetworkAclEntryType extends VpcMessage {
   Integer ruleNumber;
   String protocol;
   String ruleAction;
-  Boolean egress;
+  Boolean egress = false
   String cidrBlock;
+  @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
   ReplaceNetworkAclEntryType() {  }
@@ -523,7 +524,7 @@ class VpcPeeringConnectionType extends VpcMessage {
 class DeleteNetworkAclEntryType extends VpcMessage {
   String networkAclId;
   Integer ruleNumber;
-  Boolean egress;
+  Boolean egress = false
   DeleteNetworkAclEntryType() {  }
 }
 class AttachmentSetType extends EucalyptusData {
@@ -1437,8 +1438,9 @@ class CreateNetworkAclEntryType extends VpcMessage {
   Integer ruleNumber;
   String protocol;
   String ruleAction;
-  Boolean egress;
+  Boolean egress = false
   String cidrBlock;
+  @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
   CreateNetworkAclEntryType() {  }

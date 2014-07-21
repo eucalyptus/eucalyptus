@@ -64,9 +64,14 @@ public class NetworkAcl extends AbstractOwnedPersistent implements NetworkAclMet
     networkAcl.setVpc( vpc );
     networkAcl.setDefaultForVpc( defaultForVpc );
     networkAcl.setEntries( defaultForVpc ? Lists.newArrayList(
+        NetworkAclEntry.createEntry( networkAcl, 100, -1, RuleAction.allow, true, "0.0.0.0/0" ),
+        NetworkAclEntry.createEntry( networkAcl, 32767, -1, RuleAction.deny, true, "0.0.0.0/0" ),
         NetworkAclEntry.createEntry( networkAcl, 100, -1, RuleAction.allow, false, "0.0.0.0/0" ),
-        NetworkAclEntry.createEntry( networkAcl, 100, -1, RuleAction.allow, true, "0.0.0.0/0" )
-    ) : Lists.<NetworkAclEntry>newArrayList( ) );
+        NetworkAclEntry.createEntry( networkAcl, 32767, -1, RuleAction.deny, false, "0.0.0.0/0" )
+    ) : Lists.newArrayList(
+        NetworkAclEntry.createEntry( networkAcl, 32767, -1, RuleAction.deny, true, "0.0.0.0/0" ),
+        NetworkAclEntry.createEntry( networkAcl, 32767, -1, RuleAction.deny, false, "0.0.0.0/0" )
+    ) );
     networkAcl.subnets = Lists.newArrayList( );
     return networkAcl;
   }
