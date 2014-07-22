@@ -940,24 +940,20 @@ public class VpcManager {
 
   public DescribeAccountAttributesResponseType describeAccountAttributes(final DescribeAccountAttributesType request) throws EucalyptusCloudException {
     final DescribeAccountAttributesResponseType reply = request.getReply( );
-    {
-      final AccountAttributeSetItemType accountAttributeSetItemType = new AccountAttributeSetItemType();
-      accountAttributeSetItemType.setAttributeName( "supported-platforms" );
-      accountAttributeSetItemType.setAttributeValueSet( new AccountAttributeValueSetType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 0 ).setAttributeValue( "EC2" );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 1 ).setAttributeValue( "VPC" );
-      reply.getAccountAttributeSet( ).getItem( ).add( accountAttributeSetItemType );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    String vpcId = "none";
+    try {
+      vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName() );
+    } catch ( VpcMetadataNotFoundException e) {
+      // no default vpc
+    } catch ( Exception e ) {
+      throw handleException( e );
     }
-    {
-      final AccountAttributeSetItemType accountAttributeSetItemType = new AccountAttributeSetItemType();
-      accountAttributeSetItemType.setAttributeName( "default-vpc" );
-      accountAttributeSetItemType.setAttributeValueSet( new AccountAttributeValueSetType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 0 ).setAttributeValue( "none" );
-      reply.getAccountAttributeSet( ).getItem( ).add( accountAttributeSetItemType );
-    }
+    reply.getAccountAttributeSet( ).getItem( ).add(
+        new AccountAttributeSetItemType( "supported-platforms", Lists.newArrayList( "EC2", "VPC" ) ) ); //TODO:STEVE: Show only available platform
+    reply.getAccountAttributeSet( ).getItem( ).add(
+        new AccountAttributeSetItemType( "default-vpc", Lists.newArrayList( vpcId ) ) );
     return reply;
   }
 
@@ -1008,8 +1004,37 @@ public class VpcManager {
     return reply;
   }
 
-  public DescribeNetworkInterfaceAttributeResponseType describeNetworkInterfaceAttribute(DescribeNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    DescribeNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public DescribeNetworkInterfaceAttributeResponseType describeNetworkInterfaceAttribute(final DescribeNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final DescribeNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      final NetworkInterface networkInterface =
+          networkInterfaces.lookupByName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ), Functions.<NetworkInterface>identity( ) );
+      if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+        switch ( request.getAttribute() ) {
+          case "attachment":
+            if ( networkInterface.isAttached( ) )
+            reply.setAttachment( TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class ) );
+            break;
+          case "description":
+            reply.setDescription( new NullableAttributeValueType( ) );
+            reply.getDescription().setValue( networkInterface.getDescription( ) );
+            break;
+          case "groupSet":
+            reply.setGroupSet( new GroupSetType() ); //TODO:STEVE: security groups via enis
+            break;
+          case "sourceDestCheck":
+            reply.setSourceDestCheck( new AttributeBooleanValueType() );
+            reply.getSourceDestCheck().setValue( networkInterface.getSourceDestCheck( ) );
+            break;
+          default:
+            throw new ClientComputeException( "InvalidParameterValue", "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"  );
+        }
+      }
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1063,6 +1088,7 @@ public class VpcManager {
       final Vpc vpc =
           vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.<Vpc>identity( ) );
       if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
+        reply.setVpcId( vpc.getDisplayName( ) );
         switch ( request.getAttribute( ) ) {
           case "enableDnsSupport":
             reply.setEnableDnsSupport( new AttributeBooleanValueType( ) );
@@ -1203,8 +1229,39 @@ public class VpcManager {
     return reply;
   }
 
-  public ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute(ModifyNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    ModifyNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute(final ModifyNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final ModifyNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          accountFullName,
+          request.getNetworkInterfaceId(),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+                if ( request.getAttachment( ) != null ) {
+                  if ( networkInterface.isAttached( ) &&
+                      networkInterface.getAttachment( ).getAttachmentId( ).equals( request.getAttachment().getAttachmentId( ) ) ) {
+                    networkInterface.getAttachment( ).setDeleteOnTerminate( request.getAttachment( ).getDeleteOnTermination( ) );
+                  }
+                } else if ( request.getDescription( ) != null ) {
+                  networkInterface.setDescription( request.getDescription( ).getValue( ) );
+                } else if ( request.getGroupSet( ) != null ) {
+                  //TODO:STEVE: security groups via enis
+                } else if ( request.getSourceDestCheck( ) != null ) {
+                  networkInterface.setSourceDestCheck( request.getSourceDestCheck( ).getValue( ) );
+                } else {
+                  throw Exceptions.toUndeclared( new ClientComputeException( "MissingParameter", "Missing attribute value" ) );
+                }
+              }
+            }
+          } );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1476,8 +1533,35 @@ public class VpcManager {
     return reply;
   }
 
-  public ResetNetworkInterfaceAttributeResponseType resetNetworkInterfaceAttribute(ResetNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    ResetNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public ResetNetworkInterfaceAttributeResponseType resetNetworkInterfaceAttribute(final ResetNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final ResetNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          accountFullName,
+          request.getNetworkInterfaceId(),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+                switch ( request.getAttribute() ) {
+                  case "sourceDestCheck":
+                    networkInterface.setSourceDestCheck( true );
+                    break;
+                  default:
+                    throw Exceptions.toUndeclared( new ClientComputeException(
+                        "InvalidParameterValue",
+                        "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"
+                    ) );
+                }
+              }
+            }
+          } );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 

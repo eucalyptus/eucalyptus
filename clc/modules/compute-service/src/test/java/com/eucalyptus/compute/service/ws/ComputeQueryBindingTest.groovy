@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.service.ws
 
+import com.eucalyptus.compute.common.AttributeBooleanValueType
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType
 import com.eucalyptus.compute.common.CreateVolumePermissionItemType
 import com.eucalyptus.compute.common.DescribeSnapshotAttributeType
@@ -27,6 +28,7 @@ import com.eucalyptus.compute.common.LaunchPermissionItemType
 import com.eucalyptus.compute.common.LaunchPermissionOperationType
 import com.eucalyptus.compute.common.ModifyImageAttributeType
 import com.eucalyptus.compute.common.ModifySnapshotAttributeType
+import com.eucalyptus.compute.common.ModifyVpcAttributeType
 import com.eucalyptus.compute.common.ResetSnapshotAttributeType
 import com.eucalyptus.compute.common.UserIdGroupPairType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
@@ -742,4 +744,43 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
             ])
         }
     }
+
+  @Test
+  void testModifyVpcAttrMessageQueryBindings() {
+    URL resource = ComputeQueryBindingTest.class.getResource('/ec2-vpc-10-06-15.xml')
+
+    String version = "2010-06-15"
+    ComputeQueryBinding eb = new ComputeQueryBinding() {
+      @Override
+      protected com.eucalyptus.binding.Binding getBindingWithElementClass(final String operationName) {
+        createTestBindingFromXml(resource, operationName)
+      }
+
+      @Override
+      String getNamespace() {
+        return getNamespaceForVersion(version);
+      }
+
+      @Override
+      protected void validateBinding(final com.eucalyptus.binding.Binding currentBinding,
+                                     final String operationName,
+                                     final Map<String, String> params,
+                                     final BaseMessage eucaMsg) {
+        // Validation requires compiled bindings
+      }
+    }
+
+    // ModifyImageAttribute - 2010-06-15
+    bindAndAssertParameters(eb, ModifyVpcAttributeType.class, "ModifyVpcAttribute", new ModifyVpcAttributeType(
+        vpcId: 'vpc-0000001',
+        enableDnsHostnames: new AttributeBooleanValueType( value: true ),
+    ), [
+        VpcId                     : 'vpc-0000001',
+        'EnableDnsHostnames.Value': 'true',
+    ]).with {
+      assertNull( 'Expected null dns support attribute', enableDnsSupport )
+      assertNotNull( 'Expected non-null dns hostnames attribute', enableDnsHostnames )
+      assertEquals( 'EnableDnsHostnames value', true, enableDnsHostnames.value )
+    }
+  }
 }

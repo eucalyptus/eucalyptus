@@ -42,7 +42,19 @@ interface VpcTagged {
 }
 class DescribeVpcAttributeType extends VpcMessage {
   String vpcId;
-  String attribute //TODO:STEVE: SOAP binding for this
+  String attribute
+
+  void hasEnableDnsSupport( boolean flag ) {
+    if ( flag ) attribute = "enableDnsSupport"
+  }
+
+  void hasEnableDnsHostnames( boolean flag ) {
+    if ( flag ) attribute = "enableDnsHostnames"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   DescribeVpcAttributeType() {  }
 }
 class DhcpOptionsIdSetType extends EucalyptusData {
@@ -371,6 +383,27 @@ class CustomerGatewaySetType extends EucalyptusData {
 }
 class DescribeNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
+  String attribute
+
+  void hasAttachment( boolean flag ) {
+    if ( flag ) attribute = "attachment"
+  }
+
+  void hasDescription( boolean flag ) {
+    if ( flag ) attribute = "description"
+  }
+
+  void hasGroupSet( boolean flag ) {
+    if ( flag ) attribute = "groupSet"
+  }
+
+  void hasSourceDestCheck( boolean flag ) {
+    if ( flag ) attribute = "sourceDestCheck"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   DescribeNetworkInterfaceAttributeType() {  }
 }
 class VpnGatewaySetType extends EucalyptusData {
@@ -1293,6 +1326,12 @@ class AccountAttributeSetItemType extends EucalyptusData {
   String attributeName;
   AccountAttributeValueSetType attributeValueSet;
   AccountAttributeSetItemType() {  }
+  AccountAttributeSetItemType( String name, List<String> values ) {
+    attributeName = name;
+    attributeValueSet = new AccountAttributeValueSetType(
+        item: values.collect{ String value -> new AccountAttributeValueSetItemType( attributeValue: value ) } as ArrayList<AccountAttributeValueSetItemType>
+    )
+  }
 }
 class CreateVpcPeeringConnectionResponseType extends VpcMessage {
   VpcPeeringConnectionType vpcPeeringConnection;
@@ -1341,6 +1380,15 @@ class AttachmentType extends EucalyptusData {
 }
 class ResetNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
+  String attribute
+
+  void hasSourceDestCheck( boolean flag ) {
+    if ( flag ) attribute = "sourceDestCheck"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   ResetNetworkInterfaceAttributeType() {  }
 }
 class VpcIdSetItemType extends EucalyptusData {

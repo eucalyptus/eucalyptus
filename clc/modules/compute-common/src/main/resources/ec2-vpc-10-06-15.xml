@@ -81,8 +81,12 @@
     <mapping name="DescribeVpcAttributeType" class="com.eucalyptus.compute.common.DescribeVpcAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="vpcId" field="vpcId" usage="required"/>
+        <structure choice="true" ordered="false" usage="required">
+            <structure name="enableDnsSupport" usage="optional" flag-method="hasEnableDnsSupport" get-method="getAttrObject" set-method="setAttrObject"/>
+            <structure name="enableDnsHostnames" usage="optional" flag-method="hasEnableDnsHostnames" get-method="getAttrObject" set-method="setAttrObject"/>
+        </structure>
     </mapping>
-    <mapping name="DescribeVpcAttributeResponseType" class="com.eucalyptus.compute.common.DescribeVpcAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <mapping name="AttributeResponseType" class="com.eucalyptus.compute.common.DescribeVpcAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="vpcId" field="vpcId" usage="required"/>
         <structure name="enableDnsSupport" field="enableDnsSupport" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
@@ -1038,6 +1042,12 @@
     <mapping name="DescribeNetworkInterfaceAttributeType" class="com.eucalyptus.compute.common.DescribeNetworkInterfaceAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+        <structure choice="true" ordered="false" usage="required">
+            <structure name="attachment" usage="optional" flag-method="hasAttachment" get-method="getAttrObject" set-method="setAttrObject"/>
+            <structure name="description" usage="optional" flag-method="hasDescription" get-method="getAttrObject" set-method="setAttrObject"/>
+            <structure name="groupSet" usage="optional" flag-method="hasGroupSet" get-method="getAttrObject" set-method="setAttrObject"/>
+            <structure name="sourceDestCheck" usage="optional" flag-method="hasSourceDestCheck" get-method="getAttrObject" set-method="setAttrObject"/>
+        </structure>
     </mapping>
     <mapping name="DescribeNetworkInterfaceAttributeResponseType" class="com.eucalyptus.compute.common.DescribeNetworkInterfaceAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -1066,6 +1076,9 @@
     <mapping name="ResetNetworkInterfaceAttributeType" class="com.eucalyptus.compute.common.ResetNetworkInterfaceAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+        <structure choice="true" ordered="false" usage="required">
+            <structure name="sourceDestCheck" usage="optional" flag-method="hasSourceDestCheck" get-method="getAttrObject" set-method="setAttrObject"/>
+        </structure>
     </mapping>
     <mapping name="ResetNetworkInterfaceAttributeResponseType" class="com.eucalyptus.compute.common.ResetNetworkInterfaceAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>

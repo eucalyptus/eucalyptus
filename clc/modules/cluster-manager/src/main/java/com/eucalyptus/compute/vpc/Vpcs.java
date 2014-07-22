@@ -53,7 +53,10 @@ public interface Vpcs extends Lister<Vpc> {
                       String name,
                       Function<? super Vpc,T> transform ) throws VpcMetadataException;
 
-  boolean delete( final VpcMetadata metadata ) throws VpcMetadataException;
+  <T> T lookupDefault( OwnerFullName ownerFullName,
+                       Function<? super Vpc,T> transform ) throws VpcMetadataException;
+
+  boolean delete( VpcMetadata metadata ) throws VpcMetadataException;
 
   Vpc save( Vpc vpc ) throws VpcMetadataException;
 

@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -57,6 +58,11 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
   boolean delete( final NetworkInterfaceMetadata metadata ) throws VpcMetadataException;
 
   NetworkInterface save( NetworkInterface networkInterface ) throws VpcMetadataException;
+
+  NetworkInterface updateByExample( NetworkInterface example,
+                                    OwnerFullName ownerFullName,
+                                    String key,
+                                    Callback<NetworkInterface> updateCallback ) throws VpcMetadataException;
 
   @TypeMapper
   public enum NetworkInterfaceToNetworkInterfaceTypeTransform implements Function<NetworkInterface,NetworkInterfaceType> {
