@@ -128,6 +128,7 @@ import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -611,7 +612,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       BootableSet bootSet;
       try {
         bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-      } catch ( final NoSuchMetadataException e ) {
+      } catch ( final NoSuchMetadataException | NoSuchImageIdException e ) {
         LOG.error( "Using transient bootset in place of imageId " + imageId
             + ", kernelId " + kernelId
             + ", ramdiskId " + ramdiskId
