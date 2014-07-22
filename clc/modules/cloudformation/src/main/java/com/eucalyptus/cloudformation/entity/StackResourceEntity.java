@@ -51,6 +51,8 @@ public class StackResourceEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String metadataJson;
   @Column(name = "physical_resource_id" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)

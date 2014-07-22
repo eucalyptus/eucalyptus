@@ -298,6 +298,158 @@ public class ElasticLoadBalancingPolicyTypeAttribute {
   String value;
 }
 
+@ToString(includeNames=true)
+public class S3CorsConfiguration {
+  @Required
+  @Property
+  List<S3CorsConfigurationRule> corsRule = Lists.newArrayList();
+}
+
+@ToString(includeNames=true)
+public class S3CorsConfigurationRule {
+  @Property
+  List<String> allowedHeaders = Lists.newArrayList();
+  @Required
+  @Property
+  List<String> allowedMethods = Lists.newArrayList();
+  @Required
+  @Property
+  List<String> allowedOrigins = Lists.newArrayList();
+  @Property
+  List<String> exposedHeaders = Lists.newArrayList();
+  @Property
+  String id;
+  @Property
+  Integer maxAge;
+}
+@ToString(includeNames=true)
+public class S3LifecycleRule {
+  @Property
+  String expirationDate;
+  @Property
+  Integer expirationInDays;
+  @Property
+  String id;
+  @Property
+  String prefix;
+  @Required
+  @Property
+  String status;
+  @Property
+  S3LifecycleRuleTransition transition;
+}
+@ToString(includeNames=true)
+public class S3LifecycleConfiguration {
+  @Required
+  @Property
+  List<S3LifecycleRule> rules = Lists.newArrayList();
+}
+
+@ToString(includeNames=true)
+public class S3LoggingConfiguration {
+  @Property
+  String destinationBucketName;
+  @Property
+  String logFilePrefix;
+}
+
+@ToString(includeNames=true)
+public class S3NotificationConfiguration{
+  @Required
+  @Property
+  List<S3NotificationTopicConfiguration> topicConfigurations = Lists.newArrayList();
+}
+@ToString(includeNames=true)
+public class CloudFormationResourceTag {
+  @Required
+  @Property
+  String key;
+  @Required
+  @Property
+  String value;
+
+}
+@ToString(includeNames=true)
+public class S3VersioningConfiguration {
+  @Required
+  @Property
+  String status;
+}
+@ToString(includeNames=true)
+public class S3WebsiteConfiguration {
+  @Property
+  String errorDocument;
+  @Property
+  String indexDocument;
+  @Property
+  S3WebsiteConfigurationRedirectAllRequestsTo redirectAllRequestsTo;
+  @Property
+  List<S3WebsiteConfigurationRoutingRule> routingRules = Lists.newArrayList();
+}
+
+@ToString(includeNames=true)
+public class S3WebsiteConfigurationRoutingRule {
+  @Required
+  @Property
+  S3WebsiteConfigurationRoutingRulesRedirectRule redirectRule;
+  @Property
+  S3WebsiteConfigurationRoutingRulesRoutingRuleCondition routingRuleCondition;
+}
+
+@ToString(includeNames=true)
+public class S3WebsiteConfigurationRoutingRulesRedirectRule {
+  @Property
+  String hostName;
+  @Property
+  String httpRedirectCode;
+  @Property
+  String protocol;
+  @Property
+  String replaceKeyPrefixWith;
+  @Property
+  String replaceKeyWith;
+}
+
+@ToString(includeNames=true)
+public class S3WebsiteConfigurationRoutingRulesRoutingRuleCondition {
+  @Property
+  String httpErrorCodeReturnedEquals;
+  @Property
+  String keyPrefixEquals;
+}
+
+@ToString(includeNames=true)
+public class S3WebsiteConfigurationRedirectAllRequestsTo {
+  @Required
+  @Property
+  String hostName;
+  @Property
+  String protocol;
+}
+
+@ToString(includeNames=true)
+public class S3LifecycleRuleTransition {
+  @Required
+  @Property
+  String storageClass;
+  @Property
+  String transitionDate;
+  @Property
+  Integer transitionInDays;
+}
+
+@ToString(includeNames=true)
+public class S3NotificationTopicConfiguration {
+  @Required
+  @Property
+  String event;
+  @Required
+  @Property
+  String topic;
+}
+
+
+
 
 
 

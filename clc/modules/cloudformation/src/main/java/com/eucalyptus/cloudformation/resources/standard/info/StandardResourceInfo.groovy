@@ -112,6 +112,8 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSCloudFormationWaitConditionResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String data;
   public AWSCloudFormationWaitConditionResourceInfo() {
     setType("AWS::CloudFormation::WaitCondition");
   }
@@ -120,6 +122,8 @@ public class AWSCloudFormationWaitConditionResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSCloudFormationWaitConditionHandleResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String eucaParts;
   public AWSCloudFormationWaitConditionHandleResourceInfo() {
     setType("AWS::CloudFormation::WaitConditionHandle");
   }
@@ -688,6 +692,10 @@ public class AWSRoute53RecordSetGroupResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSS3BucketResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String domainName;
+  @AttributeJson
+  String websiteURL;
   public AWSS3BucketResourceInfo() {
     setType("AWS::S3::Bucket");
   }
