@@ -2464,6 +2464,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @PrePersist
   @PreUpdate
   private void updateGroups( ) {
+    networkGroupIds.clear( );
     CollectionUtils.fluent( networkGroups )
         .transform( TypeMappers.lookup( NetworkGroup.class, NetworkGroupId.class ) )
         .copyInto( networkGroupIds );

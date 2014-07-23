@@ -199,6 +199,7 @@ public class NetworkGroupManager {
       final boolean showAll =
           request.getSecurityGroupSet( ).remove( "verbose" ) ||
           request.getSecurityGroupIdSet( ).remove( "verbose" );
+      //TODO:STEVE: Skip creation of default group when using VPC
       NetworkGroups.createDefault( ctx.getUserFullName( ) ); //ensure the default group exists to cover some old broken installs
 
       final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );

@@ -990,6 +990,11 @@ class AttributeBooleanValueType extends EucalyptusData {
   Boolean value;
   AttributeBooleanValueType() {  }
 }
+class AttributeBooleanFlatValueType extends EucalyptusData {
+  @HttpValue
+  Boolean value;
+  AttributeBooleanFlatValueType() {  }
+}
 class RouteTableSetType extends EucalyptusData {
   RouteTableSetType() {  }
   ArrayList<RouteTableType> item = new ArrayList<RouteTableType>();

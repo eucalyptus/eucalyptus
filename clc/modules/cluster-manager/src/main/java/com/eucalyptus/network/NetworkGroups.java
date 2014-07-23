@@ -824,11 +824,13 @@ public class NetworkGroups {
           .withStringProperty( "group-name", CloudMetadatas.toDisplayName() )
           .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
           .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
+          .withStringSetProperty( "ip-permission.group-id", FilterSetFunctions.PERMISSION_GROUP_ID )
           .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
           .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
           .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
           .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
           .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
+          .withStringProperty( "vpc-id", FilterFunctions.VPC_ID )
           .withPersistenceAlias( "networkRules", "networkRules" )
           .withPersistenceFilter( "description" )
           .withPersistenceFilter( "group-id", "groupId" )
@@ -836,7 +838,9 @@ public class NetworkGroups {
           .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction( NetworkRule.Protocol.class ) )
           .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
+          .withPersistenceFilter( "vpc-id", "vpcId" )
+      );
     }
   }
 
@@ -859,6 +863,12 @@ public class NetworkGroups {
         return group.getGroupId();
       }
     },
+    VPC_ID {
+      @Override
+      public String apply( final NetworkGroup group ) {
+        return group.getVpcId( );
+      }
+    }
   }
 
   private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
@@ -889,6 +899,18 @@ public class NetworkGroups {
         for ( final NetworkRule rule : group.getNetworkRules() ) {
           for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
             if ( peer.getGroupName() != null ) result.add( peer.getGroupName() );
+          }
+        }
+        return result;
+      }
+    },
+    PERMISSION_GROUP_ID {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getGroupId() != null ) result.add( peer.getGroupId() );
           }
         }
         return result;
