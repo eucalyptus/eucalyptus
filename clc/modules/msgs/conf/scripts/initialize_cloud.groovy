@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,6 @@ try {
   Databases.initialize( );
   try {
     props = [
-          "hibernate.archive.autodetection": "jar, class, hbm",
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
@@ -113,14 +112,8 @@ try {
           "hibernate.dialect": Databases.getHibernateDialect( ),
           "hibernate.transaction.auto_close_session":"false",
           "hibernate.transaction.flush_before_completion":"false",
-          "hibernate.transaction.jta.platform": "org.hibernate.service.jta.platform.internal.BitronixJtaPlatform",
-          "hibernate.cache.use_second_level_cache": "true",
+          "hibernate.cache.use_second_level_cache": "false",
           "hibernate.cache.use_query_cache": "false",
-          "hibernate.cache.default_cache_concurrency_strategy": "transactional",
-          "hibernate.cache.region.factory_class": "com.eucalyptus.bootstrap.CacheRegionFactory",
-          "hibernate.cache.infinispan.cfg": "eucalyptus_cache_infinispan.xml",
-          "hibernate.cache.use_minimal_puts": "true",
-          "hibernate.cache.use_structured_entries": "true",
     ]
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
