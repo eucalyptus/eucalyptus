@@ -72,6 +72,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -171,15 +172,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     super( ownerFullName, groupName );
   }
 
-  protected NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
-    this( ownerFullName, groupName );
-    checkParam( groupDescription, notNullValue() );
-    this.description = groupDescription;
-    this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
-  }
-
   protected NetworkGroup( final OwnerFullName ownerFullName,
                           final Vpc vpc,
+                          final String groupId,
                           final String groupName,
                           final String groupDescription ) {
     this( ownerFullName, groupName );
@@ -187,7 +182,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this.vpc = vpc;
     this.vpcId = CloudMetadatas.toDisplayName( ).apply( vpc );
     this.description = groupDescription;
-    this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
+    this.groupId = groupId;
   }
 
   public static NetworkGroup create( final OwnerFullName ownerFullName,
@@ -195,17 +190,17 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
                                      final String groupId,
                                      final String groupName,
                                      final String groupDescription ) {
-    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName, vpc, groupName, groupDescription );
-    networkGroup.setGroupId( groupId );
-    return networkGroup;
+    return new NetworkGroup( ownerFullName, vpc, groupId, groupName, groupDescription );
   }
 
   public static NetworkGroup withOwner( final OwnerFullName ownerFullName ) {
     return new NetworkGroup( ownerFullName );
   }
 
-  public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
-    return withUniqueName( ownerFullName, null, groupName ); //TODO:STEVE: verify it is OK to require owner here
+  public static NetworkGroup named( @Nonnull final OwnerFullName ownerFullName, final String groupName ) {
+    return groupName == null ?
+        withOwner( ownerFullName ) :
+        withUniqueName( ownerFullName, null, groupName );
   }
   
   public static NetworkGroup withNaturalId( final String naturalId ) {
@@ -216,7 +211,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       return networkGroupWithGroupId(ownerFullName, groupId);
   }
 
-  public static NetworkGroup withUniqueName( final OwnerFullName ownerFullName,
+  /**
+   * Specify VPC identifier for names in a VPC, when VPC identifier is omitted only
+   * non-VPC groups will match.
+   */
+  public static NetworkGroup withUniqueName( @Nonnull final OwnerFullName ownerFullName,
                                              @Nullable final String vpcId,
                                              final String groupName ) {
     final NetworkGroup networkGroup = new NetworkGroup( ownerFullName );
@@ -224,10 +223,14 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return networkGroup;
   }
 
-  public static NetworkGroup namedForVpc( final OwnerFullName ownerFullName,
-                                          @Nullable final String vpcId,
+  /**
+   * Example for finding a group by name in a VPC
+   *
+   * @see #withUniqueName(com.eucalyptus.util.OwnerFullName, String, String) withUniqueName - For use when owner is specified
+   */
+  public static NetworkGroup namedForVpc( final String vpcId,
                                           final String groupName ) {
-    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName, groupName );
+    final NetworkGroup networkGroup = new NetworkGroup( null, groupName );
     networkGroup.setVpcId( vpcId );
     return networkGroup;
   }
@@ -353,24 +356,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public String toString( ) {
     return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, Entities.isReadable( this.networkRules ) ? this.networkRules : "<Not loaded>" );
   }
-  
-  @Transient
-  private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
-                                                                        
-                                                                        @Override
-                                                                        public PacketFilterRule apply( final NetworkRule from ) {
-                                                                          final PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                                NetworkGroup.this.getOwnerAccountNumber( ),
-                                                                                                                                NetworkGroup.this.getDisplayName( ),
-                                                                                                                                from.getProtocol( ).name( ),
-                                                                                                                                from.getLowPort( ),
-                                                                                                                                from.getHighPort( ) );
-                                                                          pfrule.getSourceCidrs( ).addAll( from.getIpRanges( ) );
-                                                                          for ( final NetworkPeer peer : from.getNetworkPeers( ) )
-                                                                            pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
-                                                                          return pfrule;
-                                                                        }
-                                                                      };
   
   public String getClusterNetworkName( ) {
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );

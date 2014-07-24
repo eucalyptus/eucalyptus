@@ -648,16 +648,12 @@ public class VpcManager {
               ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
               NetworkGroups.defaultNetworkName(),
               "default VPC security group" );
-          //TODO:STEVE: update when security group protocol support is updated for VPC
-          final Collection<NetworkPeer> peers = Lists.newArrayList( 
+          final Collection<NetworkPeer> peers = Lists.newArrayList(
               NetworkPeer.create( group.getOwnerAccountNumber( ), group.getName( ), group.getGroupId( ) ) );
-          group.getNetworkRules( ).addAll( Lists.newArrayList(
-              NetworkRule.create( NetworkRule.Protocol.icmp, -1, -1, peers, null ),
-              NetworkRule.create( NetworkRule.Protocol.tcp, 0, 65535, peers, null ),
-              NetworkRule.create( NetworkRule.Protocol.udp, 0, 65535, peers, null )
-          ) );
+          group.getNetworkRules( ).add(
+              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ) );
+          //TODO:STEVE: Add default egress rule for default VPC security group
           securityGroups.save( group );
-          //TODO:STEVE: rules
           return vpc;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );

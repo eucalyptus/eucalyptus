@@ -233,5 +233,20 @@ class NISecurityGroup {
   @XmlAttribute String name
   @XmlElement String ownerId
   @XmlElementWrapper @XmlElement(name="value") List<String> rules = Lists.newArrayList()
+  @XmlElementWrapper @XmlElement(name="rule") List<NISecurityGroupIpPermission> ingressRules = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NISecurityGroupIpPermission {
+  @XmlElement Integer protocol
+  @XmlElement Integer fromPort
+  @XmlElement Integer toPort
+  @XmlElement Integer icmpType
+  @XmlElement Integer icmpCode
+  @XmlElement String groupId
+  @XmlElement String groupOwnerId
+  @XmlElement String cidr
 }
 

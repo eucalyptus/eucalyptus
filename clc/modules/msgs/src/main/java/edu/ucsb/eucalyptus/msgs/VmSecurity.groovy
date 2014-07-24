@@ -170,25 +170,28 @@ public class SecurityGroupItemType extends EucalyptusData {
   String groupName;
   String groupDescription;
   String groupId;
+  String vpcId
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+  ArrayList<IpPermissionType> ipPermissionsEgress = new ArrayList<IpPermissionType>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   
   public SecurityGroupItemType( ) {
     super( );
   }
-  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription ) {
+  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription, String vpcId ) {
     super( );
     this.accountId = accountId;
     this.groupId = groupId;
     this.groupName = groupName;
     this.groupDescription = groupDescription;
+    this.vpcId = vpcId
   }
 }
 
 public class IpPermissionType extends EucalyptusData {
   String ipProtocol;
-  int fromPort;
-  int toPort;
+  Integer fromPort;
+  Integer toPort;
   @HttpEmbedded( multiple=true )
   ArrayList<UserIdGroupPairType> groups = new ArrayList<UserIdGroupPairType>();
   @HttpEmbedded( multiple=true )
@@ -197,7 +200,7 @@ public class IpPermissionType extends EucalyptusData {
   def IpPermissionType(){
   }
   
-  def IpPermissionType(String ipProtocol, int fromPort, int toPort ) {
+  def IpPermissionType(String ipProtocol, Integer fromPort, Integer toPort ) {
     this.ipProtocol = ipProtocol;
     this.fromPort = fromPort;
     this.toPort = toPort;

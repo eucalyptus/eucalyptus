@@ -39,6 +39,7 @@ import com.eucalyptus.cluster.NIProperty
 import com.eucalyptus.cluster.NIRoute
 import com.eucalyptus.cluster.NIRouteTable
 import com.eucalyptus.cluster.NISecurityGroup
+import com.eucalyptus.cluster.NISecurityGroupIpPermission
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NIVpc
@@ -418,7 +419,19 @@ class NetworkInfoBroadcaster {
       new NISecurityGroup(
           name: group.groupId,
           ownerId: group.ownerAccountNumber,
-          rules: group.rules
+          rules: group.rules,
+          ingressRules: group.ingressPermissions.collect{ IPPermissionNetworkView ipPermission ->
+            new NISecurityGroupIpPermission(
+                ipPermission.protocol,
+                ipPermission.fromPort,
+                ipPermission.toPort,
+                ipPermission.icmpType,
+                ipPermission.icmpCode,
+                ipPermission.groupId,
+                ipPermission.groupOwnerAccountNumber,
+                ipPermission.cidr
+            )
+          } as List<NISecurityGroupIpPermission>
       )
     } )
 
@@ -431,19 +444,63 @@ class NetworkInfoBroadcaster {
 
   private static Set<String> explodeRules( NetworkRule networkRule ) {
     Set<String> rules = Sets.newLinkedHashSet( )
-    String rule = String.format(
-        "-P %s -%s %d%s%d ",
-        networkRule.protocol,
-        NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
-        networkRule.lowPort,
-        NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
-        networkRule.highPort );
-    rules.addAll( networkRule.networkPeers.collect{ NetworkPeer peer ->
-      String.format( "%s -o %s -u %s", rule, peer.groupId, peer.userQueryKey )
-    } )
-    rules.addAll( networkRule.ipRanges.collect{ String cidr ->
-      String.format( "%s -s %s", rule, cidr )
-    } )
+    // Only EC2-Classic rules supported by this format
+    if ( !networkRule.isVpcOnly( ) ) {
+      String rule = String.format(
+          "-P %s -%s %d%s%d ",
+          networkRule.protocol,
+          NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
+          networkRule.lowPort,
+          NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
+          networkRule.highPort);
+      rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
+        String.format("%s -o %s -u %s", rule, peer.groupId, peer.userQueryKey)
+      })
+      rules.addAll(networkRule.ipRanges.collect { String cidr ->
+        String.format("%s -s %s", rule, cidr)
+      })
+    }
+    rules
+  }
+
+  private static Set<IPPermissionNetworkView> explodePermissions( NetworkRule networkRule ) {
+    Set<IPPermissionNetworkView> rules = Sets.newLinkedHashSet( )
+
+    // Rules without a protocol number are pre-VPC support
+    if ( networkRule.getProtocolNumber( ) != null ) {
+      NetworkRule.Protocol protocol = networkRule.protocol
+      Integer protocolNumber = networkRule.protocolNumber
+      Integer fromPort = protocol?.extractLowPort( networkRule )
+      Integer toPort = protocol?.extractHighPort( networkRule )
+      Integer icmpType = protocol?.extractIcmpType( networkRule )
+      Integer icmpCode = protocol?.extractIcmpCode( networkRule )
+
+      rules.addAll( networkRule.networkPeers.collect{ NetworkPeer peer ->
+        new IPPermissionNetworkView(
+            protocolNumber,
+            fromPort,
+            toPort,
+            icmpType,
+            icmpCode,
+            peer.groupId,
+            peer.userQueryKey,
+            null
+        )
+      } )
+      rules.addAll( networkRule.ipRanges.collect{ String cidr ->
+        new IPPermissionNetworkView(
+            protocolNumber,
+            fromPort,
+            toPort,
+            icmpType,
+            icmpCode,
+            null,
+            null,
+            cidr
+        )
+      } )
+    }
+
     rules
   }
 
@@ -514,11 +571,54 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
+  static class IPPermissionNetworkView {
+    Integer protocol
+    Integer fromPort
+    Integer toPort
+    Integer icmpType
+    Integer icmpCode
+    String groupId
+    String groupOwnerAccountNumber
+    String cidr
+
+    boolean equals(final o) {
+      if (this.is(o)) return true
+      if (getClass() != o.class) return false
+
+      final IPPermissionNetworkView that = (IPPermissionNetworkView) o
+
+      if (cidr != that.cidr) return false
+      if (fromPort != that.fromPort) return false
+      if (groupId != that.groupId) return false
+      if (groupOwnerAccountNumber != that.groupOwnerAccountNumber) return false
+      if (icmpCode != that.icmpCode) return false
+      if (icmpType != that.icmpType) return false
+      if (protocol != that.protocol) return false
+      if (toPort != that.toPort) return false
+
+      return true
+    }
+
+    int hashCode() {
+      int result
+      result = (protocol != null ? protocol.hashCode() : 0)
+      result = 31 * result + (fromPort != null ? fromPort.hashCode() : 0)
+      result = 31 * result + (toPort != null ? toPort.hashCode() : 0)
+      result = 31 * result + (icmpType != null ? icmpType.hashCode() : 0)
+      result = 31 * result + (icmpCode != null ? icmpCode.hashCode() : 0)
+      result = 31 * result + (groupId != null ? groupId.hashCode() : 0)
+      result = 31 * result + (groupOwnerAccountNumber != null ? groupOwnerAccountNumber.hashCode() : 0)
+      result = 31 * result + (cidr != null ? cidr.hashCode() : 0)
+      return result
+    }
+  }
+
+  @Immutable
   static class NetworkGroupNetworkView {
     String groupId
     String ownerAccountNumber
     List<String> rules
-
+    List<IPPermissionNetworkView> ingressPermissions
   }
 
   @TypeMapper
@@ -531,7 +631,8 @@ class NetworkInfoBroadcaster {
       new NetworkGroupNetworkView(
           group.groupId,
           group.ownerAccountNumber,
-          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>
+          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>,
+          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
       )
     }
   }

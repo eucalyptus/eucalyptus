@@ -609,6 +609,12 @@ class VmInstanceLifecycleHelpers {
     private static final Logger logger = Logger.getLogger( VpcNetworkInterfaceVmInstanceLifecycleHelper )
     private static final NetworkInterfaces networkInterfaces = new PersistenceNetworkInterfaces( )
 
+    //TODO:STEVE: A better approach may be to break out a separate VPC lifecycle helper for basic validation
+    @Override
+    int getOrder() {
+      -100 // higher precedence to ensure subnet initialized prior to other lifecycle helpers using it
+    }
+
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final RunInstancesType runInstances = (RunInstancesType) allocation.request
