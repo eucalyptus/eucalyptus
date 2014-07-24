@@ -97,8 +97,9 @@
 
 #define TRUE                                     1  //!< Defines the "TRUE" boolean value
 #define FALSE                                    0  //!< Defines the "FALSE" boolean value
-
 //! @}
+
+#define NANOSECONDS_IN_SECOND           1000000000  //!< constant for conversion
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -183,6 +184,8 @@ int euca_execlp(int *pStatus, const char *file, ...);
 int euca_run_workflow_parser(const char *line, void *data);
 int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
+int euca_nanosleep(unsigned long long nsec);
+void euca_srand(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

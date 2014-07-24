@@ -2450,6 +2450,43 @@ char *get_username(void)
     return passwd->pw_name;
 }
 
+//!
+//! High-precision sleep function that splits the value in
+//! nanoseconds into the form needed by nanosleep(3).
+//!
+int euca_nanosleep(unsigned long long nsec)
+{
+    struct timespec tv;
+    tv.tv_sec  = nsec / NANOSECONDS_IN_SECOND;
+    tv.tv_nsec = nsec % NANOSECONDS_IN_SECOND;
+    return nanosleep(&tv, NULL);
+}
+
+//!
+//! Random-number seeding function, to be used once in each
+//! process, that gives a reasonably good seed.
+//!
+void euca_srand(void)
+{
+    int pid = getpid();
+    if (pid == 0) {
+        pid = 1;
+    }
+
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if (tv.tv_sec == 0) {
+        tv.tv_sec = 1;
+    }
+    if (tv.tv_usec == 0) {
+        tv.tv_usec = 1;
+    }
+
+    unsigned int seed = tv.tv_sec * tv.tv_usec * pid;
+    LOGDEBUG("seeding random number generator with %u\n", seed);
+    srand(seed);
+}
+
 #ifdef _UNIT_TEST
 
 //! Helper function to read from a file descriptor until EOF,
@@ -2526,6 +2563,29 @@ int main(int argc, char **argv)
         printf("Failed to retrieve the current working directory information.\n");
         return (1);
     }
+
+    // sanity-check euca_nanosleep()
+    printf("checking euca_nanosleep\n");
+    struct timeval tv1, tv2, tv3;
+    gettimeofday(&tv1, NULL);
+    euca_nanosleep(100000L); // try a 100-microsecond sleep
+    gettimeofday(&tv2, NULL);
+    euca_nanosleep(2000000000L); // try a 2-second sleep
+    gettimeofday(&tv3, NULL);
+    unsigned diff1 = (unsigned)tv2.tv_usec - (unsigned)tv1.tv_usec;
+    unsigned diff2 = (unsigned)tv3.tv_sec - (unsigned)tv2.tv_sec;
+    assert (diff1 > 100 && diff1 < 200); // microsecond delays aren't precise
+    assert (diff2 == 2); // second delays should be right, usually
+
+    // sanity-check euca_srand()
+    printf("checking euca_srand\n");
+    euca_srand();
+    int r1 = rand();
+    euca_nanosleep(1001); // sleep for over 1 microsecond
+    euca_srand(); // this should produce a different seed
+    int r2 = rand();
+    assert(r1 != r2);
+
     // a nice big buffer with random chars
     char buf[1048576];
     bzero(buf, sizeof(buf));
