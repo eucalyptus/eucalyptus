@@ -237,6 +237,8 @@ class NetworkInfoTest {
                       <value>-P tcp -p 22-22  -s 0.0.0.0/0</value>
                       <value>-P tcp -p 55-55  -s 0.0.0.0/0</value>
                   </rules>
+                  <ingressRules/>
+                  <egressRules/>
               </securityGroup>
           </securityGroups>
       </network-data>

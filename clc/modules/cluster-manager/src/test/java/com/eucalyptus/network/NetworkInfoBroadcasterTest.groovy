@@ -102,7 +102,7 @@ class NetworkInfoBroadcasterTest {
           [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
         }
         @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
-          [ group( 'sg-00000001', '000000000002', [], [] ) ]
+          [ group( 'sg-00000001', '000000000002', [], [], [] ) ]
         }
         @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
           []
@@ -308,12 +308,19 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcaster.NetworkGroupNetworkView group( String id, String ownerAccountNumber, List<String> rules, List<NetworkInfoBroadcaster.IPPermissionNetworkView> ingressRules ) {
+  private static NetworkInfoBroadcaster.NetworkGroupNetworkView group(
+      String id,
+      String ownerAccountNumber,
+      List<String> rules,
+      List<NetworkInfoBroadcaster.IPPermissionNetworkView> ingressRules,
+      List<NetworkInfoBroadcaster.IPPermissionNetworkView> egressRules
+  ) {
     new NetworkInfoBroadcaster.NetworkGroupNetworkView(
       id,
       ownerAccountNumber,
       rules,
       ingressRules,
+      egressRules
     )
   }
 }
