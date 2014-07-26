@@ -431,6 +431,18 @@ class NetworkInfoBroadcaster {
                 ipPermission.groupOwnerAccountNumber,
                 ipPermission.cidr
             )
+          } as List<NISecurityGroupIpPermission>,
+          egressRules: group.egressPermissions.collect{ IPPermissionNetworkView ipPermission ->
+            new NISecurityGroupIpPermission(
+                ipPermission.protocol,
+                ipPermission.fromPort,
+                ipPermission.toPort,
+                ipPermission.icmpType,
+                ipPermission.icmpCode,
+                ipPermission.groupId,
+                ipPermission.groupOwnerAccountNumber,
+                ipPermission.cidr
+            )
           } as List<NISecurityGroupIpPermission>
       )
     } )
@@ -619,6 +631,7 @@ class NetworkInfoBroadcaster {
     String ownerAccountNumber
     List<String> rules
     List<IPPermissionNetworkView> ingressPermissions
+    List<IPPermissionNetworkView> egressPermissions
   }
 
   @TypeMapper
@@ -631,8 +644,9 @@ class NetworkInfoBroadcaster {
       new NetworkGroupNetworkView(
           group.groupId,
           group.ownerAccountNumber,
-          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>,
-          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
+          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>,
+          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>,
+          group.egressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
       )
     }
   }

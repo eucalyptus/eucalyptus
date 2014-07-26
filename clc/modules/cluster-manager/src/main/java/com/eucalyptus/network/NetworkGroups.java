@@ -747,9 +747,16 @@ public class NetworkGroups {
                                                                            netGroup.getDisplayName( ),
                                                                            netGroup.getDescription( ),
                                                                            netGroup.getVpcId( ) );
-        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ),
-                                                                        TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        final Iterable<IpPermissionType> ipPerms = Iterables.transform(
+            netGroup.getIngressNetworkRules( ),
+            TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
+
+        final Iterable<IpPermissionType> ipPermsEgress = Iterables.transform(
+            netGroup.getEgressNetworkRules( ),
+            TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        Iterables.addAll( groupInfo.getIpPermissionsEgress( ), ipPermsEgress );
+
         return groupInfo;
       }
     }
@@ -786,7 +793,7 @@ public class NetworkGroups {
     public List<NetworkRule> apply( IpPermissionType ipPerm ) {
       List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );
       if ( !ipPerm.getGroups( ).isEmpty( ) ) {
-        if ( ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) == 0 ) {
+        if ( ipPerm.getFromPort()!=null && ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) != null && ipPerm.getToPort( ) == 0 ) {
           ipPerm.setToPort( 65535 );
         }
         List<String> empty = Lists.newArrayList( );

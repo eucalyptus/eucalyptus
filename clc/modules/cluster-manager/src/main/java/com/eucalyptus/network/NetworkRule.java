@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,10 +77,12 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.Pair;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
@@ -95,11 +97,12 @@ public class NetworkRule extends AbstractPersistent {
   /**
    * 
    */
-  private static final int RULE_MIN_PORT = 0;
+  public static final int RULE_MIN_PORT = 0;
+
   /**
    * 
    */
-  private static final int RULE_MAX_PORT = 65535;
+  public static final int RULE_MAX_PORT = 65535;
 
   public enum Protocol {
     icmp(1){
@@ -140,16 +143,18 @@ public class NetworkRule extends AbstractPersistent {
     public Integer extractIcmpCode( NetworkRule rule ) { return null; }
   }
   
-  @Transient
   private static final long serialVersionUID = 1L;
+
+  @Column( name = "metadata_network_rule_egress", updatable = false )
+  private Boolean           egress;
   @Enumerated( EnumType.STRING )
-  @Column( name = "metadata_network_rule_protocol" )
+  @Column( name = "metadata_network_rule_protocol", updatable = false  )
   private Protocol          protocol;
-  @Column( name = "metadata_network_rule_protocol_number" )
+  @Column( name = "metadata_network_rule_protocol_number", updatable = false  )
   private Integer           protocolNumber;
-  @Column( name = "metadata_network_rule_low_port" )
+  @Column( name = "metadata_network_rule_low_port", updatable = false  )
   private Integer           lowPort;
-  @Column( name = "metadata_network_rule_high_port" )
+  @Column( name = "metadata_network_rule_high_port", updatable = false  )
   private Integer           highPort;
   
   @ElementCollection
@@ -161,15 +166,16 @@ public class NetworkRule extends AbstractPersistent {
   @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
+
+  protected NetworkRule( ) {}
   
-  private NetworkRule( ) {}
-  
-  private NetworkRule( final Protocol protocol,
-                       final Integer protocolNumber,
-                       final Integer lowPort,
-                       final Integer highPort,
-                       final Collection<String> ipRanges,
-                       final Collection<NetworkPeer> peers ) {
+  protected NetworkRule( final Protocol protocol,
+                         final Integer protocolNumber,
+                         final Integer lowPort,
+                         final Integer highPort,
+                         final Collection<String> ipRanges,
+                         final Collection<NetworkPeer> peers ) {
+    this.egress = false;
     this.protocol = protocol;
     this.protocolNumber = protocolNumber;
     if ( Protocol.tcp.equals( protocol ) || Protocol.udp.equals( protocol ) ) {
@@ -190,7 +196,7 @@ public class NetworkRule extends AbstractPersistent {
       this.networkPeers.addAll( peers );
     }
   }
-  
+
   public static NetworkRule create( final Protocol protocol,
                                     final Integer lowPort,
                                     final Integer highPort,
@@ -208,12 +214,31 @@ public class NetworkRule extends AbstractPersistent {
     return new NetworkRule( protocol, protocolNumber, lowPort, highPort, ipRanges, peers );
   }
 
+  public static NetworkRule createEgress( final Protocol protocol,
+                                          final Integer protocolNumber,
+                                          final Integer lowPort,
+                                          final Integer highPort,
+                                          final Collection<NetworkPeer> peers,
+                                          final Collection<String> ipRanges ) {
+    final NetworkRule rule = new NetworkRule( protocol, protocolNumber, lowPort, highPort, ipRanges, peers );
+    rule.setEgress( true );
+    return rule;
+  }
+
   public static NetworkRule create( final String protocolText,
                                     final boolean vpc,
                                     final Integer lowPort,
                                     final Integer highPort,
                                     final Collection<NetworkPeer> peers,
                                     final Collection<String> ipRanges ) {
+    Pair<Optional<Protocol>,Integer> protocolPair = parseProtocol( protocolText, vpc );
+    return create( protocolPair.getLeft( ).orNull( ), protocolPair.getRight( ), lowPort, highPort, peers, ipRanges );
+  }
+
+  protected static Pair<Optional<Protocol>,Integer> parseProtocol(
+      final String protocolText,
+      final boolean vpc
+  ) {
     Protocol protocol = null;
     try {
       protocol = Protocol.fromString( protocolText );
@@ -223,11 +248,27 @@ public class NetworkRule extends AbstractPersistent {
     Integer protocolNumber = protocol != null ?
         protocol.getNumber( ) :
         Integer.parseInt( protocolText );
-    return create( protocol, protocolNumber, lowPort, highPort, peers, ipRanges );
+    return Pair.lopair( protocol, protocolNumber );
   }
-  
-  public static NetworkRule named() {
-	  return new NetworkRule();
+
+  public static NetworkRule named( ) {
+    return new NetworkRule( );
+  }
+
+  /**
+   * @since 4.1
+   */
+  public boolean isEgress( ) {
+    return egress == null ? false : egress;
+  }
+
+  @Nullable
+  public Boolean getEgress( ) {
+    return egress;
+  }
+
+  public void setEgress( final Boolean egress ) {
+    this.egress = egress;
   }
 
   /**
@@ -300,6 +341,10 @@ public class NetworkRule extends AbstractPersistent {
     return getLowPort() == null || getHighPort() == null || getProtocol() == null;
   }
 
+  public static Predicate<NetworkRule> egress( ) {
+    return NetworkRulePredicates.EGRESS;
+  }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -309,6 +354,8 @@ public class NetworkRule extends AbstractPersistent {
     result = prime * result + ( ( this.lowPort == null ) ? 0 : this.lowPort.hashCode( ) );
     result = prime * result + ( ( this.networkPeers == null ) ? 0 : this.networkPeers.hashCode( ) );
     result = prime * result + ( ( this.protocol == null ) ? 0 : this.protocol.hashCode( ) );
+    result = prime * result + ( ( this.protocolNumber == null ) ? 0 : this.protocolNumber.hashCode( ) );
+    result = prime * result + ( ( this.egress == null || !this.egress) ? 0 : this.egress.hashCode( ) );
     return result;
   }
 
@@ -352,6 +399,16 @@ public class NetworkRule extends AbstractPersistent {
     if ( this.protocol != other.protocol ) {
       return false;
     }
+    if ( this.protocolNumber == null ) {
+      if ( other.protocolNumber != null ) {
+        return false;
+      }
+    } else if ( !this.protocolNumber.equals( other.protocolNumber ) ) {
+      return false;
+    }
+    if ( this.isEgress( ) != other.isEgress( ) ) {
+      return false;
+    }
     return true;
   }
 
@@ -365,6 +422,15 @@ public class NetworkRule extends AbstractPersistent {
   @PreUpdate
   protected void onUpdate( ) {
     if ( protocol != null ) protocolNumber = protocol.getNumber( );
+  }
+
+  private enum NetworkRulePredicates implements Predicate<NetworkRule> {
+    EGRESS {
+      @Override
+      public boolean apply( @Nullable final NetworkRule networkRule ) {
+        return networkRule != null && networkRule.isEgress( );
+      }
+    }
   }
 
 }

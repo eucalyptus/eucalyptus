@@ -88,7 +88,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -112,11 +111,10 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import groovy.sql.Sql;
 
 @Entity
@@ -154,7 +152,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
-  
+
   @OneToOne( cascade = CascadeType.ALL, fetch = FetchType.EAGER, optional = true, orphanRemoval = true, mappedBy = "networkGroup" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
@@ -185,6 +183,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this.groupId = groupId;
   }
 
+  protected NetworkGroup( final String naturalId ) {
+    this.setNaturalId( naturalId );
+  }
+
   public static NetworkGroup create( final OwnerFullName ownerFullName,
                                      final Vpc vpc,
                                      final String groupId,
@@ -202,11 +204,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         withOwner( ownerFullName ) :
         withUniqueName( ownerFullName, null, groupName );
   }
-  
+
   public static NetworkGroup withNaturalId( final String naturalId ) {
     return new NetworkGroup( naturalId );
   }
-  
+
   public static NetworkGroup withGroupId( final OwnerFullName ownerFullName, final String groupId ) {
       return networkGroupWithGroupId(ownerFullName, groupId);
   }
@@ -235,10 +237,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return networkGroup;
   }
 
-  private NetworkGroup( final String naturalId ) {
-    this.setNaturalId( naturalId );
-  }
-  
   private static NetworkGroup networkGroupWithGroupId( final OwnerFullName ownerFullName, final String groupId ) {
       NetworkGroup findGroupWithId = new NetworkGroup(ownerFullName);
       findGroupWithId.setGroupId(groupId);
@@ -308,7 +306,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public Set<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
   }
-  
+
+  public Iterable<NetworkRule> getIngressNetworkRules( ) {
+    return Iterables.filter( getNetworkRules( ), Predicates.not( NetworkRule.egress( ) ) );
+  }
+
+  public Iterable<NetworkRule> getEgressNetworkRules( ) {
+    return Iterables.filter( getNetworkRules( ), NetworkRule.egress( ) );
+  }
+
   private void setGroupId( final String groupId ){
      this.groupId = groupId;
   }
@@ -316,7 +322,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private void setNetworkRules( final Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
   }
-  
+
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );

@@ -650,9 +650,10 @@ public class VpcManager {
               "default VPC security group" );
           final Collection<NetworkPeer> peers = Lists.newArrayList(
               NetworkPeer.create( group.getOwnerAccountNumber( ), group.getName( ), group.getGroupId( ) ) );
-          group.getNetworkRules( ).add(
-              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ) );
-          //TODO:STEVE: Add default egress rule for default VPC security group
+          group.getNetworkRules( ).addAll( Lists.newArrayList(
+              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
+              NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+          ) );
           securityGroups.save( group );
           return vpc;
         } catch ( Exception ex ) {

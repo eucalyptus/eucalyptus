@@ -68,7 +68,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import javax.persistence.EntityTransaction;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.ComputeException;
@@ -257,12 +256,9 @@ public class NetworkGroupManager {
   }
 
   public RevokeSecurityGroupIngressResponseType revokeSecurityGroupIngress( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
+      final RevokeSecurityGroupIngressResponseType reply = request.getReply( ).markFailed( );
       final Context ctx = Contexts.lookup( );
-      final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
-      reply.markFailed( );
-
-      final EntityTransaction db = Entities.get( NetworkGroup.class );
-      try {
+      try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
         final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() ); //TODO:STEVE: Group lookup by name for default VPC
         final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
             ruleGroup.getVpcId( ) != null,
@@ -287,25 +283,21 @@ public class NetworkGroupManager {
                 + ctx.getUser());
         }
         reply.set_return(true);    
-        db.commit( );
+        tx.commit( );
         NetworkGroups.flushRules();
       } catch ( EucalyptusCloudException ex ) {
         throw ex;
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
-      } finally {
-        if ( db.isActive() ) db.rollback();
       }
       return reply;
     }
   
   public AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngress( final AuthorizeSecurityGroupIngressType request ) throws Exception {
-    final Context ctx = Contexts.lookup( );
     final AuthorizeSecurityGroupIngressResponseType reply = request.getReply( );
-    
-    final EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
+    final Context ctx = Contexts.lookup( );
+    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
       final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() ); //TODO:STEVE: Group lookup by name for default VPC
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
@@ -347,24 +339,99 @@ public class NetworkGroupManager {
         ruleGroup.getNetworkRules( ).addAll( ruleList );
         reply.set_return( true );
       }
-      db.commit( );
+      tx.commit( );
       NetworkGroups.flushRules();
       return reply;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw ex;
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
 
-  public AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgress(AuthorizeSecurityGroupEgressType request) throws EucalyptusCloudException {
-    AuthorizeSecurityGroupEgressResponseType reply = request.getReply();
-    return reply;
+  public AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgress(final AuthorizeSecurityGroupEgressType request) throws Exception {
+    final AuthorizeSecurityGroupEgressResponseType reply = request.getReply().markFailed();
+    final Context ctx = Contexts.lookup( );
+    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
+      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null );
+      if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
+        throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
+      }
+      final List<NetworkRule> ruleList = Lists.newArrayList( );
+      final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+      try {
+        NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser().getAccountNumber(), ruleGroup.getVpcId(), false );
+      } catch ( final NoSuchMetadataException e ) {
+        throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
+      }
+      for ( final IpPermissionType ipPerm : ipPermissions ) {
+        if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+          continue; // see EUCA-5934
+        }
+        if ( ipPerm.getIpProtocol( ) == null || !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
+          throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
+        }
+        try {
+          final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
+          for ( final NetworkRule rule : rules ) rule.setEgress( true );
+          ruleList.addAll( rules );
+        } catch ( final IllegalArgumentException ex ) {
+          throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
+        }
+      }
+      if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+        @Override
+        public boolean apply( final NetworkRule rule ) {
+          return Iterables.any( ruleList, Predicates.equalTo( rule ) );
+        }
+      } ) ) {
+        return reply;
+      } else {
+        ruleGroup.getNetworkRules( ).addAll( ruleList );
+        reply.set_return( true );
+      }
+      tx.commit( );
+      NetworkGroups.flushRules();
+      return reply;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      throw ex;
+    }
   }
 
-  public RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgress(RevokeSecurityGroupEgressType request) throws EucalyptusCloudException {
-    RevokeSecurityGroupEgressResponseType reply = request.getReply( );
+  public RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgress(final RevokeSecurityGroupEgressType request) throws EucalyptusCloudException {
+    final RevokeSecurityGroupEgressResponseType reply = request.getReply( ).markFailed( );
+    final Context ctx = Contexts.lookup( );
+    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
+      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null ); //TODO:STEVE: Group lookup by name for default VPC
+      final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+      if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
+        try {
+          final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null );
+          for ( final NetworkRule rule : rules ) rule.setEgress( true );
+          NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), ruleGroup.getVpcId( ), true );
+          Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
+              ruleGroup.getNetworkRules( ).iterator( ),
+              rules );
+        } catch ( IllegalArgumentException e ) {
+          throw new ClientComputeException( "InvalidPermission.Malformed", e.getMessage( ) );
+        } catch ( NoSuchMetadataException e ) {
+          throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
+        }
+      } else {
+        throw new EucalyptusCloudException(
+            "Not authorized to revoke network group "
+                + request.getGroupId() + " for "
+                + ctx.getUser());
+      }
+      reply.set_return(true);
+      tx.commit( );
+      NetworkGroups.flushRules();
+    } catch ( EucalyptusCloudException ex ) {
+      throw ex;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
+    }
     return reply;
   }
 
@@ -387,7 +454,7 @@ public class NetworkGroupManager {
     condition1Params.put("cidrIp", cidrIp);
     condition1Params.put("ipProtocol", ipProtocol);
     if ( !isVpcGroup ) {
-      condition1Params.put("fromPort", fromPort); //TODO:STEVE: For VPC we need to verify these are present when required (icmp/tcp/udp)
+      condition1Params.put("fromPort", fromPort);
       condition1Params.put("toPort", toPort);
     }
 
