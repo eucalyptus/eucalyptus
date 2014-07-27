@@ -77,7 +77,6 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
@@ -161,7 +160,7 @@ public abstract class AbstractSystemAddressManager {
     }
   }
 
-  public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
+  public Address allocateNext( final OwnerFullName userId, final Address.Domain domain ) throws NotEnoughResourcesException {
 	  int numSystemReserved=0;
 	  try{
 		  ConfigurableProperty p =
@@ -178,7 +177,7 @@ public abstract class AbstractSystemAddressManager {
 	  }	    
 
 	  Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );    
-	  final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );   
+	  final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId, domain );
 
 	  LOG.debug( "Allocated address for public addressing: " + String.valueOf( addr ) );
 	  if ( addr == null ) {
@@ -194,12 +193,12 @@ public abstract class AbstractSystemAddressManager {
   
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   
-  public final List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException {
-    return onAllocation( this.doAllocateSystemAddresses( partition, 1 ) );
+  public final List<Address> allocateSystemAddresses( int count ) throws NotEnoughResourcesException {
+    return onAllocation( this.doAllocateSystemAddresses( count ) );
   }
   
-  public final Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
-    return onAllocation( this.doAllocateSystemAddresses( partition, 1 ) ).get( 0 );
+  public final Address allocateSystemAddress( ) throws NotEnoughResourcesException {
+    return onAllocation( this.doAllocateSystemAddresses( 1 ) ).get( 0 );
   }
 
   protected List<Address> onAllocation( final List<Address> allocated ) {
@@ -209,7 +208,7 @@ public abstract class AbstractSystemAddressManager {
     return allocated;
   }
 
-  protected abstract List<Address> doAllocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
+  protected abstract List<Address> doAllocateSystemAddresses( int count ) throws NotEnoughResourcesException;
 
   /**
    * Update addresses from the list assign (system) to instances if necessary.
@@ -235,7 +234,7 @@ public abstract class AbstractSystemAddressManager {
             clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
             try {
-              final VmInstance vm = VmInstances.lookup( address.getInstanceId( ) );
+              VmInstances.lookup( address.getInstanceId( ) );
               clearOrphan( addrInfo );
             } catch ( final NoSuchElementException ex ) {
               InetAddress addr = null;
@@ -260,7 +259,7 @@ public abstract class AbstractSystemAddressManager {
 
   protected void doAssignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
     final String instanceId = vm.getInstanceId();
-    final Address addr = this.allocateSystemAddress( vm.lookupPartition( ) );
+    final Address addr = this.allocateSystemAddress( );
     final Callback.Success<BaseMessage> onSuccess = new Callback.Success<BaseMessage>( ) {
       @Override
       public void fire( final BaseMessage response ) {

@@ -648,7 +648,7 @@ public class VmInstances {
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
     try {
-      if ( Networking.getInstance( ).supports( ElasticIPs ) ) {
+      if ( Networking.getInstance( ).supports( ElasticIPs ) && vm.getVpcId( ) == null ) {
         try {
           Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
           if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly

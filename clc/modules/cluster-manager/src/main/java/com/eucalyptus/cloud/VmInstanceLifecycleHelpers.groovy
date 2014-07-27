@@ -44,7 +44,9 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.identifier.ResourceIdentifiers
+import com.eucalyptus.compute.vpc.NetworkInterfaceAssociation
 import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment
+import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
 import com.eucalyptus.compute.vpc.NetworkInterfaces
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException
@@ -76,6 +78,7 @@ import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Optional
+import com.google.common.base.Predicates
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
 import com.google.common.collect.Iterables
@@ -96,6 +99,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
+
 
 /**
  *
@@ -231,6 +235,17 @@ class VmInstanceLifecycleHelpers {
       prepareNetworkResourcesType.getResources( ).addAll( resources )
 
       !resources.isEmpty( )
+    }
+
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    static Address getAddress( final ResourceToken token ) {
+      final PublicIPResource publicIPResource = (PublicIPResource) Iterables.find(
+          token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ),
+          Predicates.instanceOf( PublicIPResource.class ),
+          null )
+      return publicIPResource!=null && publicIPResource.getValue()!=null ?
+          Addresses.getInstance().lookup( publicIPResource.getValue() ) :
+          null
     }
   }
 
@@ -415,6 +430,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
+  //TODO:STEVE: Do not allocate IP if using existing network interface
   static final class PublicIPVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     private static final Logger logger = Logger.getLogger( PublicIPVmInstanceLifecycleHelper )
 
@@ -516,6 +532,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
+  @SuppressWarnings("GroovyUnusedDeclaration")
   static final class SecurityGroupVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
@@ -582,6 +599,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
+  @SuppressWarnings("GroovyUnusedDeclaration")
   static final class ExtantNetworkVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     @Override
     void prepareNetworkMessages(
@@ -604,6 +622,8 @@ class VmInstanceLifecycleHelpers {
 
   /**
    * For network interface, including mac address and private IP address
+   *
+   * //TODO:STEVE: support for passed in network interface (incl. copy public address to instance)
    */
   static final class VpcNetworkInterfaceVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     private static final Logger logger = Logger.getLogger( VpcNetworkInterfaceVmInstanceLifecycleHelper )
@@ -653,14 +673,8 @@ class VmInstanceLifecycleHelpers {
           Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
             resource instanceof VpcNetworkInterfaceResource && resource.ownerId != null }
           if ( resources.isEmpty( ) ) {
-            String identifier = ResourceIdentifiers.generateString( 'eni' )
-            //TODO:STEVE: mac address prefix? use eni identifier for mac uniqueness
-            final String mac = String.format( "d0:0d:%s:%s:%s:%s",
-                token.instanceId.substring( 2, 4 ),
-                token.instanceId.substring( 4, 6 ),
-                token.instanceId.substring( 6, 8 ),
-                token.instanceId.substring( 8, 10 ) )
-                //String.format( "d0:0d:%s:%s:%s:%s", identifier.substring( 4, 6 ), identifier.substring( 6, 8 ), identifier.substring( 8, 10 ), identifier.substring( 10, 12 ) );
+            final String identifier = ResourceIdentifiers.generateString( 'eni' )
+            final String mac = NetworkInterfaceHelper.mac( identifier )
             final RunInstancesType runInstances = ((RunInstancesType)allocation.request)
             // TODO:STEVE: track address usage and update subnet free address count
             resources = [
@@ -691,9 +705,11 @@ class VmInstanceLifecycleHelpers {
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof VpcNetworkInterfaceResource }
       resource?.with{
         builder.privateAddress( resource.privateIp )
+        builder.macAddress( resource.mac )
       }
     }
 
+    @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     void prepareVmInstance( final ResourceToken resourceToken,
                             final VmInstanceBuilder builder ) {
@@ -726,6 +742,18 @@ class VmInstanceLifecycleHelpers {
                 new Date( ),
                 resource.deleteOnTerminate
             ) )
+            Address address = getAddress( resourceToken )
+            if ( address != null ) {
+              address.assign( networkInterface, instance )
+              networkInterface.associate( NetworkInterfaceAssociation.create(
+                  address.getAssociationId( ),
+                  address.getAllocationId( ),
+                  address.getOwnerAccountNumber( ),
+                  address.getDisplayName( ),
+                  null as String // TODO:STEVE: DNS name for ENI public ip
+              ) )
+              instance.updatePublicAddress( address.getDisplayName( ) );
+            }
             // Add so eni information is available from instance, not for
             // persistence
             instance.getNetworkInterfaces( ).add( networkInterface );
@@ -739,27 +767,8 @@ class VmInstanceLifecycleHelpers {
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
         for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
-          try {
-            if ( !Strings.isNullOrEmpty( networkInterface.privateIpAddress ) &&
-                !VmNetworkConfig.DEFAULT_IP.equals( networkInterface.privateIpAddress ) ) {
-              Networking.instance.release( new ReleaseNetworkResourcesType(
-                  vpc: instance.getVpcId( ),
-                  subnet: instance.getSubnetId( ),
-                  resources: [
-                      new VpcNetworkInterfaceResource(
-                          ownerId: instance.displayName,
-                          value: networkInterface.displayName,
-                          mac: networkInterface.macAddress,
-                          privateIp: networkInterface.privateIpAddress
-                      )
-                  ] as ArrayList<NetworkResource> )
-              )
-            }
-          } catch ( final Exception ex ) {
-            logger.error( "Error releasing private address '${networkInterface.privateIpAddress}' for interface '${networkInterface.displayName}' clean up.", ex )
-          }
-
           if ( networkInterface?.attachment?.deleteOnTerminate ) {
+            NetworkInterfaceHelper.release( networkInterface )
             Entities.delete( networkInterface )
           }
           networkInterface.detach( )

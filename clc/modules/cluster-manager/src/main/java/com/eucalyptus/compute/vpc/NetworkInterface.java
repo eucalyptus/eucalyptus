@@ -30,11 +30,13 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.NetworkInterfaceAssociationType;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -153,6 +155,9 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   @Embedded
   private NetworkInterfaceAttachment attachment;
 
+  @Embedded
+  private NetworkInterfaceAssociation association;
+
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkInterface" )
   private Collection<NetworkInterfaceTag> tags;
 
@@ -263,12 +268,41 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public void attach( final NetworkInterfaceAttachment attachment ) {
     if ( isAttached( ) ) throw new IllegalStateException( "Already attached" );
+    this.setState( State.in_use );
     this.attachment = attachment;
     this.instance = attachment.getInstance( );
   }
 
   public void detach( ) {
+    if ( attachment != null ) this.setState( State.available );
     this.attachment = null;
     this.instance = null;
+  }
+
+  public boolean isAssociated( ) {
+    return association != null;
+  }
+
+  public NetworkInterfaceAssociation getAssociation( ) {
+    return association;
+  }
+
+  public void associate( final NetworkInterfaceAssociation association ) {
+    if ( isAssociated( ) ) throw new IllegalStateException( "Already associated" );
+    this.association = association;
+    // Seems hibernate does not notice the new association unless we make
+    // another change also, so touch last updated time manually.
+    this.updateTimeStamps( );
+  }
+
+  public void disassociate( ) {
+    this.association = null;
+  }
+
+  @PostLoad
+  protected void postLoad( ) {
+    if ( isAttached( ) ) {
+      getAttachment( ).setInstance( instance );
+    }
   }
 }

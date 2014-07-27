@@ -37,6 +37,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAssociationType;
 import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAttachmentType;
 import edu.ucsb.eucalyptus.msgs.NetworkInterfaceType;
 
@@ -88,9 +89,31 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               networkInterface.getPrivateIpAddress( ),
               networkInterface.getPrivateDnsName(),
               networkInterface.getSourceDestCheck( ),
+              networkInterface.getAssociation( ) == null ?
+                  null :
+                  TypeMappers.transform( networkInterface.getAssociation( ), NetworkInterfaceAssociationType.class ),
               networkInterface.getAttachment( ) == null ?
                   null :
                   TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class )
+          );
+    }
+  }
+
+  @TypeMapper
+  public enum NetworkInterfaceAssociationToNetworkInterfaceAssociationTypeTransform implements Function<NetworkInterfaceAssociation,NetworkInterfaceAssociationType> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public NetworkInterfaceAssociationType apply( @Nullable final NetworkInterfaceAssociation networkInterfaceAssociation ) {
+      return networkInterfaceAssociation == null ?
+          null :
+          new NetworkInterfaceAssociationType(
+              networkInterfaceAssociation.getPublicIp(),
+              networkInterfaceAssociation.getPublicDnsName(),
+              networkInterfaceAssociation.getIpOwnerId(),
+              networkInterfaceAssociation.getAllocationId(),
+              networkInterfaceAssociation.getAssociationId()
           );
     }
   }
@@ -115,19 +138,20 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
     }
   }
 
+  @SuppressWarnings( "UnusedDeclaration" )
   public static class NetworkInterfaceFilterSupport extends FilterSupport<NetworkInterface> {
     public NetworkInterfaceFilterSupport( ) {
       super( builderFor( NetworkInterface.class )
               .withTagFiltering( NetworkInterfaceTag.class, "networkInterface" )
-              .withUnsupportedProperty( "addresses.private-ip-address" )
-              .withUnsupportedProperty( "addresses.primary" )
-              .withUnsupportedProperty( "addresses.association.public-ip" )
-              .withUnsupportedProperty( "addresses.association.owner-id" )
-              .withUnsupportedProperty( "association.association-id" ) //TODO:STEVE: filters for network interface EIP associations
-              .withUnsupportedProperty( "association.allocation-id" )
-              .withUnsupportedProperty( "association.ip-owner-id" )
-              .withUnsupportedProperty( "association.public-ip" )
-              .withUnsupportedProperty( "association.public-dns-name" )
+              .withStringProperty( "addresses.private-ip-address", FilterStringFunctions.PRIVATE_IP )
+              .withConstantProperty( "addresses.primary", "true" )
+              .withStringProperty( "addresses.association.public-ip", FilterStringFunctions.ASSOCIATION_PUBLIC_IP )
+              .withStringProperty( "addresses.association.owner-id", FilterStringFunctions.ASSOCIATION_IP_OWNER_ID )
+              .withStringProperty( "association.allocation-id", FilterStringFunctions.ASSOCIATION_ALLOCATION_ID )
+              .withStringProperty( "association.association-id", FilterStringFunctions.ASSOCIATION_ASSOCIATION_ID )
+              .withStringProperty( "association.ip-owner-id", FilterStringFunctions.ASSOCIATION_IP_OWNER_ID )
+              .withStringProperty( "association.public-ip", FilterStringFunctions.ASSOCIATION_PUBLIC_IP )
+              .withStringProperty( "association.public-dns-name", FilterStringFunctions.ASSOCIATION_PUBLIC_DNS_NAME )
               .withStringProperty( "attachment.attachment-id", FilterStringFunctions.ATTACHMENT_ATTACHMENT_ID )
               .withStringProperty( "attachment.instance-id", FilterStringFunctions.ATTACHMENT_INSTANCE_ID )
               .withStringProperty( "attachment.instance-owner-id", FilterStringFunctions.ATTACHMENT_INSTANCE_OWNER_ID )
@@ -152,6 +176,14 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
               .withPersistenceAlias( "vpc", "vpc" )
               .withPersistenceAlias( "subnet", "subnet" )
+              .withPersistenceFilter( "addresses.private-ip-address", "privateIpAddress" )
+              .withPersistenceFilter( "addresses.association.public-ip", "association.publicIp", Collections.<String>emptySet() )
+              .withPersistenceFilter( "addresses.association.owner-id", "association.ipOwnerId", Collections.<String>emptySet() )
+              .withPersistenceFilter( "association.allocation-id", "association.allocationId", Collections.<String>emptySet() )
+              .withPersistenceFilter( "association.association-id", "association.associationId", Collections.<String>emptySet() )
+              .withPersistenceFilter( "association.ip-owner-id", "association.ipOwnerId", Collections.<String>emptySet() )
+              .withPersistenceFilter( "association.public-ip", "association.publicIp", Collections.<String>emptySet() )
+              .withPersistenceFilter( "association.public-dns-name", "association.publicDnsName", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.attachment-id", "attachment.attachmentId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-id", "attachment.instanceId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-owner-id", "attachment.instanceOwnerId", Collections.<String>emptySet() )
@@ -177,6 +209,36 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
   }
 
   public enum FilterStringFunctions implements Function<NetworkInterface,String> {
+    ASSOCIATION_ALLOCATION_ID {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getAllocationId( );
+      }
+    },
+    ASSOCIATION_ASSOCIATION_ID {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getAssociationId( );
+      }
+    },
+    ASSOCIATION_IP_OWNER_ID {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getIpOwnerId( );
+      }
+    },
+    ASSOCIATION_PUBLIC_IP {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getPublicIp( );
+      }
+    },
+    ASSOCIATION_PUBLIC_DNS_NAME {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getPublicDnsName( );
+      }
+    },
     ATTACHMENT_ATTACHMENT_ID {
       @Override
       public String apply( final NetworkInterface networkInterface ){

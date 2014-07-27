@@ -65,7 +65,6 @@ package com.eucalyptus.address;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -75,10 +74,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
   
   @Override
-  protected List<Address> doAllocateSystemAddresses(
-      final Partition partition,
-      int count
-  ) throws NotEnoughResourcesException {
+  protected List<Address> doAllocateSystemAddresses( int count ) throws NotEnoughResourcesException {
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
       throw new NotEnoughAddressResourcesException( );
     } else {

@@ -613,6 +613,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
       final String privateIpAddress,
       final String privateDnsName,
       final Boolean sourceDestCheck,
+      final NetworkInterfaceAssociationType association,
       final NetworkInterfaceAttachmentType attachment ) {
     this.networkInterfaceId = networkInterfaceId
     this.subnetId = subnetId
@@ -627,6 +628,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
     this.privateIpAddress = privateIpAddress
     this.privateDnsName = privateDnsName
     this.sourceDestCheck = sourceDestCheck
+    this.association = association
     this.attachment = attachment;
   }
   static Function<NetworkInterfaceType, String> id( ) {
@@ -1500,7 +1502,21 @@ class NetworkInterfaceAssociationType extends EucalyptusData {
   String ipOwnerId;
   String allocationId;
   String associationId;
-  NetworkInterfaceAssociationType() {  }
+  NetworkInterfaceAssociationType( ) { }
+
+  NetworkInterfaceAssociationType(
+      final String publicIp,
+      final String publicDnsName,
+      final String ipOwnerId,
+      final String allocationId,
+      final String associationId
+  ) {
+    this.publicIp = publicIp
+    this.publicDnsName = publicDnsName
+    this.ipOwnerId = ipOwnerId
+    this.allocationId = allocationId
+    this.associationId = associationId
+  }
 }
 class CreateCustomerGatewayResponseType extends VpcMessage {
   CustomerGatewayType customerGateway;

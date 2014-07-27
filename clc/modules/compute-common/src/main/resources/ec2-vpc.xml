@@ -532,7 +532,7 @@
     </mapping>
     <mapping name="DescribeInternetGatewaysType" class="com.eucalyptus.compute.common.DescribeInternetGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-        <structure name="internetGatewayIdSet" field="internetGatewayIdSet" usage="required" type="com.eucalyptus.compute.common.InternetGatewayIdSetType"/>
+        <structure name="internetGatewayIdSet" field="internetGatewayIdSet" usage="optional" type="com.eucalyptus.compute.common.InternetGatewayIdSetType"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.InternetGatewaySetType" abstract="true">
         <collection field="item">
@@ -631,7 +631,7 @@
     </mapping>
     <mapping name="DescribeRouteTablesType" class="com.eucalyptus.compute.common.DescribeRouteTablesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-        <structure name="routeTableIdSet" field="routeTableIdSet" usage="required" type="com.eucalyptus.compute.common.RouteTableIdSetType"/>
+        <structure name="routeTableIdSet" field="routeTableIdSet" usage="optional" type="com.eucalyptus.compute.common.RouteTableIdSetType"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.RouteTableSetType" abstract="true">
         <collection field="item">
@@ -787,7 +787,7 @@
     </mapping>
     <mapping name="DescribeNetworkAclsType" class="com.eucalyptus.compute.common.DescribeNetworkAclsType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-        <structure name="networkAclIdSet" field="networkAclIdSet" usage="required" type="com.eucalyptus.compute.common.NetworkAclIdSetType"/>
+        <structure name="networkAclIdSet" field="networkAclIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkAclIdSetType"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkAclSetType" abstract="true">
         <collection field="item">

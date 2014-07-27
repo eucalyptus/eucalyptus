@@ -67,7 +67,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -81,10 +80,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   }
 
   @Override
-  protected List<Address> doAllocateSystemAddresses(
-      final Partition partition,
-      final int count
-  ) throws NotEnoughResourcesException {
+  protected List<Address> doAllocateSystemAddresses( final int count ) throws NotEnoughResourcesException {
     List<Address> addressList = Lists.newArrayList( );
     for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
       if ( addr.isSystemOwned( ) && !addr.isAssigned( ) ) {
@@ -129,7 +125,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     if ( allocCount > 0 ) {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          this.allocateNext( Principals.systemFullName( ) );
+          this.allocateNext( Principals.systemFullName( ), Address.Domain.standard );
         } catch ( NotEnoughResourcesException e ) {
           break;
         }
