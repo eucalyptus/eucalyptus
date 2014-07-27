@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -143,7 +144,9 @@ public class MetricDataQueue {
       
       metricMetadata.setMetricName(datum.getMetricName());
       metricMetadata.setNamespace(item.getNamespace());
-      final ArrayList<Dimension> dimensions = datum.getDimensions().getMember(); 
+      final List<Dimension> dimensions = datum.getDimensions( ) == null ?
+          Collections.<Dimension>emptyList( ) :
+          datum.getDimensions( ).getMember( );
       metricMetadata.setDimensionMap(makeDimensionMap(dimensions));
       metricMetadata.setMetricType(item.getMetricType());
       metricMetadata.setUnits(Units.fromValue(datum.getUnit())); 
@@ -365,7 +368,7 @@ public class MetricDataQueue {
     // use the same dimensions as current metric
     Dimensions vtpDimensions = new Dimensions();
     ArrayList<Dimension> vtpDimensionsMember = new ArrayList<Dimension>();
-    for (Dimension dimension: datum.getDimensions().getMember()) {
+    if ( datum.getDimensions( ) != null ) for ( final Dimension dimension: datum.getDimensions( ).getMember( ) ) {
       Dimension vtpDimension = new Dimension();
       vtpDimension.setName(dimension.getName());
       vtpDimension.setValue(dimension.getValue());
@@ -453,7 +456,8 @@ public class MetricDataQueue {
   }
 
   private static Map<String, String> makeDimensionMap(
-      ArrayList<Dimension> dimensions) {
+      final List<Dimension> dimensions
+  ) {
     Map<String,String> returnValue = Maps.newTreeMap();
     for (Dimension dimension: dimensions) {
       returnValue.put(dimension.getName(), dimension.getValue());
