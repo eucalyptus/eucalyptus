@@ -243,12 +243,12 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
   private void ensureCloudFormationAccountExists( ) throws Exception {
     try {
-      Accounts.lookupAccountByName( Account.BLOCKSTORAGE_SYSTEM_ACCOUNT );
+      Accounts.lookupAccountByName( Account.CLOUDFORMATION_SYSTEM_ACCOUNT );
     } catch ( Exception e ) {
       try {
-        Accounts.addSystemAccountWithAdmin( Account.BLOCKSTORAGE_SYSTEM_ACCOUNT );
+        Accounts.addSystemAccountWithAdmin( Account.CLOUDFORMATION_SYSTEM_ACCOUNT );
       } catch (Exception e1) {
-        LOG.error("Error during account creation for " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT, e1);
+        LOG.error("Error during account creation for " + Account.CLOUDFORMATION_SYSTEM_ACCOUNT, e1);
       }
     }
   }
