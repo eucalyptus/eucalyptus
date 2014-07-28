@@ -1254,13 +1254,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       // Iterate through the list of volume attachments and populate ebs mappings
       for (VmVolumeAttachment attachment : volAttachments ) {
         if (attachment.getIsRootDevice()) {
-          m.put( "block-device-mapping/ami", attachment.getDevice() );
-          m.put( "block-device-mapping/emi", attachment.getDevice() );
-          m.put( "block-device-mapping/root", attachment.getDevice() );
+          m.put( "block-device-mapping/ami", attachment.getShortDeviceName() );
+          m.put( "block-device-mapping/emi", attachment.getShortDeviceName() );
+          m.put( "block-device-mapping/root", attachment.getShortDeviceName() );
         }
         // add only volumes added at start up time and don't list root see EUCA-8636
         if (attachment.getAttachedAtStartup() && !attachment.getIsRootDevice())
-          m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getDevice() );
+          m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getShortDeviceName() );
       }
 
       // Using ephemeral attachments for bfebs instances only, can be extended to be used by all other instances
@@ -1270,7 +1270,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       // Iterate through the list of ephemeral attachments and populate ephemeral mappings
       if (!ephemeralAttachments.isEmpty()) {
         for(VmEphemeralAttachment attachment : ephemeralAttachments){
-          m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getDevice() );
+          m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getShortDeviceName() );
         }
       }
     } else {

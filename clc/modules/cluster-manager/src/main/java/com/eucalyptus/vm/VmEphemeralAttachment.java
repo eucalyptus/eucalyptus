@@ -99,6 +99,10 @@ public class VmEphemeralAttachment implements Comparable<VmEphemeralAttachment>{
 		return device;
 	}
 
+	public String getShortDeviceName() {
+		return device.startsWith("/dev/") ? device.substring(5) : device;
+	}
+
 	public void setDevice(String device) {
 		this.device = device;
 	}

@@ -274,7 +274,11 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   void setDevice( String device ) {
     this.device = device;
   }
-  
+
+  public String getShortDeviceName() {
+	return device.startsWith("/dev/") ? device.substring(5) : device;
+  }
+
   public String getRemoteDevice( ) {
     return this.remoteDevice;
   }
