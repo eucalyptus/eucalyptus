@@ -105,6 +105,9 @@ public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Seria
   //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635 
   public static final String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";
 
+  //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
+  public static final String CLOUDFORMATION_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "cloudformation";
+
   public void setName( String name ) throws AuthException;
   
   public List<User> getUsers( ) throws AuthException;
