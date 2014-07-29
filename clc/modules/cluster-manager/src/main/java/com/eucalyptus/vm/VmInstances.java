@@ -113,6 +113,9 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NetworkInterface;
+import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment;
+import com.eucalyptus.compute.vpc.NetworkInterfaces;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -164,6 +167,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -1235,6 +1239,13 @@ public class VmInstances {
         Collections.<T>emptySet();
   }
 
+  private static <T> Set<T> networkInterfaceSet( final VmInstance instance,
+                                                 final Function<? super NetworkInterface,T> transform ) {
+    return instance.getNetworkInterfaces() != null ?
+        Sets.newHashSet( Iterables.transform( instance.getNetworkInterfaces(), transform ) ) :
+        Collections.<T>emptySet( );
+  }
+
   public static class VmInstanceFilterSupport extends FilterSupport<VmInstance> {
     public VmInstanceFilterSupport() {
       super( builderFor( VmInstance.class )
@@ -1282,60 +1293,90 @@ public class VmInstances {
           .withUnsupportedProperty( "spot-instance-request-id" )
           .withUnsupportedProperty( "state-reason-code" )
           .withUnsupportedProperty( "state-reason-message" )
-          .withUnsupportedProperty( "subnet-id" )
+          .withStringProperty( "subnet-id", VmInstanceFilterFunctions.SUBNET_ID )
+          .withConstantProperty( "tenancy", "default" )
           .withStringProperty( "virtualization-type", VmInstanceFilterFunctions.VIRTUALIZATION_TYPE )
-          .withUnsupportedProperty( "vpc-id" )
+          .withStringProperty( "vpc-id", VmInstanceFilterFunctions.VPC_ID )
           .withUnsupportedProperty( "hypervisor" )
-          .withUnsupportedProperty( "network-interface.description" )
-          .withUnsupportedProperty( "network-interface.subnet-id" )
-          .withUnsupportedProperty( "network-interface.vpc-id" )
-          .withUnsupportedProperty( "network-interface.network-interface.id" )
-          .withUnsupportedProperty( "network-interface.owner-id" )
-          .withUnsupportedProperty( "network-interface.availability-zone" )
+          .withStringSetProperty( "network-interface.description", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_DESCRIPTION )
+          .withStringSetProperty( "network-interface.subnet-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_SUBNET_ID )
+          .withStringSetProperty( "network-interface.vpc-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_VPC_ID )
+          .withStringSetProperty( "network-interface.network-interface.id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ID )
+          .withStringSetProperty( "network-interface.owner-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_OWNER_ID )
+          .withStringSetProperty( "network-interface.availability-zone", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_AVAILABILITY_ZONE )
           .withUnsupportedProperty( "network-interface.requester-id" )
           .withUnsupportedProperty( "network-interface.requester-managed" )
-          .withUnsupportedProperty( "network-interface.status" )
-          .withUnsupportedProperty( "network-interface.mac-address" )
-          .withUnsupportedProperty( "network-interface-private-dns-name" )
-          .withUnsupportedProperty( "network-interface.source-destination-check" )
-          .withUnsupportedProperty( "network-interface.group-id" )
+          .withStringSetProperty( "network-interface.status", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_STATUS )
+          .withStringSetProperty( "network-interface.mac-address", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_MAC_ADDRESS )
+          .withStringSetProperty( "network-interface-private-dns-name", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_PRIVATE_DNS_NAME )
+          .withBooleanSetProperty( "network-interface.source-destination-check", VmInstanceBooleanSetFilterFunctions.NETWORK_INTERFACE_SOURCE_DEST_CHECK )
+          .withUnsupportedProperty( "network-interface.group-id" ) //TODO:STEVE: filters for network interface security groups
           .withUnsupportedProperty( "network-interface.group-name" )
-          .withUnsupportedProperty( "network-interface.attachment.attachment-id" )
-          .withUnsupportedProperty( "network-interface.attachment.instance-id" )
-          .withUnsupportedProperty( "network-interface.attachment.instance-owner-id" )
-          .withUnsupportedProperty( "network-interface.addresses.private-ip-address" )
-          .withUnsupportedProperty( "network-interface.attachment.device-index" )
-          .withUnsupportedProperty( "network-interface.attachment.status" )
-          .withUnsupportedProperty( "network-interface.attachment.attach-time" )
-          .withUnsupportedProperty( "network-interface.attachment.delete-on-termination" )
-          .withUnsupportedProperty( "network-interface.addresses.primary" )
-          .withUnsupportedProperty( "network-interface.addresses.association.public-ip" )
-          .withUnsupportedProperty( "network-interface.addresses.association.ip-owner-id" )
-          .withUnsupportedProperty( "association.public-ip" )
-          .withUnsupportedProperty( "association.ip-owner-id" )
-          .withUnsupportedProperty( "association.allocation-id" )
-          .withUnsupportedProperty( "association.association-id" )
+          .withStringSetProperty( "network-interface.addresses.private-ip-address", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_PRIVATE_IP )
+          .withBooleanSetProperty( "network-interface.addresses.primary", VmInstanceBooleanSetFilterFunctions.NETWORK_INTERFACE_ADDRESSES_PRIMARY )
+          .withStringSetProperty( "network-interface.addresses.association.public-ip", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ASSOCIATION_PUBLIC_IP )
+          .withStringSetProperty( "network-interface.addresses.association.ip-owner-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ASSOCIATION_IP_OWNER_ID )
+          .withStringSetProperty( "network-interface.attachment.attachment-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_ID )
+          .withStringSetProperty( "network-interface.attachment.instance-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_INSTANCE_ID )
+          .withStringSetProperty( "network-interface.attachment.instance-owner-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_INSTANCE_OWNER_ID )
+          .withIntegerSetProperty( "network-interface.attachment.device-index", VmInstanceIntegerSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_DEVICE_INDEX )
+          .withStringSetProperty( "network-interface.attachment.status", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_STATUS )
+          .withDateSetProperty( "network-interface.attachment.attach-time", VmInstanceDateSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_ATTACH_TIME )
+          .withBooleanSetProperty( "network-interface.attachment.delete-on-termination", VmInstanceBooleanSetFilterFunctions.NETWORK_INTERFACE_ATTACHMENT_DELETE_ON_TERMINATION )
+          .withStringSetProperty( "association.public-ip", VmInstanceStringSetFilterFunctions.ASSOCIATION_PUBLIC_IP )
+          .withStringSetProperty( "association.ip-owner-id", VmInstanceStringSetFilterFunctions.ASSOCIATION_IP_OWNER_ID )
+          .withStringSetProperty( "association.allocation-id", VmInstanceStringSetFilterFunctions.ASSOCIATION_ALLOCATION_ID )
+          .withStringSetProperty( "association.association-id", VmInstanceStringSetFilterFunctions.ASSOCIATION_ID )
           .withPersistenceAlias( "bootRecord.machineImage", "image" )
           .withPersistenceAlias( "networkGroups", "networkGroups" )
           .withPersistenceAlias( "bootRecord.vmType", "vmType" )
-          .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
+          .withPersistenceAlias( "networkConfig.networkInterfaces", "networkInterfaces" )
+          .withPersistenceAlias( "networkInterfaces.vpc", "vpc" )
+          .withPersistenceAlias( "networkInterfaces.subnet", "subnet" )
+          .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet( "bootRecord.machineImage" ), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
           .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
-          .withPersistenceFilter( "iam-instance-profile.arn",  "bootRecord.iamInstanceProfileArn", Collections.<String>emptySet() )
-          .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "iam-instance-profile.arn", "bootRecord.iamInstanceProfileArn", Collections.<String>emptySet() )
+          .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet( "bootRecord.machineImage" ) )
           .withPersistenceFilter( "instance-id", "displayName" )
-          .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet("bootRecord.vmType")  )
+          .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet( "bootRecord.vmType" ) )
           .withPersistenceFilter( "instance.group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "instance.group-name", "networkGroups.displayName" )
-          .withPersistenceFilter( "kernel-id", "image.kernelId", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "kernel-id", "image.kernelId", Sets.newHashSet( "bootRecord.machineImage" ) )
           .withPersistenceFilter( "launch-index", "launchRecord.launchIndex", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "launch-time", "launchRecord.launchTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
-          .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet( "bootRecord.machineImage" ) )
           .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
-          .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), ImageMetadata.VirtualizationType.fromString( ) )
+          .withPersistenceFilter( "subnet-id", "bootRecord.subnetId", Collections.<String>emptySet() )
+          .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), ImageMetadata.VirtualizationType.fromString() )
+          .withPersistenceFilter( "vpc-id", "bootRecord.vpcId", Collections.<String>emptySet() )
+          .withPersistenceFilter( "network-interface.description", "networkInterfaces.description", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.subnet-id", "subnet.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.subnet" )  )
+          .withPersistenceFilter( "network-interface.vpc-id", "vpc.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.vpc" ) )
+          .withPersistenceFilter( "network-interface.network-interface.id", "networkInterfaces.displayName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.owner-id", "networkInterfaces.ownerAccountNumber", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.availability-zone", "networkInterfaces.availabilityZone", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.status", "networkInterfaces.state", Sets.newHashSet( "networkConfig.networkInterfaces" ), Enums.valueOfFunction( NetworkInterface.State.class ) )
+          .withPersistenceFilter( "network-interface.mac-address", "networkInterfaces.macAddress", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface-private-dns-name", "networkInterfaces.privateDnsName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.source-destination-check", "networkInterfaces.sourceDestCheck", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "network-interface.addresses.private-ip-address", "networkInterfaces.privateIpAddress", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.addresses.association.public-ip", "networkInterfaces.association.publicIp", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.addresses.association.ip-owner-id", "networkInterfaces.association.ipOwnerId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.attachment.attachment-id", "networkInterfaces.attachment.attachmentId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.attachment.instance-id", "networkInterfaces.attachment.instanceId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.attachment.instance-owner-id", "networkInterfaces.attachment.instanceOwnerId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "network-interface.attachment.device-index", "networkInterfaces.attachment.deviceIndex", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "network-interface.attachment.status", "networkInterfaces.attachment.status", Sets.newHashSet( "networkConfig.networkInterfaces" ), Enums.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
+          .withPersistenceFilter( "network-interface.attachment.attach-time", "networkInterfaces.attachment.attachTime", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Date )
+          .withPersistenceFilter( "network-interface.attachment.delete-on-termination", "networkInterfaces.attachment.deleteOnTerminate", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "association.public-ip", "networkInterfaces.association.publicIp", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "association.ip-owner-id", "networkInterfaces.association.ipOwnerId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "association.allocation-id", "networkInterfaces.association.allocationId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
+          .withPersistenceFilter( "association.association-id", "networkInterfaces.association.associationId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
       );
     }
   }
@@ -1510,6 +1551,30 @@ public class VmInstances {
   }
 
   private enum VmInstanceStringSetFilterFunctions implements Function<VmInstance,Set<String>> {
+    ASSOCIATION_PUBLIC_IP {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_PUBLIC_IP );
+      }
+    },
+    ASSOCIATION_IP_OWNER_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_IP_OWNER_ID );
+      }
+    },
+    ASSOCIATION_ALLOCATION_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_ALLOCATION_ID );
+      }
+    },
+    ASSOCIATION_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_ID );
+      }
+    },
     BLOCK_DEVICE_MAPPING_DEVICE_NAME {
       @Override
       public Set<String> apply( final VmInstance instance ) {
@@ -1540,6 +1605,102 @@ public class VmInstances {
         return networkGroupSet( instance, CloudMetadatas.toDisplayName() );
       }
     },
+    NETWORK_INTERFACE_DESCRIPTION {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.DESCRIPTION );
+      }
+    },
+    NETWORK_INTERFACE_SUBNET_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.SUBNET_ID );
+      }
+    },
+    NETWORK_INTERFACE_VPC_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.VPC_ID );
+      }
+    },
+    NETWORK_INTERFACE_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, CloudMetadatas.toDisplayName() );
+      }
+    },
+    NETWORK_INTERFACE_OWNER_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.OWNER_ID );
+      }
+    },
+    NETWORK_INTERFACE_AVAILABILITY_ZONE {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.AVAILABILITY_ZONE );
+      }
+    },
+    NETWORK_INTERFACE_STATUS {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.STATE );
+      }
+    },
+    NETWORK_INTERFACE_MAC_ADDRESS {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.MAC_ADDRESS );
+      }
+    },
+    NETWORK_INTERFACE_PRIVATE_IP {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.PRIVATE_IP );
+      }
+    },
+    NETWORK_INTERFACE_PRIVATE_DNS_NAME {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.PRIVATE_DNS_NAME );
+      }
+    },
+    NETWORK_INTERFACE_ATTACHMENT_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ATTACHMENT_ATTACHMENT_ID );
+      }
+    },
+    NETWORK_INTERFACE_ATTACHMENT_INSTANCE_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ATTACHMENT_INSTANCE_ID );
+      }
+    },
+    NETWORK_INTERFACE_ATTACHMENT_INSTANCE_OWNER_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ATTACHMENT_INSTANCE_OWNER_ID );
+      }
+    },
+    NETWORK_INTERFACE_ATTACHMENT_STATUS {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ATTACHMENT_STATUS );
+      }
+    },
+    NETWORK_INTERFACE_ASSOCIATION_PUBLIC_IP {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_PUBLIC_IP );
+      }
+    },
+    NETWORK_INTERFACE_ASSOCIATION_IP_OWNER_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.ASSOCIATION_IP_OWNER_ID );
+      }
+    },
   }
 
   private enum VmInstanceBooleanSetFilterFunctions implements Function<VmInstance,Set<Boolean>> {
@@ -1547,6 +1708,24 @@ public class VmInstances {
       @Override
       public Set<Boolean> apply( final VmInstance instance ) {
         return blockDeviceSet( instance, VmVolumeAttachmentBooleanFilterFunctions.DELETE_ON_TERMINATE );
+      }
+    },
+    NETWORK_INTERFACE_ADDRESSES_PRIMARY {
+      @Override
+      public Set<Boolean> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, Functions.forSupplier( Suppliers.ofInstance( true ) ) );
+      }
+    },
+    NETWORK_INTERFACE_ATTACHMENT_DELETE_ON_TERMINATION {
+      @Override
+      public Set<Boolean> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION );
+      }
+    },
+    NETWORK_INTERFACE_SOURCE_DEST_CHECK {
+      @Override
+      public Set<Boolean> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterBooleanFunctions.SOURCE_DEST_CHECK );
       }
     },
   }
@@ -1567,6 +1746,12 @@ public class VmInstances {
         return blockDeviceSet( instance, VmVolumeAttachmentDateFilterFunctions.ATTACH_TIME );
       }
     },
+    NETWORK_INTERFACE_ATTACHMENT_ATTACH_TIME {
+      @Override
+      public Set<Date> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterDateFunctions.ATTACHMENT_ATTACH_TIME );
+      }
+    },
   }
 
   private enum VmInstanceIntegerFilterFunctions implements Function<VmInstance,Integer> {
@@ -1574,6 +1759,15 @@ public class VmInstances {
       @Override
       public Integer apply( final VmInstance instance ) {
         return instance.getDisplayState().getCode();
+      }
+    },
+  }
+
+  private enum VmInstanceIntegerSetFilterFunctions implements Function<VmInstance,Set<Integer>> {
+    NETWORK_INTERFACE_ATTACHMENT_DEVICE_INDEX {
+      @Override
+      public Set<Integer> apply( final VmInstance instance ) {
+        return networkInterfaceSet( instance, NetworkInterfaces.FilterIntegerFunctions.ATTACHMENT_DEVICE_INDEX );
       }
     },
   }
@@ -1615,7 +1809,7 @@ public class VmInstances {
     INSTANCE_PROFILE_ARN {
       @Override
       public String apply( final VmInstance instance ) {
-        return instance.getIamInstanceProfileArn( );
+        return instance.getIamInstanceProfileArn();
       }
     },
     INSTANCE_STATE_NAME {
@@ -1728,10 +1922,22 @@ public class VmInstances {
         return imageInfo == null ? null : imageInfo.getRootDeviceType();
       }
     },
+    SUBNET_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getSubnetId( );
+      }
+    },
     VIRTUALIZATION_TYPE {
       @Override
       public String apply( final VmInstance vmInstance ) {
-        return vmInstance.getVirtualizationType( );
+        return vmInstance.getVirtualizationType();
+      }
+    },
+    VPC_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getVpcId();
       }
     },
   }

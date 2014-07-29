@@ -148,7 +148,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "addresses.association.public-ip", FilterStringFunctions.ASSOCIATION_PUBLIC_IP )
               .withStringProperty( "addresses.association.owner-id", FilterStringFunctions.ASSOCIATION_IP_OWNER_ID )
               .withStringProperty( "association.allocation-id", FilterStringFunctions.ASSOCIATION_ALLOCATION_ID )
-              .withStringProperty( "association.association-id", FilterStringFunctions.ASSOCIATION_ASSOCIATION_ID )
+              .withStringProperty( "association.association-id", FilterStringFunctions.ASSOCIATION_ID )
               .withStringProperty( "association.ip-owner-id", FilterStringFunctions.ASSOCIATION_IP_OWNER_ID )
               .withStringProperty( "association.public-ip", FilterStringFunctions.ASSOCIATION_PUBLIC_IP )
               .withStringProperty( "association.public-dns-name", FilterStringFunctions.ASSOCIATION_PUBLIC_DNS_NAME )
@@ -215,7 +215,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
         return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getAllocationId( );
       }
     },
-    ASSOCIATION_ASSOCIATION_ID {
+    ASSOCIATION_ID {
       @Override
       public String apply( final NetworkInterface networkInterface ){
         return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getAssociationId( );
