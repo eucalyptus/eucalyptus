@@ -1276,6 +1276,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     } else if (this.bootRecord.getMachine() instanceof MachineImageInfo) {
       MachineImageInfo mii = (MachineImageInfo) this.bootRecord.getMachine();
+      // probably using mii.getRootDeviceName() is a better idea instead of hard-coded "/dev/sda1"
+      // but it might create a collision with ephemeral0 and swap
       m.put( "block-device-mapping/emi", "sda1" );
       m.put( "block-device-mapping/ami", "sda1" );
       m.put( "block-device-mapping/root", "/dev/sda1" );
