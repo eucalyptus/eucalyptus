@@ -667,7 +667,7 @@ int gen_instance_xml(const ncInstance * instance)
         }
 
         if (instance->params.nicType != NIC_TYPE_NONE) {    // NIC specification
-            char str[10];
+            char str[16];
 
             nics = _NODE(instanceNode, "nics");
             nic = _NODE(nics, "nic");
@@ -679,6 +679,8 @@ int gen_instance_xml(const ncInstance * instance)
             _ATTRIBUTE(nic, "publicIp", instance->ncnet.publicIp);
             _ATTRIBUTE(nic, "privateIp", instance->ncnet.privateIp);
             _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+            snprintf(str, sizeof(str), "vn_%s", instance->instanceId);
+            _ATTRIBUTE(nic, "guestDeviceName", str);
         }
 
         {                              // set /instance/states

@@ -151,6 +151,35 @@ void mido_free_midoname(midoname *name) {
     EUCA_FREE(name->content_type);
 }
 
+int mido_getel_midoname(midoname *name, char *key, char **val) {
+    int rc=0, ret=0;
+    json_object *jobj=NULL;
+    
+    if (!name || !key || !val) {
+        return(1);
+    }
+    
+    *val = NULL;
+    jobj = json_tokener_parse(name->jsonbuf);
+    if (jobj) {
+        json_object_object_foreach(jobj, elkey, elval) {
+            if (elkey && elval) {
+                if (!strcmp(elkey, key)) {
+                    *val = strdup(SP(json_object_get_string(elval)));
+                }
+            }
+        }
+        json_object_put(jobj);
+    }
+    
+    if (*val == NULL) {
+        ret = 1;
+    }
+    
+    return(ret);
+}
+
+
 int mido_create_router(char *tenant, char *name, midoname *outname) {
     int rc;
     midoname myname = {0,0,0,0,0};
@@ -278,26 +307,49 @@ int mido_delete_dhcp(midoname *devname, midoname *name) {
     return(mido_delete_resource(devname, name));
 }
 
+int mido_get_dhcps(midoname *devname, midoname **outnames, int *outnames_max) {
+    return(mido_get_resources(devname, 1, devname->tenant, "dhcp", outnames, outnames_max));
+}
+
 int mido_create_dhcphost(midoname *devname, midoname *dhcp, char *mac, char *ip, midoname *outname){
-    int rc;
+    int rc=0, ret=0, max_dhcphosts=0, found=0, i=0;
     midoname myname = {0,0,0,0,0};
-    midoname *parents=NULL;
+    midoname *parents=NULL, *dhcphosts=NULL;
 
     myname.tenant = strdup(devname->tenant);
     myname.resource_type = strdup("hosts");
     myname.content_type = strdup("DhcpHost");
 
-    parents = malloc(sizeof(midoname) * 2);
+    parents = calloc(2, sizeof(midoname));
+    
     mido_copy_midoname(&(parents[0]), devname);
     mido_copy_midoname(&(parents[1]), dhcp);
 
-    rc = mido_create_resource(parents, 2, &myname, outname, "macAddr", "string", mac, "ipAddr", "string", ip, NULL);
+    // check if host already has a rule in place
+    rc = mido_get_resources(parents, 2, myname.tenant, "hosts", &dhcphosts, &max_dhcphosts);
+    if (!rc) {
+        found=0;
+        for (i=0; i<max_dhcphosts && !found; i++) {
+            rc = mido_cmp_midoname_to_input(&(dhcphosts[i]), "macAddr", mac, "ipAddr", ip, NULL);
+            if (!rc) {
+                LOGTRACE("ALREADY EXISTS: dhcp host %s/%s\n", SP(mac), SP(ip));
+                found=1;
+            }
+        }
+    }
+    
+    if (!found) {
+        rc = mido_create_resource(parents, 2, &myname, outname, "macAddr", "string", mac, "ipAddr", "string", ip, NULL);
+        if (rc) {
+            ret=1;
+        }
+    }
     
     mido_free_midoname(&(parents[0]));
     mido_free_midoname(&(parents[1]));
     mido_free_midoname(&myname);
     EUCA_FREE(parents);
-    return(rc);
+    return(ret);
 }
 
 int mido_delete_dhcphost(midoname *name){
@@ -360,6 +412,8 @@ SNAT rule
 DNAT rule
 {"invNwDst": false, "nwDstAddress": "10.111.200.11", "nwDstLength": 32, "type": "dnat", "natTargets": [{"addressTo": "192.168.1.2", "addressFrom": "192.168.1.2", "portTo": 0, "portFrom": 0}], "flowAction": "accept"}
 
+REV_SNAT
+{"fragmentPolicy": "any", "nwTos": "0", "nwProto": "0", "flowAction": "accept", "invNwProto": false, "position": "1", "invNwTos": false, "type": "rev_snat"}
 
     */
     
@@ -384,7 +438,9 @@ int mido_delete_rule(midoname *name) {
 int mido_create_port(midoname *devname, char *port_type, char *ip, char *nw, char *slashnet, midoname *outname) {
     //int mido_create_port(midoname *devname, char *port_type, midoname *outname) {
     int rc;
-    midoname myname = {0,0,0,0,0};
+    midoname myname;
+    
+    bzero(&myname, sizeof(midoname));
 
     myname.tenant = strdup(devname->tenant);
     myname.resource_type = strdup("ports");
@@ -413,6 +469,10 @@ int mido_delete_port(midoname *name) {
     return(mido_delete_resource(NULL, name));
 }
 
+int mido_get_ports(midoname *devname, midoname **outnames, int *outnames_max) {
+    return(mido_get_resources(devname, 1, devname->tenant, "ports", outnames, outnames_max));
+}
+
 int mido_unlink_host_port(midoname *host, midoname *port) {
     int rc=0, ret=0;
     char url[EUCA_MAX_PATH];
@@ -427,47 +487,65 @@ int mido_unlink_host_port(midoname *host, midoname *port) {
 
 int mido_link_host_port(midoname *host, char *interface, midoname *device, midoname *port) {
 
-    int rc;
+    int rc=0, ret=0, found=0;
     midoname myname;
+    char *hinterface=NULL;
+    
     bzero(&myname, sizeof(midoname));
-    /*
-      midoname parentname = {0,0,0,0,0};
-
-      parentname.tenant = strdup(tenant);
-      parentname.name = strdup(tenant);
-      parentname.uuid = strdup(tenant);
-      parentname.resource_type = strdup("tenants");
-      parentname.content_type = strdup("Tenant");
-      parentname.jsonbuf = NULL;
-    */
 
     myname.tenant = strdup(device->tenant);
     myname.name = strdup("port");
     myname.resource_type = strdup("ports");
     myname.content_type = NULL;
 
-    rc = mido_create_resource(host, 1, &myname, NULL, "bridgeId", "string", device->uuid, "portId", "string", port->uuid, "hostId", "string", host->uuid, "interfaceName", "string", interface, NULL);
+    // check to see if the port is already mapped
+    LOGDEBUG("WTFF: %s/%s\n", port->uuid, port->jsonbuf);
+    rc = mido_getel_midoname(port, "hostInterfacePort", &hinterface);
+    if (!rc) {
+        LOGDEBUG("WTF: %s %s\n", SP(host->uuid), SP(hinterface));
+    }
+
+    if (!found) {
+        rc = mido_create_resource(host, 1, &myname, NULL, "bridgeId", "string", device->uuid, "portId", "string", port->uuid, "hostId", "string", host->uuid, "interfaceName", "string", interface, NULL);
+        if (rc) {
+            ret=1;
+        }
+    }
     
     mido_free_midoname(&myname);
-
-    return(rc);
+    
+    return(ret);
 }
 
 int mido_link_ports(midoname *a, midoname *b) {
-    int rc;
+    int rc=0, found=0, ret=0;
     midoname myname;
+    char *asideval=NULL, *bsideval=NULL;
     bzero(&myname, sizeof(midoname));
-
+    
     myname.tenant = strdup(a->tenant);
     myname.name = strdup("link");
     myname.resource_type = strdup("link");
     myname.content_type = NULL;
     
-    rc = mido_create_resource(a, 1, &myname, NULL, "peerId", "string", b->uuid, NULL);
+    // check to see if link already exists before making new link
+    if (!mido_getel_midoname(a, "peer", &asideval) && !mido_getel_midoname(b, "peer", &bsideval)) {
+        if (strstr(asideval, b->uuid) && strstr(bsideval, a->uuid)) {
+            LOGTRACE("ALREADY EXISTS: link from port %s to port %s\n", SP(a->uuid), SP(b->uuid));
+            found=1;
+        }
+    }
+    
+    if (!found) {
+        rc = mido_create_resource(a, 1, &myname, NULL, "peerId", "string", b->uuid, NULL);
+        if (rc) {
+            ret=1;
+        }
+    }
     
     mido_free_midoname(&myname);
     
-    return(0);
+    return(ret);
 }
 
 int mido_update_resource(char *resource_type, char *content_type, midoname *name, va_list *al) {
@@ -560,9 +638,14 @@ int mido_create_resource(midoname *parents, int max_parents, midoname *newname, 
     int i;
 
     if (outname) { 
+        if (outname->init) {
+            LOGTRACE("ALREADY EXISTS: %s/%s\n", outname->resource_type, outname->uuid);
+            return(0);
+            //            return(mido_read_resource(outname->resource_type, outname));
+        }
         bzero(outname, sizeof(midoname));
     }
-
+    
     //  construct the payload
     va_start(al, outname);
     
@@ -659,8 +742,6 @@ int mido_create_resource(midoname *parents, int max_parents, midoname *newname, 
         tmpbuf[0] = '\0';
         snprintf(tmpbuf, EUCA_MAX_PATH, "%s", newname->resource_type);
         strcat(url, tmpbuf);
-        //        snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s/%s/%s", parentname->resource_type, parentname->uuid, newname->resource_type);
-        //        printf("WTF: %s\n", url);
     }
 
     // perform the create
@@ -699,14 +780,35 @@ void mido_copy_midoname(midoname *dst, midoname *src) {
     if (!dst || !src) {
         return;
     }
-    bzero(dst, sizeof(midoname));
+    if (dst->init) {
+        mido_free_midoname(dst);
+    }
 
+    bzero(dst, sizeof(midoname));
     if (src->tenant) dst->tenant = strdup(src->tenant);
     if (src->name) dst->name = strdup(src->name);
     if (src->uuid) dst->uuid = strdup(src->uuid);
     if (src->jsonbuf) dst->jsonbuf = strdup(src->jsonbuf);
     if (src->resource_type) dst->resource_type = strdup(src->resource_type);
     if (src->content_type) dst->content_type = strdup(src->content_type);
+    dst->init = 1;
+}
+
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *jsonbuf, midoname *outname) {
+    if (!outname) {
+        return(1);
+    }
+
+    bzero(outname, sizeof(midoname));
+    if (tenant) outname->tenant = strdup(tenant);
+    if (name) outname->name = strdup(name);
+    if (uuid) outname->uuid = strdup(uuid);
+    if (resource_type) outname->resource_type = strdup(resource_type);
+    if (content_type) outname->content_type = strdup(content_type);
+    if (jsonbuf) outname->jsonbuf = strdup(jsonbuf);
+    outname->init = 1;
+
+    return(0);
 }
 
 int mido_update_midoname(midoname *name) {
@@ -798,7 +900,7 @@ static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_par
     struct mem_params_t *params = (struct mem_params_t *)in_params;
     
     if (!params->mem) {
-        params->mem = malloc(1);
+        params->mem = calloc(1, 1);
     }
     params->mem = realloc(params->mem, params->size + (size * nmemb) + 1);
     if (params->mem == NULL) {
@@ -840,9 +942,9 @@ int midonet_http_get(char *url, char **out_payload) {
     struct mem_params_t mem_writer_params = {0,0};
     int ret = 0;
     long httpcode = 0L;
-
+    
     *out_payload = NULL;
-
+    
     curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
@@ -864,7 +966,7 @@ int midonet_http_get(char *url, char **out_payload) {
     
     if (!ret) {
         if (mem_writer_params.mem && mem_writer_params.size > 0) {
-            *out_payload = malloc(sizeof(char) * mem_writer_params.size + 1);
+            *out_payload = calloc(mem_writer_params.size + 1, sizeof(char));
             memcpy(*out_payload, mem_writer_params.mem, mem_writer_params.size+1);
         } else {
             printf("ERROR: no data to return after successful curl operation\n");
@@ -922,12 +1024,12 @@ static size_t header_find_location(char *content, size_t size, size_t nmemb, voi
     char *buf=NULL;
     char **loc = (char **)params;
     
-    buf = malloc(sizeof(char) * (size * nmemb) + 1 );
+    buf = calloc((size * nmemb) + 1, sizeof(char));
     memcpy(buf, content, size * nmemb);
     buf[size*nmemb] = '\0';
     
     if (buf && strstr(buf, "Location: ")) {
-        *loc = malloc(sizeof(char) * strlen(buf));
+        *loc = calloc(strlen(buf), sizeof(char));
         sscanf(buf, "Location: %s", *loc);
     }
     free(buf);
@@ -1003,8 +1105,11 @@ int midonet_http_delete(char *url) {
 }
 
 int mido_router_create_route(midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight) {
-    int rc;
+    int rc=0, found=0, ret=0;
     midoname myname;
+    midoname *routes=NULL;
+    int max_routes=0, i=0;
+
     bzero(&myname, sizeof(midoname));
 
     myname.tenant = strdup(router->tenant);
@@ -1014,25 +1119,159 @@ int mido_router_create_route(midoname *router, midoname *rport, char *src, char 
     //{"type":"InteriorRouter","portAddress":"1.2.3.4","networkAddress":"1.2.3.0","networkLength":"24","tenantId":"euca_tenant_0"}
     //{"srcNetworkAddr":"0.0.0.0","srcNetworkLength":0,"dstNetworkAddr":"192.168.59.0","dstNetworkLength":24,"type":"Normal","nextHopPort":"e604e4de-b365-400d-ba13-e204483dd936","nextHopGateway":"192.168.59.1","weight":0,"position":2}
 
-    if (next_hop_ip) {
-        rc = mido_create_resource(router, 1, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, "nextHopGateway", "string", next_hop_ip, NULL);
-    } else {
-        rc = mido_create_resource(router, 1, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, NULL);
+
+    // only create the route if it doesn't already exist
+    rc = mido_get_resources(router, 1, myname.tenant, "routes", &routes, &max_routes);
+    if (!rc) {
+        found=0;
+        for (i=0; i<max_routes && !found; i++) {
+            if (next_hop_ip) {
+                rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet, "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
+                if (!rc) {
+                    found=1;
+                }
+            } else {
+                rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet, "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
+                if (!rc) {
+                    found=1;
+                }
+            }
+        }
+    }
+    
+    // route doesn't already exist, create it
+    if (!found) {
+        if (next_hop_ip) {
+            rc = mido_create_resource(router, 1, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, "nextHopGateway", "string", next_hop_ip, NULL);
+        } else {
+            rc = mido_create_resource(router, 1, &myname, NULL, "srcNetworkAddr", "string", src, "srcNetworkLength", "int", src_slashnet, "dstNetworkAddr", "string", dst, "dstNetworkLength", "int", dst_slashnet, "type", "string", "Normal", "nextHopPort", "string", rport->uuid, "weight", "int", weight, NULL);
+        }
+        if (rc) {
+            ret=1;
+        }
     }
     
     mido_free_midoname(&myname);
-    return(rc);
+    return(ret);
+}
+
+int mido_cmp_midoname_to_input(midoname *name, ...) {
+    va_list al = { {0} };
+    int ret=0, rc=0;
+    char *key=NULL, *dstval=NULL, *srcval=NULL;
+    va_start(al, name);
+    
+    key = va_arg(al, char *);
+    if (key) dstval = va_arg(al, char *);
+    while(key && dstval) {
+        rc = mido_getel_midoname(name, key, &srcval);
+        if (!rc) {
+            if (strcmp(dstval, srcval)) {
+                //                LOGTRACE("compared routes differ: key:%s/dst:%s/src:%s\n", SP(key), SP(dstval), SP(srcval));
+                EUCA_FREE(srcval);
+                return(1);
+            }
+            EUCA_FREE(srcval);
+        } else {
+            //            LOGTRACE("compared routes differ: key:%s\n", SP(key), SP(dstval), SP(srcval));
+            EUCA_FREE(srcval);
+            return(1);
+        }
+        key = va_arg(al, char *);
+        if (key) dstval = va_arg(al, char *);
+    }
+    
+    va_end(al);
+    LOGTRACE("ROUTE ALREADY IN PLACE: %s\n", SP(name->uuid));
+    return(0);
 }
 
 
+int mido_get_routers(char *tenant, midoname **outnames, int *outnames_max) {
+    return(mido_get_resources(NULL, 0, tenant, "routers", outnames, outnames_max));
+}
+
+int mido_get_bridges(char *tenant, midoname **outnames, int *outnames_max) {
+    return(mido_get_resources(NULL, 0, tenant, "bridges", outnames, outnames_max));
+}
+
+int mido_get_chains(char *tenant, midoname **outnames, int *outnames_max) {
+    return(mido_get_resources(NULL, 0, tenant, "chains", outnames, outnames_max));
+}
+
+int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *resource_type, midoname **outnames, int *outnames_max) {
+    int rc=0, ret=0, i=0;
+    char *payload=NULL, url[EUCA_MAX_PATH], tmpbuf[EUCA_MAX_PATH];
+
+    *outnames = NULL;
+    *outnames_max = 0;
+
+    bzero(url, EUCA_MAX_PATH);
+    if (!parents) {
+        snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s?tenant_id=%s", resource_type, tenant);
+    } else {
+        snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/");
+        for (i=0; i<max_parents; i++) {
+            bzero(tmpbuf, EUCA_MAX_PATH);
+            snprintf(tmpbuf, EUCA_MAX_PATH, "%s/%s/", parents[i].resource_type, parents[i].uuid);
+            strcat(url, tmpbuf);
+        }
+        bzero(tmpbuf, EUCA_MAX_PATH);
+        snprintf(tmpbuf, EUCA_MAX_PATH, "%s?tenant_id=%s", resource_type, tenant);
+        strcat(url, tmpbuf);
+    }
+    //    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s?tenant_id=%s", resource_type, tenant);
+    rc = midonet_http_get(url, &payload);
+    if (!rc) {
+        struct json_object *jobj=NULL, *resource=NULL, *el=NULL;
+        
+        jobj = json_tokener_parse(payload);
+        if (!jobj) {
+            printf("NOU\n");
+        } else {
+            if (json_object_is_type(jobj, json_type_array)) {
+                //                printf("HMM: %s, %d\n", json_object_to_json_string(jobj), json_object_array_length(jobj));
+                *outnames_max = 0;
+                *outnames = calloc(json_object_array_length(jobj), sizeof(midoname));
+                for (i=0; i<json_object_array_length(jobj); i++) {
+                    bzero(&(*outnames)[i], sizeof(midoname));
+                    resource = json_object_array_get_idx(jobj, i);
+                    if (resource) {
+
+                        /*
+                        json_object_object_foreach(resource, key, val) {
+                            printf("\t%s: %s\n", key, SP(json_object_get_string(val)));
+                        }
+                        */
+                        (*outnames)[*outnames_max].tenant = strdup(tenant);
+                        (*outnames)[*outnames_max].jsonbuf = strdup(json_object_to_json_string(resource));
+                        (*outnames)[*outnames_max].resource_type = strdup(resource_type);
+                        (*outnames)[*outnames_max].content_type = NULL;
+                        mido_update_midoname(&((*outnames)[*outnames_max]));
+                        *outnames_max = *outnames_max + 1;
+
+                        //                        json_object_put(resource);
+                    }
+                }
+            }
+            json_object_put(jobj);
+        }
+
+        EUCA_FREE(payload);
+    }
+    return(ret);
+}
 
 int mido_get_hosts(midoname **outnames, int *outnames_max) {
     int rc=0, ret=0, i=0, hostup=0;
     char *payload=NULL, url[EUCA_MAX_PATH];
+    midoname *names=NULL;
+    int names_max=0;
 
     *outnames = NULL;
     *outnames_max = 0;
-        
+
+    bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/hosts");
     rc = midonet_http_get(url, &payload);
     if (!rc) {
@@ -1045,10 +1284,10 @@ int mido_get_hosts(midoname **outnames, int *outnames_max) {
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 //                printf("HMM: %s, %d\n", json_object_to_json_string(jobj), json_object_array_length(jobj));
-                *outnames_max = 0;
-                *outnames = malloc(sizeof(midoname) * json_object_array_length(jobj));
+                names_max = 0;
+                names = calloc(json_object_array_length(jobj), sizeof(midoname));
                 for (i=0; i<json_object_array_length(jobj); i++) {
-                    bzero(&(*outnames)[i], sizeof(midoname));
+                    //                    bzero(&((*outnames)[i]), sizeof(midoname));
                     host = json_object_array_get_idx(jobj, i);
                     if (host) {
                         /*
@@ -1065,37 +1304,46 @@ int mido_get_hosts(midoname **outnames, int *outnames_max) {
                             } else {
                                 hostup = 1;
                             }
-                            json_object_put(el);
+                            //                            json_object_put(el);
                         }
 
                         if (hostup) {
-                            (*outnames)[*outnames_max].jsonbuf = strdup(json_object_to_json_string(host));
+                            names[names_max].jsonbuf = strdup(json_object_to_json_string(host));
 
                             el = json_object_object_get(host, "id");
                             if (el) {
-                                (*outnames)[*outnames_max].uuid = strdup(json_object_get_string(el));
-                                json_object_put(el);
+                                names[names_max].uuid = strdup(json_object_get_string(el));
+                                //                                json_object_put(el);
                             }
                             
                             el = json_object_object_get(host, "name");
                             if (el) {
-                                (*outnames)[*outnames_max].name = strdup(json_object_get_string(el));
-                                json_object_put(el);
+                                names[names_max].name = strdup(json_object_get_string(el));
+                                //                                json_object_put(el);
                             }
 
-
-                            (*outnames)[*outnames_max].resource_type = strdup("hosts");
-                            (*outnames)[*outnames_max].content_type = NULL;
-                            *outnames_max = *outnames_max + 1;
+                            
+                            names[names_max].resource_type = strdup("hosts");
+                            names[names_max].content_type = NULL;
+                            names_max++;
                         }
-                        json_object_put(host);
+                        //                        json_object_put(host);
                     }
                 }
             }
-            json_object_put(jobj);
+            //            json_object_put(jobj);
         }
-
+        
         EUCA_FREE(payload);
+    }
+
+    if (names && (names_max > 0)) {
+        *outnames = calloc(names_max, sizeof(midoname));
+        memcpy(*outnames, names, sizeof(midoname) * names_max);
+        *outnames_max = names_max;
+        
+        // TODO iterate and free elements of names
+        EUCA_FREE(names);
     }
     return(ret);
 }

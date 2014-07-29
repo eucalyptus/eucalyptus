@@ -249,6 +249,11 @@ that describes a Eucalyptus instance to be launched.
                                 <xsl:value-of select="@mac"/>
                             </xsl:attribute>
                         </mac>
+			<target>
+                          <xsl:attribute name="dev">
+                            <xsl:value-of select="@guestDeviceName"/>
+                          </xsl:attribute>
+                        </target>
                         <xsl:choose>
                             <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
