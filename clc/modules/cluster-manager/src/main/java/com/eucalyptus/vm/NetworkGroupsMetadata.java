@@ -124,7 +124,9 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
               ruleGroup = Entities.merge( ruleGroup );
               networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                for ( NetworkRule netRule : ruleGroup.getIngressNetworkRules( ) ) {
+                  // Only EC2-Classic rules supported by this format
+                  if ( netRule.isVpcOnly( ) ) continue;
                   try {
                     String rule = String.format(
                       "-P %s -%s %d%s%d ",

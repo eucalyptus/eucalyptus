@@ -98,21 +98,13 @@
             <structure name="item" type="com.eucalyptus.compute.common.SecurityGroupIdSetItemType"/>
         </collection>
     </mapping>
+    <mapping class="com.eucalyptus.compute.common.GroupIdSetType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.SecurityGroupIdSetItemType"/>
+        </collection>
+    </mapping>
     <mapping class="com.eucalyptus.compute.common.SecurityGroupIdSetItemType" abstract="true">
         <value name="groupId" field="groupId" usage="required"/>
-    </mapping>
-    <mapping class="com.eucalyptus.compute.common.EmptyElementType" abstract="true"/>
-    <mapping class="com.eucalyptus.compute.common.NullableAttributeValueType" abstract="true">
-        <value name="value" field="value" usage="optional"/>
-    </mapping>
-    <mapping name="NullableAttributeBooleanValueType" class="com.eucalyptus.compute.common.NullableAttributeBooleanValueType">
-        <value name="value" field="value" usage="optional"/>
-    </mapping>
-    <mapping name="AttributeValueType" class="com.eucalyptus.compute.common.AttributeValueType">
-        <value name="value" field="value" usage="required"/>
-    </mapping>
-    <mapping class="com.eucalyptus.compute.common.AttributeBooleanValueType" abstract="true">
-        <value name="value" field="value" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.AttachmentType" abstract="true">
         <value name="vpcId" field="vpcId" usage="required"/>

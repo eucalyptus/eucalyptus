@@ -64,6 +64,7 @@
 package com.eucalyptus.blockstorage.san.common.entities;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 import javax.persistence.Column;
@@ -74,6 +75,8 @@ import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -311,21 +314,21 @@ public class SANInfo extends AbstractPersistent {
 	}
 
 	public static SANInfo getStorageInfo() {
-		EntityWrapper<SANInfo> storageDb = EntityWrapper.get(SANInfo.class);
-		SANInfo conf = null;
+		TransactionResource tran = Entities.transactionFor(SANInfo.class);
+        SANInfo conf = null;
 		try {
-			conf = storageDb.getUnique(new SANInfo(StorageProperties.NAME));
-			storageDb.commit();
+			conf = Entities.uniqueResult(new SANInfo(StorageProperties.NAME));
+			tran.commit();
 		}
-		catch ( EucalyptusCloudException e ) {
+		catch ( NoSuchElementException e ) {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf = newDefault();
-			storageDb.add(conf);
-			storageDb.commit();
+			Entities.persist(conf);
+			tran.commit();
 		}
 		catch (Exception t) {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
+			tran.rollback();
 			conf = newDefault();
 		}
 		return conf;

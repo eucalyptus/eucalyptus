@@ -65,21 +65,25 @@ package com.eucalyptus.network;
 import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -92,6 +96,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.network.NetworkReportType;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -112,7 +117,9 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
@@ -131,6 +138,8 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
                     description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME          = "default";
+  public static final Pattern VPC_GROUP_NAME_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{1,255}" );
+  public static final Pattern VPC_GROUP_DESC_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
 
   @ConfigurableField( description = "Default max network index." )
@@ -330,7 +339,7 @@ public class NetworkGroups {
      * Then the state of the extant network is updated to {@link Reference.State.RELEASING}.
      */    
     try {
-      final List<NetworkGroup> groups = NetworkGroups.lookupAll( null, null );
+      final List<NetworkGroup> groups = NetworkGroups.lookupExtant( );
       for ( NetworkGroup net : groups ) {
         try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
           net = Entities.merge( net );
@@ -560,18 +569,19 @@ public class NetworkGroups {
     }
   }
 
-  public static List<NetworkGroup> lookupAll( final OwnerFullName ownerFullName, final String groupNamePattern ) throws MetadataException {
-    if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
-      createDefault( ownerFullName );
-    }
+  public static List<NetworkGroup> lookupExtant( ) throws MetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      final List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
+      final List<NetworkGroup> results = Entities.query(
+          NetworkGroup.withOwner( null ),
+          false,
+          Restrictions.isNotNull( "extantNetwork.tag" ),
+          Collections.singletonMap( "extantNetwork", "extantNetwork" ) );
       final List<NetworkGroup> ret = Lists.newArrayList( results );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Error looking up extant groups", ex );
     }
   }
 
@@ -582,7 +592,7 @@ public class NetworkGroups {
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
-        NetworkGroup net = Transactions.find( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), DEFAULT_NETWORK_NAME ) );
+        NetworkGroup net = Transactions.find( NetworkGroup.named( AccountFullName.getInstance( ownerFullName.getAccountNumber() ), DEFAULT_NETWORK_NAME ) );
         if ( net == null ) {
           create( ownerFullName, DEFAULT_NETWORK_NAME, "default group" );
         }
@@ -631,7 +641,7 @@ public class NetworkGroups {
             groupName ) );
         throw new DuplicateMetadataException( "Failed to create group: " + resourceDesc );
       } catch ( final NoSuchElementException ex ) {
-        final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, vpc, groupName, groupDescription ) );
+        final NetworkGroup entity = Entities.persist( NetworkGroup.create( userFullName, vpc, ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ), groupName, groupDescription ) );
         db.commit();
         return entity;
       }
@@ -651,17 +661,22 @@ public class NetworkGroups {
    *
    * @param permissions - The permissions to update
    * @param defaultUserId - The account number to use when not specified
+   * @param vpcId - The identifier for the VPC if the a VPC security group
    * @param revoke - True if resolving for a revoke operation
    * @throws MetadataException If an error occurs
    */
   public static void resolvePermissions( final Iterable<IpPermissionType> permissions,
                                          final String defaultUserId,
-                                         final boolean revoke) throws MetadataException {
+                                         @Nullable final String vpcId,
+                                         final boolean revoke ) throws MetadataException {
     for ( final IpPermissionType ipPermission : permissions ) {
       if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
         if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId( ) ) ) {
           try{
             final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
+            if ( vpcId != null && !vpcId.equals( networkGroup.getVpcId( ) ) ) {
+              throw new NoSuchMetadataException( "Group ("+groupInfo.getSourceGroupId()+") not found." );
+            }
             groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
             groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
           }catch(final NoSuchMetadataException ex){
@@ -670,7 +685,7 @@ public class NetworkGroups {
           }
         } else if ( Strings.isNullOrEmpty( groupInfo.getSourceGroupName( ) ) ) {
           throw new MetadataException( "Group ID or Group Name required." );
-        } else {
+        } else { //TODO:STEVE: Group lookup by name for default VPC
           try{
             final NetworkGroup networkGroup = NetworkGroups.lookup(
                 AccountFullName.getInstance(
@@ -711,7 +726,7 @@ public class NetworkGroups {
     
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
-      final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ).name( ), rule.getLowPort( ), rule.getHighPort( ) );
+      final IpPermissionType ipPerm = new IpPermissionType( rule.getDisplayProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
       final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
                                                                        TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
@@ -730,10 +745,18 @@ public class NetworkGroups {
         final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ),
                                                                            netGroup.getGroupId( ),
                                                                            netGroup.getDisplayName( ),
-                                                                           netGroup.getDescription( ) );
-        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ),
-                                                                        TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+                                                                           netGroup.getDescription( ),
+                                                                           netGroup.getVpcId( ) );
+        final Iterable<IpPermissionType> ipPerms = Iterables.transform(
+            netGroup.getIngressNetworkRules( ),
+            TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
+
+        final Iterable<IpPermissionType> ipPermsEgress = Iterables.transform(
+            netGroup.getEgressNetworkRules( ),
+            TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        Iterables.addAll( groupInfo.getIpPermissionsEgress( ), ipPermsEgress );
+
         return groupInfo;
       }
     }
@@ -751,9 +774,16 @@ public class NetworkGroups {
       return networkPeers;
     }
   }
-  
+
   public enum IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
-    INSTANCE;
+    CLASSIC( false ),
+    VPC( true );
+
+    private final boolean anyProtocolAllowed;
+
+    private IpPermissionTypeAsNetworkRule( boolean anyProtocolAllowed ) {
+      this.anyProtocolAllowed = anyProtocolAllowed;
+    }
     
     /**
      * @see com.google.common.base.Function#apply(java.lang.Object)
@@ -763,7 +793,7 @@ public class NetworkGroups {
     public List<NetworkRule> apply( IpPermissionType ipPerm ) {
       List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );
       if ( !ipPerm.getGroups( ).isEmpty( ) ) {
-        if ( ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) == 0 ) {
+        if ( ipPerm.getFromPort()!=null && ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) != null && ipPerm.getToPort( ) == 0 ) {
           ipPerm.setToPort( 65535 );
         }
         List<String> empty = Lists.newArrayList( );
@@ -779,7 +809,7 @@ public class NetworkGroups {
                                                   IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule2 );
         } else {
-          NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
+          NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), anyProtocolAllowed, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
         }
@@ -797,7 +827,7 @@ public class NetworkGroups {
             throw new IllegalArgumentException( "Invalid IP range: '"+range+"'" );
           }
         }
-        NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
+        NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), anyProtocolAllowed, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );
         ruleList.add( rule );
       } else {
@@ -806,11 +836,19 @@ public class NetworkGroups {
       return ruleList;
     }
   }
-  
-  static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions ) {
+
+  static List<NetworkRule> ipPermissionAsNetworkRules( final IpPermissionType ipPermission,
+                                                       final boolean vpc ) {
+    return ipPermissionsAsNetworkRules( Collections.singletonList( ipPermission ), vpc );
+  }
+
+  static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions,
+                                                        final boolean vpc ) {
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( final IpPermissionType ipPerm : ipPermissions ) {
-      ruleList.addAll( IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
+      ruleList.addAll(
+          ( vpc ? IpPermissionTypeAsNetworkRule.VPC : IpPermissionTypeAsNetworkRule.CLASSIC ).apply( ipPerm )
+      );
     }
     return ruleList;
   }
@@ -824,11 +862,13 @@ public class NetworkGroups {
           .withStringProperty( "group-name", CloudMetadatas.toDisplayName() )
           .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
           .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
+          .withStringSetProperty( "ip-permission.group-id", FilterSetFunctions.PERMISSION_GROUP_ID )
           .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
           .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
           .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
           .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
           .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
+          .withStringProperty( "vpc-id", FilterFunctions.VPC_ID )
           .withPersistenceAlias( "networkRules", "networkRules" )
           .withPersistenceFilter( "description" )
           .withPersistenceFilter( "group-id", "groupId" )
@@ -836,7 +876,9 @@ public class NetworkGroups {
           .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction( NetworkRule.Protocol.class ) )
           .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
+          .withPersistenceFilter( "vpc-id", "vpcId" )
+      );
     }
   }
 
@@ -859,6 +901,12 @@ public class NetworkGroups {
         return group.getGroupId();
       }
     },
+    VPC_ID {
+      @Override
+      public String apply( final NetworkGroup group ) {
+        return group.getVpcId( );
+      }
+    }
   }
 
   private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
@@ -877,7 +925,7 @@ public class NetworkGroups {
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
         for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.add( Integer.toString( rule.getLowPort() ) );
+          result.addAll( Optional.fromNullable( rule.getLowPort() ).transform( Functions.toStringFunction() ).asSet() );
         }
         return result;
       }
@@ -894,12 +942,24 @@ public class NetworkGroups {
         return result;
       }
     },
+    PERMISSION_GROUP_ID {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getGroupId() != null ) result.add( peer.getGroupId() );
+          }
+        }
+        return result;
+      }
+    },
     PERMISSION_PROTOCOL {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
         for ( final NetworkRule rule : group.getNetworkRules() ) {
-          if ( rule.getProtocol() != null ) result.add( rule.getProtocol().name() );
+          result.add( rule.getDisplayProtocol( ) );
         }
         return result;
       }
@@ -909,7 +969,7 @@ public class NetworkGroups {
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
         for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.add( Integer.toString( rule.getHighPort() ) );
+          result.addAll( Optional.fromNullable( rule.getHighPort() ).transform( Functions.toStringFunction() ).asSet() );
         }
         return result;
       }

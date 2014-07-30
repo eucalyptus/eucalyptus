@@ -86,8 +86,8 @@
 
   <mapping class="com.eucalyptus.compute.common.IpPermissionType" abstract="true">
     <value name="ipProtocol" field="ipProtocol" />
-    <value name="fromPort" field="fromPort" />
-    <value name="toPort" field="toPort" />
+    <value name="fromPort" field="fromPort" usage="optional"/>
+    <value name="toPort" field="toPort" usage="optional"/>
     <collection name="groups" factory="org.jibx.runtime.Utility.arrayListFactory" field="groups">
       <structure name="item" map-as="com.eucalyptus.compute.common.UserIdGroupPairType" />
     </collection>

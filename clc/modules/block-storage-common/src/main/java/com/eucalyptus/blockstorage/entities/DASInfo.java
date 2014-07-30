@@ -69,6 +69,9 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -79,6 +82,8 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+
+import java.util.NoSuchElementException;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
@@ -158,23 +163,23 @@ public class DASInfo extends AbstractPersistent {
 	}
 
 	public static DASInfo getStorageInfo() {
-		EntityWrapper<DASInfo> storageDb = EntityWrapper.get(DASInfo.class);
 		DASInfo conf = null;
+        TransactionResource tran = Entities.transactionFor(DASInfo.class);
 		try {
-			conf = storageDb.getUnique(new DASInfo(StorageProperties.NAME));
-			storageDb.commit();
+			conf = Entities.uniqueResult(new DASInfo(StorageProperties.NAME));
+			tran.commit();
 		}
-		catch ( EucalyptusCloudException e ) {
+		catch ( NoSuchElementException e ) {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf =  new DASInfo(StorageProperties.NAME, 
 					StorageProperties.DAS_DEVICE);
-			storageDb.add(conf);
-			storageDb.commit();
+			Entities.persist(conf);
+			tran.commit();
 		}
 		catch (Exception t) {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
-			return new DASInfo(StorageProperties.NAME, 
+			tran.rollback();
+            return new DASInfo(StorageProperties.NAME,
 					StorageProperties.DAS_DEVICE);
 		}
 		return conf;

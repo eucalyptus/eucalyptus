@@ -63,11 +63,14 @@
 package com.eucalyptus.blockstorage.entities;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -192,30 +195,30 @@ public class DirectStorageInfo extends AbstractPersistent {
 	}
 
 	public static DirectStorageInfo getStorageInfo() {
-		EntityWrapper<DirectStorageInfo> storageDb = EntityWrapper.get(DirectStorageInfo.class);
 		DirectStorageInfo conf = null;
+        TransactionResource tran = Entities.transactionFor(DirectStorageInfo.class);
 		try {
-			conf = storageDb.getUnique(new DirectStorageInfo(StorageProperties.NAME));
+			conf = Entities.uniqueResult(new DirectStorageInfo(StorageProperties.NAME));
 			// EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
 			if (null == conf.getTimeoutInMillis()) {
 				conf.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-				storageDb.add(conf);
+				Entities.merge(conf);
 			}
-			storageDb.commit();
+			tran.commit();
 		}
-		catch ( EucalyptusCloudException e ) {
+		catch ( NoSuchElementException e ) {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf =  new DirectStorageInfo(StorageProperties.NAME, 
 					StorageProperties.iface, 
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes, 
 					StorageProperties.timeoutInMillis);
-			storageDb.add(conf);
-			storageDb.commit();
+			Entities.persist(conf);
+			tran.commit();
 		}
 		catch (Exception t) {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
+			tran.rollback();
 			return new DirectStorageInfo(StorageProperties.NAME, 
 					StorageProperties.iface, 
 					StorageProperties.storageRootDirectory,

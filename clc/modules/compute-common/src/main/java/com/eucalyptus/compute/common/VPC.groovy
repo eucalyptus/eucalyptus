@@ -42,7 +42,19 @@ interface VpcTagged {
 }
 class DescribeVpcAttributeType extends VpcMessage {
   String vpcId;
-  String attribute //TODO:STEVE: SOAP binding for this
+  String attribute
+
+  void hasEnableDnsSupport( boolean flag ) {
+    if ( flag ) attribute = "enableDnsSupport"
+  }
+
+  void hasEnableDnsHostnames( boolean flag ) {
+    if ( flag ) attribute = "enableDnsHostnames"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   DescribeVpcAttributeType() {  }
 }
 class DhcpOptionsIdSetType extends EucalyptusData {
@@ -371,6 +383,27 @@ class CustomerGatewaySetType extends EucalyptusData {
 }
 class DescribeNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
+  String attribute
+
+  void hasAttachment( boolean flag ) {
+    if ( flag ) attribute = "attachment"
+  }
+
+  void hasDescription( boolean flag ) {
+    if ( flag ) attribute = "description"
+  }
+
+  void hasGroupSet( boolean flag ) {
+    if ( flag ) attribute = "groupSet"
+  }
+
+  void hasSourceDestCheck( boolean flag ) {
+    if ( flag ) attribute = "sourceDestCheck"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   DescribeNetworkInterfaceAttributeType() {  }
 }
 class VpnGatewaySetType extends EucalyptusData {
@@ -392,8 +425,9 @@ class ReplaceNetworkAclEntryType extends VpcMessage {
   Integer ruleNumber;
   String protocol;
   String ruleAction;
-  Boolean egress;
+  Boolean egress = false
   String cidrBlock;
+  @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
   ReplaceNetworkAclEntryType() {  }
@@ -484,7 +518,7 @@ class VpcPeeringConnectionType extends VpcMessage {
 class DeleteNetworkAclEntryType extends VpcMessage {
   String networkAclId;
   Integer ruleNumber;
-  Boolean egress;
+  Boolean egress = false
   DeleteNetworkAclEntryType() {  }
 }
 class AttachmentSetType extends EucalyptusData {
@@ -956,6 +990,11 @@ class AttributeBooleanValueType extends EucalyptusData {
   Boolean value;
   AttributeBooleanValueType() {  }
 }
+class AttributeBooleanFlatValueType extends EucalyptusData {
+  @HttpValue
+  Boolean value;
+  AttributeBooleanFlatValueType() {  }
+}
 class RouteTableSetType extends EucalyptusData {
   RouteTableSetType() {  }
   ArrayList<RouteTableType> item = new ArrayList<RouteTableType>();
@@ -1292,6 +1331,12 @@ class AccountAttributeSetItemType extends EucalyptusData {
   String attributeName;
   AccountAttributeValueSetType attributeValueSet;
   AccountAttributeSetItemType() {  }
+  AccountAttributeSetItemType( String name, List<String> values ) {
+    attributeName = name;
+    attributeValueSet = new AccountAttributeValueSetType(
+        item: values.collect{ String value -> new AccountAttributeValueSetItemType( attributeValue: value ) } as ArrayList<AccountAttributeValueSetItemType>
+    )
+  }
 }
 class CreateVpcPeeringConnectionResponseType extends VpcMessage {
   VpcPeeringConnectionType vpcPeeringConnection;
@@ -1340,6 +1385,15 @@ class AttachmentType extends EucalyptusData {
 }
 class ResetNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
+  String attribute
+
+  void hasSourceDestCheck( boolean flag ) {
+    if ( flag ) attribute = "sourceDestCheck"
+  }
+
+  Object getAttrObject( ){ null }
+  void setAttrObject( Object value ) { }
+
   ResetNetworkInterfaceAttributeType() {  }
 }
 class VpcIdSetItemType extends EucalyptusData {
@@ -1398,8 +1452,9 @@ class CreateNetworkAclEntryType extends VpcMessage {
   Integer ruleNumber;
   String protocol;
   String ruleAction;
-  Boolean egress;
+  Boolean egress = false
   String cidrBlock;
+  @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
   CreateNetworkAclEntryType() {  }

@@ -37,6 +37,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.base.Objects;
 
 /**
  * Entity for recording address ownership, reservation, and usage.
@@ -55,6 +56,9 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   @JoinColumn( name = "metadata_instance_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance                       instance;
+
+  @Column( name = "metadata_address_scope" )
+  private String scope;
 
   @Column( name = "metadata_partition_name" )
   private String assignedPartition;
@@ -75,12 +79,16 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     this.address = address;
   }
 
-  public static PrivateAddress named( String address ) {
-    return new PrivateAddress( address );
+  public static PrivateAddress named( String scope, String address ) {
+    final PrivateAddress privateAddress = new PrivateAddress( address );
+    privateAddress.setUniqueName( buildUniqueName( scope, privateAddress.getDisplayName( ) ) );
+    return privateAddress;
   }
 
-  public static PrivateAddress named( Integer address ) {
-    return new PrivateAddress( address );
+  public static PrivateAddress named( String scope, Integer address ) {
+    final PrivateAddress privateAddress = new PrivateAddress( address );
+    privateAddress.setUniqueName( buildUniqueName( scope, privateAddress.getDisplayName( ) ) );
+    return privateAddress;
   }
 
   public static PrivateAddress inState( State state ) {
@@ -96,15 +104,22 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return privateAddress;
   }
 
-  public static PrivateAddress create( String address ) {
+  public static PrivateAddress create( final String scope, final String address ) {
     final PrivateAddress privateAddress = new PrivateAddress( address );
     privateAddress.setOwner( Principals.nobodyFullName( ) );
     privateAddress.setState( State.FREE );
+    privateAddress.setScope( scope );
     return privateAddress;
   }
 
   protected String createUniqueName( ) {
-    return getDisplayName( );
+    return buildUniqueName( getScope( ), getDisplayName( ) );
+  }
+
+  private static String buildUniqueName( final String scope, final String name ) {
+    return scope == null ?
+        name :
+        scope + ":" + name;
   }
 
   @Override
@@ -145,6 +160,14 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     this.instance = instance;
   }
 
+  public String getScope( ) {
+    return scope;
+  }
+
+  private void setScope( final String scope ) {
+    this.scope = scope;
+  }
+
   public String getAssignedPartition( ) {
     return assignedPartition;
   }
@@ -169,7 +192,9 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return FullName.create.vendor( "euca" )
         .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
         .namespace( this.getOwnerAccountNumber( ) )
-        .relativeId( "private-address", this.getDisplayName() );
+        .relativeId(
+            "scope", Objects.firstNonNull( this.getScope( ), "global" ),
+            "private-address", this.getDisplayName( ) );
   }
 
   @Override

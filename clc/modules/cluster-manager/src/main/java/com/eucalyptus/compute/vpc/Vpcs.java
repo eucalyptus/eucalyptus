@@ -53,7 +53,10 @@ public interface Vpcs extends Lister<Vpc> {
                       String name,
                       Function<? super Vpc,T> transform ) throws VpcMetadataException;
 
-  boolean delete( final VpcMetadata metadata ) throws VpcMetadataException;
+  <T> T lookupDefault( OwnerFullName ownerFullName,
+                       Function<? super Vpc,T> transform ) throws VpcMetadataException;
+
+  boolean delete( VpcMetadata metadata ) throws VpcMetadataException;
 
   Vpc save( Vpc vpc ) throws VpcMetadataException;
 
@@ -99,6 +102,7 @@ public interface Vpcs extends Lister<Vpc> {
           .withBooleanProperty( "isDefault", FilterBooleanFunctions.IS_DEFAULT )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+          .withPersistenceAlias( "dhcpOptionSet", "dhcpOptionSet" )
           .withPersistenceFilter( "cidr" )
           .withPersistenceFilter( "dhcp-options-id", "dhcpOptionSet.displayName" )
           .withPersistenceFilter( "isDefault", "defaultVpc", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )

@@ -77,7 +77,6 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -87,6 +86,7 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
@@ -94,6 +94,7 @@ import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.NoSuchKeyMetadataException;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
@@ -176,6 +177,7 @@ import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
+import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
@@ -192,6 +194,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupIdSetItemType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
@@ -255,6 +258,8 @@ public class VmControl {
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
       final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
       if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
+      final NoSuchSubnetMetadataException e6 = Exceptions.findCause( ex, NoSuchSubnetMetadataException.class );
+      if ( e6 != null ) throw new ClientComputeException( "InvalidSubnetID.NotFound", e6.getMessage( ) );
       LOG.error( ex, ex );
       throw ex;
     } finally {
@@ -844,78 +849,109 @@ public class VmControl {
         throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
       }
 
-      if ( request.getBlockDeviceMappingAttribute( ) != null ) {
-        boolean isValidBlockDevice = false;
-        Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord( ).getPersistentVolumes( );
-        for ( VmVolumeAttachment vmVolumeAttachment : persistentVolumes ) {
-            if ( vmVolumeAttachment.getDevice( ).equals( request.getBlockDeviceMappingDeviceName( ) ) ) {
+      if ( request.getBlockDeviceMappingSet() != null && !request.getBlockDeviceMappingSet( ).getItem( ).isEmpty( ) ) {
+        nextmapping:
+        for ( final InstanceBlockDeviceMappingItemType mapping : request.getBlockDeviceMappingSet( ).getItem( ) ) {
+          for ( VmVolumeAttachment vmVolumeAttachment : Iterables.concat( vm.getBootRecord().getPersistentVolumes(), vm.getTransientVolumeState().getAttachments() ) ) {
+            if ( vmVolumeAttachment.getDevice().equals( mapping.getDeviceName() ) ) {
               // NOTE: AWS looks for a valid device name with any valid volume Id.
               // Invalid volume Id results an InvalidVolumeID.Malformed.
               // Current implementation for this negative use case is to throw InvalidVolumeID.Malformed exception
               // when user is not allowed to access the requested volume
-              try {
-                Volume volume = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getBlockDeviceMappingVolumeId( ) );
-              } catch ( Exception e) {
-                throw new NoSuchElementException( "InvalidVolumeID.Malformed: '" + request.getBlockDeviceMappingVolumeId( )
-                        + "' does not exist or " + ctx.getUserFullName( ) + " is now allowed to access this volume.");
+              if ( mapping.getEbs( ) != null && mapping.getEbs( ).getVolumeId( ) != null ) {
+                if ( mapping.getEbs( ).getVolumeId( ).equals( vmVolumeAttachment.getVolumeId( ) ) ) try {
+                  Volumes.lookup(
+                      ctx.getUserFullName().asAccountFullName(),
+                      ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getVolumeId() ) );
+                } catch ( Exception e ) {
+                  throw new ClientComputeException( "InvalidInstanceAttributeValue", "Invalid volume ("+mapping.getEbs().getVolumeId()+")" );
+                } else {
+                  throw new ClientComputeException( "InvalidInstanceAttributeValue", "Invalid volume ("+mapping.getEbs().getVolumeId()+")" );
+                }
               }
-              isValidBlockDevice = true;
-              vmVolumeAttachment.setDeleteOnTerminate( request.getBlockDeviceMappingDeleteOnTermination( ) );
-            break;
+              vmVolumeAttachment.setDeleteOnTerminate( mapping.getEbs( ) == null ?
+                  true :
+                  Objects.firstNonNull( mapping.getEbs( ).getDeleteOnTermination( ), true ) );
+              break nextmapping;
+            }
           }
+          throw new ClientComputeException( "InvalidInstanceAttributeValue", "No device is currently mapped at " + mapping.getDeviceName( ) );
         }
-        if ( !isValidBlockDevice )
-          throw new NoSuchElementException( "NoSuchBlockDevice: " + "No device is currently mapped at " + request.getBlockDeviceMappingDeviceName( ) );
-        Entities.merge( vm );
-        tx.commit( );
+        tx.commit();
+      } else if ( request.getDisableApiTermination() != null ) {
+        // not currently supported
+      } else if ( request.getEbsOptimized() != null ) {
+        // not currently supported
+      } else if ( request.getGroupIdSet( ) != null && !request.getGroupIdSet( ).getItem( ).isEmpty( ) ) {
+        final Collection<NetworkGroup> groups = Lists.newArrayList( );
+        final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+        for ( final SecurityGroupIdSetItemType groupIdItemType : request.getGroupIdSet( ).getItem( ) ) try {
+          final String groupId = ResourceIdentifiers.tryNormalize().apply( groupIdItemType.getGroupId( ) );
+          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( accountFullName, groupId );
+          if ( !RestrictedTypes.filterPrivileged( ).apply( networkGroup ) ) {
+            throw new IllegalAccessException( "Not authorized to access security group " + groupId + " for " + ctx.getUserFullName( ) );
+          }
+          if ( !Objects.firstNonNull( networkGroup.getVpcId( ), "" ).equals( vm.getVpcId( ) ) ) {
+            throw new ClientComputeException( "InvalidGroup.NotFound", "Security group ("+groupId+") not found" );
+          }
+          groups.add( networkGroup );
+        } catch ( NoSuchMetadataException e ) {
+          throw new ClientComputeException( "InvalidGroup.NotFound", "Security group ("+groupIdItemType.getGroupId( )+") not found" );
+        }
+        vm.getNetworkGroups( ).clear( );
+        vm.getNetworkGroups( ).addAll( groups );
+        tx.commit();
+      } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {
+        // not currently supported
+      } else if ( request.getSourceDestCheck( ) != null ) {
+        // not currently supported
+      } else if ( request.getSriovNetSupport( ) != null ) {
+        // not currently supported
       } else {
-        if ( !VmState.STOPPED.equals( vm.getState( ) ) ) {
-          throw new EucalyptusCloudException( "IncorrectInstanceState: " + "The instance '" + instanceId + "' is not in the 'stopped' state." );
+        if ( !VmState.STOPPED.apply( vm ) ) {
+          throw new ClientComputeException( "IncorrectInstanceState", "The instance (" + instanceId + ") is not in the 'stopped' state." );
         }
-        if ( request.getInstanceTypeValue( ) != null ) {
-          VmType vmType = VmTypes.lookup( request.getInstanceTypeValue( ) ); // throws NoSuchMetadataException
+        if ( request.getInstanceType( ) != null ) {
+          VmType vmType = VmTypes.lookup( request.getInstanceType( ).getValue( ) ); // throws NoSuchMetadataException
           if ( !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
             throw new IllegalAccessException( "Not authorized to allocate vm type " + vmType + " for " + ctx.getUserFullName( ) );
           }
           vm.getBootRecord( ).setVmType( vmType );
-          Entities.merge( vm );
           tx.commit( );
-        } else if ( request.getKernelValue( ) != null ) {
+        } else if ( request.getKernel() != null ) {
           try {
-            final KernelImageInfo kernelImg = Images.lookupKernel( request.getKernelValue( ) );
+            final KernelImageInfo kernelImg = Images.lookupKernel( request.getKernel( ).getValue( ) );
             if ( Images.FilterPermissions.INSTANCE.apply( kernelImg )
                     && ImageMetadata.State.available.equals( kernelImg.getState( ) ) ) {
               if ( !RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( kernelImg ) )
                 throw new IllegalAccessException( "Not authorize to use image " + kernelImg.getName( ) + " for ModifyInstanceAttribute" );
               vm.getBootRecord( ).setKernel( kernelImg );
-              Entities.merge( vm );
               tx.commit( );
             } else {
-              throw new NoSuchElementException( "InvalidAMIID.NotFound: " + "The image id '[" + request.getKernelValue( ) + "]' does not exist" );
+              throw new ClientComputeException( "InvalidAMIID.NotFound", "Image id (" + request.getRamdisk( ).getValue( ) + ") not found" );
             }
-          } catch ( Exception e ) {
-            throw e;
+          } catch ( final NoSuchElementException e ) {
+            throw new ClientComputeException( "InvalidAMIID.NotFound", "Image id (" + request.getRamdisk( ).getValue( ) + ") not found" );
           }
-        } else if ( request.getRamdiskValue( ) != null ) {
+        } else if ( request.getRamdisk() != null ) {
           try {
-            final RamdiskImageInfo ramdiskImg = Images.lookupRamdisk( request.getRamdiskValue( ) );
+            final RamdiskImageInfo ramdiskImg = Images.lookupRamdisk( request.getRamdisk( ).getValue( ) );
             if ( Images.FilterPermissions.INSTANCE.apply( ramdiskImg )
                     && ImageMetadata.State.available.equals( ramdiskImg.getState( ) ) ) {
               if ( !RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( ramdiskImg ) )
                 throw new IllegalAccessException( "Not authorize to use image " + ramdiskImg.getName( ) + " for ModifyInstanceAttribute" );
               vm.getBootRecord( ).setRamdisk( ramdiskImg );
-              Entities.merge( vm );
               tx.commit( );
             } else {
-              throw new NoSuchElementException( "InvalidAMIID.NotFound: " + "The image id '[" + request.getRamdiskValue( ) + "]' does not exist" );
+              throw new ClientComputeException( "InvalidAMIID.NotFound", "Image id (" + request.getRamdisk( ).getValue( ) + ") not found" );
             }
-          } catch ( Exception e ) {
-            throw e;
+          } catch ( final NoSuchElementException e ) {
+            throw new ClientComputeException( "InvalidAMIID.NotFound", "Image id (" + request.getRamdisk( ).getValue( ) + ") not found" );
           }
-        } else if ( request.getUserDataValue( ) != null ) {
+        } else if ( request.getUserData() != null ) {
           final byte[] userData;
           try {
-            userData = B64.standard.dec( request.getUserDataValue( ) );
+            userData = B64.standard.dec( request.getUserData( ).getValue( ) );
           } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
             throw new ClientComputeException( "InvalidParameterValue", "User data decoding error." );
           }
@@ -923,7 +959,6 @@ public class VmControl {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
           vm.getBootRecord( ).setUserData( userData );
-          Entities.merge( vm );
           tx.commit( );
         } else {
           // InstanceInitiatedShutdownBehavior, SourceDestCheck, GroupId [EC2-VPC], EbsOptimized are not supported yet.
@@ -933,21 +968,10 @@ public class VmControl {
     } catch ( final ComputeException e ) {
       throw  e;
     } catch ( Exception ex ) {
-      if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
-        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + instanceId + "' is not in the 'stopped' state." );
-      } else if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
-        throw new ClientComputeException( "InvalidInstanceAttributeValue", "The instanceType '" + request.getInstanceTypeValue( ) + "' is invalid." );
+      if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
+        throw new ClientComputeException( "InvalidInstanceAttributeValue", "The instanceType '" + request.getInstanceType() + "' is invalid." );
       } else if ( Exceptions.isCausedBy( ex, IllegalAccessException.class ) ) {
         throw new ClientComputeException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
-      } else if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) ) {
-        if ( ex.toString( ).contains( "InvalidAMIID.NotFound" ) ) {
-          String imageId = ( request.getKernelValue( ) != null ) ? request.getKernelValue( ) : request.getRamdiskValue( );
-          throw new ClientComputeException( "InvalidAMIID.NotFound", "The image id '[" + imageId + "]' does not exist" );
-        } else if ( ex.toString( ).contains( "NoSuchBlockDevice" ) ) {
-          throw new ClientComputeException( "InvalidInstanceAttributeValue", "No device is currently mapped at " + request.getBlockDeviceMappingDeviceName( ) );
-        } else if ( ex.toString( ).contains( "InvalidVolumeID.Malformed" ) ) {
-          throw new ClientComputeException( "InvalidVolumeID.Malformed", "Invalid id: '" + request.getBlockDeviceMappingVolumeId( ) + "'" );
-        }
       } else if ( Exceptions.isCausedBy( ex, InvalidMetadataException.class ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
@@ -966,66 +990,73 @@ public class VmControl {
           throws EucalyptusCloudException {
     final DescribeInstanceAttributeResponseType reply = request.getReply( );
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
-    reply.setInstanceId( instanceId );
-    final EntityTransaction tx = Entities.get( VmInstance.class );
-    try {
+    final String attribute = request.getAttribute( );
+    if ( attribute == null ) {
+      throw new ClientComputeException( " MissingParameter", "Attribute parameter is required" );
+    }
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-      if ( request.getAttribute( ).equals( "kernel" ) ) {
-        if ( vm.getKernelId( ) != null ) {
-          reply.getKernel( ).add( vm.getKernelId( ) );
-        }
-      } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-        if ( vm.getRamdiskId( ) != null ) {
-          reply.getRamdisk( ).add( vm.getRamdiskId( ) );
-        }
-      } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
-        if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
-          reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
-        }
-      } else if ( request.getAttribute( ).equals( "userData" ) ) {
-        if ( vm.getUserData() != null ) {
-          reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
-        }
-      } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        if ( vm.getBootRecord( ).getMachine( ) != null && vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
-          reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
-        }
-      } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
-        if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-          BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
-          Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
-          for ( VmVolumeAttachment volumeAttachment : persistentVolumes ) {
-            if ( volumeAttachment.getIsRootDevice() ) {
+      reply.setInstanceId( instanceId );
+      switch ( attribute ) {
+        case "blockDeviceMapping":
+          if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+            final BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
+            for ( final VmVolumeAttachment volumeAttachment : vm.getBootRecord().getPersistentVolumes( ) ) {
               reply.getBlockDeviceMapping( ).add( new InstanceBlockDeviceMapping(
-                      bfebsInfo.getRootDeviceName(),
-                      volumeAttachment.getVolumeId(),
-                      volumeAttachment.getStatus(),
-                      volumeAttachment.getAttachTime(),
-                      volumeAttachment.getDeleteOnTerminate() ) );
-            } else {
-              reply.getBlockDeviceMapping().add( new InstanceBlockDeviceMapping(
-                      volumeAttachment.getDevice(),
-                      volumeAttachment.getVolumeId(),
-                      volumeAttachment.getStatus(),
-                      volumeAttachment.getAttachTime(),
-                      volumeAttachment.getDeleteOnTerminate() ) );
+                  volumeAttachment.getIsRootDevice( ) ?
+                      bfebsInfo.getRootDeviceName( ) :
+                      volumeAttachment.getDevice( ),
+                  volumeAttachment.getVolumeId(),
+                  volumeAttachment.getStatus(),
+                  volumeAttachment.getAttachTime(),
+                  volumeAttachment.getDeleteOnTerminate() ) );
             }
           }
-        }
-      } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          Set<NetworkGroupId> networkGroups = vm.getNetworkGroupIds( );
-          for( NetworkGroupId networkGroup : networkGroups ) {
-              reply.getGroupSet( ).add(
-                      new GroupItemType( networkGroup.getGroupId( ), networkGroup.getGroupName( ) ) );
-          }
-      } else {
-          // disableApiTermination | ebsOptimized | instanceInitiatedShutdownBehavior | productCodes | sourceDestCheck
+          break;
+        case "disableApiTermination":
+          reply.setDisableApiTermination( false );
+          break;
+        case "ebsOptimized":
+          reply.setEbsOptimized( false );
+          break;
+        case "groupSet":
+          Iterables.addAll( reply.getGroupSet( ), Iterables.transform(
+              vm.getNetworkGroupIds( ),
+              TypeMappers.lookup( NetworkGroupId.class, GroupItemType.class ) ) );
+          break;
+        case "instanceInitiatedShutdownBehavior":
+          reply.setInstanceInitiatedShutdownBehavior( "stop" );
+          break;
+        case "instanceType":
+          reply.setInstanceType( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
+          break;
+        case "kernel":
+          reply.setKernel( vm.getKernelId( ) );
+          break;
+        case "productCodes":
+          reply.setProductCodes( false ); // set some value so an empty wrapper can be included in the response
+          break;
+        case "ramdisk":
+          reply.setRamdisk( vm.getRamdiskId( ) );
+          break;
+        case "rootDeviceName":
+          reply.setRootDeviceName( vm.getBootRecord( ).getMachine( ) == null ? null : vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) );
+          break;
+        case "sourceDestCheck":
+          reply.setSourceDestCheck( true );
+          break;
+        case "sriovNetSupport":
+          reply.setSriovNetSupport( false );
+          break;
+        case "userData":
+          reply.setUserData( vm.getUserData( ) == null ? null : Base64.toBase64String( vm.getUserData( ) ) );
+          break;
+        default:
+          throw new ClientComputeException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
       throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
-    } finally {
-      if ( tx.isActive( ) ) tx.rollback( );
     }
     return reply;
   }

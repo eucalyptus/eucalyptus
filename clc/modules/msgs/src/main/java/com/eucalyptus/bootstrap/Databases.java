@@ -241,7 +241,7 @@ public class Databases {
   public enum Events {
     INSTANCE;
     public static Sql getConnection( ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( INSTANCE.getName( ) );
+      return Databases.getBootstrapper( ).getConnection( INSTANCE.getName( ), null );
     }
 
     public String getName( ) {
@@ -305,7 +305,11 @@ public class Databases {
       return dbSyncExecutors.submit( input, input );
     }
   }
-  
+
+  public static Iterable<String> databases( ) {
+    return Sets.newTreeSet( Iterables.transform( PersistenceContexts.list( ), PersistenceContexts.toDatabaseName( ) ) );
+  }
+
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -323,9 +327,9 @@ public class Databases {
         @Override
         public void run( ) {
           try {
-            for ( String ctx : PersistenceContexts.list( ) ) {
+            for ( final String database : databases( ) ) {
               try {
-                DatabaseClusterMBean db = Databases.lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
+                DatabaseClusterMBean db = Databases.lookup( database, TimeUnit.SECONDS.toMillis( 5 ) );
                 for ( String host : db.getinactiveDatabases() ) {
                   Databases.disable( host );
                 }
@@ -386,8 +390,8 @@ public class Databases {
         try {
           Logs.extreme( ).info( "Acquired db state lock: " + runnableFunction );
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
-          for ( final String ctx : listDatabases( ) ) {
-            Runnable run = runnableFunction.apply( ctx );
+          for ( final String database : listDatabases( ) ) {
+            Runnable run = runnableFunction.apply( database );
             runnables.put( run, ExecuteRunnable.INSTANCE.apply( run ) );
           }
           Map<Runnable, Future<Runnable>> succeeded = Futures.waitAll( runnables );
@@ -540,10 +544,9 @@ public class Databases {
     public Function<String, Runnable> apply( final Host host ) {
       return new Function<String, Runnable>( ) {
         @Override
-        public Runnable apply( final String ctx ) {
+        public Runnable apply( final String database ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
-          final String contextName = ctx;
-          Runnable removeRunner = new Runnable( ) {
+          return new Runnable( ) {
             @Override
             public void run( ) {
               try {
@@ -552,7 +555,7 @@ public class Databases {
                 if ( !fullSync && !passiveSync ) {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 } else {
-                  final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 30 ) );
+                  final DatabaseClusterMBean cluster = lookup( database, TimeUnit.SECONDS.toMillis( 30 ) );
                   final boolean activated = cluster.getactiveDatabases().contains( hostName );
                   final boolean deactivated = cluster.getinactiveDatabases().contains( hostName );
                   final String passiveStrategy = cluster.getdefaultSynchronizationStrategy();
@@ -561,56 +564,56 @@ public class Databases {
                       Collections.singleton( passiveStrategy ) ), "full" );
                   final String syncStrategy = fullSync ? fullStrategy : passiveStrategy;
                   if ( activated ) {
-                    resetDatabaseWeights( contextName );
+                    resetDatabaseWeights( database );
                     return;
                   } else if ( deactivated ) {
-                    ActivateHostFunction.prepareConnections( host, contextName );
+                    ActivateHostFunction.prepareConnections( host, database );
                   } else {
-                    LOG.info( "Creating database " + ctx + " connections for: " + host );
+                    LOG.info( "Creating database " + database + " connections for: " + host );
                     try {
-                      lookupDatabase( contextName, hostName );
+                      lookupDatabase( database, hostName );
                     } catch ( NoSuchElementException e ) {
                       try {
                         cluster.add( hostName );
-                        Logs.extreme( ).debug( "Added database " + ctx + " connections for host: " + hostName );
+                        Logs.extreme( ).debug( "Added database " + database + " connections for host: " + hostName );
                       } catch ( IllegalArgumentException ex ) {
-                        Logs.extreme( ).debug( "Skipping addition of database " + ctx + " connections for host which already exists: " + hostName );
+                        Logs.extreme( ).debug( "Skipping addition of database " + database + " connections for host which already exists: " + hostName );
                       } catch ( IllegalStateException ex ) {
                         if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
                           ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( 
                               jdbcJmxDomain, 
-                              new Hashtable<>( ImmutableMap.of( "cluster", ctx, "type", "Database", "database", hostName ) ) ) );
+                              new Hashtable<>( ImmutableMap.of( "cluster", database, "type", "Database", "database", hostName ) ) ) );
                           cluster.add( hostName );
                         } else {
                           throw ex;
                         }
                       }
                     }
-                    ActivateHostFunction.prepareConnections( host, contextName );
+                    ActivateHostFunction.prepareConnections( host, database );
                   }
 
                   // demote others
                   if ( Hosts.isCoordinator( host ) ) {
                     for ( Host secondaryHost : Hosts.listActiveDatabases( ) ) if ( !secondaryHost.equals( host ) ) try {
-                      lookupDatabase( contextName, secondaryHost.getDisplayName( ) ).setweight( DATABASE_WEIGHT_SECONDARY );
+                      lookupDatabase( database, secondaryHost.getDisplayName( ) ).setweight( DATABASE_WEIGHT_SECONDARY );
                     } catch ( NoSuchElementException e ) {
                       // Weight will be set on activation
                     } catch ( Exception e ) {
-                      LOG.error( "Error setting primary weight for host " + secondaryHost.getDisplayName( ) + " context " + contextName, e );
+                      LOG.error( "Error setting primary weight for host " + secondaryHost.getDisplayName( ) + " context " + database, e );
                     }
                   }
 
                   try {
                     if ( fullSync ) {
-                      LOG.info( "Full sync of database " + ctx + " on: " + host + " using: " + fullStrategy );
+                      LOG.info( "Full sync of database " + database + " on: " + host + " using: " + fullStrategy );
                     } else {
-                      LOG.info( "Passive activation of database " + ctx + " connections to: " + host );
+                      LOG.info( "Passive activation of database " + database + " connections to: " + host );
                     }
                     cluster.activate( hostName, syncStrategy );
                     if ( fullSync ) {
-                      LOG.info( "Full sync of database " + ctx + " on: " + host + " using " + cluster.getactiveDatabases() );
+                      LOG.info( "Full sync of database " + database + " on: " + host + " using " + cluster.getactiveDatabases() );
                     } else {
-                      LOG.info( "Passive activation of database " + ctx + " on: " + host + " using " + cluster.getactiveDatabases() );
+                      LOG.info( "Passive activation of database " + database + " on: " + host + " using " + cluster.getactiveDatabases() );
                     }
                   } catch ( Exception ex ) {
                     throw Exceptions.toUndeclared( ex );
@@ -619,34 +622,29 @@ public class Databases {
                   // refresh pooled connections
                   try {
                     // Release any open connections
-                    LOG.debug( "Refreshing idle pooled connections for context: " + contextName );
-                    ProxoolFacade.killAllConnections( contextName, "Database registered", true );
-                    LOG.debug( "Refreshed idle pooled connections for context: " + contextName );
+                    LOG.debug( "Refreshing idle pooled connections for context: " + database );
+                    ProxoolFacade.killAllConnections( database, "Database registered", true );
+                    LOG.debug( "Refreshed idle pooled connections for context: " + database );
                   } catch ( Exception ex ) {
-                    LOG.error( "Error refreshing connections on activation of context: " + contextName, ex );
+                    LOG.error( "Error refreshing connections on activation of context: " + database, ex );
                   }
                 }
-              } catch ( final NoSuchElementException ex1 ) {
-                LOG.error( ex1 );
-                Logs.extreme( ).error( ex1, ex1 );
-                return;
-              } catch ( final IllegalStateException ex1 ) {
+              } catch ( final NoSuchElementException | IllegalStateException ex1 ) {
                 LOG.error( ex1 );
                 Logs.extreme( ).error( ex1, ex1 );
                 return;
               } catch ( final Exception ex1 ) {
                 LOG.error( ex1 );
                 Logs.extreme( ).error( ex1, ex1 );
-                throw Exceptions.toUndeclared( "Failed to activate database " + ctx + " host " + host + " because of: " + ex1.getMessage( ), ex1 );
+                throw Exceptions.toUndeclared( "Failed to activate database " + database + " host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
             }
             
             @Override
             public String toString( ) {
-              return "Databases.enable(): " + host.getDisplayName( ) + " " + contextName;
+              return "Databases.enable(): " + host.getDisplayName( ) + " " + database;
             }
           };
-          return removeRunner;
         }
         
         @Override
@@ -687,9 +685,9 @@ public class Databases {
     }
   }
 
-  private static DatabaseClusterMBean lookup( final String ctx, final long timeout ) throws NoSuchElementException {
+  private static DatabaseClusterMBean lookup( final String database, final long timeout ) throws NoSuchElementException {
     return lookupMBean(
-        ImmutableMap.of( "cluster", ctx, "type", "DatabaseCluster" ),
+        ImmutableMap.of( "cluster", database, "type", "DatabaseCluster" ),
         DatabaseClusterMBean.class,
         new Predicate<DatabaseClusterMBean>() {
           @Override
@@ -702,11 +700,11 @@ public class Databases {
     );
   }
 
-  private static DriverDatabaseMBean lookupDatabase( final String contextName,                      
+  private static DriverDatabaseMBean lookupDatabase( final String database,
                                                      final String hostName 
   ) throws NoSuchElementException {
     return lookupMBean(
-        ImmutableMap.of( "cluster", contextName, "type", "Database", "database", hostName ),
+        ImmutableMap.of( "cluster", database, "type", "Database", "database", hostName ),
         DriverDatabaseMBean.class,
         new Predicate<DriverDatabaseMBean>() {
           @Override
@@ -830,21 +828,23 @@ public class Databases {
   }
   
   static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
+    final String context = "eucalyptus_config";
+    final String databaseName = PersistenceContexts.toDatabaseName( ).apply( context );
+    final String schemaName = PersistenceContexts.toSchemaName( ).apply( context );
+    final String schemaPrefix = schemaName == null ? "" : schemaName + ".";
     for ( final Host h : Hosts.listActiveDatabases( ) ) {
-      final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), "eucalyptus_config" ) );
-      try {
-        final Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
-        try {
-          final PreparedStatement statement = conn.prepareStatement( "select config_component_hostname from config_component_base where config_component_partition='eucalyptus';" );
-          final ResultSet result = statement.executeQuery( );
-          while ( result.next( ) ) {
-            final Object columnValue = result.getObject( 1 );
-            if ( Internets.testLocal( columnValue.toString( ) ) ) {
-              return true;
+      final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), databaseName ) );
+      try ( final Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) ) ) {
+        try ( final PreparedStatement statement = conn.prepareStatement( "select config_component_hostname from " +
+            schemaPrefix + "config_component_base where config_component_partition='eucalyptus';" ) ) {
+          try ( final ResultSet result = statement.executeQuery( ) ) {
+            while ( result.next( ) ) {
+              final Object columnValue = result.getObject( 1 );
+              if ( Internets.testLocal( columnValue.toString( ) ) ) {
+                return true;
+              }
             }
           }
-        } finally {
-          conn.close( );
         }
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
@@ -943,9 +943,9 @@ public class Databases {
         Set<String> union = Sets.newHashSet( );
         Set<String> intersection = Sets.newHashSet( hosts );
         Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
-        for ( String ctx : PersistenceContexts.list( ) ) {
+        for ( final String database : databases( ) ) {
           try {
-            Set<String> activeDatabases = Databases.lookup( ctx, 0 ).getactiveDatabases();
+            Set<String> activeDatabases = Databases.lookup( database, 0 ).getactiveDatabases();
             if ( BootstrapArgs.isCloudController( ) ) {
               activeDatabases.add( Internets.localHostIdentifier( ) );//GRZE: use Internets.localHostIdentifier() which is static, rather than the Hosts reference as it is stateful
             }
@@ -1026,7 +1026,11 @@ public class Databases {
   public static String getDriverName( ) {
     return singleton.getDriverName( );
   }
-  
+
+  public static String getDefaultSchemaName( ) {
+    return singleton.getDefaultSchemaName( );
+  }
+
   public static String getJdbcDialect( ) {
     return singleton.getJdbcDialect( );
   }
@@ -1098,7 +1102,12 @@ public class Databases {
     public String getPassword( ) {
       return db.getPassword( );
     }
-    
+
+    @Override
+    public String getDefaultSchemaName( ) {
+      return this.db.getDefaultSchemaName( );
+    }
+
     @Override
     public String getDriverName( ) {
       return this.db.getDriverName( );
@@ -1149,79 +1158,70 @@ public class Databases {
     public String getJdbcScheme( ) {
       return this.db.getJdbcScheme( );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#listDatabases()
-     */
+
     @Override
-    public List<String> listDatabases( ) {
-      return this.db.listDatabases( );
+    public List<String> listDatabases() {
+      return db.listDatabases();
     }
 
-    /**
-     * @see DatabaseBootstrapper#listDatabases(InetAddress)
-     */
     @Override
-    public List<String> listDatabases( InetAddress host ) {
-      return this.db.listDatabases( host );
+    public List<String> listDatabases( final InetAddress host ) {
+      return db.listDatabases( host );
     }
 
-    /**
-     * @see DatabaseBootstrapper#listTables(String)
-     */
     @Override
-    public List<String> listTables( String database ) {
-      return this.db.listTables( database );
+    public List<String> listSchemas( final String database ) {
+      return db.listSchemas( database );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#backupDatabase(String,String)
-     */
+
     @Override
-    public File backupDatabase( String name, String backupIdentifier ) {
-      return this.db.backupDatabase( name, backupIdentifier );
+    public List<String> listSchemas( final InetAddress host, final String database ) {
+      return db.listSchemas( host, database );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#deleteDatabase(String)
-     */
+
     @Override
-    public void deleteDatabase( String name ) {
-      this.db.deleteDatabase( name );
+    public List<String> listTables( final String database, final String schema ) {
+      return db.listTables( database, schema );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#copyDatabase(String, String)
-     */
+
     @Override
-    public void copyDatabase( String from, String to ) {
-      this.db.copyDatabase( from, to );
+    public void createDatabase( final String database ) {
+      db.createDatabase( database );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#renameDatabase(String, String)
-     */
+
     @Override
-    public void renameDatabase( String from, String to ) {
-      this.db.renameDatabase( from, to );
+    public void deleteDatabase( final String database ) {
+      db.deleteDatabase( database );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#getConnection(String)
-     */
+
     @Override
-    public Sql getConnection( String database ) throws Exception {
-      return this.db.getConnection( database );
+    public void renameDatabase( final String from, final String to ) {
+      db.renameDatabase( from, to );
     }
-    
-    /**
-     * @see DatabaseBootstrapper#createDatabase(String)
-     */
+
     @Override
-    public void createDatabase( String name ) {
-      this.db.createDatabase( name );
+    public void copyDatabase( final String sourceDatabase,
+                              final String destinationDatabase ) {
+      db.copyDatabase( sourceDatabase, destinationDatabase );
     }
-    
+
+    @Override
+    public void copyDatabaseSchema( final String sourceDatabase,
+                                    final String sourceSchema,
+                                    final String destinationDatabase,
+                                    final String destinationSchema ) {
+      db.copyDatabaseSchema( sourceDatabase, sourceSchema, destinationDatabase, destinationSchema );
+    }
+
+    @Override
+    public Sql getConnection( final String context ) throws Exception {
+      return db.getConnection( context );
+    }
+
+    @Override
+    public Sql getConnection( final String database, final String schema ) throws Exception {
+      return db.getConnection( database, schema );
+    }
   }
   
   public static boolean isRunning( ) {
@@ -1238,7 +1238,7 @@ public class Databases {
   }
   
   public static Map<String, String> getJdbcUrlQueryParameters( ) {
-    return singleton.getJdbcUrlQueryParameters( );
+    return singleton.getJdbcUrlQueryParameters();
   }
   
   public static String getJdbcScheme( ) {
@@ -1246,9 +1246,9 @@ public class Databases {
   }
 
   public static void check( ) {
-    for ( String ctx : PersistenceContexts.list( ) ) {
+    for ( final String database : databases( ) ) {
       try {
-        DatabaseClusterMBean db = lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
+        DatabaseClusterMBean db = lookup( database, TimeUnit.SECONDS.toMillis( 5 ) );
         for ( String host : db.getactiveDatabases() ) {
           Host hostEntry = Hosts.lookup( host );
           if ( hostEntry == null ) {
@@ -1260,7 +1260,6 @@ public class Databases {
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
       }
-      return;
     }
   }
 

@@ -54,7 +54,10 @@ abstract class NetworkingServiceSupport implements NetworkingService {
       prepareWithRollback( request, resources )
     } catch ( Exception e ) {
       resources.each{ NetworkResource resource -> resource.ownerId = null }
-      release( new ReleaseNetworkResourcesType( resources: resources ) );
+      release( new ReleaseNetworkResourcesType(
+          vpc: request.vpc,
+          subnet: request.subnet,
+          resources: resources ) );
       throw e
     }
   }

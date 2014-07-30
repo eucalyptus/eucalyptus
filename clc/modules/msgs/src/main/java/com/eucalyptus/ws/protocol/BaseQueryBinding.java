@@ -335,8 +335,10 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
               }
             }
           }
-          this.populateObject( ( GroovyObject ) newInstance, fieldMap, subParams );
-          obj.setProperty( e.getValue( ), newInstance );
+          if ( !subParams.isEmpty( ) ) {
+            this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
+            obj.setProperty( e.getValue(), newInstance );
+          }
         } catch ( final Exception e1 ) {
           LOG.debug( "Error binding object", e1 );
         }

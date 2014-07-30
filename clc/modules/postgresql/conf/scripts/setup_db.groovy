@@ -60,6 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+
+import com.google.common.base.Optional
+
 import java.sql.ResultSet
 import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
@@ -74,9 +77,10 @@ import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.Internets
-import com.google.common.base.Function
+import com.eucalyptus.util.Pair
 import com.google.common.base.Joiner
 import com.google.common.collect.Iterables
+import com.google.common.collect.Sets
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
@@ -92,25 +96,24 @@ import static java.util.regex.Pattern.quote
  * SUMMARY : The PostgresqlBootstrapper class attempts to control the postgres database.  The methods
  * that control the database are : init, start, stop, hup, load, isRunning and destroy.
  */
-public class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
+@SuppressWarnings("UnnecessaryQualifiedReference")
+class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
   
   private static Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_db" )
   
   // Static definitions of postgres commands and options
-  private static int    PG_MAX_RETRY = 5
   private static String EUCA_DB_DIR  = "data"
   private String PG_HOME = System.getProperty("euca.db.home","")
   private String PG_SUFFIX = ""
   private static String PG_BIN = "/bin/pg_ctl"
   private static String PG_DUMP = "/bin/pg_dump"
+  private static String PG_RESTORE = "/bin/pg_restore"
   private static String PG_START = "start"
   private static String PG_STOP = "stop"
   private static String PG_STATUS = "status"
   private static String PG_MODE = "-mf"
   private static String PG_PORT = 8777
   private static String PG_HOST = "0.0.0.0" // or "127.0.0.1,${Internets.localHostAddress( )}"
-  private static String PG_CLI_HOME = "-h${SubDirectory.DB.getChildPath(EUCA_DB_DIR)}"
-  private static String PG_CLI_PORT = "-p${PG_PORT}"
   private static String PG_PORT_OPTS2 = "-o -h${PG_HOST} -p${PG_PORT}"
   private static String PG_DB_OPT = "-D"
   private static String PG_INITDB = "/bin/initdb"
@@ -135,14 +138,15 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   private static long   MIN_SEMMNS = 32000L
   private static long   MIN_SHMMAX = 536870912L //512MB
 
-  private int runProcessWithReturn( List<String> args ) {
+  private int runProcessWithReturn( List<String> args, Map<String,String> environment = [:] ) {
     LOG.debug("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
     try {
       ProcessBuilder pb = new ProcessBuilder(args)
+      pb.environment( ).putAll( environment )
       def root = new File("/")
       def outlines = []
       def errlines = []
-      pb.directory(root);
+      pb.directory(root)
       Process p = pb.start()
       OutputStream outstream = new ByteArrayOutputStream( 8192 )
       OutputStream errstream = new ByteArrayOutputStream( 8192 )
@@ -150,9 +154,9 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       int result = p.waitFor()
       outstream.toString().eachLine { line -> outlines.add(line); LOG.debug("stdout: ${line}") }
       errstream.toString().eachLine { line -> errlines.add(line); LOG.debug("stderr: ${line}") }
-      return result
+      result
     } catch ( Exception ex ) {
-      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.getMessage()}", ex );
+      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.message}", ex )
     }
   }
 
@@ -163,7 +167,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       def root = new File("/")
       def outlines = []
       def errlines = []
-      pb.directory(root);
+      pb.directory(root)
       Process p = pb.start()
       OutputStream outstream = new ByteArrayOutputStream( 8192 )
       OutputStream errstream = new ByteArrayOutputStream( 8192 )
@@ -174,23 +178,24 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       if ( result == 0 ) {
         return outlines
       } else {
-        throw new RuntimeException("(see stdout and stderr for details)");
+        throw new RuntimeException("(see stdout and stderr for details)")
       }
     } catch ( Exception ex ) {
-      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.getMessage()}", ex );
+      throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.message}", ex )
     }
   }
 
   //Default constructor
-  public PostgresqlBootstrapper( ) {
+  @SuppressWarnings("GroovyUnusedDeclaration")
+  PostgresqlBootstrapper( ) {
     try {
       Properties props = new Properties() {{
               try {
-                this.load( ClassLoader.getSystemResource( "postgresql-binaries.properties" ).openStream( ) );
+                this.load( ClassLoader.getSystemResource( "postgresql-binaries.properties" ).openStream( ) )
               } catch (Exception ex) {
                 throw new FileNotFoundException("postgresql-binaries.properties not found in the classpath")
               }
-            }};
+            }}
       
       if ("".equals(PG_HOME)) {
         PG_HOME = props.getProperty("euca.db.home","")
@@ -205,18 +210,19 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       PG_BIN = PG_HOME + PG_BIN + PG_SUFFIX
       PG_INITDB = PG_HOME + PG_INITDB + PG_SUFFIX
       PG_DUMP = PG_HOME + PG_DUMP + PG_SUFFIX
+      PG_RESTORE = PG_HOME + PG_RESTORE + PG_SUFFIX
     
       LOG.debug("PG_HOME = " + PG_HOME + " : PG_BIN = " + PG_BIN + " : PG_INITDB  = " + PG_INITDB)
     } catch ( Exception ex ) {
       LOG.error("Required Database variables are not correctly set "
           + "PG_HOME = " + PG_HOME + " : PG_BIN = " + PG_BIN + " : PG_INITDB  = " + PG_INITDB)
-      LOG.debug(ex, ex);
-      System.exit(1);
+      LOG.debug(ex, ex)
+      System.exit(1)
     }
   }
   
   @Override
-  public void init( ) {
+  void init( ) {
     try {
       kernelParametersCheck( )
       
@@ -245,7 +251,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       prepareService( )
       
     } catch ( Exception ex ) {
-      throw new RuntimeException( ex );
+      throw new RuntimeException( ex )
     }
   }
   
@@ -296,10 +302,10 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     try {
       String cmd = PG_INITDB + " --version"
       def pattern = ~/.*\s+9\.[1-9]\d*(\.\d+)*$/
-      return pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
+      pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
     } catch ( Exception e ) {
       LOG.fatal("Unable to find the initdb command")
-      return false
+      false
     }
   }
   
@@ -307,7 +313,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     final File passFile = SubDirectory.DB.getChildFile( PG_PASSFILE )
     try {
       passFile.write( getPassword() )
-      def output = runProcessWithOutput([
+      runProcessWithOutput([
         PG_INITDB,
         PG_ENCODING,
         PG_LOCALE,
@@ -319,10 +325,10 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         PG_ENCODING
       ])
       LOG.info( "Database init complete." )
-      initDBFile();
-      return true
+      initDBFile()
+      true
     } catch (Exception e) {
-      throw new RuntimeException(e.getMessage(), e)
+      throw new RuntimeException(e.message, e)
     } finally {
       passFile.delete()
     }
@@ -406,7 +412,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       LOG.error("Unable to create cli user", e)
       return false
     }
-    return true
+    true
   }
   
   private void initSSL() throws Exception {
@@ -425,6 +431,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       } else {
         LOG.warn("Credentials not found for database, not creating SSL certificate/key files")
       }
+      void
     }
   }
   
@@ -437,49 +444,52 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     file.setExecutable false
   }
   
-  private Function<String, String> contextToDatabaseNameMapper() {
-    return new Function<String,String>() {
-      @Override
-      String apply( String contextName ) {
-        if ( !contextName.startsWith("eucalyptus_") ) {
-          contextName = "eucalyptus_" + contextName
-        }
-        return contextName
-      }
-    }
-  }
-  
-  private Iterable<String> databases() {
-    return Iterables.transform( PersistenceContexts.list( ), contextToDatabaseNameMapper() )
+  private Iterable<Pair<String,Optional<String>>> databases( ) {
+    Iterables.transform(
+        PersistenceContexts.list( ),
+        Pair.robuilder( PersistenceContexts.toDatabaseName( ), PersistenceContexts.toSchemaName( ) ) )
   }
   
   private boolean createDBSql( ) throws Exception {
     if ( !isRunning( ) ) {
       throw new Exception("The database must be running to create the tables")
     }
-    
-    for ( String databaseName : databases() ) {
-      try {
-        String dbName = "CREATE DATABASE " + databaseName + " OWNER " + getUserName( )
-        dbExecute( PG_DEFAULT_DBNAME, dbName )
+
+    final Set<String> createdDatabases = Sets.newHashSet( )
+    for ( Pair<String,Optional<String>> databasePair : databases( ) ) {
+      final String databaseName = databasePair.left
+      final String schemaName = databasePair.right.orNull( )
+      if ( createdDatabases.add( databaseName ) ) try {
+        String createDatabase = "CREATE DATABASE " + databaseName + " OWNER " + getUserName( )
+        dbExecute( PG_DEFAULT_DBNAME, createDatabase )
         
         String alterUser = "ALTER ROLE " + getUserName( ) + " WITH LOGIN PASSWORD \'" + getPassword( ) + "\'"
         dbExecute( databaseName, alterUser )
       } catch (Exception e) {
-        if (!e.getMessage().contains("already exists")) {
+        if (!e.message.contains("already exists")) {
           LOG.error("Unable to create the database.", e)
+          return false
+        }
+      }
+
+      if ( schemaName ) try {
+        //TODO use IF NOT EXISTS when we can require postgres 9.3
+        dbExecute( databaseName, "CREATE SCHEMA \"${schemaName}\" AUTHORIZATION \"${userName}\"" )
+      } catch (Exception e) {
+        if (!e.message.contains("already exists")) {
+          LOG.error("Unable to create the database schema ${schemaName}", e)
           return false
         }
       }
     }
     
-    return true
+    true
   }
   
   private boolean startResource() throws Exception {
     OrderedShutdown.registerPostShutdownHook( new Runnable( ) {
           @Override
-          public void run( ) {
+          void run( ) {
             File pidfile = SubDirectory.DB.getChildFile( EUCA_DB_DIR, "postmaster.pid" )
             if (!pidfile.exists()) {
                 return
@@ -495,7 +505,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
               if (value != 0) {
                 LOG.fatal("Postgresql shutdown failed with exit code " + value)
               } else {
-                LOG.info("Postgresql shutdown succeeded.");
+                LOG.info("Postgresql shutdown succeeded.")
               }
             } catch ( Exception e ) {
               LOG.error("Postgresql shutdown failed with error", e)
@@ -510,7 +520,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     
     try {
-      def output = runProcessWithOutput([
+      runProcessWithOutput([
         PG_BIN,
         PG_START,
         PG_W_OPT,
@@ -518,17 +528,17 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR),
         PG_PORT_OPTS2
       ])
-      LOG.info("Postgresql startup succeeded.");
+      LOG.info("Postgresql startup succeeded.")
     } catch ( Exception ex ) {
-      LOG.fatal("Postgresql startup failed: " + ex.getMessage())
+      LOG.fatal("Postgresql startup failed: " + ex.message)
       return false
     }
     
-    return true
+    true
   }
   
   @Override
-  public boolean load( ) throws Exception {
+  boolean load( ) throws Exception {
 
     if ( !startResource( ) ) {
       throw new Exception("Unable to start postgresql")
@@ -542,29 +552,38 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     dbComp.initService( )
     prepareService( )
     
-    return true
+    true
   }
   
   private void prepareService( ) throws Exception {
-    for ( String databaseName : databases() ) {
+    for ( String databaseName : Sets.newTreeSet( Iterables.transform( databases(  ), Pair.left( ) ) ) ) {
       testContext( databaseName )
     }
   }
-  
-  public Sql getConnection( String databaseName ) throws Exception {
-    getConnectionInternal( Internets.localHostInetAddress( ), databaseName )
+
+  Sql getConnection( String context ) throws Exception {
+    getConnection(
+      PersistenceContexts.toDatabaseName( ).apply( context ),
+      PersistenceContexts.toSchemaName( ).apply( context )
+    )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String databaseName ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, databaseName ) )
-    return Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
+  Sql getConnection( String database, String schema ) throws Exception {
+    getConnectionInternal( Internets.localHostInetAddress( ), database, schema )
   }
 
-  private boolean dbExecute( String databaseName, String statement ) throws Exception {
+  private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
+    Sql sql = Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
+    if ( schema ) sql.execute( "SET search_path TO ${schema}" )
+    sql
+  }
+
+  private boolean dbExecute( String database, String statement ) throws Exception {
     Sql sql = null
     try {
-      sql = getConnection(databaseName);
-      return sql.execute( statement )
+      sql = getConnection( database, null )
+      sql.execute( statement )
     } finally {
       sql?.close()
     }
@@ -574,7 +593,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     try {
       String pgPing = "SELECT USER"
       if( !dbExecute( databaseName, pgPing ) ) {
-        LOG.error("Unable to ping the database : " + url)
+        LOG.error("Unable to ping the database : " + databaseName)
       }
     } catch (Exception exception) {
       LOG.error("Failed to test the context : ", exception)
@@ -583,117 +602,184 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-  public List<String> listDatabases( ) {
+  List<String> listDatabases( ) {
     listDatabases( Internets.localHostInetAddress( ) )
   }
 
+  @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  public List<String> listDatabases(InetAddress host) {
-    List<String> lines = [];
+  List<String> listDatabases( InetAddress host ) {
+    List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, "postgres" );
+      sql = getConnectionInternal( host, "postgres", null )
       sql.query("select datname from pg_database") { ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().datname)
       }
     } finally {
       sql?.close()
     }
-    return lines;
+    lines
   }
 
   @Override
-  public List<String> listTables(String database) {
-    List<String> lines = [];
+  List<String> listSchemas( String database ) {
+    listSchemas( Internets.localHostInetAddress( ), database )
+  }
+
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Override
+  List<String> listSchemas( InetAddress host, String database ) {
+    List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnection(database);
-      sql.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public'") { ResultSet rs ->
+      sql = getConnectionInternal( host, database, null )
+      sql.connection.metaData.schemas.with{ ResultSet rs ->
+        while (rs.next()) lines.add(rs.toRowResult().table_schem )
+      }
+    } finally {
+      sql?.close()
+    }
+    lines
+  }
+
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Override
+  List<String> listTables( String database, String schema ) {
+    List<String> lines = []
+    Sql sql = null
+    try {
+      sql = getConnection( database, null )
+      sql.connection.metaData.getTables( null, schema, '%', null ).with{ ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().table_name)
       }
     } finally {
       sql?.close()
     }
-    return lines;
-  }
-  
-  @Override
-  public File backupDatabase( String name, String backupIdentifier ) {
-    File dbBackupDir = new File( "${SubDirectory.BACKUPS.getChildPath(EUCA_DB_DIR,backupIdentifier,name)}" );
-    LOG.info("Starting backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
-    try {
-//      if ( !dbBackupDir.getParentFile( ).exists( ) ) {
-//        dbBackupDir.getParentFile( ).mkdirs( );
-//      }
-//      List<String> lines = runProcessWithOutput([
-//        PG_DUMP,
-//        PG_CLI_HOME,
-//        PG_CLI_PORT,
-//        "--superuser=eucalyptus",
-//        "--format=d",
-//        "--blobs",
-//        "--file=${dbBackupDirs.getAbsolutePath( )}",
-//        "-v",
-//        "-w",
-//        "${name}"
-//      ])
-    } catch( RuntimeException ex ) {
-      LOG.error( "Backing up database ${name} failed because of: ${ex.getMessage()}" );
-      throw ex;
-    }
-    LOG.info("Completed backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
-    return dbBackupDir;
-  }
-  
-  @Override
-  public void createDatabase( String name ) {
-    LOG.info("Creating database ${name}");
-    try {
-      dbExecute("postgres", "CREATE DATABASE \"${name}\" OWNER \"${getUserName()}\"" )
-    } catch( Exception ex ) {
-      LOG.error( "Creating database ${name} failed because of: ${ex.getMessage()}" );
-      throw ex;
-    }
-    LOG.info("Database ${name} created successfully");
+    lines
   }
 
   @Override
-  public void deleteDatabase( String name ) {
-    LOG.info("Deleting database ${name}");
+  void createDatabase( String name ) {
+    LOG.info("Creating database ${name}")
+    try {
+      dbExecute("postgres", "CREATE DATABASE \"${name}\" OWNER \"${getUserName()}\"" )
+    } catch( Exception ex ) {
+      LOG.error( "Creating database ${name} failed because of: ${ex.message}" )
+      throw ex
+    }
+    LOG.info("Database ${name} created successfully")
+  }
+
+  @Override
+  void deleteDatabase( String name ) {
+    LOG.info("Deleting database ${name}")
     try {
       dbExecute("postgres", "DROP DATABASE IF EXISTS \"${name}\"" )
     } catch( Exception ex ) {
-      LOG.error( "Deleting database ${name} failed because of: ${ex.getMessage()}" );
-      throw ex;
+      LOG.error( "Deleting database ${name} failed because of: ${ex.message}" )
+      throw ex
     }
-    LOG.info("Database ${name} deleted successfully");
+    LOG.info("Database ${name} deleted successfully")
   }
-  
+
   @Override
-  public void copyDatabase( String from, String to ) {
-    LOG.info("Copying database ${from} to ${to}");
+  void copyDatabase( String from, String to ) {
+    LOG.info("Copying database ${from} to ${to}")
     try {
       dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${getUserName()}\"" )
     } catch( Exception ex ) {
-      LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.message}" )
       throw ex;
     }
-    LOG.info("Database ${from} copied to ${to} successfully");
+    LOG.info("Database ${from} copied to ${to} successfully")
   }
-  
+
   @Override
-  public void renameDatabase( String from, String to ) {
-    LOG.info("Renaming database ${from} to ${to}");
+  void copyDatabaseSchema( String sourceDatabase,
+                           String sourceSchema,
+                           String destinationDatabase,
+                           String destinationSchema ) {
+    LOG.info("Copying database/schema ${sourceDatabase}/${sourceSchema} to ${destinationDatabase}/${destinationSchema}")
+    String databaseDumpFile = File.createTempFile( "euca-sdb-", ".dump.tar" )
+    try {
+      if ( !listDatabases( ).contains( destinationDatabase ) ) {
+        LOG.info( "Destination database ${destinationDatabase} not found, creating." )
+        dbExecute( "postgres", "CREATE DATABASE \"${destinationDatabase}\" OWNER \"${userName}\"" )
+      }
+      if ( listSchemas( destinationDatabase ).contains( sourceSchema ) ) {
+        if ( !listTables( destinationDatabase, sourceSchema ).isEmpty( ) ) {
+          throw new Exception( "Schema ${sourceSchema} in ${destinationDatabase} has tables, not dropping schema" )
+        }
+        LOG.info( "Deleting schema ${sourceSchema} from ${destinationDatabase}" )
+        dbExecute( destinationDatabase, "DROP SCHEMA \"${sourceSchema}\" CASCADE" )
+      }
+      if ( getDefaultSchemaName( ) == sourceSchema ) {
+        // public schema is required by pg_restore, drop/create ensures no content
+        LOG.info( "Creating schema ${sourceSchema} in ${destinationDatabase}" )
+        dbExecute( destinationDatabase, "CREATE SCHEMA ${getDefaultSchemaName( )}" )
+      }
+      if ( listSchemas( destinationDatabase ).contains( destinationSchema ) ) {
+        LOG.info( "Deleting schema ${destinationSchema} from ${destinationDatabase}" )
+        dbExecute( destinationDatabase, "DROP SCHEMA \"${destinationSchema}\" CASCADE" )
+      }
+
+      LOG.info( "Dumping schema ${sourceSchema} from ${sourceDatabase}" )
+      int dumpCode = runProcessWithReturn( [
+          PG_DUMP,
+          '-h', 'localhost',
+          '-p', PG_PORT,
+          PG_USER_OPT,
+          '-w',
+          '-f', databaseDumpFile,
+          '-F', 'tar',
+          '-n', sourceSchema,
+          sourceDatabase ], [PGPASSWORD: getPassword( )] )
+      if ( dumpCode != 0 ) {
+        throw new Exception( "Database dump failed with exit code ${dumpCode}" )
+      }
+      LOG.info( "Restoring schema ${sourceSchema} in ${destinationDatabase}" )
+      int restoreCode = runProcessWithReturn( [
+          PG_RESTORE,
+          '-h', 'localhost',
+          '-p', PG_PORT,
+          PG_USER_OPT,
+          '-w',
+          '-e',
+          '-1',
+          '-F', 'tar',
+          '-d', destinationDatabase,
+          databaseDumpFile ], [PGPASSWORD: getPassword()] )
+      if ( restoreCode != 0 ) {
+        throw new Exception( "Database restore failed with exit code ${restoreCode}" )
+      }
+      LOG.info( "Renaming schema ${sourceSchema} to ${destinationSchema} in ${destinationDatabase}" )
+      dbExecute( destinationDatabase, "ALTER SCHEMA \"${sourceSchema}\" RENAME TO \"${destinationSchema}\"" )
+      if ( getDefaultSchemaName( ) == sourceSchema ) {
+        dbExecute( destinationDatabase, "CREATE SCHEMA ${getDefaultSchemaName( )}" )
+      }
+    } catch( Exception ex ) {
+      LOG.error( "Copying database/schema ${sourceDatabase}/${sourceSchema} to ${destinationDatabase}/${destinationSchema} failed because of: ${ex.message}" )
+      throw ex
+    } finally {
+      new File( databaseDumpFile ).delete( )
+    }
+    LOG.info("Database/schema ${sourceDatabase}/${sourceSchema} copied to ${destinationDatabase}/${destinationSchema} successfully")
+  }
+
+  @Override
+  void renameDatabase( String from, String to ) {
+    LOG.info("Renaming database ${from} to ${to}")
     try {
       dbExecute("postgres", "ALTER DATABASE \"${from}\" RENAME TO \"${to}\"" )
     } catch( RuntimeException ex ) {
-      LOG.error( "Renaming database ${from} to ${to} failed because of: ${ex.getMessage()}" );
-      throw ex;
+      LOG.error( "Renaming database ${from} to ${to} failed because of: ${ex.message}" )
+      throw ex
     }
-    LOG.info("Database ${from} renamed to ${to} successfully");
+    LOG.info("Database ${from} renamed to ${to} successfully")
   }
-  
-  public boolean isRunning() {
+
+  boolean isRunning() {
     try {
       int value = runProcessWithReturn ([
         PG_BIN,
@@ -704,13 +790,13 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         return false
       }
     } catch ( Exception ex ) {
-      LOG.error("Postgresql status check failed: " + ex.getMessage())
+      LOG.error("Postgresql status check failed: " + ex.message)
       return false
     }
-    return true
+    true
   }
   
-  public void hup( ) {
+  void hup( ) {
     if( !stop() ) {
       LOG.fatal("Unable to stop the postgresql server")
       throw new Exception("Unable to stop the postgres server")
@@ -723,7 +809,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-  public boolean stop( ) throws Exception {
+  boolean stop( ) throws Exception {
     int value = runProcessWithReturn([
       PG_BIN,
       PG_STOP,
@@ -731,16 +817,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
     ])
     if ( value != 0 ) {
-      LOG.error("Unable to stop the postgresql server.", e)
-      return false
+      LOG.error("Unable to stop the postgresql server (exitcode:${value})",)
+      false
     } else {
       LOG.info("Postgresql shutdown succeeded.")
-      return true
+      true
     }
   }
   
   @Override
-  public void destroy( ) throws IOException {
+  void destroy( ) throws IOException {
     boolean status = false
     
     if ( isRunning( ) ) {
@@ -753,45 +839,50 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-  public String getPassword() {
-    return SystemIds.databasePassword()
+  String getPassword( ) {
+    SystemIds.databasePassword( )
   }
   
   @Override
-  public String getUserName() {
-    return DatabaseBootstrapper.DB_USERNAME
+  String getUserName( ) {
+    DatabaseBootstrapper.DB_USERNAME
+  }
+
+  @Override
+  String getDefaultSchemaName( ) {
+    'public'
+  }
+
+  @Override
+  String getDriverName( ) {
+    'org.postgresql.Driver'
   }
   
   @Override
-  public String getDriverName( ) {
-    return "org.postgresql.Driver"
+  String getHibernateDialect( ) {
+    'org.hibernate.dialect.PostgreSQLDialect'
   }
   
   @Override
-  public String getHibernateDialect( ) {
-    return "org.hibernate.dialect.PostgreSQLDialect"
+  String getJdbcDialect( ) {
+    'eucalyptus-postgresql'
   }
   
   @Override
-  public String getJdbcDialect( ) {
-    return "eucalyptus-postgresql"
+  String getServicePath( String... pathParts ) {
+    pathParts != null && pathParts.length > 0 ? Joiner.on("/").join( Arrays.asList( pathParts ) ) : 'eucalyptus_shared'
   }
   
   @Override
-  public String getServicePath( String... pathParts ) {
-    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus"
-  }
-  
-  @Override
-  public Map<String, String> getJdbcUrlQueryParameters() {
-    return PG_USE_SSL ? [
+  Map<String, String> getJdbcUrlQueryParameters() {
+    PG_USE_SSL ? [
       ssl:'true',
       sslfactory: 'com.eucalyptus.postgresql.PostgreSQLSSLSocketFactory'
     ] : emptyMap()
   }
   
   @Override
-  public String getJdbcScheme( ) {
-    return "postgresql"
+  String getJdbcScheme( ) {
+    'postgresql'
   }
 }

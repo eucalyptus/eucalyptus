@@ -512,14 +512,14 @@ public class PacketFilterRule extends EucalyptusData {
   String destNetworkName;
   String policy = "firewall-open";
   String protocol;
-  int portMin;
-  int portMax;
+  Integer portMin;
+  Integer portMax;
   ArrayList<String> sourceCidrs = new ArrayList<String>();
   ArrayList<VmNetworkPeer> peers = new ArrayList<VmNetworkPeer>();
   ArrayList<String> sourceNetworkNames = new ArrayList<String>();
   ArrayList<String> sourceUserNames = new ArrayList<String>();
   
-  def PacketFilterRule(String destUserName, String destNetworkName, String protocol, int portMin, int portMax) {
+  def PacketFilterRule(String destUserName, String destNetworkName, String protocol, Integer portMin, Integer portMax) {
     this.destUserName = destUserName;
     this.destNetworkName = destNetworkName;
     this.protocol = protocol;

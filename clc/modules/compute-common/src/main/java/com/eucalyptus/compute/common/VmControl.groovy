@@ -340,6 +340,12 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
   Boolean associatePublicIpAddress;
   InstanceNetworkInterfaceSetItemRequestType() {  }
 }
+class GroupIdSetType extends EucalyptusData {
+  GroupIdSetType() {  }
+  @HttpParameterMapping(parameter = "GroupId")
+  @HttpEmbedded(multiple = true)
+  ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
+}
 class SecurityGroupIdSetType extends EucalyptusData {
   SecurityGroupIdSetType() {  }
   @HttpParameterMapping(parameter = "SecurityGroupId")
@@ -704,28 +710,37 @@ public class StartInstancesType extends VmControlMessage{
   public StartInstancesType() {  }
 }
 
+public class InstanceEbsBlockDeviceType extends EucalyptusData {
+  String volumeId
+  Boolean deleteOnTermination = true
+}
+
+public class InstanceBlockDeviceMappingItemType extends EucalyptusData {
+  String deviceName
+  InstanceEbsBlockDeviceType ebs = new InstanceEbsBlockDeviceType( )
+}
+
+public class InstanceBlockDeviceMappingSetType extends EucalyptusData {
+  @HttpParameterMapping(parameter = "BlockDeviceMapping")
+  @HttpEmbedded(multiple = true)
+  ArrayList<InstanceBlockDeviceMappingItemType> item = Lists.newArrayList( )
+}
+
 public class ModifyInstanceAttributeType extends VmControlMessage {
-  @HttpParameterMapping( parameter = "InstanceId" )
   String instanceId;
-  @HttpParameterMapping( parameter = "InstanceType.Value" )
-  String instanceTypeValue;
-  @HttpParameterMapping( parameter = "Kernel.Value" )
-  String kernelValue;
-  @HttpParameterMapping( parameter = "Ramdisk.Value" )
-  String ramdiskValue;
-  @HttpParameterMapping( parameter = "UserData.Value" )
-  String userDataValue;
-  // TODO - probably use a better way to handle these values; also, only one mapping can be used at a time, so kind of okay
-  @HttpParameterMapping( parameter = "Attribute" )
-  String blockDeviceMappingAttribute
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.Value" )
-  String blockDeviceMappingValue
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.DeviceName" )
-  String blockDeviceMappingDeviceName
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.VolumeId" )
-  String blockDeviceMappingVolumeId
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.DeleteOnTermination" )
-  Boolean blockDeviceMappingDeleteOnTermination = true
+  AttributeValueType instanceType;
+  AttributeValueType kernel;
+  AttributeValueType ramdisk;
+  AttributeValueType userData;
+  AttributeBooleanValueType disableApiTermination
+  AttributeValueType instanceInitiatedShutdownBehavior
+  @HttpEmbedded
+  InstanceBlockDeviceMappingSetType blockDeviceMappingSet
+  AttributeBooleanValueType sourceDestCheck
+  @HttpEmbedded
+  GroupIdSetType groupIdSet
+  AttributeBooleanFlatValueType ebsOptimized
+  AttributeBooleanValueType sriovNetSupport
 }
 
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
@@ -747,35 +762,59 @@ public class DescribeInstanceAttributeType extends VmControlMessage {
   public DescribeInstanceAttributeType() {  }
 }
 public class DescribeInstanceAttributeResponseType extends VmControlMessage {
-  String instanceId;
-  ArrayList<String> instanceType = new ArrayList<String>();
-  ArrayList<String> kernel = new ArrayList<String>();
-  ArrayList<String> ramdisk = new ArrayList<String>();
-  ArrayList<String> userData = new ArrayList<String>();
-  ArrayList<String> rootDeviceName = new ArrayList<String>();
-  ArrayList<GroupItemType> groupSet = Lists.newArrayList();
-  ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = new ArrayList<InstanceBlockDeviceMapping>();
+  String instanceId
+  ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = Lists.newArrayList( )
+  Boolean disableApiTermination
+  Boolean ebsOptimized
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList( )
+  String instanceInitiatedShutdownBehavior
+  String instanceType
+  String kernel
+  Boolean productCodes // not supported, would be a list of codes
+  String ramdisk
+  String rootDeviceName
+  Boolean sourceDestCheck
+  Boolean sriovNetSupport
+  String userData
 
+  boolean hasDisableApiTermination( ) {
+    this.disableApiTermination != null
+  }
+  boolean hasEbsOptimized( ) {
+    this.ebsOptimized != null
+  }
   boolean hasInstanceType() {
-    this.instanceType
+    this.instanceType != null
+  }
+  boolean hasInstanceInitiatedShutdownBehavior( ) {
+    this.instanceInitiatedShutdownBehavior != null
   }
   boolean hasKernel() {
-    this.kernel
+    this.kernel != null
+  }
+  boolean hasProductCodes() {
+    this.productCodes != null
   }
   boolean hasRamdisk() {
-    this.ramdisk
+    this.ramdisk != null
   }
   boolean hasRootDeviceName() {
-    this.rootDeviceName
+    this.rootDeviceName != null
   }
   boolean hasUserData() {
-    this.userData
+    this.userData != null
   }
   boolean hasBlockDeviceMapping() {
-    this.blockDeviceMapping
+    !this.blockDeviceMapping.isEmpty( )
   }
   boolean hasGroupSet( ) {
-    this.groupSet
+    !this.groupSet.isEmpty( )
+  }
+  boolean hasSourceDestCheck( ) {
+    this.sourceDestCheck != null
+  }
+  boolean hasSriovNetSupport( ) {
+    return this.sriovNetSupport != null
   }
 }
 public class MonitorInstanceState extends EucalyptusData {

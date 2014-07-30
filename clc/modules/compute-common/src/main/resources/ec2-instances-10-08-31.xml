@@ -340,19 +340,28 @@
       <structure name="item" map-as="com.eucalyptus.compute.common.TerminateInstancesItemType" />
     </collection>
   </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceEbsBlockDeviceType" abstract="true">
+    <value name="volumeId" field="volumeId" usage="optional" />
+    <value name="deleteOnTermination" field="deleteOnTermination" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType" abstract="true">
+    <value name="deviceName" field="deviceName" usage="required" />
+    <structure name="ebs" field="ebs" usage="optional" map-as="com.eucalyptus.compute.common.InstanceEbsBlockDeviceType" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceBlockDeviceMappingSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType"/>
+    </collection>
+  </mapping>
   <mapping name="ModifyInstanceAttribute" class="com.eucalyptus.compute.common.ModifyInstanceAttributeType"
-    extends="com.eucalyptus.compute.common.ComputeMessage">
+           extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
-    <value name="instanceTypeValue" field="instanceTypeValue" usage="optional" />
-    <value name="kernelValue" field="kernelValue" usage="optional" />
-    <value name="ramdiskValue" field="ramdiskValue" usage="optional" />
-    <value name="userDataValue" field="userDataValue" usage="optional" />
-    <value name="blockDeviceMappingAttribute" field="blockDeviceMappingAttribute" usage="optional" />
-    <value name="blockDeviceMappingValue" field="blockDeviceMappingValue" usage="optional" />
-    <value name="blockDeviceMappingDeviceName" field="blockDeviceMappingDeviceName" usage="optional" />
-    <value name="blockDeviceMappingVolumeId" field="blockDeviceMappingVolumeId" usage="optional" />
-    <value name="blockDeviceMappingDeleteOnTermination" field="blockDeviceMappingDeleteOnTermination" usage="optional" />
+    <structure name="instanceType" field="instanceType" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+    <structure name="kernel" field="kernel" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+    <structure name="ramdisk" field="ramdisk" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+    <structure name="userData" field="userData" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+    <structure name="blockDeviceMapping" field="blockDeviceMappingSet" usage="optional" type="com.eucalyptus.compute.common.InstanceBlockDeviceMappingSetType"/>
   </mapping>
   <mapping name="ModifyInstanceAttributeResponse" class="com.eucalyptus.compute.common.ModifyInstanceAttributeResponseType"
     extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -369,34 +378,46 @@
     extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
-    <collection name="instanceType" usage="optional" field="instanceType" factory="org.jibx.runtime.Utility.arrayListFactory"
-                item-type="java.lang.String" test-method="hasInstanceType">
-      <value name="value"/>
-    </collection>
-    <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory"
-                item-type="java.lang.String" test-method="hasKernel">
-      <value name="value"/>
-    </collection>
-    <collection name="ramdisk" usage="optional" field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory"
-                item-type="java.lang.String" test-method="hasRamdisk">
-      <value name="value"/>
-    </collection>
-    <collection name="userData" usage="optional" field="userData" factory="org.jibx.runtime.Utility.arrayListFactory"
-                item-type="java.lang.String" test-method="hasUserData">
-      <value name="value" />
-    </collection>
-    <collection name="rootDeviceName" usage="optional" field="rootDeviceName" factory="org.jibx.runtime.Utility.arrayListFactory"
-                item-type="java.lang.String" test-method="hasRootDeviceName">
-      <value name="value"/>
-    </collection>
     <collection name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
                 test-method="hasBlockDeviceMapping">
-      <structure name="item" map-as="com.eucalyptus.compute.common.InstanceBlockDeviceMapping" />
+      <structure name="item" map-as="com.eucalyptus.compute.common.InstanceBlockDeviceMapping"/>
     </collection>
-      <collection name="groupSet" field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  test-method="hasGroupSet">
-        <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
+    <structure name="disableApiTermination" usage="optional" test-method="hasDisableApiTermination">
+      <value name="value" field="disableApiTermination" usage="optional"/>
+    </structure>
+    <structure name="ebsOptimized" usage="optional" test-method="hasEbsOptimized">
+      <value name="value" field="ebsOptimized" usage="optional"/>
+    </structure>
+    <collection name="groupSet" field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+                test-method="hasGroupSet">
+      <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
     </collection>
+    <structure name="instanceInitiatedShutdownBehavior" usage="optional" test-method="hasInstanceInitiatedShutdownBehavior">
+      <value name="value" field="instanceInitiatedShutdownBehavior" usage="optional"/>
+    </structure>
+    <structure name="instanceType" usage="optional" test-method="hasInstanceType">
+      <value name="value" field="instanceType" usage="optional"/>
+    </structure>
+    <structure name="kernel" usage="optional" test-method="hasKernel">
+      <value name="value" field="kernel" usage="optional"/>
+    </structure>
+    <structure name="productCodes" usage="optional" test-method="hasProductCodes">
+    </structure>
+    <structure name="ramdisk" usage="optional" test-method="hasRamdisk">
+      <value name="value" field="ramdisk" usage="optional"/>
+    </structure>
+    <structure name="rootDeviceName" usage="optional" test-method="hasRootDeviceName">
+      <value name="value" field="rootDeviceName" usage="optional"/>
+    </structure>
+    <structure name="sourceDestCheck" usage="optional" test-method="hasSourceDestCheck">
+      <value name="value" field="sourceDestCheck" usage="optional"/>
+    </structure>
+    <structure name="sriovNetSupport" usage="optional" test-method="hasSriovNetSupport">
+      <value name="value" field="sriovNetSupport" usage="optional"/>
+    </structure>
+    <structure name="userData" usage="optional" test-method="hasUserData">
+      <value name="value" field="userData" usage="optional"/>
+    </structure>
   </mapping>
   <mapping name="ResetInstanceAttribute" class="com.eucalyptus.compute.common.ResetInstanceAttributeType"
     extends="com.eucalyptus.compute.common.ComputeMessage">

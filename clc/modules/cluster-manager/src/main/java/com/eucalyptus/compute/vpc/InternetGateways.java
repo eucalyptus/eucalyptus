@@ -80,6 +80,7 @@ public interface InternetGateways extends Lister<InternetGateway> {
           .withStringProperty( "attachment.state", FilterStringFunctions.STATE )
           .withStringProperty( "attachment.vpc-id", FilterStringFunctions.VPC_ID )
           .withStringProperty( "internet-gateway-id", CloudMetadatas.toDisplayName( ) )
+          .withPersistenceAlias( "vpc", "vpc" )
           .withPersistenceFilter( "attachment.state", "vpc.displayName", new Function<String, String>() {
             @Nullable
             @Override
@@ -89,7 +90,7 @@ public interface InternetGateways extends Lister<InternetGateway> {
             }
           } )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
-          .withPersistenceFilter( "internetGateway", "displayName" )
+          .withPersistenceFilter( "internet-gateway-id", "displayName" )
       );
     }
   }

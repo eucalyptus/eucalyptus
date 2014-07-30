@@ -137,6 +137,14 @@ public class AWSCloudFormationStackProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSCloudFormationWaitConditionProperties implements ResourceProperties {
+  @Property
+  Integer count;
+  @Required
+  @Property
+  String handle;
+  @Required
+  @Property
+  Integer timeout;
 }
 
 @ToString(includeNames=true)
@@ -610,6 +618,24 @@ public class AWSRoute53RecordSetGroupProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSS3BucketProperties implements ResourceProperties {
+  @Property
+  String accessControl;
+  @Property
+  String bucketName;
+  @Property
+  S3CorsConfiguration corsConfiguration;
+  @Property
+  S3LifecycleConfiguration lifecycleConfiguration;
+  @Property
+  S3LoggingConfiguration loggingConfiguration;
+  @Property
+  S3NotificationConfiguration notificationConfiguration;
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
+  @Property
+  S3VersioningConfiguration versioningConfiguration;
+  @Property
+  S3WebsiteConfiguration websiteConfiguration;
 }
 
 @ToString(includeNames=true)

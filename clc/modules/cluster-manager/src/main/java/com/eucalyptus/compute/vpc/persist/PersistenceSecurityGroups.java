@@ -48,7 +48,7 @@ public class PersistenceSecurityGroups extends VpcPersistenceSupport<NetworkGrou
                               final Function<? super NetworkGroup, T> transform ) throws VpcMetadataException {
     try {
       return Iterables.getOnlyElement( listByExample(
-          NetworkGroup.namedForVpc( null, vpcId, NetworkGroups.defaultNetworkName() ),
+          NetworkGroup.namedForVpc( vpcId, NetworkGroups.defaultNetworkName( ) ),
           Predicates.alwaysTrue(),
           transform ) );
     } catch ( NoSuchElementException e ) {

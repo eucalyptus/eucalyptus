@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthQuotaException;
@@ -57,6 +58,7 @@ import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -328,8 +330,99 @@ public class VpcManager {
     return reply;
   }
 
-  public CreateNetworkAclEntryResponseType createNetworkAclEntry(CreateNetworkAclEntryType request) throws EucalyptusCloudException {
-    CreateNetworkAclEntryResponseType reply = request.getReply( );
+  public CreateNetworkAclEntryResponseType createNetworkAclEntry(final CreateNetworkAclEntryType request) throws EucalyptusCloudException {
+    final CreateNetworkAclEntryResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId() );
+    final String cidr = request.getCidrBlock( );
+    final Optional<Cidr> cidrOptional = Cidr.parse( ).apply( cidr );
+    if ( !cidrOptional.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + cidr );
+    }
+    final Optional<Integer> protocolOptional = protocolNumber( request.getProtocol( ) );
+    if ( !protocolOptional.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
+    }
+    if ( !Range.closed( 1, 32766 ).apply( request.getRuleNumber( ) ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Rule number invalid: " + request.getRuleNumber( ) );
+    }
+    final Supplier<NetworkAclEntry> allocator = transactional( new Supplier<NetworkAclEntry>( ) {
+      @Override
+      public NetworkAclEntry get( ) {
+        try {
+          networkAcls.updateByExample(
+              NetworkAcl.exampleWithName( accountFullName, networkAclId ),
+              accountFullName,
+              request.getNetworkAclId(),
+              new Callback<NetworkAcl>( ) {
+                @Override
+                public void fire( final NetworkAcl networkAcl ) {
+                  if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) try {
+                    final List<NetworkAclEntry> entries = networkAcl.getEntries( );
+                    final Optional<NetworkAclEntry> existingEntry =
+                        Iterables.tryFind( entries, entryPredicate( request.getEgress( ), request.getRuleNumber( ) ) );
+
+                    if ( existingEntry.isPresent( ) ) {
+                      throw new ClientComputeException(
+                          "NetworkAclEntryAlreadyExists",
+                          "Entry exists with rule number: " + request.getRuleNumber( ) );
+                    }
+
+                    final NetworkAclEntry entry;
+                    switch ( protocolOptional.get( ) ) {
+                      case 1:
+                        entry = NetworkAclEntry.createIcmpEntry(
+                            networkAcl,
+                            request.getRuleNumber(),
+                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                            request.getEgress(),
+                            cidr,
+                            request.getIcmpTypeCode().getCode(),
+                            request.getIcmpTypeCode().getType() );
+                        break;
+                      case 6:
+                      case 17:
+                        entry = NetworkAclEntry.createTcpUdpEntry(
+                            networkAcl,
+                            request.getRuleNumber(),
+                            protocolOptional.get(),
+                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                            request.getEgress(),
+                            cidr,
+                            request.getPortRange().getFrom(),
+                            request.getPortRange().getTo() );
+                        break;
+                      default:
+                        entry = NetworkAclEntry.createEntry(
+                            networkAcl,
+                            request.getRuleNumber( ),
+                            protocolOptional.get(),
+                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
+                            request.getEgress( ),
+                            cidr );
+                    }
+
+                    entries.add( entry );
+                  } catch ( Exception e ) {
+                    throw Exceptions.toUndeclared( e );
+                  }
+                }
+              }
+          );
+          return null;
+        } catch ( Exception ex ) {
+          throw new RuntimeException( ex );
+        }
+      }
+    } );
+
+    try {
+      allocator.get( );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
     return reply;
   }
 
@@ -402,9 +495,26 @@ public class VpcManager {
               new Callback<RouteTable>() {
                 @Override
                 public void fire( final RouteTable routeTable ) {
-                  if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) routeTable.getRoutes().add(
-                      Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway )
-                  );
+                  try {
+                    if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
+                      final Optional<Route> existingRoute =
+                          Iterables.tryFind( routeTable.getRoutes( ), CollectionUtils.propertyPredicate(
+                              destinationCidr,
+                              RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+
+                      if ( existingRoute.isPresent( ) ) {
+                        throw new ClientComputeException(
+                            "RouteAlreadyExists",
+                            "Route exists for cidr: " + destinationCidr );
+                      }
+
+                      routeTable.getRoutes().add(
+                          Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway )
+                      );
+                    }
+                  } catch ( Exception e ) {
+                    throw Exceptions.toUndeclared( e );
+                  }
                 }
               } );
           return null;
@@ -538,16 +648,13 @@ public class VpcManager {
               ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
               NetworkGroups.defaultNetworkName(),
               "default VPC security group" );
-          //TODO:STEVE: update when security group protocol support is updated for VPC
-          final Collection<NetworkPeer> peers = Lists.newArrayList( 
+          final Collection<NetworkPeer> peers = Lists.newArrayList(
               NetworkPeer.create( group.getOwnerAccountNumber( ), group.getName( ), group.getGroupId( ) ) );
           group.getNetworkRules( ).addAll( Lists.newArrayList(
-              NetworkRule.create( NetworkRule.Protocol.icmp, -1, -1, peers, null ),
-              NetworkRule.create( NetworkRule.Protocol.tcp, 0, 65535, peers, null ),
-              NetworkRule.create( NetworkRule.Protocol.udp, 0, 65535, peers, null )
+              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
+              NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
           ) );
           securityGroups.save( group );
-          //TODO:STEVE: rules
           return vpc;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -645,8 +752,40 @@ public class VpcManager {
     return reply;
   }
 
-  public DeleteNetworkAclEntryResponseType deleteNetworkAclEntry(DeleteNetworkAclEntryType request) throws EucalyptusCloudException {
-    DeleteNetworkAclEntryResponseType reply = request.getReply( );
+  public DeleteNetworkAclEntryResponseType deleteNetworkAclEntry(final DeleteNetworkAclEntryType request) throws EucalyptusCloudException {
+    final DeleteNetworkAclEntryResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId() );
+    try {
+      networkAcls.updateByExample(
+          NetworkAcl.exampleWithName( accountFullName, networkAclId ),
+          accountFullName,
+          request.getNetworkAclId(),
+          new Callback<NetworkAcl>() {
+            @Override
+            public void fire( final NetworkAcl networkAcl ) {
+              try {
+                final Optional<NetworkAclEntry> entry = Iterables.tryFind(
+                    networkAcl.getEntries( ),
+                    entryPredicate( request.getEgress( ), request.getRuleNumber( ) ) );
+                if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
+                  if ( entry.isPresent( ) ) {
+                    networkAcl.getEntries( ).remove( entry.get( ) );
+                  } else {
+                    throw new ClientComputeException(
+                        "InvalidNetworkAclEntry.NotFound",
+                        "Entry not found for number: " + request.getRuleNumber( ) );
+                  }
+                }
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
+              }
+            }
+          }) ;
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -677,7 +816,6 @@ public class VpcManager {
 
   public DeleteRouteResponseType deleteRoute( final DeleteRouteType request ) throws EucalyptusCloudException {
     final DeleteRouteResponseType reply = request.getReply( );
-
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
@@ -689,25 +827,29 @@ public class VpcManager {
           new Callback<RouteTable>() {
             @Override
             public void fire( final RouteTable routeTable ) {
-              final Optional<Route> route = Iterables.tryFind(
-                  routeTable.getRoutes( ),
-                  CollectionUtils.propertyPredicate(
-                      request.getDestinationCidrBlock( ),
-                      new Function<Route, String>( ) {
-                        @Override
-                        public String apply( final Route route ) {
-                          return route.getDestinationCidr( );
-                        }
-                      } ) );
-              if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
-                routeTable.getRoutes( ).removeAll( route.asSet( ) );
+              try {
+                final Optional<Route> route = Iterables.tryFind(
+                    routeTable.getRoutes( ),
+                    CollectionUtils.propertyPredicate(
+                        request.getDestinationCidrBlock( ),
+                        RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+                if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
+                  if ( route.isPresent( ) ) {
+                    routeTable.getRoutes( ).remove( route.get( ) );
+                  } else {
+                    throw new ClientComputeException(
+                        "InvalidRoute.NotFound",
+                        "Route not found for cidr: " + request.getDestinationCidrBlock( ) );
+                  }
+                }
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
               }
             }
           }) ;
     } catch ( Exception e ) {
       throw handleException( e );
     }
-
     return reply;
   }
 
@@ -795,24 +937,20 @@ public class VpcManager {
 
   public DescribeAccountAttributesResponseType describeAccountAttributes(final DescribeAccountAttributesType request) throws EucalyptusCloudException {
     final DescribeAccountAttributesResponseType reply = request.getReply( );
-    {
-      final AccountAttributeSetItemType accountAttributeSetItemType = new AccountAttributeSetItemType();
-      accountAttributeSetItemType.setAttributeName( "supported-platforms" );
-      accountAttributeSetItemType.setAttributeValueSet( new AccountAttributeValueSetType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 0 ).setAttributeValue( "EC2" );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 1 ).setAttributeValue( "VPC" );
-      reply.getAccountAttributeSet( ).getItem( ).add( accountAttributeSetItemType );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    String vpcId = "none";
+    try {
+      vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName() );
+    } catch ( VpcMetadataNotFoundException e) {
+      // no default vpc
+    } catch ( Exception e ) {
+      throw handleException( e );
     }
-    {
-      final AccountAttributeSetItemType accountAttributeSetItemType = new AccountAttributeSetItemType();
-      accountAttributeSetItemType.setAttributeName( "default-vpc" );
-      accountAttributeSetItemType.setAttributeValueSet( new AccountAttributeValueSetType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().add( new AccountAttributeValueSetItemType() );
-      accountAttributeSetItemType.getAttributeValueSet().getItem().get( 0 ).setAttributeValue( "none" );
-      reply.getAccountAttributeSet( ).getItem( ).add( accountAttributeSetItemType );
-    }
+    reply.getAccountAttributeSet( ).getItem( ).add(
+        new AccountAttributeSetItemType( "supported-platforms", Lists.newArrayList( "EC2", "VPC" ) ) ); //TODO:STEVE: Show only available platform
+    reply.getAccountAttributeSet( ).getItem( ).add(
+        new AccountAttributeSetItemType( "default-vpc", Lists.newArrayList( vpcId ) ) );
     return reply;
   }
 
@@ -863,8 +1001,37 @@ public class VpcManager {
     return reply;
   }
 
-  public DescribeNetworkInterfaceAttributeResponseType describeNetworkInterfaceAttribute(DescribeNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    DescribeNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public DescribeNetworkInterfaceAttributeResponseType describeNetworkInterfaceAttribute(final DescribeNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final DescribeNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      final NetworkInterface networkInterface =
+          networkInterfaces.lookupByName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ), Functions.<NetworkInterface>identity( ) );
+      if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+        switch ( request.getAttribute() ) {
+          case "attachment":
+            if ( networkInterface.isAttached( ) )
+            reply.setAttachment( TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class ) );
+            break;
+          case "description":
+            reply.setDescription( new NullableAttributeValueType( ) );
+            reply.getDescription().setValue( networkInterface.getDescription( ) );
+            break;
+          case "groupSet":
+            reply.setGroupSet( new GroupSetType() ); //TODO:STEVE: security groups via enis
+            break;
+          case "sourceDestCheck":
+            reply.setSourceDestCheck( new AttributeBooleanValueType() );
+            reply.getSourceDestCheck().setValue( networkInterface.getSourceDestCheck( ) );
+            break;
+          default:
+            throw new ClientComputeException( "InvalidParameterValue", "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"  );
+        }
+      }
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -918,6 +1085,7 @@ public class VpcManager {
       final Vpc vpc =
           vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.<Vpc>identity( ) );
       if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
+        reply.setVpcId( vpc.getDisplayName( ) );
         switch ( request.getAttribute( ) ) {
           case "enableDnsSupport":
             reply.setEnableDnsSupport( new AttributeBooleanValueType( ) );
@@ -1058,8 +1226,39 @@ public class VpcManager {
     return reply;
   }
 
-  public ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute(ModifyNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    ModifyNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute(final ModifyNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final ModifyNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          accountFullName,
+          request.getNetworkInterfaceId(),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+                if ( request.getAttachment( ) != null ) {
+                  if ( networkInterface.isAttached( ) &&
+                      networkInterface.getAttachment( ).getAttachmentId( ).equals( request.getAttachment().getAttachmentId( ) ) ) {
+                    networkInterface.getAttachment( ).setDeleteOnTerminate( request.getAttachment( ).getDeleteOnTermination( ) );
+                  }
+                } else if ( request.getDescription( ) != null ) {
+                  networkInterface.setDescription( request.getDescription( ).getValue( ) );
+                } else if ( request.getGroupSet( ) != null ) {
+                  //TODO:STEVE: security groups via enis
+                } else if ( request.getSourceDestCheck( ) != null ) {
+                  networkInterface.setSourceDestCheck( request.getSourceDestCheck( ).getValue( ) );
+                } else {
+                  throw Exceptions.toUndeclared( new ClientComputeException( "MissingParameter", "Missing attribute value" ) );
+                }
+              }
+            }
+          } );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1158,13 +1357,138 @@ public class VpcManager {
     return reply;
   }
 
-  public ReplaceNetworkAclEntryResponseType replaceNetworkAclEntry(ReplaceNetworkAclEntryType request) throws EucalyptusCloudException {
-    ReplaceNetworkAclEntryResponseType reply = request.getReply( );
+  public ReplaceNetworkAclEntryResponseType replaceNetworkAclEntry(final ReplaceNetworkAclEntryType request) throws EucalyptusCloudException {
+    final ReplaceNetworkAclEntryResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId( ) );
+    final String cidr = request.getCidrBlock( );
+    final Optional<Cidr> cidrOptional = Cidr.parse( ).apply( cidr );
+    if ( !cidrOptional.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + cidr );
+    }
+    final Optional<Integer> protocolOptional = protocolNumber( request.getProtocol() );
+    if ( !protocolOptional.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
+    }
+    if ( !Range.closed( 1, 32766 ).apply( request.getRuleNumber( ) ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Rule number invalid: " + request.getRuleNumber( ) );
+    }
+    try {
+      networkAcls.updateByExample(
+          NetworkAcl.exampleWithName( accountFullName, networkAclId ),
+          accountFullName,
+          request.getNetworkAclId(),
+          new Callback<NetworkAcl>( ) {
+            @Override
+            public void fire( final NetworkAcl networkAcl ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) try {
+                final List<NetworkAclEntry> entries = networkAcl.getEntries( );
+                final Optional<NetworkAclEntry> oldEntry =
+                    Iterables.tryFind( entries, entryPredicate( request.getEgress( ), request.getRuleNumber( ) ) );
+
+                if ( !oldEntry.isPresent( ) ) {
+                  throw new ClientComputeException(
+                      "InvalidNetworkAclEntry.NotFound",
+                      "Entry not found for rule number: " + request.getRuleNumber( ) );
+                }
+
+                final NetworkAclEntry entry;
+                switch ( protocolOptional.get( ) ) {
+                  case 1:
+                    entry = NetworkAclEntry.createIcmpEntry(
+                        networkAcl,
+                        request.getRuleNumber(),
+                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                        request.getEgress(),
+                        cidr,
+                        request.getIcmpTypeCode().getCode(),
+                        request.getIcmpTypeCode().getType() );
+                    break;
+                  case 6:
+                  case 17:
+                    entry = NetworkAclEntry.createTcpUdpEntry(
+                        networkAcl,
+                        request.getRuleNumber(),
+                        protocolOptional.get(),
+                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                        request.getEgress(),
+                        cidr,
+                        request.getPortRange().getFrom(),
+                        request.getPortRange().getTo() );
+                    break;
+                  default:
+                    entry = NetworkAclEntry.createEntry(
+                        networkAcl,
+                        request.getRuleNumber( ),
+                        protocolOptional.get(),
+                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
+                        request.getEgress( ),
+                        cidr );
+                }
+
+                entries.set(
+                    entries.indexOf( oldEntry.get() ),
+                    entry );
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
+              }
+            }
+          }
+      );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
-  public ReplaceRouteResponseType replaceRoute(ReplaceRouteType request) throws EucalyptusCloudException {
-    ReplaceRouteResponseType reply = request.getReply( );
+  public ReplaceRouteResponseType replaceRoute(final ReplaceRouteType request) throws EucalyptusCloudException {
+    final ReplaceRouteResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) ); //TODO:STEVE: should also eni also?
+    final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
+    final String destinationCidr = request.getDestinationCidrBlock( );
+    final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
+    if ( !destinationCidrOption.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
+    }
+    try {
+      routeTables.updateByExample(
+          RouteTable.exampleWithName( accountFullName, routeTableId ),
+          accountFullName,
+          request.getRouteTableId( ),
+          new Callback<RouteTable>( ) {
+            @Override
+            public void fire( final RouteTable routeTable ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
+                final InternetGateway internetGateway =
+                    internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
+
+                final List<Route> routes = routeTable.getRoutes( );
+                final Optional<Route> oldRoute =
+                    Iterables.tryFind( routes, CollectionUtils.propertyPredicate(
+                        destinationCidr,
+                        RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+
+                if ( !oldRoute.isPresent( ) ) {
+                  throw new ClientComputeException(
+                      "InvalidRoute.NotFound",
+                      "Route not found for cidr: " + destinationCidr );
+                }
+
+                routes.set(
+                    routes.indexOf( oldRoute.get() ),
+                    Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway ) );
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
+              }
+            }
+          }
+      );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1206,8 +1530,35 @@ public class VpcManager {
     return reply;
   }
 
-  public ResetNetworkInterfaceAttributeResponseType resetNetworkInterfaceAttribute(ResetNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    ResetNetworkInterfaceAttributeResponseType reply = request.getReply( );
+  public ResetNetworkInterfaceAttributeResponseType resetNetworkInterfaceAttribute(final ResetNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
+    final ResetNetworkInterfaceAttributeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          accountFullName,
+          request.getNetworkInterfaceId(),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+                switch ( request.getAttribute() ) {
+                  case "sourceDestCheck":
+                    networkInterface.setSourceDestCheck( true );
+                    break;
+                  default:
+                    throw Exceptions.toUndeclared( new ClientComputeException(
+                        "InvalidParameterValue",
+                        "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"
+                    ) );
+                }
+              }
+            }
+          } );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1354,6 +1705,34 @@ public class VpcManager {
         item.setTagSet( tags );
       }
     }
+  }
+
+  private static Optional<Integer> protocolNumber( final String protocol ) {
+    switch ( Objects.toString( protocol, "-1" ).toLowerCase( ) ) {
+      case "tcp":
+      case "6":
+        return Optional.of( 6 );
+      case "udp":
+      case "17":
+        return Optional.of( 17 );
+      case "icmp":
+      case "1":
+        return Optional.of( 1 );
+      default:
+        return Iterables.tryFind( Optional.fromNullable( Ints.tryParse( protocol ) ).asSet(), Range.closed( -1, 255 ) );
+    }
+  }
+
+  private static Predicate<NetworkAclEntry> entryPredicate( final Boolean egress,
+                                                            final Integer ruleNumber ) {
+    return Predicates.and(
+        CollectionUtils.propertyPredicate(
+            ruleNumber,
+            NetworkAcls.NetworkAclEntryFilterIntegerFunctions.RULE_NUMBER ),
+        CollectionUtils.propertyPredicate(
+            egress,
+            NetworkAcls.NetworkAclEntryFilterBooleanFunctions.EGRESS )
+    );
   }
 
   private static ComputeException handleException( final Exception e ) throws ComputeException {

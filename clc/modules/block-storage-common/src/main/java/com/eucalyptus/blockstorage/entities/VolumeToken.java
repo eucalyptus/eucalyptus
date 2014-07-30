@@ -66,13 +66,14 @@ import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -199,23 +200,18 @@ public class VolumeToken extends AbstractPersistent {
 	}
 	
 	public VolumeExportRecord getValidExport(String ip, String iqn) throws EucalyptusCloudException {		
-		EntityTransaction db = Entities.get(VolumeToken.class);
-		try {
+		try (TransactionResource tran = Entities.transactionFor(VolumeToken.class)) {
 			VolumeToken tokenEntity = Entities.merge(this);		
 			for(VolumeExportRecord rec : tokenEntity.getExportRecords()) {
 				if(rec.getIsActive() && rec.getHostIp().equals(ip) && rec.getHostIqn().equals(iqn)) {
-					db.commit();
+					tran.commit();
 					return rec;
 				}
 			}
-			db.commit();
+			tran.commit();
 		} catch(Exception e) {
 			LOG.error("Error when checking for valid export to " + ip + " and " + iqn + " for volume " + this.getVolume().getVolumeId() + " and token " + this.getToken());
 			throw new EucalyptusCloudException("Failed to check for valid export",e);
-		} finally {
-			if(db.isActive()) { 
-				db.rollback();
-			}
 		}
 		return null;
 	}

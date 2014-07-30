@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -57,6 +58,11 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
   boolean delete( final NetworkInterfaceMetadata metadata ) throws VpcMetadataException;
 
   NetworkInterface save( NetworkInterface networkInterface ) throws VpcMetadataException;
+
+  NetworkInterface updateByExample( NetworkInterface example,
+                                    OwnerFullName ownerFullName,
+                                    String key,
+                                    Callback<NetworkInterface> updateCallback ) throws VpcMetadataException;
 
   @TypeMapper
   public enum NetworkInterfaceToNetworkInterfaceTypeTransform implements Function<NetworkInterface,NetworkInterfaceType> {
@@ -144,6 +150,8 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "status", FilterStringFunctions.STATE )
               .withStringProperty( "subnet-id", FilterStringFunctions.SUBNET_ID )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+              .withPersistenceAlias( "vpc", "vpc" )
+              .withPersistenceAlias( "subnet", "subnet" )
               .withPersistenceFilter( "attachment.attachment-id", "attachment.attachmentId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-id", "attachment.instanceId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-owner-id", "attachment.instanceOwnerId", Collections.<String>emptySet() )
