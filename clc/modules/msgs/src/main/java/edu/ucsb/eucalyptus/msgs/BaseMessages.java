@@ -47,7 +47,7 @@ public class BaseMessages {
   ) throws IOException {
     return (R) mapper.readValue( mapper.valueToTree( message ), resultType );
   }
-
+  
   @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
   private static final class BaseMessageMixIn { }
 }

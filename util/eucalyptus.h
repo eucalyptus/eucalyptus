@@ -511,6 +511,7 @@ extern const char *euca_error_names[];
 }
 #endif /* ! EUCA_FREE */
 
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
