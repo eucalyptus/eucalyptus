@@ -182,7 +182,6 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
         releaseNetworkResourcesType.setVpc( allocation.getSubnet( ) == null ?
             null :
             CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ).getVpc( ) ) );
-        releaseNetworkResourcesType.setSubnet( CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ) ) );
         releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
         Networking.getInstance( ).release( releaseNetworkResourcesType );
       } catch ( final Exception ex ) {

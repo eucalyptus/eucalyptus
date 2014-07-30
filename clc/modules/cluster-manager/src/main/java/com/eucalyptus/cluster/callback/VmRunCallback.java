@@ -73,6 +73,7 @@ import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
@@ -153,7 +154,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-        vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( !EdgeNetworking.isEnabled( ) ) {
+          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        }
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );
@@ -162,7 +165,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
         final Address addr = getAddress( );
-        if ( addr != null ) {
+        if ( addr != null && !addr.isReallyAssigned( ) ) {
             AddressingDispatcher.dispatch(
                 AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
                     new Callback.Success<BaseMessage>( ) {

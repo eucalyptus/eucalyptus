@@ -67,8 +67,13 @@ import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -83,6 +88,8 @@ import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.entities.AccountMetadata;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
@@ -95,6 +102,7 @@ import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance;
@@ -109,12 +117,21 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address extends UserMetadata<Address.State> implements AddressMetadata {
+
+  public static final String ID_PREFIX_ALLOC = "eipalloc";
+  public static final String ID_PREFIX_ASSOC = "eipassoc";
+
   public enum State {
     broken,
     unallocated,
     allocated,
     impending,
     assigned
+  }
+
+  public enum Domain {
+    standard,
+    vpc
   }
   
   public enum Transition {
@@ -163,17 +180,61 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
+
+  private static final long               serialVersionUID        = 1L;
+
   @Transient
   private String                          instanceUuid;
   @Transient
   private String                          instanceId;
   @Transient
   private String                          instanceAddress;
+
+  /**
+   * EC2 VPC domain. Null unless allocated for use in VPC.
+   */
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_domain" )
+  private Domain                          domain;
+
+  /**
+   * EC2 VPC allocation identifier. Null unless allocated for use in VPC.
+   */
+  @Column( name = "metadata_allocation_id" )
+  private String                          allocationId;
+
+  /**
+   * EC2 VPC association identifier. Null unless associated and allocated for use in VPC.
+   */
+  @Column( name = "metadata_association_id" )
+  private String                          associationId;
+
+  /**
+   * EC2 VPC network interface identifier. Null unless associated and allocated for use in VPC.
+   */
+  @Column( name = "metadata_association_eni_id" )
+  private String                          networkInterfaceId;
+
+  /**
+   * EC2 VPC network interface owner identifier. Null unless associated and allocated for use in VPC.
+   */
+  @Column( name = "metadata_association_eni_owner_id" )
+  private String                          networkInterfaceOwnerId;
+
+  /**
+   * EC2 VPC private address. Null unless associated and allocated for use in VPC.
+   */
+  @Column( name = "metadata_association_private_address" )
+  private String privateAddress;
+
   public static String                    UNASSIGNED_INSTANCEUUID = "";
   public static String                    UNASSIGNED_INSTANCEID   = "available";
   public static String                    UNASSIGNED_INSTANCEADDR = "0.0.0.0";
   public static String                    PENDING_ASSIGNMENT      = "pending";
   public static String                    PENDING_ASSIGNMENTUUID  = "";
+  public static String                    ASSIGNED_UNKNOWN_INSTANCEUUID  = "";
+  public static String                    ASSIGNED_UNKNOWN_INSTANCEID    = "assigned";
+  public static String                    ASSIGNED_UNKNOWN_INSTANCEADDR  = "0.0.0.0";
   @Transient
   private AtomicMarkableReference<State>  atomicState;
   @Transient
@@ -229,6 +290,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceUuid = UNASSIGNED_INSTANCEUUID;
       this.instanceId = UNASSIGNED_INSTANCEID;
+      this.associationId = null;
+      this.networkInterfaceId = null;
+      this.networkInterfaceOwnerId = null;
+      this.privateAddress = null;
       Addresses.getInstance( ).registerDisabled( this );
       this.atomicState.set( State.unallocated, false );
     } else if ( !this.instanceId.equals( UNASSIGNED_INSTANCEID ) ) {
@@ -243,6 +308,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         this.instanceId = UNASSIGNED_INSTANCEID;
+        this.associationId = null;
+        this.networkInterfaceId = null;
+        this.networkInterfaceOwnerId = null;
+        this.privateAddress = null;
         Address.removeAddress( this.getDisplayName( ) );
         this.atomicState.set( State.unallocated, false );
       } else {
@@ -271,12 +340,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return true;
   }
   
-  public Address allocate( final OwnerFullName ownerFullName ) {
+  public Address allocate( final OwnerFullName ownerFullName, final Domain domain ) {
     this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
       public void top( ) {
         Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        Address.this.associationId = null;
+        Address.this.networkInterfaceId = null;
+        Address.this.networkInterfaceOwnerId = null;
+        Address.this.privateAddress = null;
+        Address.this.allocationId = domain == Domain.vpc ? ResourceIdentifiers.generateString( ID_PREFIX_ALLOC ) : null;
+        Address.this.domain = domain;
         Address.this.setOwner( ownerFullName );
         Address.addAddress( Address.this );
         try {
@@ -303,6 +378,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        Address.this.associationId = null;
+        Address.this.networkInterfaceId = null;
+        Address.this.networkInterfaceOwnerId = null;
+        Address.this.privateAddress = null;
+        Address.this.allocationId = null;
+        Address.this.domain = null;
         Address.removeAddress( Address.this.getDisplayName( ) );
         Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
@@ -360,6 +441,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        Address.this.associationId = null;
+        Address.this.networkInterfaceId = null;
+        Address.this.networkInterfaceOwnerId = null;
+        Address.this.privateAddress = null;
       }
     };
     if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
@@ -369,7 +454,31 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     }
     return this;
   }
-  
+
+  public Address unassign( @Nonnull final NetworkInterface networkInterface ) {
+    SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
+      public void top( ) {
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
+        Address.this.instanceId = UNASSIGNED_INSTANCEID;
+        Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        Address.this.associationId = null;
+        Address.this.networkInterfaceId = null;
+        Address.this.networkInterfaceOwnerId = null;
+        Address.this.privateAddress = null;
+      }
+
+      public void bottom( ) {
+      }
+    };
+    if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
+      this.transition( State.impending, State.allocated, this.isPending( ), false, unassign );
+    } else {
+      this.transition( State.assigned, State.allocated, false, false, unassign );
+    }
+    return this;
+  }
+
   public Address pendingAssignment( ) {
     this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
@@ -392,6 +501,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public Address assign( final VmInstance vm ) {
+    if ( vm.getVpcId( ) != null ) throw new IllegalArgumentException( "Cannot assign address to VPC instance" );
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
         Address.this.setInstanceInfo(
@@ -410,6 +520,47 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.transition( State.allocated, State.assigned, false, true, assign );
     }
     fireUsageEvent( new Supplier<EventActionInfo<AddressAction>>() {
+      @Override
+      public EventActionInfo<AddressAction> get() {
+        return AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() );
+      }
+    } );
+    return this;
+  }
+
+  public Address assign( @Nonnull  final NetworkInterface networkInterface,
+                         @Nullable final VmInstance vm ) {
+    final SplitTransition assign = new SplitTransition( Transition.assigning ) {
+      public void top( ) {
+        Address.this.setNetworkInterfaceInfo(
+          networkInterface.getDisplayName( ),
+          networkInterface.getOwnerAccountNumber( ),
+          networkInterface.getPrivateIpAddress( )
+        );
+        if ( vm != null ) {
+          Address.this.setInstanceInfo(
+              vm.getInstanceUuid( ),
+              vm.getInstanceId( ),
+              vm.getPrivateAddress( )
+          );
+        } else {
+          Address.this.setInstanceInfo(
+              ASSIGNED_UNKNOWN_INSTANCEUUID,
+              ASSIGNED_UNKNOWN_INSTANCEID,
+              ASSIGNED_UNKNOWN_INSTANCEADDR
+          );
+        }
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
+      }
+
+      public void bottom( ) {}
+    };
+    if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
+      this.transition( State.impending, State.assigned, true, false, assign );
+    } else {
+      this.transition( State.allocated, State.assigned, false, false, assign );
+    }
+    if ( vm != null ) fireUsageEvent( new Supplier<EventActionInfo<AddressAction>>() {
       @Override
       public EventActionInfo<AddressAction> get() {
         return AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() );
@@ -560,12 +711,51 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.stateUuid;
   }
 
+  @Nullable
+  public Domain getDomain( ) {
+    return domain;
+  }
+
+  @Nullable
+  public String getAllocationId( ) {
+    return allocationId;
+  }
+
+  @Nullable
+  public String getAssociationId( ) {
+    return associationId;
+  }
+
+  @Nullable
+  public String getNetworkInterfaceId( ) {
+    return networkInterfaceId;
+  }
+
+  @Nullable
+  public String getNetworkInterfaceOwnerId( ) {
+    return networkInterfaceOwnerId;
+  }
+
+  @Nullable
+  public String getPrivateAddress( ) {
+    return privateAddress;
+  }
+
   private void setInstanceInfo( final String instanceUuid,
                                 final String instanceId,
                                 final String instanceAddress ) {
     this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
+  }
+
+  private void setNetworkInterfaceInfo( final String networkInterfaceId,
+                                        final String networkInterfaceOwnerId,
+                                        final String privateAddress ) {
+    this.associationId = ResourceIdentifiers.generateString( ID_PREFIX_ASSOC );
+    this.networkInterfaceId = networkInterfaceId;
+    this.networkInterfaceOwnerId = networkInterfaceOwnerId;
+    this.privateAddress = privateAddress;
   }
 
   @Override
@@ -592,19 +782,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public AddressInfoType getAdminDescription( ) {
-    String name = this.getName( );
-    String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
-    return new AddressInfoType( name, desc );
+    final AddressInfoType addressInfoType = TypeMappers.transform( this, AddressInfoType.class );
+    final String desc = String.format( "%s (%s)", this.getInstanceId(), this.getOwner() );
+    addressInfoType.setInstanceId( desc );
+    return addressInfoType;
   }
-  
-  public AddressInfoType getDescription( ) {
-    String name = this.getName( );
-    String desc = UNASSIGNED_INSTANCEID.equals( this.getInstanceId( ) )
-        ? ""
-        : this.getInstanceId( );
-    return new AddressInfoType( name, desc );
-  }
-  
+
   public abstract class SplitTransition {
     private Transition t;
     private State      previous;

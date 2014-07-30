@@ -29,17 +29,20 @@
     <!--2008-02-01-->
   <mapping name="AllocateAddress" class="com.eucalyptus.compute.common.AllocateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="domain" field="domain" usage="optional"/>
   </mapping>
     <!--2008-02-01-->
   <mapping name="AllocateAddressResponse" class="com.eucalyptus.compute.common.AllocateAddressResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="publicIp" field="publicIp" />
-    <value name="domain" constant="standard" />
+    <value name="domain" field="domain" />
+    <value name="allocationId" field="allocationId" usage="optional" />
   </mapping>
     <!--2008-02-01-->
   <mapping name="ReleaseAddress" class="com.eucalyptus.compute.common.ReleaseAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
-    <value name="publicIp" field="publicIp" />
+    <value name="publicIp" field="publicIp" usage="optional"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
   </mapping>
     <!--2008-02-01-->
   <mapping name="ReleaseAddressResponse" class="com.eucalyptus.compute.common.ReleaseAddressResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -79,19 +82,31 @@
     <!--2008-02-01-->
   <mapping name="AssociateAddress" class="com.eucalyptus.compute.common.AssociateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
-    <value name="publicIp" field="publicIp" />
-    <value name="instanceId" field="instanceId" />
+    <structure choice="true" ordered="false">
+      <value name="publicIp" field="publicIp" usage="optional"/>
+      <value name="allocationId" field="allocationId" usage="optional"/>
+    </structure>
+    <structure choice="true" ordered="false">
+      <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+      <value name="instanceId" field="instanceId" usage="optional"/>
+    </structure>
+    <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+    <value name="allowReassociation" field="allowReassociation" usage="optional"/>
   </mapping>
     <!--2008-02-01-->
   <mapping name="AssociateAddressResponse" class="com.eucalyptus.compute.common.AssociateAddressResponseType"
     extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="return" get-method="get_return" set-method="set_return" />
+    <value name="associationId" field="associationId" usage="optional"/>
   </mapping>
     <!--2008-02-01-->
   <mapping name="DisassociateAddress" class="com.eucalyptus.compute.common.DisassociateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
-    <value name="publicIp" field="publicIp" />
+    <structure choice="true" ordered="false">
+      <value name="publicIp" field="publicIp" usage="optional"/>
+      <value name="associationId" field="associationId" usage="optional"/>
+    </structure>
   </mapping>
     <!--2008-02-01-->
   <mapping name="DisassociateAddressResponse" class="com.eucalyptus.compute.common.DisassociateAddressResponseType"
@@ -99,11 +114,15 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
-    <!--2008-02-01-->
   <mapping class="com.eucalyptus.compute.common.AddressInfoType" abstract="true">
     <value name="publicIp" field="publicIp" />
-    <value name="domain" constant="standard" />
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="domain" field="domain" />
     <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="associationId" field="associationId" usage="optional" />
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional" />
+    <value name="networkInterfaceOwnerId" field="networkInterfaceOwnerId" usage="optional" />
+    <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
   </mapping>
 
 </binding>

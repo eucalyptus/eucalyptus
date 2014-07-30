@@ -56,7 +56,6 @@ abstract class NetworkingServiceSupport implements NetworkingService {
       resources.each{ NetworkResource resource -> resource.ownerId = null }
       release( new ReleaseNetworkResourcesType(
           vpc: request.vpc,
-          subnet: request.subnet,
           resources: resources ) );
       throw e
     }
@@ -67,8 +66,6 @@ abstract class NetworkingServiceSupport implements NetworkingService {
 
   protected Collection<NetworkResource> preparePublicIp( final PrepareNetworkResourcesType request,
                                                          final PublicIPResource publicIPResource ) {
-    final String zone = request.availabilityZone
-
     String address = null
     if ( publicIPResource.value ) { // handle restore
       String restoreQualifier = ''
@@ -90,7 +87,7 @@ abstract class NetworkingServiceSupport implements NetworkingService {
         Logs.extreme( ).error( e, e );
       }
     } else {
-      address = Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName
+      address = Addresses.allocateSystemAddress( ).displayName
     }
 
     address ?

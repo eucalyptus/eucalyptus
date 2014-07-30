@@ -93,7 +93,6 @@ class PrepareNetworkResourcesResponseType extends NetworkingMessage {
 
 class ReleaseNetworkResourcesType extends NetworkingMessage {
   String vpc
-  String subnet
   ArrayList<NetworkResource> resources = Lists.newArrayList( )
 }
 

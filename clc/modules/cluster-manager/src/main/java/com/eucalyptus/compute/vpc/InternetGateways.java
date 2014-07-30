@@ -48,6 +48,10 @@ public interface InternetGateways extends Lister<InternetGateway> {
                       String name,
                       Function<? super InternetGateway,T> transform ) throws VpcMetadataException;
 
+  <T> T lookupByVpc( @Nullable OwnerFullName ownerFullName,
+                     String vpcId,
+                     Function<? super InternetGateway,T> transform ) throws VpcMetadataException;
+
   boolean delete( final InternetGatewayMetadata metadata ) throws VpcMetadataException;
 
   InternetGateway save( InternetGateway internetGateway ) throws VpcMetadataException;

@@ -183,9 +183,4 @@ public class NetworkInterfaceAttachment implements Serializable {
   public void setDeleteOnTerminate( final Boolean deleteOnTerminate ) {
     this.deleteOnTerminate = deleteOnTerminate;
   }
-
-  @PostLoad
-  protected void postLoad( ) {
-    this.instance = networkInterface.getInstance( );
-  }
 }
