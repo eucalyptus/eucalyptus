@@ -155,11 +155,17 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       final PrepareNetworkResourcesType request,
       final VpcNetworkInterfaceResource vpcNetworkInterfaceResource
   ) {
-    VpcNetworkInterfaceResource resource = preparePrivateIp( request, new PrivateIPResource(
-        ownerId: vpcNetworkInterfaceResource.ownerId,
-        value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
-      vpcNetworkInterfaceResource.privateIp = value
-      vpcNetworkInterfaceResource
+    VpcNetworkInterfaceResource resource
+
+    if ( vpcNetworkInterfaceResource.mac == null ) { // using existing network interface, nothing to do
+      resource = vpcNetworkInterfaceResource
+    } else {
+      resource = preparePrivateIp( request, new PrivateIPResource(
+          ownerId: vpcNetworkInterfaceResource.ownerId,
+          value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
+        vpcNetworkInterfaceResource.privateIp = value
+        vpcNetworkInterfaceResource
+      }
     }
 
     resource ?

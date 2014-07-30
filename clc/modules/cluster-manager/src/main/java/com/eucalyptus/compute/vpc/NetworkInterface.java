@@ -21,12 +21,15 @@ package com.eucalyptus.compute.vpc;
 
 import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
 import java.util.Collection;
+import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
@@ -34,13 +37,16 @@ import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.NetworkInterfaceAssociationType;
 import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -86,6 +92,7 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   public static NetworkInterface create( final OwnerFullName owner,
                                          final Vpc vpc,
                                          final Subnet subnet,
+                                         final Set<NetworkGroup> networkGroups,
                                          final String displayName,
                                          final String macAddress,
                                          final String privateIp,
@@ -93,6 +100,7 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     final NetworkInterface networkInterface = new NetworkInterface( owner, displayName );
     networkInterface.setVpc( vpc );
     networkInterface.setSubnet( subnet );
+    networkInterface.setNetworkGroups( networkGroups );
     networkInterface.setAvailabilityZone( subnet.getAvailabilityZone( ) );
     networkInterface.setDescription( description );
     networkInterface.setState( State.available );
@@ -127,6 +135,14 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   @JoinColumn( name = "metadata_instance_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance instance;
+
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "metadata_network_interfaces_groups",
+      joinColumns =        @JoinColumn( name = "networkinterface_id" ),
+      inverseJoinColumns = @JoinColumn( name = "networkgroup_id" ) )
+  @ManyToMany
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<NetworkGroup> networkGroups = Sets.newHashSet();
 
   @Column( name = "metadata_zone", nullable = false, updatable = false )
   private String availabilityZone;
@@ -188,6 +204,14 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public void setSubnet( final Subnet subnet ) {
     this.subnet = subnet;
+  }
+
+  public Set<NetworkGroup> getNetworkGroups( ) {
+    return networkGroups;
+  }
+
+  public void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
+    this.networkGroups = networkGroups;
   }
 
   VmInstance getInstance() {

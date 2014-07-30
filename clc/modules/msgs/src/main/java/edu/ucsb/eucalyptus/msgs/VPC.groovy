@@ -512,7 +512,9 @@ class CreateNetworkInterfaceType extends VpcMessage {
   String subnetId;
   String description;
   String privateIpAddress;
+  @HttpEmbedded
   SecurityGroupIdSetType groupSet;
+  @HttpEmbedded
   PrivateIpAddressesSetRequestType privateIpAddressesSet;
   Integer secondaryPrivateIpAddressCount;
   CreateNetworkInterfaceType() {  }
@@ -653,7 +655,8 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
       final String privateDnsName,
       final Boolean sourceDestCheck,
       final NetworkInterfaceAssociationType association,
-      final NetworkInterfaceAttachmentType attachment ) {
+      final NetworkInterfaceAttachmentType attachment,
+      final Collection<GroupItemType> securityGroups ) {
     this.networkInterfaceId = networkInterfaceId
     this.subnetId = subnetId
     this.vpcId = vpcId
@@ -669,6 +672,17 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
     this.sourceDestCheck = sourceDestCheck
     this.association = association
     this.attachment = attachment;
+    this.privateIpAddressesSet = new NetworkInterfacePrivateIpAddressesSetType(
+      item: [
+          new NetworkInterfacePrivateIpAddressesSetItemType(
+              privateIpAddress: privateIpAddress,
+              privateDnsName: privateDnsName,
+              primary: true,
+              association: association
+          )
+      ] as ArrayList<NetworkInterfacePrivateIpAddressesSetItemType>
+    )
+    this.groupSet = new GroupSetType( securityGroups )
   }
   static Function<NetworkInterfaceType, String> id( ) {
     { NetworkInterfaceType networkInterface -> networkInterface.networkInterfaceId } as Function<NetworkInterfaceType, String>
@@ -991,6 +1005,7 @@ class DescribeInternetGatewaysType extends VpcMessage {
 class ModifyNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
   NullableAttributeValueType description;
+  @HttpEmbedded
   AttributeBooleanValueType sourceDestCheck;
   SecurityGroupIdSetType groupSet;
   ModifyNetworkInterfaceAttachmentType attachment;

@@ -163,7 +163,7 @@ class NINetworkInterface {
   @XmlElement Integer deviceIndex
   @XmlElement String macAddress
   @XmlElement String privateIp
-  @XmlElementWrapper @XmlElement(name="value") List<String> privateIpAddresses = Lists.newArrayList( )
+  @XmlElement String publicIp
   @XmlElement Boolean sourceDestCheck
   @XmlElementWrapper @XmlElement(name="value") List<String> securityGroups = Lists.newArrayList( )
 }

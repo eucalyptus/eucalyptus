@@ -853,6 +853,21 @@ public class NetworkGroups {
     return ruleList;
   }
 
+  @RestrictedTypes.Resolver( NetworkGroup.class )
+  public enum Lookup implements Function<String, NetworkGroup> {
+    INSTANCE;
+
+    @Override
+    public NetworkGroup apply( final String identifier ) {
+      try {
+        return NetworkGroups.lookupByGroupId( identifier );
+      } catch ( NoSuchMetadataException e ) {
+        throw Exceptions.toUndeclared( e );
+      }
+    }
+  }
+
+
   public static class NetworkGroupFilterSupport extends FilterSupport<NetworkGroup> {
     public NetworkGroupFilterSupport() {
       super( builderFor( NetworkGroup.class )

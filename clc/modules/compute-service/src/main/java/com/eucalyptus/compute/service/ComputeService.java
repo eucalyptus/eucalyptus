@@ -42,7 +42,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vm.VmControl;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Objects;
