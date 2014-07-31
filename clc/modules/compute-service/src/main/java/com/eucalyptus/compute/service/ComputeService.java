@@ -20,9 +20,13 @@
 package com.eucalyptus.compute.service;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+
 import java.util.NoSuchElementException;
+
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.component.ComponentException;
+
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -38,9 +42,11 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmControl;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Objects;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
@@ -49,19 +55,22 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
  *
  */
 public class ComputeService {
+  private static Logger LOG = Logger.getLogger( ComputeService.class );
 
   public ComputeMessage dispatchAction( final ComputeMessage request ) throws EucalyptusCloudException {
+    LOG.debug(request.toSimpleString());
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( request ), user ) ) {
       throw new ComputeServiceAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
-
     try {
-      final BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      backendRequest = backendRequest.regardingRequest(request);
       final BaseMessage backendResponse = send( backendRequest );
       final ComputeMessage response =
           (ComputeMessage) BaseMessages.deepCopy( backendResponse, request.getReply( ).getClass( ) );
-      response.setCorrelationId( request.getCorrelationId( ) );
+      response.setCorrelationId( request.getCorrelationId() );
+      LOG.debug(response.toSimpleString());
       return response;
     } catch ( Exception e ) {
       handleRemoteException( e );

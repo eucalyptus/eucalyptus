@@ -138,6 +138,7 @@ public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-
   }
 }
 public class AssociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
+  String associationId
 }
 /** *******************************************************************************/
 
@@ -158,10 +159,11 @@ public class AddressInfoType extends EucalyptusData {  //** added 2008-02-01  **
   String networkInterfaceOwnerId
   String privateIpAddress
   
-  def AddressInfoType(final publicIp, final instanceId)
+  def AddressInfoType( final String publicIp, final String domain, final String instanceId )
   {
-    this.publicIp = publicIp;
-    this.instanceId = instanceId;
+    this.publicIp = publicIp
+    this.domain = domain
+    this.instanceId = instanceId
   }
   
   def AddressInfoType()

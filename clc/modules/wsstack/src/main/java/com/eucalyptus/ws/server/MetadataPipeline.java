@@ -102,8 +102,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
                                              "  <title>404 - Not Found</title>\n" +
                                              " </head>\n" +
                                              " <body>\n" +
-                                             "  <h1>404 - Not Found: failed to find %s</h1>\n" +
-                                             "  <pre>%s</pre>\n" +
+                                             "  <h1>404 - Not Found</h1>\n" +
                                              " </body>\n" +
                                              "</html>\n";
   /**
@@ -172,19 +171,9 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       HttpResponse response = null;
       if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
-        String errorMessage = String.format(
-          ERROR_STRING,
-          newUri.replaceAll( remoteHost + ":", "" ),
-          replyEx != null && Logs.isDebug( ) ? Exceptions.string( replyEx ) : "" );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-        ChannelBuffer buffer = null;
-        if ( replyEx != null && !( replyEx instanceof NoSuchElementException ) ) {
-          buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
-          response.setContent( buffer );
-        } else {
-          buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
-          response.setContent( buffer );
-        }
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ERROR_STRING.getBytes( ) );
+        response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       } else {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );

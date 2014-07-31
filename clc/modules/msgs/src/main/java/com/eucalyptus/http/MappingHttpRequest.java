@@ -170,7 +170,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   
   @Override
   public void setMessage( Object message ) {
-    if ( message instanceof BaseMessage ) {
+    if ( message instanceof BaseMessage && this.getCorrelationId()!=null) {
       ( ( BaseMessage ) message ).setCorrelationId( this.getCorrelationId( ) );
     }
     super.setMessage( message );

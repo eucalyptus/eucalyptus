@@ -2450,6 +2450,25 @@ char *get_username(void)
     return passwd->pw_name;
 }
 
+//! Make a correlation ID that is prefixed with the ID received from other components
+char* get_correlation_id(const char* id) 
+{
+    char*new_corr_id = NULL;
+    if(id==NULL)
+        return NULL;
+    // correlation_id = [prefix(36)::new_id(36)]
+    if(id!=NULL && strstr(id, "::")!=NULL && strlen(id)>=74){ 
+        char* newid = system_output("uuidgen");
+        if(newid!=NULL){
+            new_corr_id = calloc(75,sizeof(char));
+            strncpy(new_corr_id, id, 38);
+            strncpy(new_corr_id+38, newid, 36);
+            EUCA_FREE(newid);
+        }
+    }
+    return new_corr_id;
+}
+
 #ifdef _UNIT_TEST
 
 //! Helper function to read from a file descriptor until EOF,

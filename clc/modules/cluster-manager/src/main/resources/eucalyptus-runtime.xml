@@ -115,7 +115,9 @@
       <inbound>
         <inbound-endpoint ref="AddressWS"/>
       </inbound>
-      <component class="com.eucalyptus.address.AddressManager"/>
+      <component>
+        <spring-object bean="addressManager"/>
+      </component>
     </service>
 
   </model>

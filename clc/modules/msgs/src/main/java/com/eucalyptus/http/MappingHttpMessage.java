@@ -109,7 +109,7 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
   }
 
   public void setMessage( Object message ) {
-    if( message instanceof BaseMessage ) {
+    if( message instanceof BaseMessage && this.getCorrelationId()!=null) {
       ((BaseMessage)message).setCorrelationId( this.getCorrelationId( ) );
     }
     this.message = message;

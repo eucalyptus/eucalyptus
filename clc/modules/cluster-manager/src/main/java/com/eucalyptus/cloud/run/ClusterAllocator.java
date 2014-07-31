@@ -83,8 +83,11 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
@@ -121,6 +124,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
@@ -136,6 +140,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -262,7 +267,15 @@ public class ClusterAllocator implements Runnable {
     for ( final Cluster cluster : clustersToUpdate ) {
       ResourceStateCallback cb = new ResourceStateCallback();
       cb.setSubject( cluster );
+     
       Request<DescribeResourcesType,DescribeResourcesResponseType> request = AsyncRequests.newRequest( cb );
+      try{
+        final BaseMessage originMsg = MessageContexts.lookup(this.allocInfo.getReservationId(), 
+            edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
+        request.getRequest().regardingRequest(originMsg);
+      }catch(final Exception ex){
+        ;
+      }
       this.messages.addRequest( State.UPDATE_RESOURCES, request );
     }
   }
@@ -473,6 +486,16 @@ public class ClusterAllocator implements Runnable {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo );
       final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( callback );
+      
+      try{
+        final BaseMessage parentReq = MessageContexts.lookup(req.getRequest().getInstanceId(), 
+            edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
+        if(parentReq!=null)
+          req.getRequest().regardingRequest(parentReq);
+      }catch(final Exception ex){
+        LOG.warn("Failed to set correlation id to VmRunType", ex);
+      }
+      
       this.messages.addRequest( State.CREATE_VMS, req );
       this.messages.addCleanup( new Runnable( ) {
         @Override

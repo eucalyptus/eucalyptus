@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
+import static com.google.common.base.Objects.firstNonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
@@ -432,36 +434,33 @@ public class VpcManager {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String subnetId = Identifier.subnet.normalize( request.getSubnetId( ) );
+    final String privateIp = request.getPrivateIpAddress( ) != null ?
+        request.getPrivateIpAddress( ) :
+        request.getPrivateIpAddressesSet( ) != null && !request.getPrivateIpAddressesSet( ).getItem( ).isEmpty( ) ?
+            request.getPrivateIpAddressesSet( ).getItem( ).get( 0 ).getPrivateIpAddress( ) :
+            null;
     final Supplier<NetworkInterface> allocator = new Supplier<NetworkInterface>( ) {
       @Override
       public NetworkInterface get( ) {
         try {
-          final Subnet subnet =
-              subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity() );
+          final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity() );
           final Vpc vpc = subnet.getVpc();
-          final String identifier = Identifier.eni.generate( );
-          final String privateIp = request.getPrivateIpAddress( ); //TODO:STEVE: private ip allocation
-          if ( privateIp==null ) {
-            throw new ClientComputeException( " InvalidParameterValue", "Private IP address is required" );
+          final String identifier = Identifier.eni.generate();
+          if ( privateIp != null ) {
+            final Cidr cidr = Cidr.parse( subnet.getCidr( ) );
+            if ( !cidr.contains( privateIp ) ) {
+              throw new ClientComputeException( "InvalidParameterValue", "Address does not fall within the subnet's address range" );
+            } else if ( !Iterables.contains( Iterables.skip( IPRange.fromCidr( cidr ), 3 ), PrivateAddresses.asInteger( privateIp ) ) ) {
+              throw new ClientComputeException( "InvalidParameterValue", "Address is in subnet's reserved address range" );
+            }
           }
-          final Cidr cidr = Cidr.parse( subnet.getCidr() );
-          if ( !cidr.contains( privateIp ) ) {
-            throw new ClientComputeException( " InvalidParameterValue", "Address does not fall within the subnet's address range" );
-          } else if ( !Iterables.contains( Iterables.skip( IPRange.fromCidr( cidr ), 3 ), PrivateAddresses.asInteger( privateIp ) ) ) {
-            throw new ClientComputeException( " InvalidParameterValue", "Address is in subnet's reserved address range" );
-          }
-          //TODO:STEVE: mac address prefix?
-          final String mac = String.format( "d0:0d:%s:%s:%s:%s", identifier.substring( 4, 6 ), identifier.substring( 6, 8 ), identifier.substring( 8, 10 ), identifier.substring( 10, 12 ) );
-          return networkInterfaces.save( NetworkInterface.create(
-              ctx.getUserFullName( ),
-              vpc,
-              subnet,
-              identifier,
-              mac,
-              privateIp,
-              request.getDescription() ) );
+          final String mac = NetworkInterfaceHelper.mac( identifier );
+          final String ip = NetworkInterfaceHelper.allocate( vpc.getDisplayName( ), subnet.getDisplayName( ), identifier, mac, privateIp );
+          return networkInterfaces.save( NetworkInterface.create( ctx.getUserFullName(), vpc, subnet, identifier, mac, ip, firstNonNull( request.getDescription( ), "" ) ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet not found '" + request.getSubnetId() + "'" ) );
+        } catch ( ResourceAllocationException ex ) {
+          throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", ex.getMessage( ) ) );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
@@ -803,6 +802,7 @@ public class VpcManager {
                   "InvalidNetworkInterface.InUse",
                   "The network interface is in use '"+request.getNetworkInterfaceId()+"'" );
             }
+            NetworkInterfaceHelper.release( networkInterface );
             networkInterfaces.delete( networkInterface );
           } // else treat this as though the network interface does not exist
           return null;

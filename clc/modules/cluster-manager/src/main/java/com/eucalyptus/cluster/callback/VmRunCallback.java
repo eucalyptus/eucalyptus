@@ -63,8 +63,11 @@
 package com.eucalyptus.cluster.callback;
 
 import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.AddressingDispatcher;
@@ -73,7 +76,9 @@ import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
@@ -87,6 +92,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -153,7 +159,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-        vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( !EdgeNetworking.isEnabled( ) ) {
+          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        }
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );
@@ -162,9 +170,10 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
         final Address addr = getAddress( );
-        if ( addr != null ) {
+        if ( addr != null && !addr.isReallyAssigned( ) ) {
+            final BaseMessage runInstanceReq = MessageContexts.lookup(input.getInstanceId(), edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
             AddressingDispatcher.dispatch(
-                AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
+                AsyncRequests.newRequest( addr.assign( vm ).getCallback(runInstanceReq) ).then(
                     new Callback.Success<BaseMessage>( ) {
                       @Override
                       public void fire( final BaseMessage response ) {

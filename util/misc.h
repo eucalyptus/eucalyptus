@@ -185,6 +185,7 @@ int euca_execlp(int *pStatus, const char *file, ...);
 int euca_run_workflow_parser(const char *line, void *data);
 int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
+char* get_correlation_id(const char*);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

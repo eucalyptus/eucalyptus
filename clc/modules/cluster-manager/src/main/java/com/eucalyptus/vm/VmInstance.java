@@ -125,6 +125,7 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
@@ -1254,13 +1255,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       // Iterate through the list of volume attachments and populate ebs mappings
       for (VmVolumeAttachment attachment : volAttachments ) {
         if (attachment.getIsRootDevice()) {
-          m.put( "block-device-mapping/ami", attachment.getDevice() );
-          m.put( "block-device-mapping/emi", attachment.getDevice() );
+          m.put( "block-device-mapping/ami", attachment.getShortDeviceName() );
+          m.put( "block-device-mapping/emi", attachment.getShortDeviceName() );
           m.put( "block-device-mapping/root", attachment.getDevice() );
         }
         // add only volumes added at start up time and don't list root see EUCA-8636
         if (attachment.getAttachedAtStartup() && !attachment.getIsRootDevice())
-          m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getDevice() );
+          m.put( "block-device-mapping/ebs" + String.valueOf(++ebsCount), attachment.getShortDeviceName() );
       }
 
       // Using ephemeral attachments for bfebs instances only, can be extended to be used by all other instances
@@ -1270,16 +1271,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       // Iterate through the list of ephemeral attachments and populate ephemeral mappings
       if (!ephemeralAttachments.isEmpty()) {
         for(VmEphemeralAttachment attachment : ephemeralAttachments){
-          m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getDevice() );
+          m.put( "block-device-mapping/" + attachment.getEphemeralId(), attachment.getShortDeviceName() );
         }
       }
-    } else {
+    } else if (this.bootRecord.getMachine() instanceof MachineImageInfo) {
+      MachineImageInfo mii = (MachineImageInfo) this.bootRecord.getMachine();
+      // probably using mii.getRootDeviceName() is a better idea instead of hard-coded "/dev/sda1"
+      // but it might create a collision with ephemeral0 and swap
       m.put( "block-device-mapping/emi", "sda1" );
       m.put( "block-device-mapping/ami", "sda1" );
-      m.put( "block-device-mapping/ephemeral", "sda2" );
-      m.put( "block-device-mapping/ephemeral0", "sda2" );
-      m.put( "block-device-mapping/swap", "sda3" );
       m.put( "block-device-mapping/root", "/dev/sda1" );
+      if (mii.getVirtualizationType() == ImageMetadata.VirtualizationType.paravirtualized) {
+        m.put( "block-device-mapping/ephemeral0", "sda2" );
+        m.put( "block-device-mapping/swap", "sda3" );
+      } else {
+        m.put( "block-device-mapping/ephemeral0", "sdb" );
+      }
     }
     return m;
   }

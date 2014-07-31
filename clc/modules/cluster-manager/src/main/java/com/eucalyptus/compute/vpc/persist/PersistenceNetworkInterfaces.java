@@ -23,7 +23,12 @@ import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetada
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NetworkInterfaces;
+import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 
 /**
  *
@@ -43,5 +48,19 @@ public class PersistenceNetworkInterfaces extends VpcPersistenceSupport<NetworkI
   @Override
   protected NetworkInterface exampleWithName( final OwnerFullName ownerFullName, final String name ) {
     return NetworkInterface.exampleWithName( ownerFullName, name );
+  }
+
+  @RestrictedTypes.Resolver( NetworkInterface.class )
+  public enum Lookup implements Function<String, NetworkInterface> {
+    INSTANCE;
+
+    @Override
+    public NetworkInterface apply( final String identifier ) {
+      try {
+        return new PersistenceNetworkInterfaces( ).lookupByName( null, identifier, Functions.<NetworkInterface>identity( ) );
+      } catch ( VpcMetadataException e ) {
+        throw Exceptions.toUndeclared( e );
+      }
+    }
   }
 }

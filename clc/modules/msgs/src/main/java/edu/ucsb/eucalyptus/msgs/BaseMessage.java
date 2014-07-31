@@ -211,6 +211,7 @@ public class BaseMessage {
     return ( TYPE ) this;
   }
   
+  
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg ) {
     return ( TYPE ) regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
@@ -239,6 +240,32 @@ public class BaseMessage {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     this.userId = msg.userId;
     return ( TYPE ) this;
+  }
+  
+  public <TYPE extends BaseMessage> TYPE regardingRequest(final BaseMessage msg){
+    final String requestId = (msg==null || msg.extractRequestId()==null) ? "none" : msg.extractRequestId();
+   // LOG.debug(String.format("[%s] Setting request ID to %s", this.getClass().toString(), requestId));
+    return this.regardingRequest(requestId);
+  }
+  
+  public <TYPE extends BaseMessage> TYPE regardingRequest(final String requestId){
+    if(requestId!=null){
+      if(this.correlationId == null)
+        this.correlationId = String.format("%s::%s", requestId, UUID.randomUUID( ).toString( ));
+      else
+        this.correlationId = String.format("%s::%s", requestId, this.correlationId);
+    }
+    return ( TYPE ) this;
+  }
+  
+  private String extractRequestId() {
+    if(this.correlationId!=null){ 
+      if(this.correlationId.contains("::"))
+        return this.correlationId.substring(0, this.correlationId.indexOf("::"));
+      else
+        return this.correlationId;
+    }else
+      return null;
   }
     
   public String toString( ) {

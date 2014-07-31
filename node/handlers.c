@@ -2946,6 +2946,7 @@ int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%.36s][%s] assigning address: [%s]\n", SP(pMeta->correlationId), SP(instanceId), SP(publicIp));
     LOGDEBUG("[%s] invoked (publicIp=%s)\n", instanceId, publicIp);
 
     if (nc_state.H->doAssignAddress)
@@ -2970,6 +2971,7 @@ int doPowerDown(ncMetadata * pMeta)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%.36s] powering down\n", SP(pMeta->correlationId));
     LOGDEBUG("invoked\n");
 
     if (nc_state.H->doPowerDown)
@@ -3019,7 +3021,7 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n", instanceId, params->cores, params->disk,
+    LOGINFO("[%.36s][%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n", SP(pMeta->correlationId), instanceId, params->cores, params->disk,
             params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform, kernelId, ramdiskId);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
@@ -3077,7 +3079,7 @@ int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *sh
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] termination requested\n", instanceId);
+    LOGINFO("[%.36s][%s] termination requested\n", SP(pMeta->correlationId), instanceId);
 
     if (nc_state.H->doTerminateInstance)
         ret = nc_state.H->doTerminateInstance(&nc_state, pMeta, instanceId, force, shutdownState, previousState);
@@ -3103,6 +3105,7 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
+    LOGINFO("[%.36s][%s] rebooting requested\n", SP(pMeta->correlationId), SP(instanceId));
     LOGDEBUG("[%s] invoked\n", instanceId);
 
     if (nc_state.H->doRebootInstance)
@@ -3129,7 +3132,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     if (init())
         return 1;
 
-    LOGINFO("[%s] console output requested\n", instanceId);
+    LOGINFO("[%.36s][%s] console output requested\n", SP(pMeta->correlationId), instanceId);
 
     if (nc_state.H->doGetConsoleOutput)
         ret = nc_state.H->doGetConsoleOutput(&nc_state, pMeta, instanceId, consoleOutput);
@@ -3184,6 +3187,7 @@ int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remot
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%.36s] starting network (remoteHostsLen=%d port=%d vlan=%d)\n", SP(pMeta->correlationId), remoteHostsLen, port, vlan);
     LOGDEBUG("invoked (remoteHostsLen=%d port=%d vlan=%d)\n", remoteHostsLen, port, vlan);
 
     if (nc_state.H->doStartNetwork)
@@ -3213,6 +3217,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
+    LOGINFO("[%.36s][%s][%s] attaching volume (localDev=%s)\n", SP(pMeta->correlationId), instanceId, volumeId, localDev );
     LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
     if (nc_state.H->doAttachVolume)
@@ -3244,6 +3249,7 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
+    LOGINFO("[%.36s][%s][%s] detaching volume\n", SP(pMeta->correlationId), instanceId, volumeId);
     LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
 
     if (nc_state.H->doDetachVolume)
@@ -3276,7 +3282,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
+    LOGINFO("[%.36s][%s] starting instance bundling into bucket %s\n", SP(pMeta->correlationId), instanceId, bucketName);
     LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
              instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
 
@@ -3302,7 +3308,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] restarting bundling instance\n", instanceId);
+    LOGINFO("[%.36s][%s] restarting bundling instance\n", SP(pMeta->correlationId), instanceId);
     if (nc_state.H->doBundleRestartInstance)
         return (nc_state.H->doBundleRestartInstance(&nc_state, pMeta, instanceId));
     return (nc_state.D->doBundleRestartInstance(&nc_state, pMeta, instanceId));
@@ -3324,7 +3330,7 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] canceling bundling instance\n", instanceId);
+    LOGINFO("[%.36s][%s] canceling bundling instance\n", SP(pMeta->correlationId), instanceId);
 
     if (nc_state.H->doCancelBundleTask)
         ret = nc_state.H->doCancelBundleTask(&nc_state, pMeta, instanceId);
@@ -3353,7 +3359,7 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("describing bundle tasks (for %d instances)\n", instIdsLen);
+    LOGINFO("[%.36s] describing bundle tasks (for %d instances)\n", SP(pMeta->correlationId), instIdsLen);
 
     if (nc_state.H->doDescribeBundleTasks)
         ret = nc_state.H->doDescribeBundleTasks(&nc_state, pMeta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
@@ -3381,7 +3387,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s][%s] creating image\n", instanceId, volumeId);
+    LOGINFO("[%.36s][%s][%s] creating image\n", SP(pMeta->correlationId), instanceId, volumeId);
 
     if (nc_state.H->doCreateImage)
         ret = nc_state.H->doCreateImage(&nc_state, pMeta, instanceId, volumeId, remoteDev);
@@ -3441,6 +3447,7 @@ int doModifyNode(ncMetadata * pMeta, char *stateName)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%.36s] modifying node\n", SP(pMeta->correlationId));
     LOGDEBUG("invoked (stateName=%s)\n", stateName);
 
     if (nc_state.H->doModifyNode) {
@@ -3472,8 +3479,9 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%.36s] migrating %d instances\n", SP(pMeta->correlationId), instancesLen);
     LOGTRACE("invoked\n");
-
+  
     LOGDEBUG("verifying %d instance[s] for migration...\n", instancesLen);
     for (int i = 0; i < instancesLen; i++) {
         LOGDEBUG("verifying instance # %d...\n", i);
@@ -3521,7 +3529,7 @@ int doStartInstance(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] instance start requested\n", instanceId);
+    LOGINFO("[%.36s][%s] instance start requested\n", SP(pMeta->correlationId), instanceId);
     if (nc_state.H->doStartInstance)
         ret = nc_state.H->doStartInstance(&nc_state, pMeta, instanceId);
     else
@@ -3546,7 +3554,7 @@ int doStopInstance(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] instance shutdown requested\n", instanceId);
+    LOGINFO("[%.36s][%s] instance shutdown requested\n", SP(pMeta->correlationId), instanceId);
     if (nc_state.H->doStopInstance)
         ret = nc_state.H->doStopInstance(&nc_state, pMeta, instanceId);
     else

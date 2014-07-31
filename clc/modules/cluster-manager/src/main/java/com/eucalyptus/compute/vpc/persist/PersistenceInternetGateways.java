@@ -19,11 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc.persist;
 
+import java.util.Collections;
+import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.vpc.InternetGateway;
 import com.eucalyptus.compute.vpc.InternetGateways;
+import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -33,6 +42,22 @@ public class PersistenceInternetGateways extends VpcPersistenceSupport<CloudMeta
 
   public PersistenceInternetGateways( ) {
     super( "internet-gateway" );
+  }
+
+  @Override
+  public <T> T lookupByVpc( @Nullable final OwnerFullName ownerFullName,
+                            final String vpcId,
+                            final Function<? super InternetGateway, T> transform ) throws VpcMetadataException {
+    try {
+      return Iterables.getOnlyElement( listByExample(
+          InternetGateway.exampleWithOwner( ownerFullName ),
+          Predicates.alwaysTrue(),
+          Restrictions.eq( "vpc.displayName", vpcId ),
+          Collections.singletonMap( "vpc", "vpc" ),
+          transform ) );
+    } catch ( NoSuchElementException e ) {
+      throw new VpcMetadataNotFoundException( "Internet gateway not found for " + vpcId );
+    }
   }
 
   @Override

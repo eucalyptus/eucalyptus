@@ -356,6 +356,7 @@ public class NetworkGroupManager {
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
+      //TODO:STEVE: fail for non-vpc group ...
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       try {
@@ -405,6 +406,7 @@ public class NetworkGroupManager {
       final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null ); //TODO:STEVE: Group lookup by name for default VPC
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
+        //TODO:STEVE: fail for non-vpc group ...
         try {
           final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null );
           for ( final NetworkRule rule : rules ) rule.setEgress( true );
