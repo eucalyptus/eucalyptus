@@ -62,12 +62,18 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesClusterResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 

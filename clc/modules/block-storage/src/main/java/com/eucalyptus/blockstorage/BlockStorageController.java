@@ -282,7 +282,8 @@ public class BlockStorageController {
     }
     
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
-        UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
+      LOG.debug(request.toSimpleString());  
+      UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
             throw new AccessDeniedException("Only admin can change walrus properties.");
         //test connection to ObjectStorage
@@ -300,10 +301,12 @@ public class BlockStorageController {
             }
             blockManager.setStorageProps(request.getStorageParams());
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
         StorageProperties.updateName();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
@@ -313,10 +316,12 @@ public class BlockStorageController {
             ArrayList<ComponentProperty> storageParams = blockManager.getStorageProps();
             reply.setStorageParams(storageParams);
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetVolumeTokenResponseType GetVolumeToken(GetVolumeTokenType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         GetVolumeTokenResponseType reply = (GetVolumeTokenResponseType) request.getReply();
         String volumeId = request.getVolumeId();
         LOG.info("Processing GetVolumeToken request for volume " + volumeId);
@@ -334,7 +339,8 @@ public class BlockStorageController {
             String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class));
             reply.setToken(encryptedToken);
             reply.setVolumeId(volumeId);
-            tran.commit();
+            tran.commit();    
+            LOG.debug(reply.toSimpleString());
             return reply;
         } catch(NoSuchElementException e) {
             throw new EucalyptusCloudException("Volume " + request.getVolumeId() + " not found", e);
@@ -354,6 +360,7 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         UnexportVolumeResponseType reply = request.getReply();
         final String token = request.getToken();
         final String volumeId = request.getVolumeId();
@@ -420,6 +427,7 @@ public class BlockStorageController {
             LOG.error("Failed UnexportVolume due to: " + e.getMessage(), e);
             throw new EucalyptusCloudException(e);
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -435,6 +443,7 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         final ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();
         final String volumeId = request.getVolumeId();
         final String token = request.getToken();
@@ -536,11 +545,12 @@ public class BlockStorageController {
             LOG.error("Failed ExportVolume transaction due to: " + e.getMessage(), e);
             throw new EucalyptusCloudException("Failed to add export",e);
         }
-
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
         if(!StorageProperties.enableStorage) {
             LOG.error("BlockStorage has been disabled. Please check your setup");
@@ -570,10 +580,12 @@ public class BlockStorageController {
             }
             tran.commit();
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
         if(!StorageProperties.enableStorage) {
             LOG.error("BlockStorage has been disabled. Please check your setup");
@@ -616,6 +628,7 @@ public class BlockStorageController {
             LOG.error("Exception looking up volume: " + volumeId, e);
             throw new EucalyptusCloudException(e);
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -791,6 +804,7 @@ public class BlockStorageController {
 
     //returns snapshots in progress or at the SC
     public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
         checker.transferPendingSnapshots();
         List<String> snapshotSet = request.getSnapshotSet();
@@ -820,6 +834,7 @@ public class BlockStorageController {
             }
             tran.commit();
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -831,6 +846,7 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
         StorageProperties.updateWalrusUrl();
@@ -866,6 +882,7 @@ public class BlockStorageController {
                 tran.rollback();
             }
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -903,6 +920,7 @@ public class BlockStorageController {
 	}*/
 
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
         if(!StorageProperties.enableStorage) {
@@ -979,6 +997,7 @@ public class BlockStorageController {
         VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, parentVolumeId, sizeAsInt);
         volumeService.add(volumeCreator);
 
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -1000,6 +1019,7 @@ public class BlockStorageController {
     }
 
     public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
 
         List<String> volumeSet = request.getVolumeSet();
@@ -1031,10 +1051,12 @@ public class BlockStorageController {
             }
             tran.commit();
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
         String provider = request.getOriginalProvider();
         provider = "com.eucalyptus.storage." + provider;
@@ -1056,6 +1078,7 @@ public class BlockStorageController {
                 throw new EucalyptusCloudException(e);
             }
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -1094,6 +1117,7 @@ public class BlockStorageController {
     }
 
     public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
+        LOG.debug(request.toSimpleString());
         DetachStorageVolumeResponseType reply = request.getReply();
         String volumeId = request.getVolumeId();
         LOG.info("Processing DetachVolume request for volume " + volumeId);
@@ -1106,6 +1130,7 @@ public class BlockStorageController {
             LOG.error("Failed to fully detach volume " + volumeId);
             reply.set_return(false);
         }
+        LOG.debug(reply.toSimpleString());
         return reply;
     }
 

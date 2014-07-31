@@ -139,6 +139,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
@@ -174,8 +175,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.VmControlMessage;
 
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
@@ -646,6 +649,16 @@ public class VmInstances {
 
   private static void cleanUp( final VmInstance vm,
                                final boolean rollbackNetworkingOnFailure ) {
+    BaseMessage originReq = null;
+    try{
+      originReq = MessageContexts.lookupLast(vm.getInstanceId(), Sets.<Class>newHashSet(
+          edu.ucsb.eucalyptus.msgs.TerminateInstancesType.class,
+          edu.ucsb.eucalyptus.msgs.StopInstancesType.class
+          ));
+    }catch(final Exception ex){
+      ;
+    }
+    
     final VmState vmLastState = vm.getLastState( );
     final VmState vmState = vm.getState( );
     RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
@@ -713,7 +726,10 @@ public class VmInstances {
     }
 
     try {
-      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( vm.getPartition( ) );
+      final TerminateCallback cb = new TerminateCallback( vm.getInstanceId( ));
+      if(originReq!=null)
+        cb.getRequest().regardingRequest(originReq);
+      AsyncRequests.newRequest(  cb ).dispatch( vm.getPartition( ) );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );

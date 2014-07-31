@@ -62,6 +62,7 @@ import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
@@ -85,14 +86,18 @@ import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
+
 import edu.ucsb.eucalyptus.cloud.VmInfo
+import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import org.apache.log4j.Logger
 import org.springframework.core.OrderComparator
 
 import javax.persistence.EntityTransaction
+
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy as JavaProxy
 import java.lang.reflect.Method
@@ -611,6 +616,15 @@ class VmInstanceLifecycleHelpers {
         Entities.transaction( NetworkGroup ) { EntityTransaction db ->
           if ( Entities.merge( net ).hasExtantNetwork( ) ) {
             final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) )
+            try{
+              final BaseMessage parentReq = MessageContexts.lookup(allocation.getReservationId(),
+                  edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
+              if(parentReq!=null)
+                callback.getRequest().regardingRequest(parentReq);
+            }catch(final Exception ex){
+              ;
+            }
+            
             messages.addRequest( State.CREATE_NETWORK, callback )
             EventRecord.here( ClusterAllocator, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( )
           }
