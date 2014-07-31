@@ -30,11 +30,11 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface PrivateAddressAllocator {
 
-  String allocate( String scope, Iterable<Integer> addresses ) throws NotEnoughResourcesException
+  String allocate( String scope, String tag, Iterable<Integer> addresses ) throws NotEnoughResourcesException
 
   void associate( String address, VmInstance instance ) throws ResourceAllocationException
 
-  void release( String scope, String address, String ownerId )
+  String release( String scope, String address, String ownerId )
 
   boolean verify( String scope, String address, String ownerId )
 

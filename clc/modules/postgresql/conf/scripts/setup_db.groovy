@@ -575,7 +575,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
     String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
     Sql sql = Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
-    if ( schema ) sql.execute( "SET search_path TO ${schema}" )
+    if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
   }
 

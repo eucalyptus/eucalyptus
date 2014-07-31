@@ -483,8 +483,10 @@ public class Upgrades {
       }
     }
     
-    public Sql getConnection( String databaseName ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( this.getVersionedName( databaseName ), null );
+    public Sql getConnection( String context ) throws Exception {
+      return Databases.getBootstrapper( ).getConnection(
+          this.getVersionedName( PersistenceContexts.toSchemaName( ).apply( context ) ),
+          PersistenceContexts.toSchemaName( ).apply( context ) );
     }
     
   }
