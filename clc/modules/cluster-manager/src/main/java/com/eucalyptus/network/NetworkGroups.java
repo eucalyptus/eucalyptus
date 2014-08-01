@@ -374,7 +374,7 @@ public class NetworkGroups {
         .apply( Lists.transform( activeNetworks, NetworkIndexTransform.INSTANCE ) ) );
     try ( final TransactionResource db = Entities.transactionFor( PrivateNetworkIndex.class  ) ) {
       for ( final PrivateNetworkIndex index :
-          Entities.query( PrivateNetworkIndex.inState( Reference.State.PENDING ), Entities.queryOptions().build() ) ) {
+          Entities.query( PrivateNetworkIndex.inState( Reference.State.PENDING ) ) ) {
         if ( isTimedOut( index.lastUpdateMillis(), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
           if ( taggedNetworkIndicies.contains( index.getDisplayName( ) ) ) {
             LOG.warn( String.format( "Pending network index (%s) timed out, setting state to EXTANT", index.getDisplayName( ) ) );
