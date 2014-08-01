@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,18 +60,32 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.exceptions;
+package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-@SuppressWarnings("serial")
-public class UnknownFileSizeException extends EucalyptusCloudException {
+public class FileResource extends StorageResource {
 
-	public UnknownFileSizeException(String fileName, Throwable ex) {
-		super("Unable to determine file size of " + fileName, ex);
+	public FileResource(String id, String path) {
+		super(id, path, StorageResource.Type.FILE);
 	}
 
-	public UnknownFileSizeException(String fileName) {
-		super("Unable to determine file size of " + fileName);
+	@Override
+	public Long getSize() throws Exception {
+		return new File(this.getPath()).length();
+	}
+
+	@Override
+	public InputStream getInputStream() throws Exception {
+		return new FileInputStream(new File(this.getPath()));
+	}
+
+	@Override
+	public OutputStream getOutputStream() throws Exception {
+		return new FileOutputStream(new File(this.getPath()));
 	}
 }

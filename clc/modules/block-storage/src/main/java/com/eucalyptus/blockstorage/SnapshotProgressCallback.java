@@ -69,7 +69,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
-import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;

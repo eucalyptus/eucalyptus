@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,40 +60,18 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.exceptions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
+@SuppressWarnings("serial")
+public class UnknownSizeException extends EucalyptusCloudException {
 
-/**
- * File stream with update callbacks to update on progress. Will call callback on each operation, callback must be selective on when to do update and should do
- * so asynchronously for best performance.
- * 
- */
-public class FileInputStreamWithCallback extends FileInputStream {
-
-	private SnapshotProgressCallback callback;
-
-	public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownSizeException {
-		super(file);
-		this.callback = callback;
+	public UnknownSizeException(String msg, Throwable ex) {
+		super(msg, ex);
 	}
 
-	@Override
-	public int read(byte[] b, int off, int len) throws IOException {
-		int bytesRead = super.read(b, off, len);
-		callback.update(bytesRead);
-		return bytesRead;
-	}
-
-	@Override
-	public int read(byte[] b) throws IOException {
-		int bytesRead = super.read(b);
-		callback.update(bytesRead);
-		return bytesRead;
+	public UnknownSizeException(String msg) {
+		super(msg);
 	}
 }

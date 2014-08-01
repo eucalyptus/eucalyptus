@@ -64,10 +64,10 @@ package com.eucalyptus.blockstorage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -119,11 +119,11 @@ import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotUploadInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotUploadInfo.SnapshotUploadState;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotFinalizeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotInitializeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotUploadPartException;
-import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
@@ -255,7 +255,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	 *            absolute path to the snapshot on the file system
 	 */
 	@Override
-	public void upload(String sourceFileName) throws SnapshotTransferException {
+	public void upload(StorageResource storageResource) throws SnapshotTransferException {
 		validateInput(); // Validate input
 		loadTransferConfig(); // Load the transfer configuration parameters from database
 		SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
@@ -276,14 +276,14 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
 		try {
 			// Get the uncompressed file size for uploading as metadata
-			Long uncompressedSize = getFileSize(sourceFileName);
+			Long uncompressedSize = storageResource.getSize();
 
 			// Setup the snapshot and part entities.
 			snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
 			Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
 			part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
 
-			FileInputStream inputStream = new FileInputStream(sourceFileName);
+			InputStream inputStream = storageResource.getInputStream();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			GZIPOutputStream gzipStream = new GZIPOutputStream(baos);
 			FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
@@ -458,14 +458,14 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	 * Not implemented
 	 */
 	@Override
-	public void resumeUpload(String sourceFileName) throws SnapshotTransferException {
+	public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
 		throw new SnapshotTransferException("Not supported yet");
 	}
 
 	/**
 	 * Downloads the compressed snapshot from objectstorage gateway to the filesystem
 	 */
-	public void download(String destinationFileName) throws SnapshotTransferException {
+	public void download(StorageResource storageResource) throws SnapshotTransferException {
 		LOG.debug("Downloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
 
 		validateInput();
@@ -488,25 +488,12 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		}
 
 		if (snapshotObj != null && snapshotObj.getObjectContent() != null) {
-			LOG.debug("Unzipping downloaded snapshot snapshotId=" + snapshotId + ", destination=" + destinationFileName);
+			LOG.debug("Unzipping downloaded snapshot snapshotId=" + snapshotId + ", destination=" + storageResource.getPath());
 			GZIPInputStream gzipStream = null;
-			FileOutputStream unzipStream = null;
+			OutputStream unzipStream = null;
 			try {
 				gzipStream = new GZIPInputStream(snapshotObj.getObjectContent());
-				int failedAttempts = 0;
-				do {
-					try {
-						unzipStream = new FileOutputStream(new File(destinationFileName));
-						break;
-					} catch (FileNotFoundException e) {
-						if ((++failedAttempts) < TX_RETRIES) {
-							LOG.debug("Failed to open FileOutputStream to " + destinationFileName + ". Will retry");
-						} else {
-							LOG.warn("Failed to open FileOutputStream to " + destinationFileName + " after " + failedAttempts + " attempts");
-							throw e;
-						}
-					}
-				} while (failedAttempts < TX_RETRIES);
+				unzipStream = storageResource.getOutputStream();
 				byte[] buffer = new byte[READ_BUFFER_SIZE];
 				int len;
 
@@ -514,8 +501,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 					unzipStream.write(buffer, 0, len);
 				}
 			} catch (Exception e) {
-				LOG.warn("Failed to unzip downloaded snapshot: snapshotId=" + snapshotId + ", destination=" + destinationFileName + " due to " + e.getMessage());
-				throw new SnapshotTransferException("Failed to unzip downloaded snapshot: snapshotId=" + snapshotId + ", destination=" + destinationFileName, e);
+				LOG.warn("Failed to unzip downloaded snapshot: snapshotId=" + snapshotId + ", destination=" + storageResource.getPath() + " due to "
+						+ e.getMessage());
+				throw new SnapshotTransferException("Failed to unzip downloaded snapshot: snapshotId=" + snapshotId + ", destination="
+						+ storageResource.getPath(), e);
 			} finally {
 				try {
 					if (unzipStream != null)
@@ -645,19 +634,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		if (eucaS3Client == null) {
 			throw new SnapshotTransferException("S3 client reference is invalid. Cannot upload snapshot " + snapshotId);
 		}
-	}
-
-	private Long getFileSize(String fileName) throws UnknownFileSizeException {
-		Long size = 0L;
-		if ((size = new File(fileName).length()) <= 0) {
-			try {
-				CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", fileName });
-				size = Long.parseLong(StringUtils.trimToEmpty(result.output));
-			} catch (Exception ex) {
-				throw new UnknownFileSizeException(fileName, ex);
-			}
-		}
-		return size;
 	}
 
 	private String createAndReturnBucketName() throws SnapshotTransferException {

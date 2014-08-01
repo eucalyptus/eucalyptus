@@ -250,7 +250,7 @@ public class BlockStorageUnitTestSupport {
             }
 
             @Override
-            public void upload(String sourceFileName) throws SnapshotTransferException {
+            public void upload(StorageResource storageResource) throws SnapshotTransferException {
 
             }
 
@@ -260,12 +260,12 @@ public class BlockStorageUnitTestSupport {
             }
 
             @Override
-            public void resumeUpload(String sourceFileName) throws SnapshotTransferException {
+            public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
 
             }
 
             @Override
-            public void download(String destinationFileName) throws SnapshotTransferException {
+            public void download(StorageResource storageResource) throws SnapshotTransferException {
 
             }
 
@@ -328,7 +328,7 @@ public class BlockStorageUnitTestSupport {
             }
 
             @Override
-            public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException {
+            public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException {
                 return null;
             }
 
@@ -388,7 +388,7 @@ public class BlockStorageUnitTestSupport {
             }
 
             @Override
-            public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+            public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
                 return null;
             }
 

@@ -73,13 +73,13 @@ public interface SnapshotTransfer {
 
 	public String prepareForUpload() throws SnapshotTransferException;
 
-	public void upload(String sourceFileName) throws SnapshotTransferException;
+	public void upload(StorageResource storageResource) throws SnapshotTransferException;
 
-	public void resumeUpload(String sourceFileName) throws SnapshotTransferException;
+	public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
 
 	public void cancelUpload() throws SnapshotTransferException;
 
-	public void download(String destinationFileName) throws SnapshotTransferException;
+	public void download(StorageResource storageResource) throws SnapshotTransferException;
 
 	public void delete() throws SnapshotTransferException;
 

@@ -80,7 +80,7 @@ public class ProbabalisticFailureStorageManager implements LogicalStorageManager
 	}
 
 	@Override
-	public List<String> createSnapshot(String volumeId, String snapshotId,
+	public StorageResource createSnapshot(String volumeId, String snapshotId,
 			String snapshotPointId, Boolean shouldTransferSnapshots)
 			throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
@@ -162,7 +162,7 @@ public class ProbabalisticFailureStorageManager implements LogicalStorageManager
 	}
 
 	@Override
-	public String prepareSnapshot(String snapshotId, int sizeExpected,
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected,
 			long actualSizeInMB) throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
 		return null;

@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
+import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
@@ -270,14 +271,14 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
+	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
 			throws EucalyptusCloudException {
 		String sanSnapshotId = resourceIdOnSan(snapshotId);
 		String sanVolumeId = null;
 		SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId);
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		int size = -1;
-		List<String> returnValues = new ArrayList<String>();
+		StorageResource storageResource = null;
 
 		try {
 			// Look up source volume in the database and get the backend volume ID
@@ -341,15 +342,14 @@ public class SANManager implements LogicalStorageManager {
 			}
 
 			if (shouldTransferSnapshots) {
-				String deviceName = connectionManager.connectTarget(iqn);
-				returnValues.add(deviceName);
-				returnValues.add(String.valueOf(size * StorageProperties.GB));
+				storageResource = connectionManager.connectTarget(iqn);
+				storageResource.setId(snapshotId);
 			}
 		} else {
 			throw new EucalyptusCloudException("Unable to create snapshot: " + snapshotId + " from volume: " + volumeId);
 		}
 
-		return returnValues;
+		return storageResource;
 	}
 
 	public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
@@ -686,7 +686,7 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
 
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		LOG.info("Preparing snapshot " + snapshotId + " of size: " + sizeExpected);
@@ -733,13 +733,14 @@ public class SANManager implements LogicalStorageManager {
 				}
 
 				// Run the connect
-				String deviceName = null;
+				StorageResource storageResource = null;
 				try {
 					// Negative luns are invalid, so don't include, i.e Equallogic uses no lun
 					if (lun >= 0) {
 						iqn = iqn + "," + String.valueOf(lun);
 					}
-					deviceName = connectionManager.connectTarget(iqn);
+					storageResource = connectionManager.connectTarget(iqn);
+					storageResource.setId(snapshotId);
 				} catch (Exception connEx) {
 					LOG.debug("Failed to connect SC to snapshot volume on SAN for snapshot " + snapshotId + ". Detaching and cleaning up.");
 					try {
@@ -756,7 +757,7 @@ public class SANManager implements LogicalStorageManager {
 				db = StorageProperties.getEntityWrapper();
 				db.add(snapInfo);
 				db.commit();
-				return deviceName;
+				return storageResource;
 			} catch (EucalyptusCloudException e) {
 				LOG.error("Error occured trying to connect the SC to the snapshot lun on the SAN.", e);
 				if (!connectionManager.deleteVolume(snapshotId)) {
@@ -812,7 +813,7 @@ public class SANManager implements LogicalStorageManager {
 		try {
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
 			String iqn = volumeInfo.getIqn();
-			String deviceName = connectionManager.connectTarget(iqn);
+			String deviceName = connectionManager.connectTarget(iqn).getPath();
 			return deviceName;
 		} catch (EucalyptusCloudException ex) {
 			LOG.error("Unable to find volume: " + volumeId);
@@ -836,7 +837,7 @@ public class SANManager implements LogicalStorageManager {
 
 		String iqn = connectionManager.createVolume(sanVolumeId, size);
 		if (iqn != null) {
-			String deviceName = connectionManager.connectTarget(iqn);
+			String deviceName = connectionManager.connectTarget(iqn).getPath();
 			// now copy
 			try {
 				SystemUtil.run(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName,
@@ -868,7 +869,7 @@ public class SANManager implements LogicalStorageManager {
 		String sanSnapshotId = resourceIdOnSan(snapshotId);
 		String iqn = connectionManager.createVolume(sanSnapshotId, size);
 		if (iqn != null) {
-			String deviceName = connectionManager.connectTarget(iqn);
+			String deviceName = connectionManager.connectTarget(iqn).getPath();
 			// now copy
 			try {
 				SystemUtil.run(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName,

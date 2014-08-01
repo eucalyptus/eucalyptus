@@ -67,6 +67,7 @@ package com.eucalyptus.blockstorage.san.common;
 
 import java.util.ArrayList;
 
+import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -122,7 +123,7 @@ public interface SANProvider {
 	 * @return
 	 * @throws EucalyptusCloudException
 	 */
-	public String connectTarget(String iqn) throws EucalyptusCloudException;
+	public StorageResource connectTarget(String iqn) throws EucalyptusCloudException;
 
 	/**
 	 * Returns a string that contains a list of volume metadata concatanated together. The returned string has the format:

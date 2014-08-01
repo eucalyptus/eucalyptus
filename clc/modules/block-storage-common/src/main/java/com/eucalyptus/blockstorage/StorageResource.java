@@ -62,38 +62,52 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
+public abstract class StorageResource {
 
-/**
- * File stream with update callbacks to update on progress. Will call callback on each operation, callback must be selective on when to do update and should do
- * so asynchronously for best performance.
- * 
- */
-public class FileInputStreamWithCallback extends FileInputStream {
-
-	private SnapshotProgressCallback callback;
-
-	public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownSizeException {
-		super(file);
-		this.callback = callback;
+	public static enum Type {
+		FILE, BLOCK, CEPH;
 	}
 
-	@Override
-	public int read(byte[] b, int off, int len) throws IOException {
-		int bytesRead = super.read(b, off, len);
-		callback.update(bytesRead);
-		return bytesRead;
+	private String id;
+	private String path;
+	private Type type;
+
+	public StorageResource(String id, String path, Type type) {
+		this.id = id;
+		this.path = path;
+		this.type = type;
 	}
 
-	@Override
-	public int read(byte[] b) throws IOException {
-		int bytesRead = super.read(b);
-		callback.update(bytesRead);
-		return bytesRead;
+	public String getId() {
+		return id;
 	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getPath() {
+		return path;
+	}
+
+	public void setPath(String path) {
+		this.path = path;
+	}
+
+	public Type getType() {
+		return type;
+	}
+
+	public void setType(Type type) {
+		this.type = type;
+	}
+
+	public abstract Long getSize() throws Exception;
+
+	public abstract InputStream getInputStream() throws Exception;
+
+	public abstract OutputStream getOutputStream() throws Exception;
 }
