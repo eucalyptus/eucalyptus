@@ -275,7 +275,7 @@ public class BlockStorageUnitTestSupport {
             }
 
             @Override
-            public Long getSizeInBytes() {
+            public Long getSizeInBytes() throws SnapshotTransferException {
                 return super.getSizeInBytes();
             }
         };
