@@ -185,7 +185,14 @@ int euca_execlp(int *pStatus, const char *file, ...);
 int euca_run_workflow_parser(const char *line, void *data);
 int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
-char* get_correlation_id(const char*);
+
+//! global variable and functions for setting correlation id
+//! 
+char *get_corrid(const char*);
+extern char thread_correlation_id[256];
+extern pid_t thread_pid;
+void set_corrid(const char* corr_id);
+void unset_corrid();
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

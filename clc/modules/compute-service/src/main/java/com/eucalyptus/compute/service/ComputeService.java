@@ -65,7 +65,6 @@ public class ComputeService {
     }
     try {
       BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
-      backendRequest = backendRequest.regardingRequest(request);
       final BaseMessage backendResponse = send( backendRequest );
       final ComputeMessage response =
           (ComputeMessage) BaseMessages.deepCopy( backendResponse, request.getReply( ).getClass( ) );

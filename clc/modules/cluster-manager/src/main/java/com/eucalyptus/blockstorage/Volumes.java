@@ -414,7 +414,7 @@ public class Volumes {
       public void fire( final Volume t ) {
         t.setState( State.GENERATING );
         try {
-          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingRequest( request );
+          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
           LOG.debug("Volume created");
 

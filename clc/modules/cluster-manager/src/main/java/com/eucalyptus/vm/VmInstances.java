@@ -727,8 +727,6 @@ public class VmInstances {
 
     try {
       final TerminateCallback cb = new TerminateCallback( vm.getInstanceId( ));
-      if(originReq!=null)
-        cb.getRequest().regardingRequest(originReq);
       AsyncRequests.newRequest(  cb ).dispatch( vm.getPartition( ) );
     } catch ( Exception ex ) {
       LOG.error( ex );

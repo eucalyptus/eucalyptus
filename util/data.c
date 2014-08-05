@@ -1253,3 +1253,5 @@ libvirtNicType libvirtNicType_from_string(const char *str)
 {
     return (libvirtNicType) get_str_index(libvirtNicTypeNames, str);
 }
+
+

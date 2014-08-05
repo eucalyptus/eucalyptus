@@ -814,6 +814,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     char buf[LOGLINEBUF] = "";
     va_list ap = { {0} };
     const char *prefix_spec = NULL;
+    char new_format[512];
 
     // return if level is invalid or below the threshold
     if (level < log_level) {
@@ -937,15 +938,22 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         offset += size;
     }
 
+    pid_t cur_pid = getpid();
+    if (cur_pid == thread_pid && thread_correlation_id!=NULL) {
+        snprintf(new_format, 512, "[%.8s] %s", thread_correlation_id, format);
+    }else{
+        snprintf(new_format, 512, "%s", format);
+    }
+
     // add a space between the prefix and the message proper
     if ((offset > 0) && ((sizeof(buf) - offset - 1) > 0)) {
         buf[offset++] = ' ';
         buf[offset] = '\0';
     }
     // append the log message passed via va_list
-    va_start(ap, format);
+    va_start(ap, new_format);
     {
-        rc = vsnprintf(buf + offset, sizeof(buf) - offset - 1, format, ap);
+        rc = vsnprintf(buf + offset, sizeof(buf) - offset - 1, new_format, ap);
     }
     va_end(ap);
     if (rc < 0)

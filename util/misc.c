@@ -2451,7 +2451,7 @@ char *get_username(void)
 }
 
 //! Make a correlation ID that is prefixed with the ID received from other components
-char* get_correlation_id(const char* id) 
+char* get_corrid(const char* id) 
 {
     char*new_corr_id = NULL;
     if(id==NULL)
@@ -2467,6 +2467,23 @@ char* get_correlation_id(const char* id)
         }
     }
     return new_corr_id;
+}
+
+pid_t thread_pid = -1;
+char thread_correlation_id[256];
+
+void set_corrid(const char* corr_id) {
+    if(corr_id == NULL || strstr(corr_id, "::") == NULL) {
+        unset_corrid();
+        return;
+    }
+    thread_pid = getpid();    
+    euca_strncpy(thread_correlation_id, corr_id, strlen(corr_id));
+}
+
+void unset_corrid(){
+    thread_pid = -1;
+    memset(thread_correlation_id, 0x00, 256);
 }
 
 #ifdef _UNIT_TEST
@@ -2712,4 +2729,5 @@ int main(int argc, char **argv)
 
     return (0);
 }
+
 #endif // _UNIT_TEST

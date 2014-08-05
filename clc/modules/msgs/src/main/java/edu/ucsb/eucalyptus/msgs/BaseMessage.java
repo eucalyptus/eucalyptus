@@ -65,7 +65,9 @@ package edu.ucsb.eucalyptus.msgs;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -73,11 +75,14 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -207,65 +212,49 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    regarding( null, null );
+    regarding( null );
     return ( TYPE ) this;
   }
   
-  
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg ) {
-    return ( TYPE ) regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+    this.correlationId = UUID.randomUUID( ).toString( );
+    this.userId = Principals.systemFullName( ).getUserName( );
+    this.effectiveUserId = Principals.systemFullName( ).getUserName( );
+    
+    return ( TYPE ) this;
   }
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg ) {
-    return ( TYPE ) regardingUserRequest( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
-  }
-  
-  public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
-    String corrId = null;
-    if ( msg == null ) {
-      this.correlationId = UUID.randomUUID( ).toString( );
-    } else {
-      corrId = msg.correlationId;
-    }
-    if ( subCorrelationId == null ) {
-      subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
-    }
-    this.userId = Principals.systemFullName( ).getUserName( );
-    this.effectiveUserId = Principals.systemFullName( ).getUserName( );
-    this.correlationId = corrId + "-" + subCorrelationId;
-    return ( TYPE ) this;
-  }
-  
-  public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
-    this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     this.userId = msg.userId;
-    return ( TYPE ) this;
+    return ( TYPE ) this;  
   }
   
-  public <TYPE extends BaseMessage> TYPE regardingRequest(final BaseMessage msg){
-    final String requestId = (msg==null || msg.extractRequestId()==null) ? "none" : msg.extractRequestId();
-   // LOG.debug(String.format("[%s] Setting request ID to %s", this.getClass().toString(), requestId));
-    return this.regardingRequest(requestId);
+  public <TYPE extends BaseMessage> TYPE lookupAndSetCorrelationId(){
+    String corrId = null;
+    try{
+      corrId = Contexts.lookup().getCorrelationId();
+    }catch(final Exception ex){
+      corrId = Threads.getCorrelationId();
+    }
+    if(corrId != null && corrId.length()>=36){
+      return this.regardingRequestId(corrId);
+    }else
+      return ( TYPE ) this;
   }
   
-  public <TYPE extends BaseMessage> TYPE regardingRequest(final String requestId){
-    if(requestId!=null){
+  public <TYPE extends BaseMessage> TYPE regardingRequestId(final String msgId){
+    if(msgId!=null){
+      String requestId = null;
+      if (! msgId.contains("::"))
+        requestId = msgId;
+      else
+        requestId = msgId.substring(0, msgId.indexOf("::"));
       if(this.correlationId == null)
         this.correlationId = String.format("%s::%s", requestId, UUID.randomUUID( ).toString( ));
       else
         this.correlationId = String.format("%s::%s", requestId, this.correlationId);
     }
     return ( TYPE ) this;
-  }
-  
-  private String extractRequestId() {
-    if(this.correlationId!=null){ 
-      if(this.correlationId.contains("::"))
-        return this.correlationId.substring(0, this.correlationId.indexOf("::"));
-      else
-        return this.correlationId;
-    }else
-      return null;
   }
     
   public String toString( ) {

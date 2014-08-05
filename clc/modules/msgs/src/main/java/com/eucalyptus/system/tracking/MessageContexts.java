@@ -19,13 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.system.tracking;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
@@ -42,7 +39,7 @@ public class MessageContexts {
   private static Map<String, List<MessageCache>> correlationIds = 
       new ConcurrentHashMap<String, List<MessageCache>>();
 
-  public static void remember(final String resourceId, final Class<? extends BaseMessage> msgType, BaseMessage message) {
+  public static synchronized void remember(final String resourceId, final Class<? extends BaseMessage> msgType, BaseMessage message) {
     List<MessageCache> listIds = null;
     if(! correlationIds.containsKey(resourceId)){
       listIds = Lists.newArrayList();
@@ -50,11 +47,17 @@ public class MessageContexts {
     }else
       listIds = correlationIds.get(resourceId);
     
-    for(final MessageCache corrId : listIds){
+    int duplicate = -1;
+    for(int i=0; i<listIds.size(); i++){
+      final MessageCache corrId = listIds.get(i);
       if(msgType.equals(corrId.getKey())){
-        return;
+        duplicate = i;
+        break;
       }
     }
+    if(duplicate>=0)
+      listIds.remove(duplicate);
+    
     try{
       listIds.add(new MessageCache(msgType, message ));
     }catch(final Exception ex){
@@ -62,11 +65,11 @@ public class MessageContexts {
     }
   }
   
-  public static boolean contains(final String resourceId, final Class<? extends BaseMessage> msgType){
+  public static synchronized boolean contains(final String resourceId, final Class<? extends BaseMessage> msgType){
     return lookup(resourceId, msgType) != null;
   }
   
-  public static BaseMessage lookupLast(final String resourceId, Set<Class> msgTypes) {
+  public static synchronized BaseMessage lookupLast(final String resourceId, Set<Class> msgTypes) {
     if(! correlationIds.containsKey(resourceId))
       return null;
     
@@ -89,7 +92,7 @@ public class MessageContexts {
     return lastMsg;
   }
   
-  public static List<BaseMessage> lookup(final String resourceId, final Set<Class> msgTypes) {
+  public static synchronized List<BaseMessage> lookup(final String resourceId, final Set<Class> msgTypes) {
     if(! correlationIds.containsKey(resourceId))
       return Lists.newArrayList();
     
@@ -101,7 +104,7 @@ public class MessageContexts {
     return result;
   }
   
-  public static BaseMessage lookup(final String resourceId, final Class<? extends BaseMessage> msgType) {
+  public static synchronized BaseMessage lookup(final String resourceId, final Class<? extends BaseMessage> msgType) {
     if(! correlationIds.containsKey(resourceId))
       return null;
     
@@ -112,7 +115,7 @@ public class MessageContexts {
     return null;
   }
   
-  public static List<BaseMessage> lookup(final String resourceId){
+  public static synchronized List<BaseMessage> lookup(final String resourceId){
     if(! correlationIds.containsKey(resourceId))
       return Lists.newArrayList();
     

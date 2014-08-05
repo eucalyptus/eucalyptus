@@ -62,8 +62,13 @@
 
 package com.eucalyptus.system;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.log4j.spi.LoggingEvent;
 import org.hibernate.exception.GenericJDBCException;
+
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.log.EucaLoggingEvent;
 import com.eucalyptus.system.log.EucaPatternLayout;
@@ -77,7 +82,7 @@ public class EucaLayout extends EucaPatternLayout {
 	private EucaPatternLayout continuation = null;
 	private final EucaPatternLayout extremeLayout;
 	private final EucaPatternLayout debugLayout;
-
+	
 	public EucaLayout( ) {
 		super( DEFAULT_LOG_PATTERN );
 		this.debugLayout = new EucaPatternLayout(DEBUG_LOG_PATTERN);
@@ -93,8 +98,6 @@ public class EucaLayout extends EucaPatternLayout {
 			return super.format(e);
 	}
 
-
-
 	@Override
 	public String format( LoggingEvent event ) {
 		try {
@@ -107,9 +110,20 @@ public class EucaLayout extends EucaPatternLayout {
 				return "";
 			}
 			String renderedMessage = event.getRenderedMessage( );
+
 			if(renderedMessage != null) {
 				String[] messages = renderedMessage.split( "\n" );
 				StringBuffer sb = new StringBuffer( );
+				
+				String corrId = null;
+				try {
+				  corrId = Contexts.lookup().getCorrelationId();
+				}catch(final Exception ex){
+				  corrId = Threads.getCorrelationId();
+				}
+				if(corrId!=null && corrId.length()>=36)
+				    sb.append(String.format("[%s] ", corrId.substring(0,8)));
+			
 				boolean con = false;
 				for( int i = 0; i < messages.length; i++ ) {
 					String substring= messages[i];

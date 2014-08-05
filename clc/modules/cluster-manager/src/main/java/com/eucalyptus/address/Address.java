@@ -577,8 +577,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
      getCallback(final BaseMessage originReq) {
     final RemoteCallback<? extends BaseMessage, ? extends BaseMessage> cb =
         this.getCallback();
-    if(originReq!=null)
-      cb.getRequest().regardingRequest(originReq);
     return cb;
   }
   

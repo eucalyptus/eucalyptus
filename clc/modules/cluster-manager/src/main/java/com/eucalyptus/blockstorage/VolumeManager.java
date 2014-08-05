@@ -150,7 +150,6 @@ public class VolumeManager {
   private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException, AuthException {
-    LOG.debug(request.toSimpleString());
     Context ctx = Contexts.lookup( );
     Long volSize = request.getSize( ) != null
                                              ? Long.parseLong( request.getSize( ) )
@@ -207,7 +206,6 @@ public class VolumeManager {
         Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
-        LOG.debug(reply.toSimpleString());
         return reply;
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
@@ -443,7 +441,6 @@ public class VolumeManager {
     GetVolumeTokenResponseType scGetTokenResponse;
     try {
     	GetVolumeTokenType req = new GetVolumeTokenType(volume.getDisplayName());
-    	req.regardingRequest(request);
     	scGetTokenResponse = AsyncRequests.sendSync(sc, req);
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -457,7 +454,6 @@ public class VolumeManager {
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     vm.addTransientVolume( deviceName, token, volume );
     final VolumeAttachCallback cb = new VolumeAttachCallback( request );
-    cb.getRequest().regardingRequest(request);
     AsyncRequests.newRequest( cb ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
@@ -532,7 +528,6 @@ public class VolumeManager {
     	//Ensure that the volume is not attached
     	try {
     	  final DetachStorageVolumeType detach = new DetachStorageVolumeType( volume.getVolumeId( ));
-    	  detach.regardingRequest(request);
     		AsyncRequests.sendSync( scVm, detach);
     	} catch ( Exception e ) {
     		LOG.debug( e );
@@ -555,7 +550,6 @@ public class VolumeManager {
     	request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     	request.setInstanceId( vm.getInstanceId( ) );
     	VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
-    	ncDetach.getRequest().regardingRequest(request);
     	/* No SC action required, send directly to NC
     	 * try {
     		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );

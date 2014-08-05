@@ -583,4 +583,5 @@ libvirtNicType libvirtNicType_from_string(const char *str);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+
 #endif /* ! _INCLUDE_DATA_H_ */

@@ -148,7 +148,6 @@ public class AddressManager {
         throw new EucalyptusCloudException( "couldn't allocate addresses" );
       }
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
@@ -188,7 +187,6 @@ public class AddressManager {
     Addresses.release( address );
 
     reply.set_return( true );
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
@@ -217,7 +215,6 @@ public class AddressManager {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Address.Domain.standard.toString(), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
-    LOG.debug(request.toSimpleString());
     return reply;
   }
 
@@ -411,7 +408,6 @@ public class AddressManager {
         tx.commit( );
       }
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 

@@ -616,15 +616,6 @@ class VmInstanceLifecycleHelpers {
         Entities.transaction( NetworkGroup ) { EntityTransaction db ->
           if ( Entities.merge( net ).hasExtantNetwork( ) ) {
             final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) )
-            try{
-              final BaseMessage parentReq = MessageContexts.lookup(allocation.getReservationId(),
-                  edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
-              if(parentReq!=null)
-                callback.getRequest().regardingRequest(parentReq);
-            }catch(final Exception ex){
-              ;
-            }
-            
             messages.addRequest( State.CREATE_NETWORK, callback )
             EventRecord.here( ClusterAllocator, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( )
           }
