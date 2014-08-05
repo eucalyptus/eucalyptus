@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskTimedOut</code> event.
  * </p>
  */
-public class ActivityTaskTimedOutEventAttributes implements Serializable {
+public class ActivityTaskTimedOutEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The type of the timeout that caused this event.
@@ -315,6 +315,11 @@ public class ActivityTaskTimedOutEventAttributes implements Serializable {
     public ActivityTaskTimedOutEventAttributes withDetails(String details) {
         this.details = details;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskTimedOutEventAttributes( this );
     }
 
     /**

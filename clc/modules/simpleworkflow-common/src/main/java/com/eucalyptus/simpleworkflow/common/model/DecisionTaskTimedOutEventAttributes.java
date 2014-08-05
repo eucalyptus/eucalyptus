@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>DecisionTaskTimedOut</code> event.
  * </p>
  */
-public class DecisionTaskTimedOutEventAttributes implements Serializable {
+public class DecisionTaskTimedOutEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The type of timeout that expired before the decision task could be
@@ -262,6 +262,11 @@ public class DecisionTaskTimedOutEventAttributes implements Serializable {
     public DecisionTaskTimedOutEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setDecisionTaskTimedOutEventAttributes( this );
     }
 
     /**

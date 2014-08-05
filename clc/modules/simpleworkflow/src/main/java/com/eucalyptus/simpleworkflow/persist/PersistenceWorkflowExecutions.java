@@ -20,17 +20,35 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  *
  */
+@ComponentNamed
 public class PersistenceWorkflowExecutions extends SwfPersistenceSupport<WorkflowExecutionMetadata,WorkflowExecution> implements WorkflowExecutions {
 
   public PersistenceWorkflowExecutions( ) {
     super( "workflow-execution" );
+  }
+
+  public <T> List<T> listTimedOut( final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        WorkflowExecution.exampleForOpenWorkflow( ),
+        Predicates.alwaysTrue( ),
+        Restrictions.lt( "timeoutTimestamp", new Date( ) ),
+        Collections.<String,String>emptyMap( ),
+        transform );
   }
 
   @Override

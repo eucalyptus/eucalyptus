@@ -37,9 +37,17 @@ public interface WorkflowExecutions {
                              Predicate<? super WorkflowExecution> filter,
                              Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
 
+  <T> List<T> listTimedOut( Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
+
+  <T> T lookupByExample( WorkflowExecution example,
+                         @Nullable OwnerFullName ownerFullName,
+                         String key,
+                         Predicate<? super WorkflowExecution> filter,
+                         Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
+
   <T> T updateByExample( WorkflowExecution example,
                          OwnerFullName ownerFullName,
-                         String runId,
+                         String id,
                          Function<? super WorkflowExecution,T> updateTransform ) throws SwfMetadataException;
 
   WorkflowExecution save( WorkflowExecution workflowExecution ) throws SwfMetadataException;

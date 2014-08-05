@@ -44,7 +44,7 @@ import java.io.Serializable;
  * <code>RequestCancelExternalWorkflowExecutionFailed</code> event.
  * </p>
  */
-public class RequestCancelExternalWorkflowExecutionFailedEventAttributes implements Serializable {
+public class RequestCancelExternalWorkflowExecutionFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The <code>workflowId</code> of the external workflow to which the
@@ -497,6 +497,11 @@ public class RequestCancelExternalWorkflowExecutionFailedEventAttributes impleme
     public RequestCancelExternalWorkflowExecutionFailedEventAttributes withControl(String control) {
         this.control = control;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setRequestCancelExternalWorkflowExecutionFailedEventAttributes( this );
     }
 
     /**

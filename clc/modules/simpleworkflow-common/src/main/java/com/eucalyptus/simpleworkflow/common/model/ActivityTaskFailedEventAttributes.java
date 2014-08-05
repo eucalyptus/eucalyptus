@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskFailed</code> event.
  * </p>
  */
-public class ActivityTaskFailedEventAttributes implements Serializable {
+public class ActivityTaskFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The reason provided for the failure (if any).
@@ -261,6 +261,12 @@ public class ActivityTaskFailedEventAttributes implements Serializable {
     public ActivityTaskFailedEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
+    }
+
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskFailedEventAttributes( this );
     }
 
     /**

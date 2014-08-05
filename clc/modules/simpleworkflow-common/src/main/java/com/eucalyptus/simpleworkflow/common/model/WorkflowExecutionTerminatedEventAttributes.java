@@ -44,7 +44,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class WorkflowExecutionTerminatedEventAttributes implements Serializable {
+public class WorkflowExecutionTerminatedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The reason provided for the termination (if any).
@@ -445,6 +445,12 @@ public class WorkflowExecutionTerminatedEventAttributes implements Serializable 
     public WorkflowExecutionTerminatedEventAttributes withCause(WorkflowExecutionTerminatedCause cause) {
         this.cause = cause.toString();
         return this;
+    }
+
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionTerminatedEventAttributes( this );
     }
 
     /**

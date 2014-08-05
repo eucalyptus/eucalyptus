@@ -20,6 +20,8 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTaskMetadata;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -28,13 +30,24 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
-import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Pair;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -69,6 +82,9 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Column( name = "scheduled_event_id", nullable = false, updatable = false  )
   private Long scheduledEventId;
 
+  @Column( name = "started_event_id" )
+  private Long startedEventId;
+
   @Column( name = "activity_type", nullable = false, updatable = false  )
   private String activityType;
 
@@ -79,6 +95,26 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   private String input;
+
+  @Column( name = "schedule_to_close_timeout", nullable = false, updatable = false )
+  private Integer scheduleToCloseTimeout;
+
+  @Column( name = "schedule_to_start_timeout", nullable = false, updatable = false )
+  private Integer scheduleToStartTimeout;
+
+  @Column( name = "start_to_close_timeout", nullable = false, updatable = false )
+  private Integer startToCloseTimeout;
+
+  @Column( name = "heartbeat_timeout", updatable = false )
+  private Integer heartbeatTimeout;
+
+  @Column( name = "started_timestamp" )
+  @Temporal( TemporalType.TIMESTAMP )
+  private Date startedTimestamp;
+
+  @Column( name = "timeout_timestamp" )
+  @Temporal( TemporalType.TIMESTAMP )
+  private Date timeoutTimestamp;
 
   protected ActivityTask( ) {
   }
@@ -95,7 +131,11 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
                                      final String activityVersion,
                                      final String input,
                                      final Long scheduledEventId,
-                                     final String taskList ) {
+                                     final String taskList,
+                                     final Integer scheduleToCloseTimeout,
+                                     final Integer scheduleToStartTimeout,
+                                     final Integer startToCloseTimeout,
+                                     final Integer heartbeatTimeout ) {
     final ActivityTask activityTask = new ActivityTask( ownerFullName, activityId );
     activityTask.setWorkflowExecution( workflowExecution );
     activityTask.setDomain( domain );
@@ -103,7 +143,12 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     activityTask.setActivityVersion( activityVersion );
     activityTask.setInput( input );
     activityTask.setScheduledEventId( scheduledEventId );
+    activityTask.setStartedEventId( 0L );
     activityTask.setTaskList( taskList );
+    activityTask.setScheduleToCloseTimeout( scheduleToCloseTimeout );
+    activityTask.setScheduleToStartTimeout( scheduleToStartTimeout );
+    activityTask.setStartToCloseTimeout( startToCloseTimeout );
+    activityTask.setHeartbeatTimeout( heartbeatTimeout );
     activityTask.setState( State.Pending );
     return activityTask;
   }
@@ -143,6 +188,34 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Override
   protected String createUniqueName( ) {
     return createUniqueName( getOwnerAccountNumber( ), getWorkflowExecution( ).getDisplayName( ), getScheduledEventId( ) );
+  }
+
+  public Pair<String,Date> calculateNextTimeout( ) {
+    final Iterable<Pair<String,Optional<Long>>> taggedTimeouts = Iterables.filter( Lists.newArrayList(
+        Pair.ropair( "SCHEDULE_TO_CLOSE", toTimeout( getCreationTimestamp( ), getScheduleToCloseTimeout( ) ) ),
+        Pair.ropair( "SCHEDULE_TO_START", toTimeout( getCreationTimestamp( ), getScheduleToStartTimeout( ) ) ),
+        getState( ) == State.Active ? Pair.ropair( "START_TO_CLOSE", toTimeout( getStartedTimestamp( ), getStartToCloseTimeout( ) ) ) : null,
+        getState( ) == State.Active ? Pair.ropair( "HEARTBEAT",  toTimeout( getLastUpdateTimestamp( ), getHeartbeatTimeout( ) ) ) : null
+    ), Predicates.notNull( ) );
+    final Function<Pair<String,Optional<Long>>,Long> timeExtractor = Functions.compose(
+        CollectionUtils.<Long>optionalOrNull( ),
+        Pair.<String, Optional<Long>>right( ) );
+    final Long timeout = CollectionUtils.reduce(
+        CollectionUtils.fluent( taggedTimeouts )
+            .transform( timeExtractor )
+            .filter( Predicates.notNull( ) ), Long.MAX_VALUE, CollectionUtils.lmin( ) );
+    final String tag = Iterables.tryFind( taggedTimeouts,
+        CollectionUtils.propertyPredicate( timeout, timeExtractor ) )
+        .transform( Pair.<String, Optional<Long>>left( ) ).or( "SCHEDULE_TO_CLOSE" );
+    return timeout == Long.MAX_VALUE ?
+        null :
+        Pair.pair( tag, new Date( timeout ) );
+  }
+
+  private static Long toTimeout( final Date from, final Integer period ) {
+    return period == null ?
+        null :
+        from.getTime( ) + TimeUnit.SECONDS.toMillis( period );
   }
 
   public WorkflowExecution getWorkflowExecution( ) {
@@ -185,6 +258,14 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     this.scheduledEventId = scheduledEventId;
   }
 
+  public Long getStartedEventId() {
+    return startedEventId;
+  }
+
+  public void setStartedEventId( final Long startedEventId ) {
+    this.startedEventId = startedEventId;
+  }
+
   public String getActivityType( ) {
     return activityType;
   }
@@ -207,5 +288,68 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   public void setInput( final String input ) {
     this.input = input;
+  }
+
+  public Integer getScheduleToCloseTimeout() {
+    return scheduleToCloseTimeout;
+  }
+
+  public void setScheduleToCloseTimeout( final Integer scheduleToCloseTimeout ) {
+    this.scheduleToCloseTimeout = scheduleToCloseTimeout;
+  }
+
+  public Integer getScheduleToStartTimeout() {
+    return scheduleToStartTimeout;
+  }
+
+  public void setScheduleToStartTimeout( final Integer scheduleToStartTimeout ) {
+    this.scheduleToStartTimeout = scheduleToStartTimeout;
+  }
+
+  public Integer getStartToCloseTimeout() {
+    return startToCloseTimeout;
+  }
+
+  public void setStartToCloseTimeout( final Integer startToCloseTimeout ) {
+    this.startToCloseTimeout = startToCloseTimeout;
+  }
+
+  public Integer getHeartbeatTimeout() {
+    return heartbeatTimeout;
+  }
+
+  public void setHeartbeatTimeout( final Integer heartbeatTimeout ) {
+    this.heartbeatTimeout = heartbeatTimeout;
+  }
+
+  public Date getStartedTimestamp() {
+    return startedTimestamp;
+  }
+
+  public void setStartedTimestamp( final Date startedTimestamp ) {
+    this.startedTimestamp = startedTimestamp;
+  }
+
+  public Date getTimeoutTimestamp() {
+    return timeoutTimestamp;
+  }
+
+  public void setTimeoutTimestamp( final Date timeoutTimestamp ) {
+    this.timeoutTimestamp = timeoutTimestamp;
+  }
+
+  @Override
+  public void updateTimeStamps() {
+    super.updateTimeStamps( );
+    if ( getState( ) == State.Active && startedTimestamp == null ) {
+      startedTimestamp = new Date( );
+    }
+  }
+
+  @PreUpdate
+  @PrePersist
+  protected void updateTimeout( ) {
+    updateTimeStamps( );
+    setTimeoutTimestamp( Optional.fromNullable( calculateNextTimeout( ) ).transform( Pair.<String,Date>right( ) ).orNull( ) );
   }
 }

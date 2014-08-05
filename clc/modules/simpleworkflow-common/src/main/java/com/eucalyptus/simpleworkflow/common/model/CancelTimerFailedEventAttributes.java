@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>CancelTimerFailed</code> event.
  * </p>
  */
-public class CancelTimerFailedEventAttributes implements Serializable {
+public class CancelTimerFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The timerId provided in the <code>CancelTimer</code> decision that
@@ -315,6 +315,11 @@ public class CancelTimerFailedEventAttributes implements Serializable {
     public CancelTimerFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setCancelTimerFailedEventAttributes( this );
     }
 
     /**
