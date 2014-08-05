@@ -20,12 +20,12 @@
 package com.eucalyptus.vm;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
@@ -40,6 +40,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -641,9 +642,20 @@ public class CreateImageTask {
 		final List<Map.Entry<String, String>> volumesToSnapshot = 
 				Lists.newArrayList();
 		volumesToSnapshot.add(this.getInstanceRootVolume());
-		if(this.blockDevices == null || this.blockDevices.size() <= 0){ // block device mapping not requested
-			volumesToSnapshot.addAll(this.getInstanceNonRootVolumes());
+		// blockDevices might have devices that should be suppressed as well as ephemeral devices
+		// first check if there are any volumes that should be suppressed
+		List<String> suppressedDevice = new ArrayList<String>();
+		for(BlockDeviceMappingItemType device : blockDevices){
+			if(device.getNoDevice() != null && device.getNoDevice())
+				suppressedDevice.add(device.getDeviceName());
 		}
+
+		// device -> volume-id
+		for(Map.Entry<String, String> vol:getInstanceNonRootVolumes()){
+			if (!suppressedDevice.contains(vol.getKey()))
+				volumesToSnapshot.add(vol);
+		}
+
 	    Boolean isRootDevice = true;
 		for(final Map.Entry<String,String> volume: volumesToSnapshot){
 			final String deviceName = volume.getKey();

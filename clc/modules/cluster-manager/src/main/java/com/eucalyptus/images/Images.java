@@ -906,7 +906,6 @@ public class Images {
 		  ImageMetadata.Platform imagePlatform,
 		  final List<BlockDeviceMappingItemType> blockDeviceMappings
 		  ) throws Exception {
-
 	  final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
 			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
@@ -919,12 +918,11 @@ public class Images {
 	  }
 	  if(toRemove!=null)
 		  blockDeviceMappings.remove(toRemove);
-	  
 	  final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
 	  try {
 		  ret = Entities.merge( ret );
 		  ret.setState(ImageMetadata.State.pending);
-      ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
+		  ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
 	      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, -1 ) ) );
 		  tx.commit( );
 		  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );

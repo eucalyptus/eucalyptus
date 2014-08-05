@@ -74,6 +74,7 @@ import static com.eucalyptus.vm.VmVolumeAttachment.deleteOnTerminateFilter;
 import static com.eucalyptus.vm.VmVolumeAttachment.volumeIdFilter;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -601,6 +602,26 @@ public class VmInstances {
 		  return item;
 	  }
   };
+
+  public static List<String> lookupPersistentDeviceNames(final String instanceId){
+	  final EntityTransaction db = Entities.get( VmInstance.class );
+	  List<String> deviceNames = new ArrayList<>();
+	  try{
+		  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
+		  for(VmVolumeAttachment vol:vm.getBootRecord().getPersistentVolumes()){
+			  deviceNames.add(vol.getDevice());
+		  }
+		  db.commit();
+		  return deviceNames;
+	  }catch(NoSuchElementException ex){
+		  throw ex;
+	  }catch(Exception ex){
+		  throw Exceptions.toUndeclared(ex);
+	  }finally{
+		  if(db.isActive())
+			  db.rollback();
+	  }
+  }
 
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
