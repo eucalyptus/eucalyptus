@@ -406,6 +406,9 @@ class SecurityGroupIdSetType extends EucalyptusData {
   @HttpParameterMapping(parameter = "SecurityGroupId")
   @HttpEmbedded(multiple = true)
   ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
+  ArrayList<String> groupIds( ) {
+    (item?.collect{ SecurityGroupIdSetItemType item -> item.groupId } ?: [ ]) as ArrayList<String>
+  }
 }
 class SecurityGroupIdSetItemType extends EucalyptusData {
   @HttpValue

@@ -37,10 +37,10 @@ class DatabasePrivateAddressPersistence implements PrivateAddressPersistence {
   private final Logger logger = Logger.getLogger( DatabasePrivateAddressPersistence )
 
   @Override
-  Optional<PrivateAddress> tryCreate( final String scope, final String address ) {
+  Optional<PrivateAddress> tryCreate( final String scope, final String tag, final String address ) {
     try {
       transaction( PrivateAddress ) { EntityTransaction db ->
-        PrivateAddress privateAddress = PrivateAddress.create( scope, address ).allocate( )
+        PrivateAddress privateAddress = PrivateAddress.create( scope, tag, address ).allocate( )
         Entities.persist( privateAddress )
         db.commit( )
         Optional.of( privateAddress )

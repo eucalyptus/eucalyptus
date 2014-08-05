@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network;
 
+import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -27,17 +28,22 @@ import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Objects;
+import groovy.sql.Sql;
 
 /**
  * Entity for recording address ownership, reservation, and usage.
@@ -49,9 +55,6 @@ import com.google.common.base.Objects;
 public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstance> implements RestrictedType {
   private static final long serialVersionUID = 1L;
 
-  @Column( name = "metadata_address", unique = true, nullable = false, updatable = false )
-  private Integer address;
-
   @OneToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_instance_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -60,23 +63,18 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   @Column( name = "metadata_address_scope" )
   private String scope;
 
+  @Column( name = "metadata_address_tag" )
+  private String tag;
+
   @Column( name = "metadata_partition_name" )
   private String assignedPartition;
 
   private PrivateAddress( ) {
-    this( (Integer) null );
+    super( null, null );
   }
 
   private PrivateAddress( final String address ) {
     super( null, address );
-    if ( address != null ) {
-      this.address = PrivateAddresses.asInteger( address );
-    }
-  }
-
-  private PrivateAddress( final Integer address ) {
-    super( null, null );
-    this.address = address;
   }
 
   public static PrivateAddress named( String scope, String address ) {
@@ -85,9 +83,9 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return privateAddress;
   }
 
-  public static PrivateAddress named( String scope, Integer address ) {
-    final PrivateAddress privateAddress = new PrivateAddress( address );
-    privateAddress.setUniqueName( buildUniqueName( scope, privateAddress.getDisplayName( ) ) );
+  public static PrivateAddress tagged( String tag ) {
+    final PrivateAddress privateAddress = new PrivateAddress( );
+    privateAddress.setTag( tag );
     return privateAddress;
   }
 
@@ -104,11 +102,12 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return privateAddress;
   }
 
-  public static PrivateAddress create( final String scope, final String address ) {
+  public static PrivateAddress create( final String scope, final String tag, final String address ) {
     final PrivateAddress privateAddress = new PrivateAddress( address );
     privateAddress.setOwner( Principals.nobodyFullName( ) );
     privateAddress.setState( State.FREE );
     privateAddress.setScope( scope );
+    privateAddress.setTag( tag );
     return privateAddress;
   }
 
@@ -144,12 +143,12 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     if ( this.getDisplayName() != null ) {
       builder.append( this.getDisplayName() );
     }
-    return builder.toString( );
+    return builder.toString();
   }
 
   @Nullable
   public String getInstanceId( ) {
-    return this.instance == null ? null : this.instance.getDisplayName( );
+    return CloudMetadatas.toDisplayName( ).apply( instance );
   }
 
   private VmInstance getInstance( ) {
@@ -166,6 +165,14 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
 
   private void setScope( final String scope ) {
     this.scope = scope;
+  }
+
+  public String getTag( ) {
+    return tag;
+  }
+
+  public void setTag( final String tag ) {
+    this.tag = tag;
   }
 
   public String getAssignedPartition( ) {
@@ -199,5 +206,27 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
 
   @Override
   protected void ensureTransaction() {
+  }
+
+  @Upgrades.PreUpgrade( value = Eucalyptus.class, since = Upgrades.Version.v4_1_0 )
+  public static class PrivateAddressPreUpgrade41 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( PrivateAddressPreUpgrade41.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Databases.getBootstrapper().getConnection( "eucalyptus_cloud" );
+        sql.execute( "alter table metadata_private_addresses drop column if exists metadata_address" );
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error deleting column metadata_address for metadata_private_addresses", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
   }
 }

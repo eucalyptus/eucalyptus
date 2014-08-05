@@ -155,7 +155,6 @@ import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.MachineImageInfo;
@@ -2148,8 +2147,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             if ( runningInstance.getNetworkInterfaceSet( ) == null ) {
               runningInstance.setNetworkInterfaceSet( new InstanceNetworkInterfaceSetType( ) );
             }
-            final boolean hasPublicAddress = runningInstance.getIpAddress( ) != null &&
-                !runningInstance.getIpAddress( ).equals( runningInstance.getPrivateIpAddress() );
             runningInstance.getNetworkInterfaceSet( ).getItem( ).add( new InstanceNetworkInterfaceSetItemType(
               networkInterface.getDisplayName( ),
               networkInterface.getSubnet( ).getDisplayName( ),
@@ -2161,7 +2158,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               networkInterface.getPrivateIpAddress( ),
               null,
               networkInterface.getSourceDestCheck( ),
-              new GroupSetType( runningInstance.getGroupSet( ) ), //TODO:STEVE: groups/associations/private ips only correct for the primary
+              new GroupSetType( Collections2.transform(
+                  networkInterface.getNetworkGroups( ),
+                  TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) ) ),
               new InstanceNetworkInterfaceAttachmentType(
                 networkInterface.getAttachment( ).getAttachmentId( ),
                 networkInterface.getAttachment( ).getDeviceIndex(),
@@ -2169,20 +2168,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                 networkInterface.getAttachment( ).getAttachTime( ),
                 networkInterface.getAttachment( ).getDeleteOnTerminate( )
               ),
-              hasPublicAddress ? new InstanceNetworkInterfaceAssociationType(
-                runningInstance.getIpAddress( ),
-                null,
-                networkInterface.getOwnerAccountNumber( )
+              networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
+                  networkInterface.getAssociation( ).getPublicIp( ),
+                  networkInterface.getAssociation( ).getPublicDnsName( ),
+                  networkInterface.getAssociation( ).getIpOwnerId( )
               ) : null,
               new InstancePrivateIpAddressesSetType( Lists.newArrayList(
                 new InstancePrivateIpAddressesSetItemType(
                     networkInterface.getPrivateIpAddress( ),
                     null,
                     true,
-                    hasPublicAddress ? new InstanceNetworkInterfaceAssociationType(
-                        runningInstance.getIpAddress( ),
-                        null,
-                        networkInterface.getOwnerAccountNumber( )
+                    networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
+                        networkInterface.getAssociation( ).getPublicIp( ),
+                        networkInterface.getAssociation( ).getPublicDnsName( ),
+                        networkInterface.getAssociation( ).getIpOwnerId( )
                     ) : null
                 )
               ) )

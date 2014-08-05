@@ -78,11 +78,15 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     subnet.setRouteTableAssociationId( ResourceIdentifiers.generateString( "rtbassoc" ) );
     subnet.setCidr( cidr );
     subnet.setAvailabilityZone( availabilityZone );
-    subnet.setAvailableIpAddressCount( ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5 ); // 5 reserved
+    subnet.setAvailableIpAddressCount( usableAddressesForSubnet( cidr ) );
     subnet.setDefaultForAz( false );
     subnet.setMapPublicIpOnLaunch( false );
     subnet.setState( State.available );
     return subnet;
+  }
+
+  public static int usableAddressesForSubnet( final String cidr ) {
+    return ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5; // 5 reserved
   }
 
   public static Subnet exampleWithOwner( final OwnerFullName owner ) {

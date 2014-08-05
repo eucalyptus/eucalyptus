@@ -25,11 +25,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -68,9 +70,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
 import com.google.common.net.InternetDomainName;
 import com.google.common.primitives.Ints;
@@ -444,7 +448,12 @@ public class VpcManager {
       public NetworkInterface get( ) {
         try {
           final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity() );
-          final Vpc vpc = subnet.getVpc();
+          final Vpc vpc = subnet.getVpc( );
+          final Set<NetworkGroup> groups = request.getGroupSet( )==null ?
+              Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkGroup>identity( ) ) ) :
+              Sets.newHashSet( Iterables.transform(
+                  request.getGroupSet( ).groupIds( ),
+                  RestrictedTypes.resolver( NetworkGroup.class ) ) );
           final String identifier = Identifier.eni.generate();
           if ( privateIp != null ) {
             final Cidr cidr = Cidr.parse( subnet.getCidr( ) );
@@ -456,12 +465,16 @@ public class VpcManager {
           }
           final String mac = NetworkInterfaceHelper.mac( identifier );
           final String ip = NetworkInterfaceHelper.allocate( vpc.getDisplayName( ), subnet.getDisplayName( ), identifier, mac, privateIp );
-          return networkInterfaces.save( NetworkInterface.create( ctx.getUserFullName(), vpc, subnet, identifier, mac, ip, firstNonNull( request.getDescription( ), "" ) ) );
+          return networkInterfaces.save( NetworkInterface.create( ctx.getUserFullName(), vpc, subnet, groups, identifier, mac, ip, firstNonNull( request.getDescription( ), "" ) ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet not found '" + request.getSubnetId() + "'" ) );
         } catch ( ResourceAllocationException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", ex.getMessage( ) ) );
         } catch ( Exception ex ) {
+          final NoSuchMetadataException e = Exceptions.findCause(  ex, NoSuchMetadataException.class );
+          if ( e != null ) {
+            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSecurityGroupID.NotFound", e.getMessage( ) ) );
+          }
           throw new RuntimeException( ex );
         }
       }
@@ -1007,7 +1020,13 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     try {
       final NetworkInterface networkInterface =
-          networkInterfaces.lookupByName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ), Functions.<NetworkInterface>identity( ) );
+          networkInterfaces.lookupByName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ), new Function<NetworkInterface,NetworkInterface>( ){
+            @Override
+            public NetworkInterface apply( final NetworkInterface networkInterface ) {
+              Entities.initialize( networkInterface.getNetworkGroups( ) );
+              return networkInterface;
+            }
+          } );
       if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
         switch ( request.getAttribute() ) {
           case "attachment":
@@ -1019,7 +1038,9 @@ public class VpcManager {
             reply.getDescription().setValue( networkInterface.getDescription( ) );
             break;
           case "groupSet":
-            reply.setGroupSet( new GroupSetType() ); //TODO:STEVE: security groups via enis
+            reply.setGroupSet( new GroupSetType( Collections2.transform(
+                networkInterface.getNetworkGroups( ),
+                TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) ) ) );
             break;
           case "sourceDestCheck":
             reply.setSourceDestCheck( new AttributeBooleanValueType() );
@@ -1246,8 +1267,18 @@ public class VpcManager {
                   }
                 } else if ( request.getDescription( ) != null ) {
                   networkInterface.setDescription( request.getDescription( ).getValue( ) );
-                } else if ( request.getGroupSet( ) != null ) {
-                  //TODO:STEVE: security groups via enis
+                } else if ( request.getGroupSet( ) != null && !request.getGroupSet( ).getItem( ).isEmpty( ) ) {
+                  try {
+                    networkInterface.setNetworkGroups( Sets.newHashSet( Iterables.transform(
+                        request.getGroupSet( ).groupIds( ),
+                        RestrictedTypes.resolver( NetworkGroup.class ) ) ) );
+                  } catch ( RuntimeException e ) {
+                    final NoSuchMetadataException nsme = Exceptions.findCause(  e, NoSuchMetadataException.class );
+                    if ( nsme != null ) {
+                      throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSecurityGroupID.NotFound", nsme.getMessage( ) ) );
+                    }
+                    throw e;
+                  }
                 } else if ( request.getSourceDestCheck( ) != null ) {
                   networkInterface.setSourceDestCheck( request.getSourceDestCheck( ).getValue( ) );
                 } else {
@@ -1446,7 +1477,7 @@ public class VpcManager {
     final ReplaceRouteResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
-    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) ); //TODO:STEVE: should also eni also?
+    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) ); //TODO:STEVE: should support eni also?
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     final String destinationCidr = request.getDestinationCidrBlock( );
     final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );

@@ -1281,6 +1281,13 @@ public class VmInstances {
         Collections.<T>emptySet( );
   }
 
+  private static <T> Set<T> networkInterfaceSetSet( final VmInstance instance,
+                                                    final Function<? super NetworkInterface,Set<T>> transform ) {
+    return instance.getNetworkInterfaces() != null ?
+        Sets.newHashSet( Iterables.concat( Iterables.transform( instance.getNetworkInterfaces(), transform ) ) ) :
+        Collections.<T>emptySet( );
+  }
+
   public static class VmInstanceFilterSupport extends FilterSupport<VmInstance> {
     public VmInstanceFilterSupport() {
       super( builderFor( VmInstance.class )
@@ -1345,8 +1352,8 @@ public class VmInstances {
           .withStringSetProperty( "network-interface.mac-address", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_MAC_ADDRESS )
           .withStringSetProperty( "network-interface-private-dns-name", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_PRIVATE_DNS_NAME )
           .withBooleanSetProperty( "network-interface.source-destination-check", VmInstanceBooleanSetFilterFunctions.NETWORK_INTERFACE_SOURCE_DEST_CHECK )
-          .withUnsupportedProperty( "network-interface.group-id" ) //TODO:STEVE: filters for network interface security groups
-          .withUnsupportedProperty( "network-interface.group-name" )
+          .withStringSetProperty( "network-interface.group-id", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_GROUP_ID )
+          .withStringSetProperty( "network-interface.group-name", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_GROUP_NAME )
           .withStringSetProperty( "network-interface.addresses.private-ip-address", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_PRIVATE_IP )
           .withBooleanSetProperty( "network-interface.addresses.primary", VmInstanceBooleanSetFilterFunctions.NETWORK_INTERFACE_ADDRESSES_PRIMARY )
           .withStringSetProperty( "network-interface.addresses.association.public-ip", VmInstanceStringSetFilterFunctions.NETWORK_INTERFACE_ASSOCIATION_PUBLIC_IP )
@@ -1368,6 +1375,7 @@ public class VmInstances {
           .withPersistenceAlias( "networkConfig.networkInterfaces", "networkInterfaces" )
           .withPersistenceAlias( "networkInterfaces.vpc", "vpc" )
           .withPersistenceAlias( "networkInterfaces.subnet", "subnet" )
+          .withPersistenceAlias( "networkInterfaces.networkGroups", "networkInterfaceNetworkGroups" )
           .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet( "bootRecord.machineImage" ), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
           .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
@@ -1389,7 +1397,7 @@ public class VmInstances {
           .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), ImageMetadata.VirtualizationType.fromString() )
           .withPersistenceFilter( "vpc-id", "bootRecord.vpcId", Collections.<String>emptySet() )
           .withPersistenceFilter( "network-interface.description", "networkInterfaces.description", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
-          .withPersistenceFilter( "network-interface.subnet-id", "subnet.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.subnet" )  )
+          .withPersistenceFilter( "network-interface.subnet-id", "subnet.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.subnet" ) )
           .withPersistenceFilter( "network-interface.vpc-id", "vpc.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.vpc" ) )
           .withPersistenceFilter( "network-interface.network-interface.id", "networkInterfaces.displayName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.owner-id", "networkInterfaces.ownerAccountNumber", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
@@ -1398,6 +1406,8 @@ public class VmInstances {
           .withPersistenceFilter( "network-interface.mac-address", "networkInterfaces.macAddress", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface-private-dns-name", "networkInterfaces.privateDnsName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.source-destination-check", "networkInterfaces.sourceDestCheck", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "network-interface.group-id", "networkInterfaceNetworkGroups.groupId", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.networkGroups" ) )
+          .withPersistenceFilter( "network-interface.group-name", "networkInterfaceNetworkGroups.displayName", Sets.newHashSet( "networkConfig.networkInterfaces", "networkInterfaces.networkGroups" )  )
           .withPersistenceFilter( "network-interface.addresses.private-ip-address", "networkInterfaces.privateIpAddress", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.addresses.association.public-ip", "networkInterfaces.association.publicIp", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.addresses.association.ip-owner-id", "networkInterfaces.association.ipOwnerId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
@@ -1698,6 +1708,18 @@ public class VmInstances {
       @Override
       public Set<String> apply( final VmInstance instance ) {
         return networkInterfaceSet( instance, NetworkInterfaces.FilterStringFunctions.PRIVATE_DNS_NAME );
+      }
+    },
+    NETWORK_INTERFACE_GROUP_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSetSet( instance, NetworkInterfaces.FilterStringSetFunctions.GROUP_ID );
+      }
+    },
+    NETWORK_INTERFACE_GROUP_NAME {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkInterfaceSetSet( instance, NetworkInterfaces.FilterStringSetFunctions.GROUP_NAME );
       }
     },
     NETWORK_INTERFACE_ATTACHMENT_ID {

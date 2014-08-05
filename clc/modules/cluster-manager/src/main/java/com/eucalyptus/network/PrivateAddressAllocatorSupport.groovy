@@ -47,9 +47,9 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   }
 
   @Override
-  String allocate( String scope, Iterable<Integer> addresses ) throws NotEnoughResourcesException {
+  String allocate( String scope, String tag, Iterable<Integer> addresses ) throws NotEnoughResourcesException {
     allocate( addresses, { Integer address ->
-      getDistinctPersistence( ).tryCreate( scope, PrivateAddresses.fromInteger( address.intValue( ) ) )
+      getDistinctPersistence( ).tryCreate( scope, tag, PrivateAddresses.fromInteger( address.intValue( ) ) )
           .transform( RestrictedTypes.toDisplayName( ) ).orNull( )
     } as Closure<String>) ?: typedThrow(String){ new NotEnoughResourcesException( 'Insufficient addresses' ) }
   }
@@ -62,7 +62,7 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   }
 
   @Override
-  void release( String scope, String address, String ownerId ) {
+  String release( String scope, String address, String ownerId ) {
     getDistinctPersistence( ).withFirstMatch( PrivateAddress.named( scope, address ), ownerId ) { PrivateAddress privateAddress ->
       if ( EXTANT.apply( privateAddress ) || !privateAddress.assignedPartition ) {
         getPersistence( ).teardown( privateAddress )
@@ -70,8 +70,8 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
         privateAddress.set( null )
         privateAddress.releasing( )
       }
-      void
-    }
+      privateAddress.tag
+    }.orNull( )
   }
 
   @Override

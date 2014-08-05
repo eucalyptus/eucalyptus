@@ -293,6 +293,7 @@ public class AddressManager {
             Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces() ) :
             RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
       }
+      reply.set_return( true );
 
       if ( !address.isAssigned( ) || !networkInterface.getDisplayName( ).equals( address.getNetworkInterfaceId( ) ) ) {
         if ( address.isAssigned( ) && !request.getAllowReassociation( ) ) {
