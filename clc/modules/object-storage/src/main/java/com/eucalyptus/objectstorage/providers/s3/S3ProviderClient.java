@@ -182,7 +182,7 @@ import java.util.NoSuchElementException;
  * or any separation between Euca-users.
  *
  */
-@ObjectStorageProviderClientProperty("s3")
+
 public class S3ProviderClient implements ObjectStorageProviderClient {
 	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class);
     private volatile URI upstreamEndpoint;
