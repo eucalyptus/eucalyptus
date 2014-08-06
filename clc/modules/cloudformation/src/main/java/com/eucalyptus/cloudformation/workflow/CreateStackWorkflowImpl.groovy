@@ -33,10 +33,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
-import com.netflix.glisten.WorkflowOperations;
+import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode;
+import groovy.transform.TypeCheckingMode
 
 @CompileStatic(TypeCheckingMode.SKIP)
 public class CreateStackWorkflowImpl implements CreateStackWorkflow {
@@ -116,7 +116,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             // let's make it an and promise...
             List<Promise<String>> allResources = Lists.newArrayList();
             allResources.addAll(createdResourcePromiseMap.values());
-            waitFor(allResources) {
+            AndPromise allResourcePromises = new AndPromise(allResources);
+            waitFor(allResourcePromises) {
               waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId))) {
                 promiseFor(activities.createGlobalStackEvent(stackId, accountId,
                   StackResourceEntity.Status.CREATE_COMPLETE.toString(),
@@ -208,7 +209,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                   // let's make it an and promise...
                   List<Promise<String>> allDeletedResources = Lists.newArrayList();
                   allDeletedResources.addAll(deletedResourcePromiseMap.values());
-                  waitFor(allDeletedResources) {
+                  AndPromise allDeletedResourcePromises = new AndPromise(allDeletedResources);
+                  waitFor(allDeletedResourcePromises) {
                     // Was everything done correctly?
                     Collection<String> failedDeletedResources = Lists.newArrayList();
                     for (String resourceName: deletedResourceStatusMap.keySet()) {
