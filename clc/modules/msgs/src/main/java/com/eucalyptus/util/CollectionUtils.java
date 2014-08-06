@@ -295,14 +295,35 @@ public class CollectionUtils {
    *
    * @return The min function.
    */
-  public static Function<Integer,Function<Integer,Integer>> min() {
-    return new Function<Integer,Function<Integer,Integer>>() {
+  public static NonNullFunction<Integer,Function<Integer,Integer>> min() {
+    return new NonNullFunction<Integer,Function<Integer,Integer>>() {
+      @Nonnull
       @Override
       public Function<Integer, Integer> apply( final Integer integer1 ) {
         return new Function<Integer, Integer>(){
           @Override
           public Integer apply( final Integer integer2 ) {
             return Math.min( integer1, integer2 );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Min function suitable for use with reduce.
+   *
+   * @return The long min function.
+   */
+  public static NonNullFunction<Long,Function<Long,Long>> lmin() {
+    return new NonNullFunction<Long,Function<Long,Long>>() {
+      @Nonnull
+      @Override
+      public Function<Long, Long> apply( final Long long1 ) {
+        return new Function<Long, Long>(){
+          @Override
+          public Long apply( final Long long2 ) {
+            return Math.min( long1, long2 );
           }
         };
       }

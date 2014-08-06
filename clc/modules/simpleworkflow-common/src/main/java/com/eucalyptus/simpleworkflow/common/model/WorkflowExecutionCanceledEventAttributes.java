@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionCanceled</code> event.
  * </p>
  */
-public class WorkflowExecutionCanceledEventAttributes implements Serializable {
+public class WorkflowExecutionCanceledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * Details for the cancellation (if any).
@@ -159,6 +159,11 @@ public class WorkflowExecutionCanceledEventAttributes implements Serializable {
     public WorkflowExecutionCanceledEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionCanceledEventAttributes( this );
     }
 
     /**

@@ -22,6 +22,7 @@ package com.eucalyptus.simpleworkflow;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -37,6 +38,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -48,8 +51,11 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -128,6 +134,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Enumerated( EnumType.STRING )
   private DecisionStatus decisionStatus;
 
+  @Column( name = "decision_timestamp", nullable = false)
+  @Temporal( TemporalType.TIMESTAMP )
+  private Date decisionTimestamp;
+
   @Column( name = "close_status" )
   @Enumerated( EnumType.STRING )
   private CloseStatus closeStatus;
@@ -151,6 +161,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   private String latestExecutionContext;
+
+  @Column( name = "timeout_timestamp" )
+  @Temporal( TemporalType.TIMESTAMP )
+  private Date timeoutTimestamp;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "workflowExecution" )
   @OrderColumn( name = "event_id" )
@@ -194,11 +208,31 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
         taskStartToCloseTimeout );
     workflowExecution.setTagList( tags );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
+    workflowExecution.setDecisionTimestamp( new Date() );
     workflowExecution.setWorkflowHistory( Lists.<WorkflowHistoryEvent>newArrayList( ) );
     for ( final WorkflowEventAttributes attributes : eventAttributes ) {
       workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create( workflowExecution, attributes ) );
     }
     return workflowExecution;
+  }
+
+  public Date calculateNextTimeout( ) {
+    final Long timeout = CollectionUtils.reduce( Iterables.filter( Lists.newArrayList(
+        toTimeout( getCreationTimestamp( ), getExecutionStartToCloseTimeout( ) ),
+        toTimeout( getDecisionTimestamp( ), getDecisionStatus( ) != DecisionStatus.Idle ? getTaskStartToCloseTimeout( ) : null )
+    ), Predicates.notNull( ) ), Long.MAX_VALUE, CollectionUtils.lmin( ) );
+    return timeout == Long.MAX_VALUE ? null : new Date( timeout );
+  }
+
+  public boolean isWorkflowTimedOut( ){
+    final Long timeout = toTimeout( getCreationTimestamp( ), getExecutionStartToCloseTimeout( ) );
+    return timeout != null && timeout < System.currentTimeMillis( );
+  }
+
+  private static Long toTimeout( final Date from, final Integer period ) {
+    return period == null ?
+        null :
+        from.getTime( ) + TimeUnit.SECONDS.toMillis( period );
   }
 
   public static WorkflowExecution exampleWithOwner( final OwnerFullName owner ) {
@@ -216,6 +250,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     workflowExecution.setDomainName( domain );
     workflowExecution.setTaskList( taskList );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
+    workflowExecution.setState( ExecutionStatus.Open );
     return workflowExecution;
   }
 
@@ -227,9 +262,22 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return workflowExecution;
   }
 
+  public static WorkflowExecution exampleForOpenWorkflow( ) {
+    return exampleForOpenWorkflow( null, null, null );
+  }
+
   public static WorkflowExecution exampleForOpenWorkflow( final OwnerFullName owner,
+                                                          final String domain,
                                                           final String workflowId ) {
-    final WorkflowExecution workflowExecution = new WorkflowExecution( owner, null );
+    return exampleForOpenWorkflow( owner, domain, workflowId, null );
+  }
+
+  public static WorkflowExecution exampleForOpenWorkflow( final OwnerFullName owner,
+                                                          final String domain,
+                                                          final String workflowId,
+                                                          final String runId ) {
+    final WorkflowExecution workflowExecution = new WorkflowExecution( owner, runId );
+    workflowExecution.setDomainName( domain );
     workflowExecution.setWorkflowId( workflowId );
     workflowExecution.setState( ExecutionStatus.Open );
     return workflowExecution;
@@ -351,6 +399,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     this.decisionStatus = decisionStatus;
   }
 
+  public Date getDecisionTimestamp() {
+    return decisionTimestamp;
+  }
+
+  public void setDecisionTimestamp( final Date decisionTimestamp ) {
+    this.decisionTimestamp = decisionTimestamp;
+  }
+
   public CloseStatus getCloseStatus( ) {
     return closeStatus;
   }
@@ -391,11 +447,26 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     this.latestExecutionContext = latestExecutionContext;
   }
 
+  public Date getTimeoutTimestamp() {
+    return timeoutTimestamp;
+  }
+
+  public void setTimeoutTimestamp( final Date timeoutTimestamp ) {
+    this.timeoutTimestamp = timeoutTimestamp;
+  }
+
   public List<WorkflowHistoryEvent> getWorkflowHistory() {
     return workflowHistory;
   }
 
   public void setWorkflowHistory( final List<WorkflowHistoryEvent> workflowHistory ) {
     this.workflowHistory = workflowHistory;
+  }
+
+  @PreUpdate
+  @PrePersist
+  protected void updateTimeout( ) {
+    updateTimeStamps( );
+    setTimeoutTimestamp( calculateNextTimeout( ) );
   }
 }

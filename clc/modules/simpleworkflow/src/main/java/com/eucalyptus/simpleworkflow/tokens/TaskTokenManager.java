@@ -36,6 +36,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import com.eucalyptus.bootstrap.SystemIds;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
@@ -49,6 +50,7 @@ import com.google.common.primitives.Longs;
 /**
  *
  */
+@ComponentNamed
 public class TaskTokenManager {
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
 

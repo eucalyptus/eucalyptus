@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.DomainMetadata;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.Domain;
 import com.eucalyptus.simpleworkflow.Domains;
 import com.eucalyptus.util.OwnerFullName;
@@ -27,6 +28,7 @@ import com.eucalyptus.util.OwnerFullName;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceDomains extends SwfPersistenceSupport<DomainMetadata,Domain> implements Domains {
 
   public PersistenceDomains( ) {

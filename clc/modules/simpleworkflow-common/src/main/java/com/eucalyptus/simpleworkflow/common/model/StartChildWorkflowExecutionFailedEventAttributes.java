@@ -44,7 +44,7 @@ import java.io.Serializable;
  * <code>StartChildWorkflowExecutionFailed</code> event.
  * </p>
  */
-public class StartChildWorkflowExecutionFailedEventAttributes implements Serializable {
+public class StartChildWorkflowExecutionFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The workflow type provided in the
@@ -471,6 +471,11 @@ public class StartChildWorkflowExecutionFailedEventAttributes implements Seriali
     public StartChildWorkflowExecutionFailedEventAttributes withControl(String control) {
         this.control = control;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setStartChildWorkflowExecutionFailedEventAttributes( this );
     }
 
     /**

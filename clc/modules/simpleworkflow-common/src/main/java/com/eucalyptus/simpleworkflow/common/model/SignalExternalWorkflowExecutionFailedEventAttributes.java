@@ -44,7 +44,7 @@ import java.io.Serializable;
  * <code>SignalExternalWorkflowExecutionFailed</code> event.
  * </p>
  */
-public class SignalExternalWorkflowExecutionFailedEventAttributes implements Serializable {
+public class SignalExternalWorkflowExecutionFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The <code>workflowId</code> of the external workflow execution that
@@ -490,6 +490,11 @@ public class SignalExternalWorkflowExecutionFailedEventAttributes implements Ser
     public SignalExternalWorkflowExecutionFailedEventAttributes withControl(String control) {
         this.control = control;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setSignalExternalWorkflowExecutionFailedEventAttributes( this );
     }
 
     /**

@@ -33,6 +33,8 @@ public interface ActivityTasks {
                              Predicate<? super ActivityTask> filter,
                              Function<? super ActivityTask,T> transform ) throws SwfMetadataException;
 
+  <T> List<T> listTimedOut( Function<? super ActivityTask,T> transform ) throws SwfMetadataException;
+
   <T> T updateByExample( ActivityTask example,
                          OwnerFullName ownerFullName,
                          String activityId,

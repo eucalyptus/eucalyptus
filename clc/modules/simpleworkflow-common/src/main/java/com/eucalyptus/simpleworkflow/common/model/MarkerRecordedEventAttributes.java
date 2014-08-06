@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>MarkerRecorded</code> event.
  * </p>
  */
-public class MarkerRecordedEventAttributes implements Serializable {
+public class MarkerRecordedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The name of the marker.
@@ -202,6 +202,11 @@ public class MarkerRecordedEventAttributes implements Serializable {
     public MarkerRecordedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setMarkerRecordedEventAttributes( this );
     }
 
     /**

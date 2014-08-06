@@ -46,7 +46,7 @@ import java.io.Serializable;
  * workflow execution.
  * </p>
  */
-public class History implements Serializable {
+public class History extends SimpleWorkflowMessage {
 
     /**
      * The list of history events.

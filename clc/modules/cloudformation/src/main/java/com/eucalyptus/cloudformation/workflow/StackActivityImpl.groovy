@@ -51,6 +51,7 @@ public class StackActivityImpl implements StackActivity{
   private static final Logger LOG = Logger.getLogger(StackActivityImpl.class);
   @Override
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason) {
+    LOG.info("Creating global stack event: " + resourceStatus);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     StackEvent stackEvent = new StackEvent();
@@ -77,6 +78,7 @@ public class StackActivityImpl implements StackActivity{
       stackEntity.setDeleteOperationTimestamp(new Date()); // AWS only records the first delete attempt timestamp
     }
     StackEntityManager.updateStack(stackEntity);
+    LOG.info("Done creating global stack event: " + resourceStatus);
     return ""; // promiseFor() doesn't work on void return types
   }
 
@@ -308,6 +310,7 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String finalizeCreateStack(String stackId, String accountId) {
+    LOG.info("Finalizing create stack");
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
       Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
@@ -326,6 +329,7 @@ public class StackActivityImpl implements StackActivity{
       LOG.error(e,e);
       throw e;
     }
+    LOG.info("Done finalizing create stack");
     return ""; // promiseFor() doesn't work on void return types
   }
 
@@ -337,10 +341,11 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String deleteAllStackRecords(String stackId, String accountId) {
+    LOG.info("Deleting all stack records");
     StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
+    LOG.info("Finished deleting all stack records");
     return ""; // promiseFor() doesn't work on void return types
   }
 }
-
