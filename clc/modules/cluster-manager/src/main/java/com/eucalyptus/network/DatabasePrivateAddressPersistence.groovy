@@ -61,7 +61,7 @@ class DatabasePrivateAddressPersistence implements PrivateAddressPersistence {
                                       final String ownerId,
                                       final Closure<V> closure ) {
     asTransaction( PrivateAddress, { PrivateAddress privateAddress ->
-      Entities.query( privateAddress, Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
+      Entities.query( privateAddress )?.getAt( 0 )?.with{
         PrivateAddress entity ->
           if ( ownerId == null || entity.instanceId == ownerId ) {
             Optional.fromNullable( closure.call( entity ) )

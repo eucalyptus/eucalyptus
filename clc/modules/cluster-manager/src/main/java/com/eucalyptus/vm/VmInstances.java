@@ -476,7 +476,7 @@ public class VmInstances {
     try {
       VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
-                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
+                                             .add( Example.create( vmExample ) )
                                              .add( Restrictions.in( "state", new VmState[] { VmState.RUNNING, VmState.PENDING } ) )
                                              .uniqueResult( );
       if ( vm == null ) {
@@ -628,7 +628,7 @@ public class VmInstances {
     try {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
-                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
+                                             .add( Example.create( vmExample ) )
                                              .add( criterion( VmState.RUNNING, VmState.PENDING ) )
                                              .uniqueResult();
       if ( vm == null ) {

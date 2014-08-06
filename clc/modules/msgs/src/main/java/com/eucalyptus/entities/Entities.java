@@ -317,7 +317,6 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   public static <T> List<T> query( final T example ) {
@@ -325,12 +324,11 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
                                                                     .setReadOnly( readOnly )
@@ -346,8 +344,6 @@ public class Entities {
    *
    * <P>The caller must have an active transaction for the entity.</P>
    *
-   * <P>WARNING: This method uses wildcard matching</P>
-   * 
    * @param example The example object
    * @param readOnly Use True if the results will not be modified
    * @param criterion Additional restrictions for the query
@@ -360,7 +356,7 @@ public class Entities {
                                    final boolean readOnly, 
                                    final Criterion criterion,
                                    final Map<String,String> aliases ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
         .createCriteria( example.getClass( ) )
         .setReadOnly( readOnly )
@@ -376,12 +372,11 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
                                                                     .setReadOnly( readOnly )
@@ -560,7 +555,7 @@ public class Entities {
                                 .getTxState( )
                                 .getSession( )
                                 .createCriteria( example.getClass( ) )
-                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .add( Example.create( example ) )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
