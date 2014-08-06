@@ -472,8 +472,8 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+	try ( TransactionResource db =
+	          Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ) )
@@ -487,15 +487,13 @@ public class VmInstances {
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchElementException( ex.getMessage( ) );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+    try ( TransactionResource db =
+	          Entities.transactionFor( VmInstance.class ) ) {
       List<VmInstance> vms = Entities.query( VmInstance.create( ) );
       for ( VmInstance vm : vms ) {
         try {
@@ -514,15 +512,13 @@ public class VmInstances {
       return ret;
     } catch ( Exception ex ) {
       throw new NoSuchElementException( ex.getMessage( ) );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   
   public static VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
 	 VmVolumeAttachment ret = null;
-	 final EntityTransaction db = Entities.get( VmInstance.class );
-	 try {
+     try ( TransactionResource db =
+		     Entities.transactionFor( VmInstance.class ) ) {
 	   List<VmInstance> vms = Entities.query( VmInstance.create( ) );
 	   for ( VmInstance vm : vms ) {
 	     try {
@@ -545,9 +541,7 @@ public class VmInstances {
 	   throw nex;
 	 } catch ( Exception ex ) {
 	   throw new NoSuchElementException( ex.getMessage( ) );
-	 } finally {
-	   if ( db.isActive() ) db.rollback();
-   }
+	 }
  }
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
@@ -573,8 +567,8 @@ public class VmInstances {
   }
 
   public static List<VmEphemeralAttachment> lookupEphemeralDevices(final String instanceId){
-	  final EntityTransaction db = Entities.get( VmInstance.class );
-	  try{
+	  try ( TransactionResource db =
+	          Entities.transactionFor( VmInstance.class ) ) {
 		  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
 		  final List<VmEphemeralAttachment> ephemeralDisks = 
 				  Lists.newArrayList(vm.getBootRecord().getEphemeralStorage());
@@ -584,9 +578,6 @@ public class VmInstances {
 		  throw ex;
 	  }catch(Exception ex){
 		  throw Exceptions.toUndeclared(ex);
-	  }finally{
-		  if(db.isActive())
-			  db.rollback();
 	  }
   }
 
@@ -604,28 +595,25 @@ public class VmInstances {
   };
 
   public static List<String> lookupPersistentDeviceNames(final String instanceId){
-	  final EntityTransaction db = Entities.get( VmInstance.class );
-	  List<String> deviceNames = new ArrayList<>();
-	  try{
-		  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
-		  for(VmVolumeAttachment vol:vm.getBootRecord().getPersistentVolumes()){
-			  deviceNames.add(vol.getDevice());
-		  }
-		  db.commit();
-		  return deviceNames;
-	  }catch(NoSuchElementException ex){
-		  throw ex;
-	  }catch(Exception ex){
-		  throw Exceptions.toUndeclared(ex);
-	  }finally{
-		  if(db.isActive())
-			  db.rollback();
+    try ( TransactionResource db =
+	        Entities.transactionFor( VmInstance.class ) ) {;
+      List<String> deviceNames = new ArrayList<>();
+	  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
+	  for(VmVolumeAttachment vol:vm.getBootRecord().getPersistentVolumes()){
+        deviceNames.add(vol.getDevice());
 	  }
+	  db.commit();
+      return deviceNames;
+	}catch(NoSuchElementException ex){
+	  throw ex;
+	}catch(Exception ex){
+	  throw Exceptions.toUndeclared(ex);
+	}
   }
 
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+	try ( TransactionResource db =
+	          Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ) )
@@ -639,8 +627,6 @@ public class VmInstances {
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchElementException( ex.getMessage( ) );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   

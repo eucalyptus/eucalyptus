@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowDevSda1;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExtraEphemeral;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -607,6 +608,10 @@ public class ImageManager {
 				existingNames.add(device.getDeviceName());
 			}
 		}
+		if(device.getVirtualName() != null) {
+			existingNames.add(device.getDeviceName());
+			creteImageDevices.add(device);
+		}
     }
 
 	if(! bdmCreateImageVerifier().apply(request)){
@@ -630,6 +635,12 @@ public class ImageManager {
 		throw e;
 	} catch(final Exception ex){
 		LOG.warn("Failed to retrieve ephemeral device information", ex);
+	}
+
+	try {
+		Images.validateBlockDeviceMappings( creteImageDevices, EnumSet.of( AllowEbsMapping ) );
+	} catch (MetadataException e) {
+		throw new ClientComputeException("InvalidBlockDeviceMapping", e.getMessage());
 	}
 
 	final List<BlockDeviceMappingItemType> blockDeviceMapping = creteImageDevices;

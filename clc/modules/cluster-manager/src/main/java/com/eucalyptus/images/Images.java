@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -455,6 +456,7 @@ public class Images {
     AllowSuppressMapping,
     AllowEbsMapping,
     AllowDevSda1,
+    SkipExtraEphemeral,
     ;
 
     /**
@@ -467,7 +469,7 @@ public class Images {
   
   /**
    * <p>Validates the correctness of a block device mapping</p>
-   * 
+   * <p>Returns block device mapping that has only one ephemeral device if multiple were passed</p>
    * <p>Invalid cases:</p> 
    * <ul>
    * <li>Device name is assigned multiple times</li>
@@ -482,20 +484,30 @@ public class Images {
    * @param options Validation options
    * @throws MetadataException for any validation failure
    */
-  public static void validateBlockDeviceMappings(
+  public static ArrayList<BlockDeviceMappingItemType> validateBlockDeviceMappings(
       final List<BlockDeviceMappingItemType> bdms,
       final Set<DeviceMappingValidationOption> options
   ) throws MetadataException {
+    ArrayList<BlockDeviceMappingItemType> resultedBdms = new ArrayList<>();
     if ( bdms != null ) {
       Set<String> deviceNames = Sets.newHashSet();
+      boolean ephemeralAlreadyPresent = false;
       int ephemeralCount = 0;
-
       for ( final BlockDeviceMappingItemType bdm : bdms ) {
         checkParam( bdm, notNullValue( ) );
         checkParam( bdm.getDeviceName( ), notNullValue( ) );
         if( !deviceNames.add( bdm.getDeviceName( ).replace("/dev/","") ) ) {
           throw new MetadataException( bdm.getDeviceName() + " is assigned multiple times" );
         }
+        if ( DeviceMappingValidationOption.SkipExtraEphemeral.present(options) && StringUtils.isNotBlank(bdm.getVirtualName( )) ) {
+	      if( !ephemeralAlreadyPresent ) {
+	        ephemeralAlreadyPresent = true;
+	      } else {
+	        // skip all ephemerals except the first one
+	        continue;
+	      }
+        }
+        resultedBdms.add(bdm);
       }
       final Set<String> fullDeviceNames = Sets.newHashSet();
       for(final String name : deviceNames){
@@ -503,7 +515,7 @@ public class Images {
       }
       deviceNames = fullDeviceNames;
 
-      for ( final BlockDeviceMappingItemType bdm : bdms ) {
+      for ( final BlockDeviceMappingItemType bdm : resultedBdms ) {
     	if ( !bdm.getDeviceName().matches("(/dev/)?([svh]|xv)d[a-z]([1-9])*")){
     		throw new MetadataException("Device name " + bdm.getDeviceName() + " is invalid");
     	} else if( bdm.getDeviceName().matches(".*\\d\\Z") && 
@@ -517,9 +529,11 @@ public class Images {
           if ( !bdm.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
             throw new MetadataException( "Virtual device name must be of the form ephemeral[0123]. Fix the mapping for " + bdm.getDeviceName() );
           }
-          ephemeralCount ++;
-          if( ephemeralCount > 1 ) {
-            throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+          if ( !DeviceMappingValidationOption.SkipExtraEphemeral.present(options) ){
+            ephemeralCount++;
+            if( ephemeralCount > 1 ) {
+              throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+            }
           }
         } else if ( null != bdm.getEbs( ) ) {
           if ( !DeviceMappingValidationOption.AllowEbsMapping.present( options ) ) {
@@ -546,6 +560,7 @@ public class Images {
         }
       }
     }
+    return resultedBdms;
   }
   
   public static boolean isImageNameValid(final String imgName){
