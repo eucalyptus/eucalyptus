@@ -58,6 +58,6 @@ public class PersistenceActivityTasks extends SwfPersistenceSupport<ActivityTask
 
   @Override
   protected ActivityTask exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return ActivityTask.exampleWithName( ownerFullName, name );
+    return ActivityTask.exampleWithActivityId( ownerFullName, null, null, name );
   }
 }

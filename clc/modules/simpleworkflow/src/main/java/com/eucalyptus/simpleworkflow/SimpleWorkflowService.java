@@ -41,10 +41,13 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
+import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCancelRequestedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCanceledEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCompletedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskFailedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskScheduledEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStartedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStatus;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeDetail;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfo;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfos;
@@ -55,6 +58,10 @@ import com.eucalyptus.simpleworkflow.common.model.CancelWorkflowExecutionDecisio
 import com.eucalyptus.simpleworkflow.common.model.CompleteWorkflowExecutionDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.CountClosedWorkflowExecutionsRequest;
+import com.eucalyptus.simpleworkflow.common.model.CountOpenWorkflowExecutionsRequest;
+import com.eucalyptus.simpleworkflow.common.model.CountPendingActivityTasksRequest;
+import com.eucalyptus.simpleworkflow.common.model.CountPendingDecisionTasksRequest;
 import com.eucalyptus.simpleworkflow.common.model.Decision;
 import com.eucalyptus.simpleworkflow.common.model.DecisionTask;
 import com.eucalyptus.simpleworkflow.common.model.DecisionTaskCompletedEventAttributes;
@@ -65,6 +72,7 @@ import com.eucalyptus.simpleworkflow.common.model.DeprecateDomainRequest;
 import com.eucalyptus.simpleworkflow.common.model.DeprecateWorkflowTypeRequest;
 import com.eucalyptus.simpleworkflow.common.model.DescribeActivityTypeRequest;
 import com.eucalyptus.simpleworkflow.common.model.DescribeDomainRequest;
+import com.eucalyptus.simpleworkflow.common.model.DescribeWorkflowExecutionRequest;
 import com.eucalyptus.simpleworkflow.common.model.DescribeWorkflowTypeRequest;
 import com.eucalyptus.simpleworkflow.common.model.DomainDetail;
 import com.eucalyptus.simpleworkflow.common.model.DomainInfo;
@@ -74,18 +82,27 @@ import com.eucalyptus.simpleworkflow.common.model.GetWorkflowExecutionHistoryReq
 import com.eucalyptus.simpleworkflow.common.model.History;
 import com.eucalyptus.simpleworkflow.common.model.HistoryEvent;
 import com.eucalyptus.simpleworkflow.common.model.ListActivityTypesRequest;
+import com.eucalyptus.simpleworkflow.common.model.ListClosedWorkflowExecutionsRequest;
 import com.eucalyptus.simpleworkflow.common.model.ListDomainsRequest;
+import com.eucalyptus.simpleworkflow.common.model.ListOpenWorkflowExecutionsRequest;
 import com.eucalyptus.simpleworkflow.common.model.ListWorkflowTypesRequest;
 import com.eucalyptus.simpleworkflow.common.model.MarkerRecordedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.PendingTaskCount;
 import com.eucalyptus.simpleworkflow.common.model.PollForActivityTaskRequest;
 import com.eucalyptus.simpleworkflow.common.model.PollForDecisionTaskRequest;
+import com.eucalyptus.simpleworkflow.common.model.RecordActivityTaskHeartbeatRequest;
 import com.eucalyptus.simpleworkflow.common.model.RecordMarkerDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.RegisterActivityTypeRequest;
 import com.eucalyptus.simpleworkflow.common.model.RegisterDomainRequest;
 import com.eucalyptus.simpleworkflow.common.model.RegisterWorkflowTypeRequest;
+import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskDecisionAttributes;
+import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedCause;
+import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionFailedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.RequestCancelWorkflowExecutionRequest;
+import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskCanceledRequest;
 import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskCompletedRequest;
 import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskFailedRequest;
 import com.eucalyptus.simpleworkflow.common.model.RespondDecisionTaskCompletedRequest;
@@ -94,6 +111,7 @@ import com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskDecisionAt
 import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionFailedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.SignalWorkflowExecutionRequest;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionFailedCause;
@@ -104,9 +122,14 @@ import com.eucalyptus.simpleworkflow.common.model.StartTimerFailedEventAttribute
 import com.eucalyptus.simpleworkflow.common.model.StartWorkflowExecutionRequest;
 import com.eucalyptus.simpleworkflow.common.model.TaskList;
 import com.eucalyptus.simpleworkflow.common.model.TerminateWorkflowExecutionRequest;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCancelRequestedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCanceledEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCompletedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCount;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionDetail;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionFailedEventAttributes;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionInfos;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionSignaledEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionStartedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTerminatedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeDetail;
@@ -488,6 +511,34 @@ public class SimpleWorkflowService {
     }
   }
 
+  public WorkflowExecutionDetail describeWorkflowExecution( final DescribeWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+    return request.reply( new WorkflowExecutionDetail( ) ); //TODO:STEVE: counts and listings - EUCA-9623
+  }
+
+  public WorkflowExecutionCount countClosedWorkflowExecutions( final CountClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+    return request.reply( new WorkflowExecutionCount( ) );
+  }
+
+  public WorkflowExecutionCount countOpenWorkflowExecutions( final CountOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+    return request.reply( new WorkflowExecutionCount( ) );
+  }
+
+  public PendingTaskCount countPendingActivityTasks( final CountPendingActivityTasksRequest request ) throws SimpleWorkflowException {
+    return request.reply( new PendingTaskCount( ) );
+  }
+
+  public PendingTaskCount countPendingDecisionTasks( final CountPendingDecisionTasksRequest request ) throws SimpleWorkflowException {
+    return request.reply( new PendingTaskCount( ) );
+  }
+
+  public WorkflowExecutionInfos listClosedWorkflowExecutions( final ListClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+    return request.reply( new WorkflowExecutionInfos( ) );
+  }
+
+  public WorkflowExecutionInfos listOpenWorkflowExecutions( final ListOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+    return request.reply( new WorkflowExecutionInfos( ) );
+  }
+
   public Run startWorkflowExecution( final StartWorkflowExecutionRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
@@ -644,6 +695,104 @@ public class SimpleWorkflowService {
       activityTask = new com.eucalyptus.simpleworkflow.common.model.ActivityTask( );
     }
     return request.reply( activityTask );
+  }
+
+  public ActivityTaskStatus recordActivityTaskHeartbeat( final RecordActivityTaskHeartbeatRequest request ) throws SimpleWorkflowException {
+    final Context ctx = Contexts.lookup( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final Predicate<? super ActivityTask> accessible =
+        SimpleWorkflowMetadatas.filteringFor( ActivityTask.class ).byPrivileges( ).buildPredicate( );
+
+    final ActivityTaskStatus status = new ActivityTaskStatus( );
+    status.setCancelRequested( false );
+    try {
+      final TaskToken token =
+          taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
+
+      activityTasks.updateByExample(
+          ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId(), token.getScheduledEventId() ),
+          accountFullName,
+          token.getRunId( ) + "/" + token.getScheduledEventId( ),
+          new Function<ActivityTask, ActivityTask>() {
+            @Override
+            public ActivityTask apply( final ActivityTask activityTask ) {
+              if ( accessible.apply( activityTask ) ) {
+                activityTask.setHeartbeatDetails( request.getDetails( ) );
+                activityTask.updateTimeStamps( );
+                status.setCancelRequested( activityTask.getCancelRequestedEventId( ) != null );
+              }
+              return activityTask;
+            }
+          } );
+    } catch ( SwfMetadataNotFoundException e ) {
+      throw new SimpleWorkflowClientException(
+          "UnknownResourceFault",
+          "Unknown activity task, token = " + request.getTaskToken( ) );
+    } catch( Exception e ) {
+      throw handleException( e );
+    }
+
+    return request.reply( status );
+  }
+
+  public SimpleWorkflowMessage respondActivityTaskCanceled( final RespondActivityTaskCanceledRequest request ) throws SimpleWorkflowException {
+    final Context ctx = Contexts.lookup( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final Predicate<? super ActivityTask> accessible =
+        SimpleWorkflowMetadatas.filteringFor( ActivityTask.class ).byPrivileges( ).buildPredicate( );
+
+    final ActivityTaskStatus status = new ActivityTaskStatus( );
+    status.setCancelRequested( false );
+    try {
+      final TaskToken token =
+          taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
+
+      activityTasks.updateByExample(
+          ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId( ), token.getScheduledEventId( ) ),
+          accountFullName,
+          token.getRunId( ) + "/" + token.getScheduledEventId( ),
+          new Function<ActivityTask, ActivityTask>() {
+            @Override
+            public ActivityTask apply( final ActivityTask activityTask ) {
+              if ( accessible.apply( activityTask ) ) {
+                final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
+                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                    workflowExecution,
+                    new ActivityTaskCanceledEventAttributes()
+                        .withDetails( request.getDetails() )
+                        .withLatestCancelRequestedEventId( activityTask.getCancelRequestedEventId() )
+                        .withScheduledEventId( activityTask.getScheduledEventId() )
+                        .withStartedEventId( activityTask.getStartedEventId() )
+                ) );
+                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskScheduledEventAttributes( )
+                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  ) );
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                }
+                Entities.delete( activityTask );
+              }
+              return activityTask;
+            }
+          } );
+    } catch ( SwfMetadataNotFoundException e ) {
+      throw new SimpleWorkflowClientException(
+          "UnknownResourceFault",
+          "Unknown activity task, token = " + request.getTaskToken( ) );
+    } catch( Exception e ) {
+      throw handleException( e );
+    }
+
+    longPollExit( );
+
+    return request.reply( new SimpleWorkflowMessage( ) );
+
   }
 
   public SimpleWorkflowMessage respondActivityTaskCompleted( final RespondActivityTaskCompletedRequest request ) throws SimpleWorkflowException {
@@ -892,10 +1041,18 @@ public class SimpleWorkflowService {
                 if ( !started.getEventId( ).equals( token.getStartedEventId( ) ) ) {
                   throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "ValidationError", "Bad token" ) );
                 }
+                final WorkflowHistoryEvent scheduled = Iterables.find(
+                    reverseEvents,
+                    CollectionUtils.propertyPredicate( "DecisionTaskScheduled", WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE ) );
+                if ( scheduled.getEventId( ) < started.getEventId() ) {
+                  workflowExecution.setDecisionStatus( Idle );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                } else {
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                }
 
                 // process decision task response
-                workflowExecution.setDecisionStatus( Idle );
-                workflowExecution.setDecisionTimestamp( new Date( ) );
                 workflowExecution.setLatestExecutionContext( request.getExecutionContext( ) );
                 final Long completedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                     workflowExecution,
@@ -930,6 +1087,7 @@ public class SimpleWorkflowService {
                               .withDecisionTaskCompletedEventId( completedId )
                               .withDetails( cancelWorkflowExecution.getDetails() )
                       ) );
+                      deleteActivities( activityTasks, accountFullName, workflowExecution );
                       break;
                     case "CompleteWorkflowExecution":
                       final CompleteWorkflowExecutionDecisionAttributes completed =
@@ -965,6 +1123,7 @@ public class SimpleWorkflowService {
                               .withDecisionTaskCompletedEventId( completedId )
                               .withDetails( failed.getDetails( ) )
                               .withReason( failed.getReason( ) ) ) );
+                      deleteActivities( activityTasks, accountFullName, workflowExecution );
                       break;
                     case "RecordMarker":
                       final RecordMarkerDecisionAttributes mark = decision.getRecordMarkerDecisionAttributes( );
@@ -975,12 +1134,58 @@ public class SimpleWorkflowService {
                               .withDecisionTaskCompletedEventId( completedId )
                               .withMarkerName( mark.getMarkerName( ) )
                       ) );
-                      scheduleDecisionTask = true;
-                      //TODO:STEVE: test as part of EUCA-9622
                       break;
-//TODO:STEVE: cancel task - EUCA-9622
-//                    case "RequestCancelActivityTask":
-//                      break;
+                    case "RequestCancelActivityTask":
+                      final RequestCancelActivityTaskDecisionAttributes cancelActivity =
+                          decision.getRequestCancelActivityTaskDecisionAttributes();
+                      try {
+                        activityTasks.updateByExample(
+                            ActivityTask.exampleWithActivityId(
+                                accountFullName,
+                                workflowExecution.getDomainName( ),
+                                workflowExecution.getDisplayName( ),
+                                cancelActivity.getActivityId( ) ),
+                            accountFullName,
+                            cancelActivity.getActivityId( ),
+                            new Function<ActivityTask, Void>() {
+                              @Override
+                              public Void apply( final ActivityTask activityTask ) {
+                                final Long cancelRequestedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                                    workflowExecution,
+                                    new ActivityTaskCancelRequestedEventAttributes()
+                                        .withDecisionTaskCompletedEventId( completedId )
+                                        .withActivityId( cancelActivity.getActivityId() )
+                                ) );
+
+                                if ( activityTask.getState( ) == ActivityTask.State.Active ) {
+                                  activityTask.setCancelRequestedEventId( cancelRequestedId );
+                                } else {
+                                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                                      workflowExecution,
+                                      new ActivityTaskCanceledEventAttributes()
+                                          .withLatestCancelRequestedEventId( cancelRequestedId )
+                                          .withScheduledEventId( activityTask.getScheduledEventId() )
+                                          .withStartedEventId( activityTask.getStartedEventId() )
+                                  ) );
+                                  Entities.delete( activityTask );
+                                }
+                                return null;
+                              }
+                            }
+                        );
+                      } catch ( SwfMetadataNotFoundException e ) {
+                        workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new RequestCancelActivityTaskFailedEventAttributes( )
+                                .withCause( RequestCancelActivityTaskFailedCause.ACTIVITY_ID_UNKNOWN )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withActivityId( cancelActivity.getActivityId( ) )
+                        ) );
+                      } catch ( SwfMetadataException e ) {
+                        throw Exceptions.toUndeclared( e );
+                      }
+                      scheduleDecisionTask = true;
+                      break;
                     case "RequestCancelExternalWorkflowExecution":
                       final RequestCancelExternalWorkflowExecutionDecisionAttributes cancelExternalWorkflow =
                           decision.getRequestCancelExternalWorkflowExecutionDecisionAttributes();
@@ -1092,7 +1297,7 @@ public class SimpleWorkflowService {
                           "Unsupported decision type: " + decision.getDecisionType( ) ) );
                   }
                 }
-                if ( scheduleDecisionTask ) {
+                if ( scheduleDecisionTask && workflowExecution.getDecisionStatus( ) != Pending ) {
                   workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                       workflowExecution,
                       new DecisionTaskScheduledEventAttributes()
@@ -1107,6 +1312,110 @@ public class SimpleWorkflowService {
             }
           } );
     } catch( Exception e ) {
+      throw handleException( e );
+    }
+
+    longPollExit( );
+
+    return request.reply( new SimpleWorkflowMessage( ) );
+  }
+
+  public SimpleWorkflowMessage signalWorkflowExecution( final SignalWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+    final Context ctx = Contexts.lookup( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final Predicate<? super WorkflowExecution> accessible =
+        SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
+
+    try {
+      workflowExecutions.updateByExample(
+          WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
+          accountFullName,
+          request.getWorkflowId( ),
+          new Function<WorkflowExecution,Void>(){
+            @Override
+            public Void apply( final WorkflowExecution workflowExecution ) {
+              if ( accessible.apply( workflowExecution ) ) {
+                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new WorkflowExecutionSignaledEventAttributes( )
+                            .withExternalInitiatedEventId( 0L )
+                            .withInput( request.getInput( ) )
+                            .withSignalName( request.getSignalName( ) )
+                ) );
+                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskScheduledEventAttributes()
+                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  ) );
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                }
+              }
+              return null;
+            }
+          }
+      );
+    } catch ( SwfMetadataNotFoundException e ) {
+      throw new SimpleWorkflowClientException(
+          "UnknownResourceFault",
+          request.getRunId( ) == null ?
+              "Unknown execution, workflowId = " + request.getWorkflowId( ) :
+              "Unknown execution: WorkflowExecution=[workflowId=" + request.getWorkflowId( ) + ", runId="+ request.getRunId( ) +"]" );
+    } catch ( SwfMetadataException e ) {
+      throw handleException( e );
+    }
+
+    longPollExit( );
+
+    return request.reply( new SimpleWorkflowMessage( ) );
+  }
+
+  public SimpleWorkflowMessage requestCancelWorkflowExecution( final RequestCancelWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+    final Context ctx = Contexts.lookup( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final Predicate<? super WorkflowExecution> accessible =
+        SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
+
+    try {
+      workflowExecutions.updateByExample(
+          WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
+          accountFullName,
+          request.getWorkflowId( ),
+          new Function<WorkflowExecution,Void>(){
+            @Override
+            public Void apply( final WorkflowExecution workflowExecution ) {
+              if ( accessible.apply( workflowExecution ) ) {
+                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                    workflowExecution,
+                    new WorkflowExecutionCancelRequestedEventAttributes( )
+                        .withExternalInitiatedEventId( 0L )
+                ) );
+                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskScheduledEventAttributes()
+                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  ) );
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                }
+              }
+              return null;
+            }
+          }
+      );
+    } catch ( SwfMetadataNotFoundException e ) {
+      throw new SimpleWorkflowClientException(
+          "UnknownResourceFault",
+          request.getRunId( ) == null ?
+              "Unknown execution, workflowId = " + request.getWorkflowId( ) :
+              "Unknown execution: WorkflowExecution=[workflowId=" + request.getWorkflowId( ) + ", runId="+ request.getRunId( ) +"]" );
+    } catch ( SwfMetadataException e ) {
       throw handleException( e );
     }
 
@@ -1144,6 +1453,7 @@ public class SimpleWorkflowService {
                               .withReason( request.getReason() ) )
                   );
                 }
+                deleteActivities( activityTasks, accountFullName, workflowExecution );
                 return null;
              }
            }
@@ -1225,8 +1535,18 @@ public class SimpleWorkflowService {
     return Entities.asTransaction( supplier );
   }
 
-  protected <E extends AbstractPersistent,P> Function<P,E> transactional( final Function<P,E> function ) {
-    return Entities.asTransaction( function );
+  private static void deleteActivities( final ActivityTasks activityTasks,
+                                        final AccountFullName accountFullName,
+                                        final WorkflowExecution workflowExecution ) {
+    try {
+      activityTasks.deleteByExample(
+          ActivityTask.exampleWithWorkflowExecution(
+              accountFullName,
+              workflowExecution.getDomainName( ),
+              workflowExecution.getDisplayName( ) ) );
+    } catch ( SwfMetadataException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
   /**

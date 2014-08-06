@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskCanceled</code> event.
  * </p>
  */
-public class ActivityTaskCanceledEventAttributes implements Serializable {
+public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * Details of the cancellation (if any).
@@ -270,6 +270,11 @@ public class ActivityTaskCanceledEventAttributes implements Serializable {
     public ActivityTaskCanceledEventAttributes withLatestCancelRequestedEventId(Long latestCancelRequestedEventId) {
         this.latestCancelRequestedEventId = latestCancelRequestedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setActivityTaskCanceledEventAttributes( this );
     }
 
     /**

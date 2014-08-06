@@ -44,7 +44,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class WorkflowExecutionCancelRequestedEventAttributes implements Serializable {
+public class WorkflowExecutionCancelRequestedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The external workflow execution for which the cancellation was
@@ -299,6 +299,11 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Serializ
     public WorkflowExecutionCancelRequestedEventAttributes withCause(WorkflowExecutionCancelRequestedCause cause) {
         this.cause = cause.toString();
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionCancelRequestedEventAttributes( this );
     }
 
     /**
