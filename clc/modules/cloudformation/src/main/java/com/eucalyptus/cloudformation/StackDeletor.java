@@ -19,13 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation;
 
+import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.Template;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.StackActivity;
-import com.eucalyptus.cloudformation.workflow.StackActivityImpl;
-import com.netflix.glisten.impl.local.LocalWorkflowOperations;
 import org.apache.log4j.Logger;
 
 /**
@@ -47,9 +43,7 @@ public class StackDeletor extends Thread {
   public void run() {
     try {
       try {
-        DeleteStackWorkflowImpl deleteStackWorkflow = new DeleteStackWorkflowImpl();
-        deleteStackWorkflow.setWorkflowOperations(LocalWorkflowOperations.<StackActivity>of(new StackActivityImpl()));
-        deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
+        CloudFormationBootstrapper.getWorkflowProvider().getDeleteStackWorkflow().deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
       } catch (Exception ex2) {
         LOG.error(ex2, ex2);
       }

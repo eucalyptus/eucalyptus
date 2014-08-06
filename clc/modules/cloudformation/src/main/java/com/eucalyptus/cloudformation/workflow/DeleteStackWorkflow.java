@@ -19,7 +19,13 @@
  ************************************************************************/
 
 package com.eucalyptus.cloudformation.workflow;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
+import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
 
+@Workflow
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 3600)
 public interface DeleteStackWorkflow {
+  @Execute(version = "3.0")
   public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId);
 }

@@ -19,16 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation;
 
+import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.entity.StackEntityHelper;
-import com.eucalyptus.cloudformation.resources.ResourceInfo;
-import com.eucalyptus.cloudformation.resources.ResourceInfoHelper;
-import com.eucalyptus.cloudformation.template.JsonHelper;
-import com.eucalyptus.cloudformation.template.Template;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.StackActivity;
-import com.eucalyptus.cloudformation.workflow.StackActivityImpl;
-import com.netflix.glisten.impl.local.LocalWorkflowOperations;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -53,9 +45,7 @@ public class StackCreator extends Thread {
   @Override
   public void run() {
     try {
-      CreateStackWorkflowImpl createStackWorkflow = new CreateStackWorkflowImpl();
-      createStackWorkflow.setWorkflowOperations(LocalWorkflowOperations.<StackActivity>of(new StackActivityImpl()));
-      createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId, onFailure);
+      CloudFormationBootstrapper.getWorkflowProvider().getCreateStackWorkflow().createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId, onFailure);
     } catch (Exception ex2) {
       LOG.error(ex2, ex2);
     }
