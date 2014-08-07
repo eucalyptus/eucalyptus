@@ -90,7 +90,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listClosedWorkflowExecutions(ListClosedWorkflowExecutionsRequest)
  */
-public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable {
+public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable, ClosedWorkflowExecutionFilterParameters {
 
     /**
      * The name of the domain that contains the workflow executions to list.

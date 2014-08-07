@@ -88,7 +88,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#countOpenWorkflowExecutions(CountOpenWorkflowExecutionsRequest)
  */
-public class CountOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable {
+public class CountOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable, WorkflowExecutionFilterParameters {
 
     /**
      * The name of the domain containing the workflow executions to count.

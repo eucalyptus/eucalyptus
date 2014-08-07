@@ -41,6 +41,7 @@ import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.CancelWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.ChildPolicy;
 import com.eucalyptus.simpleworkflow.common.model.CloseStatus;
+import com.eucalyptus.simpleworkflow.common.model.CloseStatusFilter;
 import com.eucalyptus.simpleworkflow.common.model.CompleteWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionDecisionAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedCause;
@@ -62,6 +63,8 @@ import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionFai
 import com.eucalyptus.simpleworkflow.common.model.StartTimerFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCancelRequestedCause;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCount;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionInfo;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTerminatedCause;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTimeoutType;
 import com.eucalyptus.util.Exceptions;
@@ -82,12 +85,18 @@ public class SwfJsonUtils {
     mapper.getSerializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
-    mapper.getDeserializationConfig( ).addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class);
-    mapper.getDeserializationConfig( ).addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class);
+    mapper.getSerializationConfig().addMixInAnnotations( CloseStatusFilter.class, BindingMixIn.class );
+    mapper.getSerializationConfig().addMixInAnnotations( WorkflowExecutionCount.class, BindingMixIn.class );
+    mapper.getSerializationConfig().addMixInAnnotations( WorkflowExecutionInfo.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class);
+    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class);
     mapper.getDeserializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getDeserializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
-    mapper.getDeserializationConfig( ).addMixInAnnotations( Decision.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( Decision.class, BindingMixIn.class );
     mapper.getDeserializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( CloseStatusFilter.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowExecutionCount.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowExecutionInfo.class, BindingMixIn.class );
     mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
     mapper.getSerializationConfig().setSerializationInclusion( JsonSerialize.Inclusion.NON_NULL );
   }
@@ -145,6 +154,7 @@ public class SwfJsonUtils {
     @JsonIgnore void setTimeoutType(DecisionTaskTimeoutType timeoutType);
     @JsonIgnore void setTimeoutType(WorkflowExecutionTimeoutType timeoutType);
     @JsonIgnore Boolean isCancelRequested( );
+    @JsonIgnore Boolean isTruncated( );
   }
 
 

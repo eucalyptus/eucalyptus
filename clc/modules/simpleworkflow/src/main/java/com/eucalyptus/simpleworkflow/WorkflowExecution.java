@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +55,7 @@ import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -89,6 +91,12 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
     public String toString( ) {
       return name( ).toUpperCase( );
+    }
+
+    public static CloseStatus fromString( final String value ) {
+      return Iterables.tryFind(
+          Arrays.asList( values( ) ),
+          CollectionUtils.propertyPredicate( value, Functions.toStringFunction( ) )  ).or( CloseStatus.Completed );
     }
   }
 
@@ -127,7 +135,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Column( name = "task_start_to_close_timeout", nullable = false, updatable = false )
   private Integer taskStartToCloseTimeout;
 
-  @Column( name = "cancel_requested" )
+  @Column( name = "cancel_requested", nullable = false )
   private Boolean cancelRequested;
 
   @Column( name = "decision_status" )
@@ -207,6 +215,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
         workflowType.getDefaultTaskStartToCloseTimeout() :
         taskStartToCloseTimeout );
     workflowExecution.setTagList( tags );
+    workflowExecution.setCancelRequested( false );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
     workflowExecution.setDecisionTimestamp( new Date() );
     workflowExecution.setWorkflowHistory( Lists.<WorkflowHistoryEvent>newArrayList( ) );
@@ -280,6 +289,20 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     workflowExecution.setDomainName( domain );
     workflowExecution.setWorkflowId( workflowId );
     workflowExecution.setState( ExecutionStatus.Open );
+    workflowExecution.setStateChangeStack( null );
+    workflowExecution.setLastState( null );
+    return workflowExecution;
+  }
+
+  public static WorkflowExecution exampleForClosedWorkflow( final OwnerFullName owner,
+                                                            final String domain,
+                                                            final String workflowId ) {
+    final WorkflowExecution workflowExecution = new WorkflowExecution( owner, null );
+    workflowExecution.setDomainName( domain );
+    workflowExecution.setWorkflowId( workflowId );
+    workflowExecution.setState( ExecutionStatus.Closed );
+    workflowExecution.setStateChangeStack( null );
+    workflowExecution.setLastState( null );
     return workflowExecution;
   }
 
