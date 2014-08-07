@@ -67,9 +67,10 @@ public class TimeoutManager {
               workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                   workflowExecution,
                   new ActivityTaskTimedOutEventAttributes( )
-                      .withTimeoutType( timeout.getLeft( ) )
-                      .withStartedEventId( activityTask.getStartedEventId( ) )
+                      .withDetails( activityTask.getHeartbeatDetails( ) )
                       .withScheduledEventId( activityTask.getScheduledEventId( ) )
+                      .withStartedEventId( activityTask.getStartedEventId( ) )
+                      .withTimeoutType( timeout.getLeft( ) )
               ) );
               if ( workflowExecution.getDecisionStatus( ) != Pending ) {
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(

@@ -35,6 +35,7 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStatus;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskTimeoutType;
 import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.CancelWorkflowExecutionFailedCause;
@@ -80,11 +81,13 @@ public class SwfJsonUtils {
     mapper.getSerializationConfig().addMixInAnnotations( Decision.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
+    mapper.getSerializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
     mapper.getDeserializationConfig( ).addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class);
     mapper.getDeserializationConfig( ).addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class);
     mapper.getDeserializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getDeserializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
     mapper.getDeserializationConfig( ).addMixInAnnotations( Decision.class, BindingMixIn.class );
+    mapper.getDeserializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
     mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
     mapper.getSerializationConfig().setSerializationInclusion( JsonSerialize.Inclusion.NON_NULL );
   }
@@ -141,6 +144,7 @@ public class SwfJsonUtils {
     @JsonIgnore void setTimeoutType(ActivityTaskTimeoutType timeoutType);
     @JsonIgnore void setTimeoutType(DecisionTaskTimeoutType timeoutType);
     @JsonIgnore void setTimeoutType(WorkflowExecutionTimeoutType timeoutType);
+    @JsonIgnore Boolean isCancelRequested( );
   }
 
 

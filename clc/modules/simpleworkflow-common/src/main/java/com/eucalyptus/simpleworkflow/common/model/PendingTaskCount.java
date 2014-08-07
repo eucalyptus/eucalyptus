@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Contains the count of tasks in a task list.
  * </p>
  */
-public class PendingTaskCount implements Serializable {
+public class PendingTaskCount extends SimpleWorkflowMessage {
 
     /**
      * The number of tasks in the task list.
