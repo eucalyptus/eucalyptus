@@ -169,6 +169,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.volumePartition = volumePartition;
     this.volumeSize = volumeSize;
     this.progress = "0%";
+    this.snapshotPublic = false;
     super.setState( State.NIHIL );
   }
 
