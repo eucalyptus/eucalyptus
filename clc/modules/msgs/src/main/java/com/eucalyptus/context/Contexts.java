@@ -143,7 +143,26 @@ public class Contexts {
   public static void removeThreadLocal( ) {//GRZE: really unhappy these are public.
     tlContext.remove( );
   }
-  
+
+  public static Runnable runnableWithCurrentContext( final Runnable runnable ) {
+    return runnableWithContext( runnable, Contexts.lookup( ) );
+  }
+
+  public static Runnable runnableWithContext( final Runnable runnable, final Context context ) {
+    return new Runnable() {
+      @Override
+      public void run( ) {
+        final Context previously = tlContext.get( );
+        threadLocal( context );
+        try {
+          runnable.run( );
+        } finally {
+          threadLocal( previously );
+        }
+      }
+    };
+  }
+
   public static Context lookup( String correlationId ) throws NoSuchContextException {
     checkParam( "BUG: correlationId is null.", correlationId, notNullValue() );
     if ( !uuidContexts.containsKey( correlationId ) ) {

@@ -27,7 +27,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -37,12 +40,14 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCancelRequestedEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCanceledEventAttributes;
@@ -142,15 +147,23 @@ import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTerminatedEve
 import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeDetail;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfo;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfos;
+import com.eucalyptus.simpleworkflow.stateful.NotifyResponseType;
+import com.eucalyptus.simpleworkflow.stateful.NotifyType;
+import com.eucalyptus.simpleworkflow.stateful.PollForNotificationResponseType;
+import com.eucalyptus.simpleworkflow.stateful.PollForNotificationType;
+import com.eucalyptus.simpleworkflow.stateful.PolledNotifications;
 import com.eucalyptus.simpleworkflow.tokens.TaskToken;
 import com.eucalyptus.simpleworkflow.tokens.TaskTokenException;
 import com.eucalyptus.simpleworkflow.tokens.TaskTokenManager;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.concurrent.ListenableFuture;
 import com.eucalyptus.ws.Role;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -164,6 +177,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -856,7 +870,7 @@ public class SimpleWorkflowService {
       }
     }, WorkflowExecution.class, request.getWorkflowId( ) );
 
-    longPollExit( );
+    notifyTaskList( accountFullName, workflowExecution.getDomainName( ), "decision", workflowExecution.getTaskList( ) );
 
     final Run run = new Run( );
     run.setRunId( workflowExecution.getDisplayName() );
@@ -872,70 +886,81 @@ public class SimpleWorkflowService {
     final Predicate<? super ActivityTask> accessible =
         SimpleWorkflowMetadatas.filteringFor( ActivityTask.class ).byPrivileges( ).buildPredicate( );
 
-    com.eucalyptus.simpleworkflow.common.model.ActivityTask activityTask = null;
-    try {
-      final List<ActivityTask> pending = activityTasks.listByExample(
-          ActivityTask.examplePending( accountFullName, request.getDomain(), request.getTaskList().getName() ),
-          accessible,
-          Functions.<ActivityTask>identity( ) );
-      Collections.sort( pending, Ordering.natural( ).onResultOf( AbstractPersistentSupport.creation( ) ) );
-      for ( final ActivityTask pendingTask : pending ) {
-        if ( activityTask != null ) break;
-        try {
-          activityTask = activityTasks.updateByExample(
-              pendingTask,
-              accountFullName,
-              pendingTask.getDisplayName(),
-              new Function<ActivityTask,com.eucalyptus.simpleworkflow.common.model.ActivityTask>(){
-                @Nullable
-                @Override
-                public com.eucalyptus.simpleworkflow.common.model.ActivityTask apply( final ActivityTask activityTask ) {
-                  if ( activityTask.getState( ) == ActivityTask.State.Pending ) {
-                    final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
-                    final Long startedId = workflowExecution.addHistoryEvent(
-                        WorkflowHistoryEvent.create( workflowExecution, new ActivityTaskStartedEventAttributes( )
-                          .withIdentity( request.getIdentity( ) )
-                          .withScheduledEventId( activityTask.getScheduledEventId( ) )
-                        )
-                    );
-                    activityTask.setState( ActivityTask.State.Active );
-                    activityTask.setStartedEventId( startedId );
-                    return new com.eucalyptus.simpleworkflow.common.model.ActivityTask( )
-                        .withStartedEventId( startedId )
-                        .withInput( activityTask.getInput() )
-                        .withTaskToken( taskTokenManager.encryptTaskToken( new TaskToken(
-                            accountFullName.getAccountNumber(),
-                            workflowExecution.getDomain().getNaturalId(),
-                            workflowExecution.getDisplayName(),
-                            activityTask.getScheduledEventId(),
-                            startedId,
-                            System.currentTimeMillis(),
-                            System.currentTimeMillis() ) ) )
-                        .withActivityId( activityTask.getDisplayName() )
-                        .withActivityType( new com.eucalyptus.simpleworkflow.common.model.ActivityType()
-                            .withName( activityTask.getActivityType() )
-                            .withVersion( activityTask.getActivityVersion() ) )
-                        .withWorkflowExecution( new com.eucalyptus.simpleworkflow.common.model.WorkflowExecution()
-                            .withRunId( workflowExecution.getDisplayName() )
-                            .withWorkflowId( workflowExecution.getWorkflowId() ) );
-                  }
-                  return null;
-                }
-              });
+    final String domain = request.getDomain( );
+    final String taskList = request.getTaskList( ).getName( );
+    final Callable<com.eucalyptus.simpleworkflow.common.model.ActivityTask> taskCallable =
+        new Callable<com.eucalyptus.simpleworkflow.common.model.ActivityTask>() {
+          @Override
+          public com.eucalyptus.simpleworkflow.common.model.ActivityTask call( ) throws Exception {
+            com.eucalyptus.simpleworkflow.common.model.ActivityTask activityTask = null;
+            final List<ActivityTask> pending = activityTasks.listByExample(
+                ActivityTask.examplePending( accountFullName, domain, taskList ),
+                accessible,
+                Functions.<ActivityTask>identity( ) );
+            Collections.sort( pending, Ordering.natural( ).onResultOf( AbstractPersistentSupport.creation( ) ) );
+            for ( final ActivityTask pendingTask : pending ) {
+              if ( activityTask != null ) break;
+              try {
+                activityTask = activityTasks.updateByExample(
+                    pendingTask,
+                    accountFullName,
+                    pendingTask.getDisplayName(),
+                    new Function<ActivityTask,com.eucalyptus.simpleworkflow.common.model.ActivityTask>(){
+                      @Nullable
+                      @Override
+                      public com.eucalyptus.simpleworkflow.common.model.ActivityTask apply( final ActivityTask activityTask ) {
+                        if ( activityTask.getState( ) == ActivityTask.State.Pending ) {
+                          final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
+                          final Long startedId = workflowExecution.addHistoryEvent(
+                              WorkflowHistoryEvent.create( workflowExecution, new ActivityTaskStartedEventAttributes( )
+                                      .withIdentity( request.getIdentity( ) )
+                                      .withScheduledEventId( activityTask.getScheduledEventId( ) )
+                              )
+                          );
+                          activityTask.setState( ActivityTask.State.Active );
+                          activityTask.setStartedEventId( startedId );
+                          return new com.eucalyptus.simpleworkflow.common.model.ActivityTask( )
+                              .withStartedEventId( startedId )
+                              .withInput( activityTask.getInput() )
+                              .withTaskToken( taskTokenManager.encryptTaskToken( new TaskToken(
+                                  accountFullName.getAccountNumber(),
+                                  workflowExecution.getDomain().getNaturalId(),
+                                  workflowExecution.getDisplayName(),
+                                  activityTask.getScheduledEventId(),
+                                  startedId,
+                                  System.currentTimeMillis(),
+                                  System.currentTimeMillis() ) ) )
+                              .withActivityId( activityTask.getDisplayName() )
+                              .withActivityType( new com.eucalyptus.simpleworkflow.common.model.ActivityType()
+                                  .withName( activityTask.getActivityType() )
+                                  .withVersion( activityTask.getActivityVersion() ) )
+                              .withWorkflowExecution( new com.eucalyptus.simpleworkflow.common.model.WorkflowExecution()
+                                  .withRunId( workflowExecution.getDisplayName() )
+                                  .withWorkflowId( workflowExecution.getWorkflowId() ) );
+                        }
+                        return null;
+                      }
+                    });
 
-        } catch ( Exception e ) {
-          logger.error( "Error taking activity task", e );
-        }
-      }
+              } catch ( Exception e ) {
+                if ( PersistenceExceptions.isStaleUpdate( e ) ) {
+                  logger.error( "Activity task for domain " + domain + ", list " + taskList + " already taken", e );
+                } else {
+                  logger.error( "Error taking activity task for domain " + domain + ", list " + taskList, e );
+                }
+              }
+            }
+            return activityTask;
+          }
+        };
+
+    try {
+      handleTaskPolling( accountFullName, domain, "activity", taskList, request.getCorrelationId( ), new com.eucalyptus.simpleworkflow.common.model.ActivityTask( ), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
 
-    if ( activityTask == null ) {
-      longPollSimulation( );
-      activityTask = new com.eucalyptus.simpleworkflow.common.model.ActivityTask( );
-    }
-    return request.reply( activityTask );
+    return null;
   }
 
   public ActivityTaskStatus recordActivityTaskHeartbeat( final RecordActivityTaskHeartbeatRequest request ) throws SimpleWorkflowException {
@@ -990,13 +1015,13 @@ public class SimpleWorkflowService {
       final TaskToken token =
           taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
 
-      activityTasks.updateByExample(
+      final Pair<String,String> domainTaskListPair = activityTasks.updateByExample(
           ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId( ), token.getScheduledEventId( ) ),
           accountFullName,
           token.getRunId( ) + "/" + token.getScheduledEventId( ),
-          new Function<ActivityTask, ActivityTask>() {
+          new Function<ActivityTask, Pair<String,String>>() {
             @Override
-            public ActivityTask apply( final ActivityTask activityTask ) {
+            public Pair<String,String> apply( final ActivityTask activityTask ) {
               if ( accessible.apply( activityTask ) ) {
                 final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
@@ -1018,10 +1043,15 @@ public class SimpleWorkflowService {
                   workflowExecution.setDecisionTimestamp( new Date( ) );
                 }
                 Entities.delete( activityTask );
+                return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
               }
-              return activityTask;
+              return null;
             }
           } );
+
+      if ( domainTaskListPair != null ) {
+        notifyTaskList( accountFullName, domainTaskListPair.getLeft(), "decision", domainTaskListPair.getRight() );
+      }
     } catch ( SwfMetadataNotFoundException e ) {
       throw new SimpleWorkflowClientException(
           "UnknownResourceFault",
@@ -1029,8 +1059,6 @@ public class SimpleWorkflowService {
     } catch( Exception e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
 
@@ -1053,7 +1081,7 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      workflowExecutions.updateByExample(
+      final WorkflowExecution workflowExecution = workflowExecutions.updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1091,11 +1119,11 @@ public class SimpleWorkflowService {
               return workflowExecution;
             }
           } );
+
+      notifyTaskList( accountFullName, workflowExecution.getDomainName( ), "decision", workflowExecution.getTaskList( ) );
     } catch( Exception e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1117,7 +1145,7 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      workflowExecutions.updateByExample(
+      final WorkflowExecution workflowExecution = workflowExecutions.updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1156,11 +1184,11 @@ public class SimpleWorkflowService {
               return workflowExecution;
             }
           } );
+
+      notifyTaskList( accountFullName, workflowExecution.getDomainName( ), "decision", workflowExecution.getTaskList( ) );
     } catch( Exception e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1172,79 +1200,89 @@ public class SimpleWorkflowService {
     final Predicate<? super WorkflowExecution> accessible =
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
-    DecisionTask decisionTask = null;
-    try {
-      final List<WorkflowExecution> pending = workflowExecutions.listByExample(
-          WorkflowExecution.exampleWithPendingDecision( accountFullName, request.getDomain( ), request.getTaskList( ).getName( ) ),
-          accessible,
-          Functions.<WorkflowExecution>identity( ) );
-      Collections.sort( pending, Ordering.natural( ).onResultOf( AbstractPersistentSupport.creation( ) ) );
-      for ( final WorkflowExecution execution : pending ) {
-        if ( decisionTask != null ) break;
-        try {
-          decisionTask = workflowExecutions.updateByExample(
-              WorkflowExecution.exampleWithUniqueName( accountFullName, execution.getDomainName( ), execution.getDisplayName( ) ),
-              accountFullName,
-              execution.getDisplayName(),
-              new Function<WorkflowExecution,DecisionTask>( ) {
-                @Nullable
-                @Override
-                public DecisionTask apply( final WorkflowExecution workflowExecution ) {
-                  if ( workflowExecution.getDecisionStatus( ) == Pending ) {
-                    final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
-                    final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
-                    final WorkflowHistoryEvent scheduled = Iterables.find(
-                        reverseEvents,
-                        CollectionUtils.propertyPredicate( "DecisionTaskScheduled", EVENT_TYPE ) );
-                    final Optional<WorkflowHistoryEvent> previousStarted = Iterables.tryFind(
-                        reverseEvents,
-                        CollectionUtils.propertyPredicate( "DecisionTaskStarted", EVENT_TYPE ) );
-                    workflowExecution.setDecisionStatus( Active );
-                    workflowExecution.setDecisionTimestamp( new Date( ) );
-                    final WorkflowHistoryEvent started = WorkflowHistoryEvent.create(
-                        workflowExecution,
-                        new DecisionTaskStartedEventAttributes()
-                            .withIdentity( request.getIdentity() )
-                            .withScheduledEventId( scheduled.getEventId() ) );
-                    workflowExecution.addHistoryEvent( started );
-                    return new DecisionTask( )
-                        .withWorkflowExecution( new com.eucalyptus.simpleworkflow.common.model.WorkflowExecution( )
-                            .withWorkflowId( workflowExecution.getWorkflowId( ) )
-                            .withRunId( workflowExecution.getDisplayName( ) ) )
-                        .withWorkflowType( new com.eucalyptus.simpleworkflow.common.model.WorkflowType()
-                            .withName( workflowExecution.getWorkflowType( ).getDisplayName( ) )
-                            .withVersion( workflowExecution.getWorkflowType( ).getWorkflowVersion( ) ) )
-                        .withTaskToken( taskTokenManager.encryptTaskToken( new TaskToken(
-                            accountFullName.getAccountNumber( ),
-                            workflowExecution.getDomain( ).getNaturalId( ),
-                            workflowExecution.getDisplayName( ),
-                            scheduled.getEventId( ),
-                            started.getEventId( ),
-                            System.currentTimeMillis( ),
-                            System.currentTimeMillis( ) ) ) )  //TODO:STEVE: token expiry date
-                        .withStartedEventId( started.getEventId() )
-                        .withPreviousStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).or( 0L ) )
-                        .withEvents( Collections2.transform(
-                            Objects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
-                            TypeMappers.lookup( WorkflowHistoryEvent.class, HistoryEvent.class )
-                        ) );
+    final String domain = request.getDomain( );
+    final String taskList = request.getTaskList( ).getName( );
+    final Callable<DecisionTask> taskCallable = new Callable<DecisionTask>() {
+      @Override
+      public DecisionTask call() throws Exception {
+        final List<WorkflowExecution> pending = workflowExecutions.listByExample(
+            WorkflowExecution.exampleWithPendingDecision( accountFullName, domain, taskList ),
+            accessible,
+            Functions.<WorkflowExecution>identity( ) );
+        Collections.sort( pending, Ordering.natural( ).onResultOf( AbstractPersistentSupport.creation( ) ) );
+        DecisionTask decisionTask = null;
+        for ( final WorkflowExecution execution : pending ) {
+          if ( decisionTask != null ) break;
+          try {
+            decisionTask = workflowExecutions.updateByExample(
+                WorkflowExecution.exampleWithUniqueName( accountFullName, execution.getDomainName( ), execution.getDisplayName( ) ),
+                accountFullName,
+                execution.getDisplayName(),
+                new Function<WorkflowExecution,DecisionTask>( ) {
+                  @Nullable
+                  @Override
+                  public DecisionTask apply( final WorkflowExecution workflowExecution ) {
+                    if ( workflowExecution.getDecisionStatus( ) == Pending ) {
+                      final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
+                      final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
+                      final WorkflowHistoryEvent scheduled = Iterables.find(
+                          reverseEvents,
+                          CollectionUtils.propertyPredicate( "DecisionTaskScheduled", EVENT_TYPE ) );
+                      final Optional<WorkflowHistoryEvent> previousStarted = Iterables.tryFind(
+                          reverseEvents,
+                          CollectionUtils.propertyPredicate( "DecisionTaskStarted", EVENT_TYPE ) );
+                      workflowExecution.setDecisionStatus( Active );
+                      workflowExecution.setDecisionTimestamp( new Date( ) );
+                      final WorkflowHistoryEvent started = WorkflowHistoryEvent.create(
+                          workflowExecution,
+                          new DecisionTaskStartedEventAttributes()
+                              .withIdentity( request.getIdentity() )
+                              .withScheduledEventId( scheduled.getEventId() ) );
+                      workflowExecution.addHistoryEvent( started );
+                      return new DecisionTask( )
+                          .withWorkflowExecution( new com.eucalyptus.simpleworkflow.common.model.WorkflowExecution( )
+                              .withWorkflowId( workflowExecution.getWorkflowId( ) )
+                              .withRunId( workflowExecution.getDisplayName( ) ) )
+                          .withWorkflowType( new com.eucalyptus.simpleworkflow.common.model.WorkflowType()
+                              .withName( workflowExecution.getWorkflowType( ).getDisplayName( ) )
+                              .withVersion( workflowExecution.getWorkflowType( ).getWorkflowVersion( ) ) )
+                          .withTaskToken( taskTokenManager.encryptTaskToken( new TaskToken(
+                              accountFullName.getAccountNumber( ),
+                              workflowExecution.getDomain( ).getNaturalId( ),
+                              workflowExecution.getDisplayName( ),
+                              scheduled.getEventId( ),
+                              started.getEventId( ),
+                              System.currentTimeMillis( ),
+                              System.currentTimeMillis( ) ) ) )  //TODO:STEVE: token expiry date
+                          .withStartedEventId( started.getEventId() )
+                          .withPreviousStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).or( 0L ) )
+                          .withEvents( Collections2.transform(
+                              Objects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
+                              TypeMappers.lookup( WorkflowHistoryEvent.class, HistoryEvent.class )
+                          ) );
+                    }
+                    return null;
                   }
-                  return null;
-                }
-              } );
-        } catch ( Exception e ) {
-          logger.error( "Error taking decision task", e );
+                } );
+          } catch ( Exception e ) {
+            if ( PersistenceExceptions.isStaleUpdate( e ) ) {
+              logger.info( "Decision task for workflow " + execution.getDisplayName( ) + " already taken.");
+            } else {
+              logger.error( "Error taking decision task for workflow " + execution.getDisplayName( ), e );
+            }
+          }
         }
+        return decisionTask;
       }
+    };
+
+    try {
+      handleTaskPolling( accountFullName, domain, "decision", taskList, request.getCorrelationId(), new DecisionTask(), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
 
-    if ( decisionTask == null ) {
-      longPollSimulation( );
-      decisionTask = new DecisionTask( );
-    }
-    return request.reply( decisionTask );
+    return null;
   }
 
   public SimpleWorkflowMessage respondDecisionTaskCompleted( final RespondDecisionTaskCompletedRequest request ) throws SimpleWorkflowException {
@@ -1264,6 +1302,7 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
+      final Set<Pair<String,String>> notificationTypeListPairs = Sets.newHashSet( );
       workflowExecutions.updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
@@ -1291,6 +1330,7 @@ public class SimpleWorkflowService {
                 } else {
                   workflowExecution.setDecisionStatus( Pending );
                   workflowExecution.setDecisionTimestamp( new Date( ) );
+                  notificationTypeListPairs.add( Pair.pair( "decision", workflowExecution.getTaskList( ) ) );
                 }
 
                 // process decision task response
@@ -1471,6 +1511,9 @@ public class SimpleWorkflowService {
                             Predicates.alwaysTrue( ),
                             Functions.<ActivityType>identity( ) );
 
+                        final String list = scheduleActivity.getTaskList() == null ?
+                            activityType.getDefaultTaskList() :
+                            scheduleActivity.getTaskList().getName();
                         activityTasks.save( com.eucalyptus.simpleworkflow.ActivityTask.create(
                             userFullName,
                             workflowExecution,
@@ -1480,14 +1523,14 @@ public class SimpleWorkflowService {
                             scheduleActivity.getActivityType().getVersion(),
                             scheduleActivity.getInput(),
                             scheduledId,
-                            scheduleActivity.getTaskList() == null ?
-                                activityType.getDefaultTaskList() :
-                                scheduleActivity.getTaskList().getName(),
+                            list,
                             parsePeriod( scheduleActivity.getScheduleToCloseTimeout( ), activityType.getDefaultTaskScheduleToCloseTimeout( ) ),
                             parsePeriod( scheduleActivity.getScheduleToStartTimeout( ), activityType.getDefaultTaskScheduleToStartTimeout( ) ),
                             parsePeriod( scheduleActivity.getStartToCloseTimeout( ), activityType.getDefaultTaskStartToCloseTimeout( ) ),
                             parsePeriod( scheduleActivity.getHeartbeatTimeout( ), activityType.getDefaultTaskHeartbeatTimeout( ) )
                         ) );
+
+                        notificationTypeListPairs.add( Pair.pair( "activity", list ) );
                       } catch ( Exception e ) {
                         throw Exceptions.toUndeclared( e );
                       }
@@ -1547,16 +1590,24 @@ public class SimpleWorkflowService {
                   ) );
                   workflowExecution.setDecisionStatus( Pending );
                   workflowExecution.setDecisionTimestamp( new Date( ) );
+                  notificationTypeListPairs.add( Pair.pair( "decision", workflowExecution.getTaskList( ) ) );
                 }
               }
               return workflowExecution;
             }
           } );
+
+          //TODO:STEVE: update API to allow batch notification
+          for ( final Pair<String,String> notificationTypeListPair : notificationTypeListPairs ) {
+            notifyTaskList(
+                accountFullName,
+                domain.getDisplayName( ),
+                notificationTypeListPair.getLeft( ),
+                notificationTypeListPair.getRight( ) );
+          }
     } catch( Exception e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1569,13 +1620,13 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      workflowExecutions.updateByExample(
+      final Pair<String,String> domainTaskListPair = workflowExecutions.updateByExample(
           WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
           accountFullName,
           request.getWorkflowId( ),
-          new Function<WorkflowExecution,Void>(){
+          new Function<WorkflowExecution,Pair<String,String>>(){
             @Override
-            public Void apply( final WorkflowExecution workflowExecution ) {
+            public Pair<String,String> apply( final WorkflowExecution workflowExecution ) {
               if ( accessible.apply( workflowExecution ) ) {
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                         workflowExecution,
@@ -1593,12 +1644,17 @@ public class SimpleWorkflowService {
                   ) );
                   workflowExecution.setDecisionStatus( Pending );
                   workflowExecution.setDecisionTimestamp( new Date( ) );
+                  return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
                 }
               }
               return null;
             }
           }
       );
+
+      if ( domainTaskListPair != null ) {
+        notifyTaskList( accountFullName, domainTaskListPair.getLeft( ), "decision", domainTaskListPair.getRight( ) );
+      }
     } catch ( SwfMetadataNotFoundException e ) {
       throw new SimpleWorkflowClientException(
           "UnknownResourceFault",
@@ -1608,8 +1664,6 @@ public class SimpleWorkflowService {
     } catch ( SwfMetadataException e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1622,13 +1676,13 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      workflowExecutions.updateByExample(
+      final Pair<String,String> domainTaskListPair = workflowExecutions.updateByExample(
           WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
           accountFullName,
           request.getWorkflowId( ),
-          new Function<WorkflowExecution,Void>(){
+          new Function<WorkflowExecution,Pair<String,String>>(){
             @Override
-            public Void apply( final WorkflowExecution workflowExecution ) {
+            public Pair<String,String> apply( final WorkflowExecution workflowExecution ) {
               if ( accessible.apply( workflowExecution ) ) {
                 workflowExecution.setCancelRequested( true );
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
@@ -1645,12 +1699,17 @@ public class SimpleWorkflowService {
                   ) );
                   workflowExecution.setDecisionStatus( Pending );
                   workflowExecution.setDecisionTimestamp( new Date( ) );
+                  return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
                 }
               }
               return null;
             }
           }
       );
+
+      if ( domainTaskListPair != null ) {
+        notifyTaskList( accountFullName, domainTaskListPair.getLeft( ), "decision", domainTaskListPair.getRight( ) );
+      }
     } catch ( SwfMetadataNotFoundException e ) {
       throw new SimpleWorkflowClientException(
           "UnknownResourceFault",
@@ -1660,8 +1719,6 @@ public class SimpleWorkflowService {
     } catch ( SwfMetadataException e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1709,8 +1766,6 @@ public class SimpleWorkflowService {
     } catch ( SwfMetadataException e ) {
       throw handleException( e );
     }
-
-    longPollExit( );
 
     return request.reply( new SimpleWorkflowMessage( ) );
   }
@@ -1885,19 +1940,78 @@ public class SimpleWorkflowService {
     }
   }
 
-  private static void longPollExit( ) {
-    synchronized ( pollNotifier ) {
-      pollNotifier.notifyAll( );
+  private static void notifyTaskList( final AccountFullName accountFullName,
+                                      final String domain,
+                                      final String type,
+                                      final String taskList ) {
+    final NotifyType notify = new NotifyType( );
+    notify.setChannel( channelName( accountFullName, type, domain, taskList ) );
+    try {
+      final ListenableFuture<NotifyResponseType> dispatchFuture =
+          AsyncRequests.dispatch( Topology.lookup( PolledNotifications.class ), notify );
+      dispatchFuture.addListener( new Runnable( ) {
+        @Override
+        public void run() {
+          try {
+            dispatchFuture.get( );
+          } catch ( final InterruptedException e ) {
+            logger.info( "Interrupted while sending notification for " + notify.getChannel(), e );
+          } catch ( final ExecutionException e ) {
+            logger.error( "Error sending notification for " + notify.getChannel( ), e );
+            //TODO:STEVE: should retry notification?
+          }
+        }
+      } );
+    } catch ( final Exception e ) {
+      logger.error( "Error sending notification for " + notify.getChannel( ), e );
     }
   }
 
-  private static void longPollSimulation( ) {
+  private static void handleTaskPolling( final AccountFullName accountFullName,
+                                         final String domain,
+                                         final String type,
+                                         final String taskList,
+                                         final String correlationId,
+                                         final SimpleWorkflowMessage emptyResponse,
+                                         final Callable<? extends SimpleWorkflowMessage> responseCallable ) {
+    final PollForNotificationType poll = new PollForNotificationType( );
+    poll.setChannel( channelName( accountFullName, type, domain, taskList ) );
     try {
-      synchronized ( pollNotifier ) {
-        pollNotifier.wait( 5000L );
-      }
-    } catch ( InterruptedException e ) {
-      // respond immediately
+      final ListenableFuture<PollForNotificationResponseType> dispatchFuture =
+          AsyncRequests.dispatch( Topology.lookup( PolledNotifications.class ), poll );
+      dispatchFuture.addListener( Contexts.runnableWithCurrentContext( new Runnable( ) {
+        @Override
+        public void run() {
+          try {
+            final PollForNotificationResponseType response = dispatchFuture.get( );
+            if ( Objects.firstNonNull( response.getNotified( ), false ) ) {
+              final SimpleWorkflowMessage taskResponse = responseCallable.call( );
+              if ( taskResponse != null ) {
+                taskResponse.setCorrelationId( correlationId );
+                Contexts.response( taskResponse );
+                return;
+              }
+            }
+          } catch ( final InterruptedException e ) {
+            logger.info( "Interrupted while polling for task " + poll.getChannel(), e );
+          } catch ( final Exception e ) {
+            logger.error( "Error polling for task " + poll.getChannel( ), e );
+          }
+          emptyResponse.setCorrelationId( correlationId );
+          Contexts.response( emptyResponse );
+        }
+      } ) );
+    } catch ( Exception e ) {
+      logger.error( "Error polling for task " + poll.getChannel( ), e );
+      emptyResponse.setCorrelationId( correlationId );
+      Contexts.response( emptyResponse );
     }
+  }
+
+  private static String channelName( final AccountFullName accountFullName,
+                                     final String domain,
+                                     final String type,
+                                     final String taskList ) {
+    return accountFullName.getAccountNumber() + ":" + type + ":" + domain + ":" + taskList;
   }
 }

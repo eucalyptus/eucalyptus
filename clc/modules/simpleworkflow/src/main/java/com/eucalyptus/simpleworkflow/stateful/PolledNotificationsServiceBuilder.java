@@ -17,18 +17,20 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
+package com.eucalyptus.simpleworkflow.stateful;
 
-import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.DistributedServiceBuilder;
+import com.eucalyptus.component.annotation.ComponentPart;
 
 /**
  *
  */
-@ComponentMessage( SimpleWorkflow.class )
-public class SimpleWorkflowMessage extends BaseMessage {
-  public <TYPE extends SimpleWorkflowMessage> TYPE reply( final TYPE response ) {
-    return super.reply( response );
+@ComponentPart( PolledNotifications.class )
+@Handles({})
+public class PolledNotificationsServiceBuilder extends DistributedServiceBuilder {
+  public PolledNotificationsServiceBuilder( ) {
+    super( ComponentIds.lookup( PolledNotifications.class ) );
   }
 }

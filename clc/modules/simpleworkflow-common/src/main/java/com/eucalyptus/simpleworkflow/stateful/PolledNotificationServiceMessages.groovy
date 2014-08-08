@@ -3,10 +3,10 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 3 of the License.
+ * the Free Software Foundation version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
@@ -17,18 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
+@GroovyAddClassUUID
+package com.eucalyptus.simpleworkflow.stateful
 
-import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.component.annotation.ComponentMessage
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
-/**
- *
- */
-@ComponentMessage( SimpleWorkflow.class )
-public class SimpleWorkflowMessage extends BaseMessage {
-  public <TYPE extends SimpleWorkflowMessage> TYPE reply( final TYPE response ) {
-    return super.reply( response );
-  }
+@ComponentMessage(PolledNotifications.class)
+class PolledNotificationServiceMessage extends BaseMessage {
+}
+
+class NotifyType extends PolledNotificationServiceMessage {
+  String channel
+  String details
+}
+
+class NotifyResponseType extends PolledNotificationServiceMessage {
+}
+
+class PollForNotificationType extends PolledNotificationServiceMessage {
+  String channel
+}
+
+class PollForNotificationResponseType extends PolledNotificationServiceMessage {
+  Boolean notified
+  String details
 }
