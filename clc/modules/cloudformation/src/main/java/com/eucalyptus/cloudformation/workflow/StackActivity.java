@@ -23,8 +23,11 @@ package com.eucalyptus.cloudformation.workflow;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
 
-@ActivityRegistrationOptions(defaultTaskScheduleToStartTimeoutSeconds = 1200,
-  defaultTaskStartToCloseTimeoutSeconds = 600)
+@ActivityRegistrationOptions(
+  defaultTaskScheduleToStartTimeoutSeconds = 1200,
+  defaultTaskStartToCloseTimeoutSeconds = 600,
+  defaultTaskScheduleToCloseTimeoutSeconds = 1800
+)
 @Activities(version="1.0")
 public interface StackActivity {
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
