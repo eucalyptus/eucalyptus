@@ -50,6 +50,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -393,8 +394,8 @@ public class CreateImageTask {
 	}
 	
 	private void setVmCreateImageTaskState(final VmCreateImageTask.CreateImageState state){
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 vm.getRuntimeState().setCreateImageTaskState(state);
 			 Entities.persist(vm);
@@ -403,15 +404,12 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 	
 	private VmInstance getVmInstance() {
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 db.commit();
 			 return vm;
@@ -419,16 +417,13 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 	
 	private static List<BlockDeviceMappingItemType> getDeviceMappingsFromImage(final String imageId){
 		List<BlockDeviceMappingItemType> deviceMaps = Lists.newArrayList();
-		final EntityTransaction db = Entities.get(BlockStorageImageInfo.class);
-		try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			final BlockStorageImageInfo image = (BlockStorageImageInfo) Entities.uniqueResult(BlockStorageImageInfo.named(imageId));
 			final List<DeviceMapping> dmSet = image.getDeviceMappings();
 			for(final DeviceMapping dm : dmSet){
@@ -439,9 +434,6 @@ public class CreateImageTask {
 			return deviceMaps;
 		}catch(final Exception ex){
 			throw Exceptions.toUndeclared(ex);
-		}finally{
-			if(db.isActive())
-				db.rollback();
 		}
 	}
 	
@@ -477,8 +469,8 @@ public class CreateImageTask {
 			this.setAccountAdmin();
 			// will throw Exception if check failed
 			this.validateVmInstance();
-			final EntityTransaction db = Entities.get( VmInstance.class );
-			try{
+			try ( TransactionResource db =
+			          Entities.transactionFor( VmInstance.class ) ) {
 				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 				if(VmState.STOPPED.equals(vm.getState()) && !this.noReboot){
 					LOG.debug("Reboot is not possible for stopped instance");
@@ -491,9 +483,6 @@ public class CreateImageTask {
 				throw ex;
 			}catch(Exception ex){
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			createImageTasks.put(this.instanceId, this);
 			return;
@@ -568,23 +557,6 @@ public class CreateImageTask {
 		return deleteOnTerminates.contains(volumeId);
 	}
 	
-	private void setImageId(final String imageId){
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
-			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 vm.getRuntimeState().getVmCreateImageTask().setImageId(imageId);
-			 Entities.persist(vm);
-			 db.commit();
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
-		 }
-	}
-	
 	private String getImageId(){
 		final VmInstance vm = this.getVmInstance();
 		return vm.getRuntimeState().getVmCreateImageTask().getImageId();
@@ -592,8 +564,8 @@ public class CreateImageTask {
 	
 	private List<String> getSnapshotIds(){
 		List<String> snapshots = null;
-		final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 snapshots = Lists.transform(Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots()), 
 					 new Function<VmCreateImageSnapshot, String>(){
@@ -609,9 +581,6 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 
@@ -662,7 +631,8 @@ public class CreateImageTask {
 			final String volumeId = volume.getValue();
 			String snapshotId = null;
 			try{
-				final EucalyptusCreateSnapshotTask task = new EucalyptusCreateSnapshotTask(volumeId);
+				final EucalyptusCreateSnapshotTask task = new EucalyptusCreateSnapshotTask(volumeId,
+						String.format("Created by CreateImage(%s) for %s from %s", instanceId, getImageId(), volumeId));
 				final CheckedListenableFuture<Boolean> result = task.dispatch();
 				if(result.get()){
 					 snapshotId = task.getSnapshotId();
@@ -672,8 +642,8 @@ public class CreateImageTask {
 				throw Exceptions.toUndeclared(ex);
 			}
 			LOG.info(String.format("Created snapshot %s from volume %s for device %s", snapshotId, volumeId, deviceName));
-			final EntityTransaction db = Entities.get( VmInstance.class );
-			try{
+			try ( TransactionResource db =
+			          Entities.transactionFor( VmInstance.class ) ) {
 				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 				vm.getRuntimeState().getVmCreateImageTask().addSnapshot(deviceName, snapshotId, isRootDevice, isDeleteOnTerminate(volumeId));
 				isRootDevice=false;
@@ -682,16 +652,13 @@ public class CreateImageTask {
 			}catch(final Exception ex){
 				LOG.error("failed to add new snapshot", ex);
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	private List<VmCreateImageSnapshot> getSnapshots(){
-		final EntityTransaction db = Entities.get( VmInstance.class );
-		try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			final List<VmCreateImageSnapshot> snapshots =
 					Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots());
@@ -700,9 +667,6 @@ public class CreateImageTask {
 		}catch(final Exception ex){
 			LOG.error("failed to pull snapshot info", ex);
 			throw Exceptions.toUndeclared(ex);
-		}finally{
-			if(db.isActive())
-				db.rollback();
 		}
 	}
 	
@@ -819,12 +783,15 @@ public class CreateImageTask {
 	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private String volumeId = null;
 		private String snapshotId = null;
-		private EucalyptusCreateSnapshotTask(final String volumeId){
+		private String description = null;
+		private EucalyptusCreateSnapshotTask(final String volumeId, String description){
 			this.volumeId = volumeId;
+			this.description = description;
 		}
 		private CreateSnapshotType createSnapshot(){
 			final CreateSnapshotType req = new CreateSnapshotType();
 			req.setVolumeId(volumeId);
+			req.setDescription(description);
 			return req;
 		}
 		
