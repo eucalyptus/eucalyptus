@@ -172,6 +172,8 @@ public class AWSEC2DHCPOptionsResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2EIPResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String allocationId;
   public AWSEC2EIPResourceInfo() {
     setType("AWS::EC2::EIP");
   }
@@ -289,6 +291,8 @@ public class AWSEC2SecurityGroupEgressResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String availabilityZone;
   public AWSEC2SubnetResourceInfo() {
     setType("AWS::EC2::Subnet");
   }
