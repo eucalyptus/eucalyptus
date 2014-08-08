@@ -196,7 +196,7 @@ public class SimpleWorkflowService {
     this.taskTokenManager = taskTokenManager;
   }
 
-  public SimpleWorkflowMessage registerDomain( final RegisterDomainRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage registerDomain( final RegisterDomainRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     allocate( new Supplier<Domain>( ) {
@@ -217,7 +217,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public SimpleWorkflowMessage deprecateDomain( final DeprecateDomainRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage deprecateDomain( final DeprecateDomainRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super Domain> accessible =
@@ -244,7 +244,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public DomainInfos listDomains( final ListDomainsRequest request ) throws SimpleWorkflowException {
+  public synchronized DomainInfos listDomains( final ListDomainsRequest request ) throws SimpleWorkflowException {
     final DomainInfos domainInfos = new DomainInfos( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
@@ -265,7 +265,7 @@ public class SimpleWorkflowService {
     return request.reply( domainInfos );
   }
 
-  public DomainDetail describeDomain( final DescribeDomainRequest request ) throws SimpleWorkflowException {
+  public synchronized DomainDetail describeDomain( final DescribeDomainRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super Domain> requestedAndAccessible = SimpleWorkflowMetadatas.filteringFor( Domain.class )
@@ -286,7 +286,7 @@ public class SimpleWorkflowService {
     }
   }
 
-  public SimpleWorkflowMessage registerActivityType( final RegisterActivityTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage registerActivityType( final RegisterActivityTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -317,7 +317,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public SimpleWorkflowMessage deprecateActivityType( final DeprecateActivityTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage deprecateActivityType( final DeprecateActivityTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super ActivityType> accessible =
@@ -355,7 +355,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public ActivityTypeInfos listActivityTypes( final ListActivityTypesRequest request ) throws SimpleWorkflowException {
+  public synchronized ActivityTypeInfos listActivityTypes( final ListActivityTypesRequest request ) throws SimpleWorkflowException {
     final ActivityTypeInfos activityTypeInfos = new ActivityTypeInfos( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
@@ -378,7 +378,7 @@ public class SimpleWorkflowService {
     return request.reply( activityTypeInfos );
   }
 
-  public ActivityTypeDetail describeActivityType( final DescribeActivityTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized ActivityTypeDetail describeActivityType( final DescribeActivityTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super ActivityType> accessible =
@@ -403,7 +403,7 @@ public class SimpleWorkflowService {
     }
   }
 
-  public SimpleWorkflowMessage registerWorkflowType( final RegisterWorkflowTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage registerWorkflowType( final RegisterWorkflowTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -434,7 +434,7 @@ public class SimpleWorkflowService {
 
   }
 
-  public SimpleWorkflowMessage deprecateWorkflowType( final DeprecateWorkflowTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage deprecateWorkflowType( final DeprecateWorkflowTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super WorkflowType> accessible =
@@ -471,7 +471,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public WorkflowTypeInfos listWorkflowTypes( final ListWorkflowTypesRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowTypeInfos listWorkflowTypes( final ListWorkflowTypesRequest request ) throws SimpleWorkflowException {
     final WorkflowTypeInfos workflowTypeInfos = new WorkflowTypeInfos( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
@@ -494,7 +494,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowTypeInfos );
   }
 
-  public WorkflowTypeDetail describeWorkflowType( final DescribeWorkflowTypeRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowTypeDetail describeWorkflowType( final DescribeWorkflowTypeRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final Predicate<? super WorkflowType> accessible =
@@ -519,7 +519,7 @@ public class SimpleWorkflowService {
     }
   }
 
-  public WorkflowExecutionDetail describeWorkflowExecution( final DescribeWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowExecutionDetail describeWorkflowExecution( final DescribeWorkflowExecutionRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -564,7 +564,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowExecutionDetail );
   }
 
-  public WorkflowExecutionCount countClosedWorkflowExecutions( final CountClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowExecutionCount countClosedWorkflowExecutions( final CountClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -605,7 +605,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowExecutionCount );
   }
 
-  public WorkflowExecutionCount countOpenWorkflowExecutions( final CountOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowExecutionCount countOpenWorkflowExecutions( final CountOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -646,7 +646,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowExecutionCount );
   }
 
-  public PendingTaskCount countPendingActivityTasks( final CountPendingActivityTasksRequest request ) throws SimpleWorkflowException {
+  public synchronized PendingTaskCount countPendingActivityTasks( final CountPendingActivityTasksRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -683,7 +683,7 @@ public class SimpleWorkflowService {
     return request.reply( pendingTaskCount );
   }
 
-  public PendingTaskCount countPendingDecisionTasks( final CountPendingDecisionTasksRequest request ) throws SimpleWorkflowException {
+  public synchronized PendingTaskCount countPendingDecisionTasks( final CountPendingDecisionTasksRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -720,7 +720,7 @@ public class SimpleWorkflowService {
     return request.reply( pendingTaskCount );
   }
 
-  public WorkflowExecutionInfos listClosedWorkflowExecutions( final ListClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowExecutionInfos listClosedWorkflowExecutions( final ListClosedWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -750,7 +750,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowExecutionInfos );
   }
 
-  public WorkflowExecutionInfos listOpenWorkflowExecutions( final ListOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
+  public synchronized WorkflowExecutionInfos listOpenWorkflowExecutions( final ListOpenWorkflowExecutionsRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -780,7 +780,7 @@ public class SimpleWorkflowService {
     return request.reply( workflowExecutionInfos );
   }
 
-  public Run startWorkflowExecution( final StartWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+  public synchronized Run startWorkflowExecution( final StartWorkflowExecutionRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -863,7 +863,7 @@ public class SimpleWorkflowService {
     return request.reply( run );
   }
 
-  public com.eucalyptus.simpleworkflow.common.model.ActivityTask pollForActivityTask(
+  public synchronized com.eucalyptus.simpleworkflow.common.model.ActivityTask pollForActivityTask(
       final PollForActivityTaskRequest request
   ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
@@ -938,7 +938,7 @@ public class SimpleWorkflowService {
     return request.reply( activityTask );
   }
 
-  public ActivityTaskStatus recordActivityTaskHeartbeat( final RecordActivityTaskHeartbeatRequest request ) throws SimpleWorkflowException {
+  public synchronized ActivityTaskStatus recordActivityTaskHeartbeat( final RecordActivityTaskHeartbeatRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -977,7 +977,7 @@ public class SimpleWorkflowService {
     return request.reply( status );
   }
 
-  public SimpleWorkflowMessage respondActivityTaskCanceled( final RespondActivityTaskCanceledRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage respondActivityTaskCanceled( final RespondActivityTaskCanceledRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1036,7 +1036,7 @@ public class SimpleWorkflowService {
 
   }
 
-  public SimpleWorkflowMessage respondActivityTaskCompleted( final RespondActivityTaskCompletedRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage respondActivityTaskCompleted( final RespondActivityTaskCompletedRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1100,7 +1100,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public SimpleWorkflowMessage respondActivityTaskFailed( final RespondActivityTaskFailedRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage respondActivityTaskFailed( final RespondActivityTaskFailedRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1165,7 +1165,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public DecisionTask pollForDecisionTask( final PollForDecisionTaskRequest request ) throws SimpleWorkflowException {
+  public synchronized DecisionTask pollForDecisionTask( final PollForDecisionTaskRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1247,7 +1247,7 @@ public class SimpleWorkflowService {
     return request.reply( decisionTask );
   }
 
-  public SimpleWorkflowMessage respondDecisionTaskCompleted( final RespondDecisionTaskCompletedRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage respondDecisionTaskCompleted( final RespondDecisionTaskCompletedRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1614,7 +1614,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public SimpleWorkflowMessage requestCancelWorkflowExecution( final RequestCancelWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage requestCancelWorkflowExecution( final RequestCancelWorkflowExecutionRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1666,7 +1666,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public SimpleWorkflowMessage terminateWorkflowExecution( final TerminateWorkflowExecutionRequest request ) throws SimpleWorkflowException {
+  public synchronized SimpleWorkflowMessage terminateWorkflowExecution( final TerminateWorkflowExecutionRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -1715,7 +1715,7 @@ public class SimpleWorkflowService {
     return request.reply( new SimpleWorkflowMessage( ) );
   }
 
-  public History getWorkflowExecutionHistory( final GetWorkflowExecutionHistoryRequest request ) throws SimpleWorkflowException {
+  public synchronized History getWorkflowExecutionHistory( final GetWorkflowExecutionHistoryRequest request ) throws SimpleWorkflowException {
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
