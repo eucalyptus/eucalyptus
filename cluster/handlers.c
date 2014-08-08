@@ -4899,9 +4899,6 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
         // Generate migration credentials.
         const char cred_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        srand(tv.tv_sec * tv.tv_usec * getpid());
         for (int ci = 0; ci < (CREDENTIAL_SIZE - 1); ci++) {
             credentials[ci] = cred_chars[rand() % (sizeof(cred_chars) - 1)];
         }
@@ -6145,7 +6142,8 @@ int init_thread(void)
         // thread has already been initialized
     } else {
         // this thread has not been initialized, set up shared memory segments
-        srand(time(NULL));
+
+        euca_srand(); // seed the random number generator
 
         bzero(locks, sizeof(sem_t *) * ENDLOCK);
         bzero(mylocks, sizeof(int) * ENDLOCK);

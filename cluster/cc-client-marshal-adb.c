@@ -185,7 +185,6 @@ int cc_killallInstances(axutil_env_t * env, axis2_stub_t * pStub)
     adb_describeInstancesType_set_userId(dit, env, "eucalyptus");
     {
         bzero(cidstr, 9);
-        srand(time(NULL) + getpid());
         for (i = 0; i < 8; i++) {
             cidstr[i] = rand() % 26 + 'a';
         }
@@ -660,7 +659,6 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
     adb_bundleInstanceType_set_userId(sn, env, "eucalyptus");
     {
         bzero(cidstr, 9);
-        srand(time(NULL) + getpid());
         for (i = 0; i < 8; i++) {
             cidstr[i] = rand() % 26 + 'a';
         }
@@ -721,8 +719,6 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
     adb_bundleRestartInstanceType_set_userId(sn, env, "eucalyptus");
     {
         bzero(cidstr, 9);
-        srand(time(NULL) + getpid());
-
         for (i = 0; i < 8; i++) {
             cidstr[i] = rand() % 26 + 'a';
         }
@@ -1273,8 +1269,6 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     adb_runInstancesResponseType_t *rirt = NULL;
     adb_virtualMachineType_t *vm = copy_vm_type_to_adb(env, vm_type);
 
-    srand(time(NULL));
-
     rit = adb_runInstancesType_create(env);
     adb_runInstancesType_set_imageId(rit, env, amiId);
     adb_runInstancesType_set_imageURL(rit, env, amiURL);
@@ -1380,7 +1374,6 @@ int cc_registerImage(char *imageloc, axutil_env_t * env, axis2_stub_t * pStub)
     adb_registerImageType_set_userId(rit, env, "eucalyptus");
     {
         bzero(cidstr, 9);
-        srand(time(NULL) + getpid());
         for (i = 0; i < 8; i++) {
             cidstr[i] = rand() % 26 + 'a';
         }
