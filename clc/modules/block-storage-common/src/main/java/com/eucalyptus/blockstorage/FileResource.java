@@ -88,4 +88,9 @@ public class FileResource extends StorageResource {
 	public OutputStream getOutputStream() throws Exception {
 		return new FileOutputStream(new File(this.getPath()));
 	}
+
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.TRUE;
+	}
 }

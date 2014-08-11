@@ -110,4 +110,6 @@ public abstract class StorageResource {
 	public abstract InputStream getInputStream() throws Exception;
 
 	public abstract OutputStream getOutputStream() throws Exception;
+
+	public abstract Boolean isDownloadSynchronous();
 }

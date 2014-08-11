@@ -100,8 +100,10 @@ public class StorageInfo extends AbstractPersistent {
 	private static final Integer DEFAULT_MAX_SNAP_TRANSFER_RETRIES = 50;
 	private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
 	private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
-	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS = 3;
-	private static final Integer DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT = 48;
+	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
+	private static final Integer DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT = 48;
+	private static final Integer DEFAULT_READ_BUFFER_SIZE_IN_MB = 1;
+	private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 10;
 
 	@Transient
 	private static Logger LOG = Logger.getLogger(StorageInfo.class);
@@ -139,12 +141,20 @@ public class StorageInfo extends AbstractPersistent {
 	private Integer maxSnapshotPartsQueueSize;
 
 	@ConfigurableField(description = "Maximum number of snapshots that can be uploaded concurrently", displayName = "Maximum Concurrent Snapshot Uploads", initial = "3", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "max_concurrent_snapshot_Uploads")
-	private Integer maxConcurrentSnapshotUploads;
+	@Column(name = "max_concurrent_snapshot_transfers")
+	private Integer maxConcurrentSnapshotTransfers;
 
 	@ConfigurableField(description = "Snapshot upload wait time in hours after which the upload will be cancelled", displayName = "Snapshot Upload Timeout", initial = "48", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "snapshot_upload_timeout_hours")
-	private Integer snapshotUploadTimeoutInHours;
+	@Column(name = "snapshot_transfer_timeout_hours")
+	private Integer snapshotTransferTimeoutInHours;
+
+	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
+	@Column(name = "read_buffer_size_mb")
+	private Integer readBuffferSizeInMB;
+
+	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot", displayName = "Write Buffer Size", initial = "10", changeListener = PositiveIntegerChangeListener.class)
+	@Column(name = "write_buffer_size_mb")
+	private Integer writeBufferSizeInMB;
 
 	public StorageInfo() {
 		this.name = StorageProperties.NAME;
@@ -226,20 +236,36 @@ public class StorageInfo extends AbstractPersistent {
 		this.maxSnapshotPartsQueueSize = maxSnapshotPartsQueueSize;
 	}
 
-	public Integer getMaxConcurrentSnapshotUploads() {
-		return maxConcurrentSnapshotUploads;
+	public Integer getMaxConcurrentSnapshotTransfers() {
+		return maxConcurrentSnapshotTransfers;
 	}
 
-	public void setMaxConcurrentSnapshotUploads(Integer maxConcurrentSnapshotUploads) {
-		this.maxConcurrentSnapshotUploads = maxConcurrentSnapshotUploads;
+	public void setMaxConcurrentSnapshotTransfers(Integer maxConcurrentSnapshotTransfers) {
+		this.maxConcurrentSnapshotTransfers = maxConcurrentSnapshotTransfers;
 	}
 
-	public Integer getSnapshotUploadTimeoutInHours() {
-		return snapshotUploadTimeoutInHours;
+	public Integer getSnapshotTransferTimeoutInHours() {
+		return snapshotTransferTimeoutInHours;
 	}
 
-	public void setSnapshotUploadTimeoutInHours(Integer snapshotUploadTimeoutInHours) {
-		this.snapshotUploadTimeoutInHours = snapshotUploadTimeoutInHours;
+	public void setSnapshotTransferTimeoutInHours(Integer snapshotTransferTimeoutInHours) {
+		this.snapshotTransferTimeoutInHours = snapshotTransferTimeoutInHours;
+	}
+
+	public Integer getReadBuffferSizeInMB() {
+		return readBuffferSizeInMB;
+	}
+
+	public void setReadBuffferSizeInMB(Integer readBuffferSizeInMB) {
+		this.readBuffferSizeInMB = readBuffferSizeInMB;
+	}
+
+	public Integer getWriteBufferSizeInMB() {
+		return writeBufferSizeInMB;
+	}
+
+	public void setWriteBufferSizeInMB(Integer writeBufferSizeInMB) {
+		this.writeBufferSizeInMB = writeBufferSizeInMB;
 	}
 
 	@Override
@@ -296,13 +322,18 @@ public class StorageInfo extends AbstractPersistent {
 		if (maxSnapshotPartsQueueSize == null) {
 			maxSnapshotPartsQueueSize = DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE;
 		}
-		if (maxConcurrentSnapshotUploads == null) {
-			maxConcurrentSnapshotUploads = DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS;
+		if (maxConcurrentSnapshotTransfers == null) {
+			maxConcurrentSnapshotTransfers = DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS;
 		}
-		if (snapshotUploadTimeoutInHours == null) {
-			snapshotUploadTimeoutInHours = DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT;
+		if (snapshotTransferTimeoutInHours == null) {
+			snapshotTransferTimeoutInHours = DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT;
 		}
-
+		if (readBuffferSizeInMB == null) {
+			readBuffferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
+		}
+		if (writeBufferSizeInMB == null) {
+			writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
+		}
 	}
 
 	private static StorageInfo getDefaultInstance() {
@@ -314,14 +345,16 @@ public class StorageInfo extends AbstractPersistent {
 		info.setMaxSnapTransferRetries(DEFAULT_MAX_SNAP_TRANSFER_RETRIES);
 		info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
 		info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
-		info.setMaxConcurrentSnapshotUploads(DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS);
-		info.setSnapshotUploadTimeoutInHours(DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT);
+		info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
+		info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
+		info.setReadBuffferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
+		info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
 		return info;
 	}
 
 	public static StorageInfo getStorageInfo() {
 		TransactionResource tran = Entities.transactionFor(StorageInfo.class);
-        StorageInfo conf = null;
+		StorageInfo conf = null;
 		try {
 			conf = Entities.uniqueResult(new StorageInfo(StorageProperties.NAME));
 			tran.commit();

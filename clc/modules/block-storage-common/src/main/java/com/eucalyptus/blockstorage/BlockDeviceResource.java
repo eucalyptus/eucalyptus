@@ -127,4 +127,9 @@ public class BlockDeviceResource extends StorageResource {
 		throw new IOException("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath());
 	}
 
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.TRUE;
+	}
+
 }
