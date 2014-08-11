@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Contains details about a workflow execution.
  * </p>
  */
-public class WorkflowExecutionDetail implements Serializable {
+public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
 
     /**
      * Information about the workflow execution.

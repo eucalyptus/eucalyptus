@@ -44,7 +44,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class RequestCancelActivityTaskFailedEventAttributes implements Serializable {
+public class RequestCancelActivityTaskFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The activityId provided in the <code>RequestCancelActivityTask</code>
@@ -323,6 +323,11 @@ public class RequestCancelActivityTaskFailedEventAttributes implements Serializa
     public RequestCancelActivityTaskFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setRequestCancelActivityTaskFailedEventAttributes( this );
     }
 
     /**

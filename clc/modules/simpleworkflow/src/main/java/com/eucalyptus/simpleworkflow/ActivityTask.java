@@ -76,6 +76,9 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Column( name = "domain", nullable = false, updatable = false )
   private String domain;
 
+  @Column( name = "workflow_run_id", nullable = false, updatable = false )
+  private String workflowRunId;
+
   @Column( name = "task_list", nullable = false, updatable = false  )
   private String taskList;
 
@@ -84,6 +87,9 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   @Column( name = "started_event_id" )
   private Long startedEventId;
+
+  @Column( name = "cancel_requested_event_id" )
+  private Long cancelRequestedEventId;
 
   @Column( name = "activity_type", nullable = false, updatable = false  )
   private String activityType;
@@ -107,6 +113,11 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   @Column( name = "heartbeat_timeout", updatable = false )
   private Integer heartbeatTimeout;
+
+  @Column( name = "heartbeat_details", updatable = false )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  private String heartbeatDetails;
 
   @Column( name = "started_timestamp" )
   @Temporal( TemporalType.TIMESTAMP )
@@ -139,6 +150,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     final ActivityTask activityTask = new ActivityTask( ownerFullName, activityId );
     activityTask.setWorkflowExecution( workflowExecution );
     activityTask.setDomain( domain );
+    activityTask.setWorkflowRunId( workflowExecution.getDisplayName( ) );
     activityTask.setActivityType( activityType );
     activityTask.setActivityVersion( activityVersion );
     activityTask.setInput( input );
@@ -157,8 +169,23 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     return new ActivityTask( owner, null );
   }
 
-  public static ActivityTask exampleWithName( final OwnerFullName owner, final String name ) {
-    return new ActivityTask( owner, name );
+  public static ActivityTask exampleWithActivityId( final OwnerFullName owner,
+                                                    final String domainName,
+                                                    final String runId,
+                                                    final String name ) {
+    final ActivityTask activityTask = new ActivityTask( owner, name );
+    activityTask.setDomain( domainName );
+    activityTask.setWorkflowRunId( runId );
+    return activityTask;
+  }
+
+  public static ActivityTask exampleWithWorkflowExecution( final OwnerFullName owner,
+                                                           final String domainName,
+                                                           final String runId ) {
+    final ActivityTask activityTask = new ActivityTask( owner, null );
+    activityTask.setDomain( domainName );
+    activityTask.setWorkflowRunId( runId );
+    return activityTask;
   }
 
   public static ActivityTask exampleWithUniqueName( final OwnerFullName owner,
@@ -242,6 +269,14 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     this.domain = domain;
   }
 
+  public String getWorkflowRunId() {
+    return workflowRunId;
+  }
+
+  public void setWorkflowRunId( final String workflowRunId ) {
+    this.workflowRunId = workflowRunId;
+  }
+
   public String getTaskList( ) {
     return taskList;
   }
@@ -264,6 +299,14 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   public void setStartedEventId( final Long startedEventId ) {
     this.startedEventId = startedEventId;
+  }
+
+  public Long getCancelRequestedEventId() {
+    return cancelRequestedEventId;
+  }
+
+  public void setCancelRequestedEventId( final Long cancelRequestedEventId ) {
+    this.cancelRequestedEventId = cancelRequestedEventId;
   }
 
   public String getActivityType( ) {
@@ -320,6 +363,14 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   public void setHeartbeatTimeout( final Integer heartbeatTimeout ) {
     this.heartbeatTimeout = heartbeatTimeout;
+  }
+
+  public String getHeartbeatDetails() {
+    return heartbeatDetails;
+  }
+
+  public void setHeartbeatDetails( final String heartbeatDetails ) {
+    this.heartbeatDetails = heartbeatDetails;
   }
 
   public Date getStartedTimestamp() {

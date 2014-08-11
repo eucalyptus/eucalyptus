@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Contains a paginated list of information about workflow executions.
  * </p>
  */
-public class WorkflowExecutionInfos implements Serializable {
+public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
 
     /**
      * The list of workflow information structures.

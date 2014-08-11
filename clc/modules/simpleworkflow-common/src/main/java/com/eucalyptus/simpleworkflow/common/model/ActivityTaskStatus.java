@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Status information about an activity task.
  * </p>
  */
-public class ActivityTaskStatus implements Serializable {
+public class ActivityTaskStatus extends SimpleWorkflowMessage {
 
     /**
      * Set to <code>true</code> if cancellation of the task is requested.
