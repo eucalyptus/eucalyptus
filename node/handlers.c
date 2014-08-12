@@ -1719,7 +1719,7 @@ void *startup_thread(void *arg)
 
                     // DAN TEMPORARY FOR VPC TESTING
                     //                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
-                    if (!strcmp(nc_state.vnetconfig->mode, "VPC")) {
+                    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
                         char iface[16], cmd[EUCA_MAX_PATH];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
                         //    snprintf(nc_state.rootwrap_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
@@ -2540,7 +2540,7 @@ static int init(void)
     int initFail = 0;
 
     if (tmp
-        && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
+        && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2549,7 +2549,7 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE))) {
+    if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
             LOGFATAL("in 'SYSTEM', 'STATIC', 'EDGE', or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");

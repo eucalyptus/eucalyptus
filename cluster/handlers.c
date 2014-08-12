@@ -1490,7 +1490,7 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
     LOGDEBUG("invoked: correlationId=%s, userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
              SP(pMeta->correlationId), pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         fail = 0;
     } else {
 
@@ -1560,7 +1560,7 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
         return (1);
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         return (0);
     }
 
@@ -1728,7 +1728,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
 
         rc = find_instanceCacheIP(dst, &myInstance);
         if (!rc) {
-            if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+            if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
                 ret = 0;
             } else if (myInstance) {
                 LOGDEBUG("found local instance, applying %s->%s mapping\n", src, dst);
@@ -1941,7 +1941,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
         LOGERROR("bad input params\n");
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         ret = 0;
     } else {
 
@@ -2081,7 +2081,7 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     LOGDEBUG("invoked: correlationId=%s, userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
              SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
@@ -3888,7 +3888,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         return (-1);
     }
     // check health of the networkIndexList
-    if ((!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) || networkIndexList == NULL) {
+    if ((!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) || networkIndexList == NULL) {
         // disabled
         nidx = -1;
         if (vlan > 0) {
@@ -6528,7 +6528,7 @@ int init_config(void)
         }
 
         if (pubmode && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN)
-                         || !strcmp(pubmode, NETMODE_MANAGED))) {
+                         || !strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_VPCMIDO))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6552,7 +6552,7 @@ int init_config(void)
                 initFail = 1;
             }
         } else if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
-
+        } else if (pubmode && !strcmp(pubmode, NETMODE_VPCMIDO)) {
         } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
@@ -7055,8 +7055,8 @@ int maintainNetworkState(void)
     char pidfile[EUCA_MAX_PATH] = "";
     char *pidstr = NULL;
 
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        LOGDEBUG("no network maintain required for EDGE\n");
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+        LOGDEBUG("no network maintain required for EDGE or VPCMIDO\n");
         return (0);
     }
 
@@ -7143,7 +7143,7 @@ int maintainNetworkState(void)
         sem_mypost(VNET);
     }
 
-    if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (strcmp(vnetconfig->mode, NETMODE_EDGE) && strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         sem_mywait(CONFIG);
         snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
         if (!check_file(pidfile)) {
@@ -7191,7 +7191,7 @@ int restoreNetworkState(void)
 
     LOGDEBUG("restoring network state\n");
 
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         LOGDEBUG("no restore necessary in EDGE\n");
         return (0);
     }
@@ -7236,7 +7236,7 @@ int restoreNetworkState(void)
 
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
         if (rc) {
             LOGERROR("could not (re)assign public/private IP mappings\n");
@@ -7244,7 +7244,7 @@ int restoreNetworkState(void)
         }
     }
 
-    if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (strcmp(vnetconfig->mode, NETMODE_EDGE) && strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         // get DHCPD back up and running
         LOGDEBUG("restarting DHCPD\n");
         rc = vnetKickDHCP(vnetconfig);
