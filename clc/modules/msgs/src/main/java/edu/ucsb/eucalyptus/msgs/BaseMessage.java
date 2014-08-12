@@ -249,12 +249,13 @@ public class BaseMessage {
         requestId = msgId;
       else
         requestId = msgId.substring(0, msgId.indexOf("::"));
-      if(this.correlationId == null)
-        this.correlationId = String.format("%s::%s", requestId, UUID.randomUUID( ).toString( ));
-      else
-        this.correlationId = String.format("%s::%s", requestId, this.correlationId);
+      this.correlationId = String.format("%s::%s", requestId, UUID.randomUUID( ).toString( ));
     }
     return ( TYPE ) this;
+  }
+  
+  public boolean hasRequestId(){
+    return this.correlationId!=null && this.correlationId.indexOf("::") > 0;
   }
     
   public String toString( ) {

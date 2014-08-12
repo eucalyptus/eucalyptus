@@ -65,13 +65,16 @@
 	xmlns:tns="http://storagecontroller.eucalyptus.ucsb.edu" name="storagecontroller_eucalyptus_ucsb_edu">
 	<namespace uri="http://storagecontroller.eucalyptus.ucsb.edu"
 		default="elements" />
-
-	<mapping class="com.eucalyptus.blockstorage.msgs.StorageRequestType"
+        <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
+            <value name="requestId" get-method="getCorrelationId" field="correlationId" usage="optional" />
+        </mapping>
+	<mapping class="com.eucalyptus.blockstorage.msgs.StorageRequestType"  extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
 		abstract="true">
+            <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
 	</mapping>
-
-	<mapping class="com.eucalyptus.blockstorage.msgs.StorageResponseType"
+	<mapping class="com.eucalyptus.blockstorage.msgs.StorageResponseType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
 		abstract="true">
+            <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
 	</mapping>
 	
 	<mapping name="ExportVolume" class="com.eucalyptus.blockstorage.msgs.ExportVolumeType"

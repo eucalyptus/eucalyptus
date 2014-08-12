@@ -108,6 +108,14 @@ public class Contexts {
     return ctx;
   }
   
+  public static Context update ( Context ctx, final String correlationId) {
+    final String oldId = ctx.getCorrelationId();
+    uuidContexts.remove(oldId);
+    ctx.setCorrelationId(correlationId);
+    uuidContexts.put( ctx.getCorrelationId( ), ctx );
+    return ctx;
+  }
+  
   public static boolean exists( ) {
     try {
       lookup( );
