@@ -65,9 +65,11 @@ package com.eucalyptus.images;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowDevSda1;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExtraEphemeral;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,7 @@ import javax.persistence.PersistenceException;
 
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.compute.ClientComputeException;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
@@ -89,9 +92,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ComputeException;
@@ -284,7 +285,9 @@ public class ImageManager {
     	else if (ImageMetadata.Platform.windows.name( ).equals( eki ))
     	  platform = ImageMetadata.Platform.windows;
     	final ImageMetadata.Platform imagePlatform = platform;
-    	
+    	final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
+    			? ImageMetadata.Architecture.i386
+    			: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
     	allocator = new Supplier<ImageInfo>( ) {
 
     		@Override
@@ -292,7 +295,7 @@ public class ImageManager {
     			try {
     				return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
     						request.getDescription( ), imagePlatform, eki, eri, rootDevName,
-    						request.getBlockDeviceMappings( ) );
+    						request.getBlockDeviceMappings( ), arch );
     			} catch ( EucalyptusCloudException ex ) {
     				throw new RuntimeException( ex );
     			}
@@ -552,10 +555,8 @@ public class ImageManager {
                                             + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
       }
       
-      Cluster cluster = null;
 	  try {
-	      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-	      cluster = Clusters.lookup( ccConfig );
+	      Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
 	  } catch ( NoSuchElementException e ) {
 	      LOG.debug( e );
 	      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPartition( )  );
@@ -586,27 +587,65 @@ public class ImageManager {
     }
     final ImageMetadata.Architecture imageArch = arch;
     final ImageMetadata.Platform imagePlatform = platform;
-    
-    // if device mapping is not requested, we copy it (ephemeral only; createImageTask will perform snapshot) from the instance
-    if(blockDevices==null || blockDevices.size()<=0){
-    	try{
-    		blockDevices = Lists.transform(VmInstances.lookupEphemeralDevices(instanceId), 
-    				VmInstances.EphemeralAttachmentToDevice);
-    	}catch(final Exception ex){
-    		LOG.warn("Failed to retrieve ephemeral device information", ex);
-    		blockDevices = Lists.newArrayList();
-    	}
-    }else{
-    	for(final BlockDeviceMappingItemType device : blockDevices){
-    		if(rootDeviceName!=null && rootDeviceName.equals(device.getDeviceName()))
-    			throw new ClientComputeException("InvalidBlockDeviceMapping", "The device names should not contain root device");
-    	}
-    	if(! bdmCreateImageVerifier().apply(request)){
-    		throw new ClientComputeException("InvalidBlockDeviceMapping", "A block device mapping parameter is not valid");
-    	}
+    if( blockDevices==null )
+        blockDevices = new ArrayList<>();
+
+    // validate input
+    List<String> suppressedDevice = new ArrayList<>();
+    List<BlockDeviceMappingItemType> creteImageDevices = new ArrayList<>();
+    List<String> existingNames = VmInstances.lookupPersistentDeviceNames(instanceId);
+
+    for(final BlockDeviceMappingItemType device : blockDevices){
+		if(rootDeviceName!=null && rootDeviceName.equals(device.getDeviceName()))
+			throw new ClientComputeException("InvalidBlockDeviceMapping", "The device names should not contain root device");
+		if(device.getNoDevice() != null && device.getNoDevice())
+			suppressedDevice.add(device.getDeviceName());
+		if(device.getEbs() != null) {
+			if ( existingNames.contains(device.getDeviceName()) )
+				throw new ClientComputeException("InvalidBlockDeviceMapping",
+						"Can't add new block device mapping with a device name that is already in use");
+			else {
+				creteImageDevices.add(device);
+				// add name to the list of "existing names" so later ephemeral devices can be checked
+				existingNames.add(device.getDeviceName());
+			}
+		}
+		if(device.getVirtualName() != null) {
+			existingNames.add(device.getDeviceName());
+			creteImageDevices.add(device);
+		}
     }
-	
-	final List<BlockDeviceMappingItemType> blockDeviceMapping = blockDevices;
+
+	if(! bdmCreateImageVerifier().apply(request)){
+		throw new ClientComputeException("InvalidBlockDeviceMapping", "A block device mapping parameter is not valid");
+	}
+	// add ephemeral devices unless they need to be suppressed
+	try{
+		for(BlockDeviceMappingItemType device: Lists.transform(VmInstances.lookupEphemeralDevices(instanceId),
+				VmInstances.EphemeralAttachmentToDevice)){
+			String dName = device.getDeviceName();
+			if ( dName != null && existingNames.contains(dName) )
+				throw new ClientComputeException("InvalidBlockDeviceMapping",
+						"Can't add new block device mapping with a device name that is already in use by an ephemeral device");
+			if ( dName != null && !suppressedDevice.contains(dName) ){
+				creteImageDevices.add(device);
+			} else {
+				blockDevices.add(device);
+			}
+		}
+	} catch (ClientComputeException e) {
+		throw e;
+	} catch(final Exception ex){
+		LOG.warn("Failed to retrieve ephemeral device information", ex);
+	}
+
+	try {
+		Images.validateBlockDeviceMappings( creteImageDevices, EnumSet.of( AllowEbsMapping ) );
+	} catch (MetadataException e) {
+		throw new ClientComputeException("InvalidBlockDeviceMapping", e.getMessage());
+	}
+
+	final List<BlockDeviceMappingItemType> blockDeviceMapping = creteImageDevices;
     Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
 			@Override
 			public ImageInfo get( ) {
@@ -636,7 +675,7 @@ public class ImageManager {
 	
 	ImageInfo imageInfo = null;
     try{
-    	imageInfo =RestrictedTypes.allocateUnitlessResource( allocator );
+    	imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
     	reply.setImageId(imageInfo.getDisplayName());
     }catch (final AuthException ex){
         throw new ClientComputeException( "AuthFailure", "Not authorized to create an image" );
@@ -644,7 +683,7 @@ public class ImageManager {
     	LOG.error("Unable to register the image", ex);
     	throw new EucalyptusCloudException( "Unable to register the image", ex);
     }
-    
+
     final CreateImageTask task = new CreateImageTask(userId, instanceId, noReboot, blockDevices);
     try{
     	task.create(imageInfo.getDisplayName());
@@ -715,8 +754,7 @@ public class ImageManager {
 
 
   /*
-  * <p>Predicate to validate the block device mappings in create image request.
-  * Suppressing a device mapping is not allowed and ebs mappings are considered valid</p>
+  * <p>Predicate to validate the block device mappings in create image request.</p>
   */
   private static Predicate<CreateImageType> bdmCreateImageVerifier ( ) {
     return new Predicate<CreateImageType> ( ) {
@@ -724,7 +762,7 @@ public class ImageManager {
       public boolean apply(CreateImageType arg0) {
         checkParam( arg0, notNullValue( ) );
         try {
-          Images.validateBlockDeviceMappings( arg0.getBlockDeviceMappings(), EnumSet.of( AllowEbsMapping ) );
+          Images.validateBlockDeviceMappings( arg0.getBlockDeviceMappings(), EnumSet.of( AllowEbsMapping, AllowSuppressMapping ) );
           return true;
         } catch ( MetadataException e ) {
           throw Exceptions.toUndeclared( e );

@@ -213,7 +213,6 @@ public class VmControl {
   private static Logger LOG = Logger.getLogger( VmControl.class );
   
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
-    LOG.debug(request.toSimpleString());
     RunInstancesResponseType reply = request.getReply( );
     Allocation allocInfo = Allocations.run( request );
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -267,18 +266,17 @@ public class VmControl {
     } finally {
       if ( db.isActive() ) db.rollback();
     }
-    ClusterAllocator.get( ).apply( allocInfo );
-    
+
     MessageContexts.remember(allocInfo.getReservationId(), request.getClass(), request);
     for( final ResourceToken allocToken : allocInfo.getAllocationTokens()){
       MessageContexts.remember(allocToken.getInstanceId(), request.getClass(), request);
     }
-    LOG.debug(reply.toSimpleString());
+    
+    ClusterAllocator.get( ).apply( allocInfo );
     return reply;
   }
 
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
-    LOG.debug(msg.toSimpleString());
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
     boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
@@ -325,12 +323,10 @@ public class VmControl {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 
   public DescribeInstanceStatusResponseType describeInstanceStatus( final DescribeInstanceStatusType msg ) throws EucalyptusCloudException {
-    LOG.debug(msg.toSimpleString());
     final DescribeInstanceStatusResponseType reply = ( DescribeInstanceStatusResponseType ) msg.getReply( );
     final Context ctx = Contexts.lookup();
     final boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
@@ -362,12 +358,10 @@ public class VmControl {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 
   public TerminateInstancesResponseType terminateInstances( final TerminateInstancesType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final TerminateInstancesResponseType reply = request.getReply( );
     final List<String> failedVmList = new ArrayList<String>( );
     final List<VmInstance> vmList = new ArrayList<VmInstance>(  );
@@ -446,7 +440,6 @@ public class VmControl {
         }
       }
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
-      LOG.debug(reply.toSimpleString());
       return reply;
     } catch ( final Throwable e ) {
       LOG.error( e );
@@ -462,7 +455,6 @@ public class VmControl {
   }
   
   public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     try {
         List <String> instanceSet = normalizeIdentifiers( request.getInstancesSet() );
@@ -503,7 +495,6 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
-              req.getRequest( ).regardingRequest( request );
               ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
               req.dispatch( ccConfig );
               return true;
@@ -513,7 +504,6 @@ public class VmControl {
         }
       } );
       reply.set_return( result );
-      LOG.debug(reply.toSimpleString());
       return reply;
     } catch ( final Exception e ) {
       LOG.error( e );
@@ -523,7 +513,6 @@ public class VmControl {
   }
   
   public GetConsoleOutputResponseType getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     VmInstance v;
     try {
@@ -550,7 +539,6 @@ public class VmControl {
         reply.setInstanceId( instanceId );
         reply.setTimestamp( response.getTimestamp() );
         reply.setOutput( response.getOutput() );
-        LOG.debug(reply.toSimpleString());
         return reply;
       } catch( Exception e ) {
         LOG.error( e, e );
@@ -560,7 +548,6 @@ public class VmControl {
   }
   
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final DescribeBundleTasksResponseType reply = request.getReply( );
 
     final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
@@ -600,7 +587,6 @@ public class VmControl {
     } finally {
       db.rollback( );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 
@@ -613,7 +599,6 @@ public class VmControl {
   }
   
   public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final UnmonitorInstancesResponseType reply = request.getReply();
     final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet( ) );
     final List<MonitorInstanceState> monitorFalseList = Lists.newArrayList( );
@@ -626,12 +611,10 @@ public class VmControl {
     }
 
     reply.setInstancesSet( SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
-    LOG.debug(request.toSimpleString());
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : normalizeIdentifiers( request.getInstancesSet() ) ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
@@ -651,6 +634,7 @@ public class VmControl {
             final String newState = VmState.PENDING.getName( );
             vm.setState( VmState.PENDING );
             db.commit( );
+            MessageContexts.remember(instanceId, request.getClass(), request);
             ClusterAllocator.get( ).apply( allocInfo );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
           } catch ( Exception ex ) {
@@ -666,12 +650,10 @@ public class VmControl {
         if ( db.isActive() ) db.rollback();
       }
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
   public StopInstancesResponseType stopInstances( final StopInstancesType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final StopInstancesResponseType reply = request.getReply( );
     try {
       final Context ctx = Contexts.lookup( );
@@ -692,6 +674,7 @@ public class VmControl {
                 VmInstances.stopped( v );
               }
             }
+            MessageContexts.remember(instanceId, request.getClass(), request);
             return true;//GRZE: noop needs to be true to continue Iterables.all
           } catch ( final NoSuchElementException e ) {
             try {
@@ -732,7 +715,6 @@ public class VmControl {
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
       Iterables.all( identifiers, stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
-      LOG.debug(reply.toSimpleString());
       return reply;
     } catch( final EucalyptusCloudException ex){ 
     	throw ex;
@@ -745,7 +727,6 @@ public class VmControl {
 
   public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request )
           throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final ResetInstanceAttributeResponseType reply = request.getReply( );
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     
@@ -797,12 +778,10 @@ public class VmControl {
     } finally {
       if ( tx.isActive( ) ) tx.rollback( );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
   public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) throws EucalyptusCloudException {    
-      LOG.debug(request.toSimpleString());
       final MonitorInstancesResponseType reply = request.getReply();
       final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet() );
       final List<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
@@ -815,7 +794,6 @@ public class VmControl {
       }
       
       reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorTrueList ) );
-      LOG.debug(reply.toSimpleString());
       return reply;
   }
   
@@ -868,7 +846,6 @@ public class VmControl {
 
   public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request )
           throws EucalyptusCloudException, NoSuchMetadataException {
-    LOG.debug(request.toSimpleString());
     final ModifyInstanceAttributeResponseType reply = request.getReply( );
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     Context ctx = Contexts.lookup( );
@@ -1010,7 +987,6 @@ public class VmControl {
       LOG.error( ex, ex );
       throw new ComputeException( "InternalError", "Error processing request: " + ex.getMessage( ) );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
@@ -1021,7 +997,6 @@ public class VmControl {
 
   public DescribeInstanceAttributeResponseType describeInstanceAttribute( final DescribeInstanceAttributeType request )
           throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final DescribeInstanceAttributeResponseType reply = request.getReply( );
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     final String attribute = request.getAttribute( );
@@ -1092,7 +1067,6 @@ public class VmControl {
       LOG.error( ex );
       throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 
@@ -1107,7 +1081,6 @@ public class VmControl {
   }
   
   public CancelBundleTaskResponseType cancelBundleTask( final CancelBundleTaskType request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
     final CancelBundleTaskResponseType reply = request.getReply( );
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
@@ -1241,12 +1214,10 @@ public class VmControl {
       Logs.extreme( ).error( ex, ex );
       throw Exceptions.toUndeclared( ex );
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
   public GetPasswordDataResponseType getPasswordData( final GetPasswordDataType request ) throws Exception {
-    LOG.debug(request.toSimpleString());
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     final VmInstance v;
     try {
@@ -1297,7 +1268,6 @@ public class VmControl {
     reply.setOutput( v.getPasswordData( ) );
     reply.setTimestamp( new Date() );
     reply.setInstanceId( v.getInstanceId() );
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 

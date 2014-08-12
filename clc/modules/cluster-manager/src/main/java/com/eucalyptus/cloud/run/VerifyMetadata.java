@@ -64,6 +64,7 @@ package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExtraEphemeral;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -396,7 +397,7 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       
       BootableImageInfo imageInfo = allocInfo.getBootSet().getMachine();   
-      final ArrayList<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null 
+      final List<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null
     		  													? allocInfo.getRequest().getBlockDeviceMapping() 
     		  													: new ArrayList<BlockDeviceMappingItemType>()  ;
       List<DeviceMapping> imageMappings = new ArrayList<DeviceMapping>(((ImageInfo) imageInfo).getDeviceMappings());
@@ -409,19 +410,19 @@ public class VerifyMetadata {
     	  }
       })), Images.DeviceMappingDetails.INSTANCE));
 
+      ArrayList<BlockDeviceMappingItemType> resultedInstanceMappings = new ArrayList<>();
       if ( imageInfo instanceof BlockStorageImageInfo ) { //bfebs image   
      
         if ( !instanceMappings.isEmpty() ) {
-        
-          //Verify all block device mappings. Dont fuss if both snapshot id and volume size are left blank
-          Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, AllowEbsMapping ) );
+          //Verify all block device mappings. Don't fuss if both snapshot id and volume size are left blank
+          //Ignore (remove) extra ephemerals EUCA-9148
+          resultedInstanceMappings = Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, AllowEbsMapping, SkipExtraEphemeral ) );
           
           BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imageInfo;
           Integer imageSizeGB = (int) ( bfebsImage.getImageSizeBytes( ) / BYTES_PER_GB );
           Integer userRequestedSizeGB = null;
-           
           // Find the root block device mapping in the run instance request. Validate it
-          BlockDeviceMappingItemType rootBlockDevice = Iterables.find( instanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
+          BlockDeviceMappingItemType rootBlockDevice = Iterables.find( resultedInstanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
           if( rootBlockDevice != null) {
             // Ensure that root device is not mapped to a different snapshot, logical device or suppressed.
             // Verify that the root device size is not smaller than the image size
@@ -456,11 +457,11 @@ public class VerifyMetadata {
         }
       } else { // Instance store image
         //Verify all block device mappings. EBS mappings must be considered invalid since AWS doesn't support it
-        Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping ) );
+        resultedInstanceMappings = Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, SkipExtraEphemeral ) );
       }
       
       // Set the final list of block device mappings in the run instance request (necessary if the instance mappings were null). Checked with grze that its okay
-      allocInfo.getRequest().setBlockDeviceMapping(instanceMappings);
+      allocInfo.getRequest().setBlockDeviceMapping(resultedInstanceMappings);
       return true;
     }
   }

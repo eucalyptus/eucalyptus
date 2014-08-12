@@ -274,8 +274,8 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
         return (1);
     }
 
-    LOGINFO("[%.36s][%s] bundling requested\n", SP(pMeta->correlationId), instanceId);
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
+    LOGINFO("[%s] bundling requested\n", instanceId);
+    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
@@ -361,8 +361,8 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
     if (rc || ccIsEnabled())
         return (1);
 
-    LOGINFO("[%.36s][%s] bundling instance restart\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s, instanceId=%s userId=%s\n", SP(pMeta->correlationId), SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGINFO("[%s] bundling instance restart\n",  SP(instanceId));
+    LOGDEBUG("invoked: instanceId=%s userId=%s\n", SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
     if (instanceId == NULL) {
         LOGERROR("bad input params\n");
         return (1);
@@ -431,8 +431,8 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    LOGINFO("[%.36s][%s] bundle task cancelled\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s instanceId=%s userId=%s\n", SP(pMeta->correlationId), SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGINFO("[%s] bundle task cancelled\n", SP(instanceId));
+    LOGDEBUG("invoked: instanceId=%s userId=%s\n", SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1329,8 +1329,8 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         return (1);
     }
 
-    LOGINFO("[%.36s][%s][%s] attaching volume\n", SP(pMeta->correlationId), SP(instanceId), SP(volumeId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+    LOGINFO("[%s][%s] attaching volume\n", SP(instanceId), SP(volumeId));
+    LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1408,8 +1408,8 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
         return (1);
     }
 
-    LOGINFO("[%.36s][%s][%s] detaching volume\n", SP(pMeta->correlationId), SP(instanceId), SP(volumeId));
-    LOGDEBUG("invoked: correlationId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n", SP(pMeta->correlationId), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
+    LOGINFO("[%s][%s] detaching volume\n", SP(instanceId), SP(volumeId));
+    LOGDEBUG("invoked: volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n", SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1486,9 +1486,9 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
         return (1);
     }
 
-    LOGINFO("[%.36s] configuring network %s\n", SP(pMeta->correlationId), SP(destName));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
-             SP(pMeta->correlationId), pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
+    LOGINFO("configuring network %s\n", SP(destName));
+    LOGDEBUG("invoked: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
+             pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         fail = 0;
@@ -1595,8 +1595,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         return (1);
     }
 
-    //LOGINFO("[%.36s] broadcasting network info\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, networkInfo=%.16s\n", SP(pMeta->correlationId), SP(networkInfo));
+    LOGDEBUG("invoked: networkInfo=%.16s\n", SP(networkInfo));
 
     if (!networkInfo) {
         LOGDEBUG("bad input params\n");
@@ -1708,8 +1707,8 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
         return (1);
     }
 
-    LOGINFO("[%.36s] assigning address %s to %s\n", SP(pMeta->correlationId), SP(src), SP(dst));
-    LOGDEBUG("invoked: correlationId=%s, src=%s, dst=%s, uuid=%s\n", SP(pMeta->correlationId), SP(src), SP(dst), SP(uuid));
+    LOGINFO("assigning address %s to %s\n", SP(src), SP(dst));
+    LOGDEBUG("invoked: src=%s, dst=%s, uuid=%s\n", SP(src), SP(dst), SP(uuid));
 
     if (!src || !dst || !strcmp(src, "0.0.0.0")) {
         LOGDEBUG("bad input params\n");
@@ -1805,8 +1804,7 @@ int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int 
         return (1);
     }
 
-//    LOGINFO("[%.36s] describing public address\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     ret = 0;
     if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
@@ -1852,8 +1850,8 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
         return (1);
     }
 
-    LOGINFO("[%.36s] unassigning address %s\n", SP(pMeta->correlationId), SP(src));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, src=%s, dst=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(src), SP(dst));
+    LOGINFO("unassigning address %s\n", SP(src));
+    LOGDEBUG("invoked: userId=%s, src=%s, dst=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(src), SP(dst));
 
     if (!src || !dst || !strcmp(src, "0.0.0.0")) {
         LOGDEBUG("bad input params\n");
@@ -1935,8 +1933,8 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
         return (1);
     }
 
-    LOGINFO("[%.36s] stopping network %d\n", SP(pMeta->correlationId), vlan);
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan);
+    LOGINFO("stopping network %d\n", vlan);
+    LOGDEBUG("invoked: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan);
     if (!pMeta || !netName || vlan < 0) {
         LOGERROR("bad input params\n");
     }
@@ -1989,8 +1987,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *vmsubdomain, char *nameservers,
     if (rc || ccIsEnabled()) {
         return (1);
     }
-//    LOGINFO("[%.36s] describing networks\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, vmsubdomain=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(vmsubdomain), SP(nameservers), ccsLen);
+    LOGDEBUG("invoked: userId=%s, vmsubdomain=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
     rc = checkActiveNetworks();
@@ -2077,9 +2074,9 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
         return (1);
     }
 
-    LOGINFO("[%.36s] starting network %s with VLAN %d\n", SP(pMeta->correlationId), SP(netName), vlan);
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
-             SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
+    LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
+    LOGDEBUG("invoked: userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         ret = 0;
@@ -2151,8 +2148,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
     ccResource *res;
     ccResourceCache resourceCacheLocal;
     
-    //LOGINFO("[%.36s] describing resources\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, vmLen=%d\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), vmLen);
+    LOGDEBUG("invoked: userId=%s, vmLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), vmLen);
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -2299,8 +2295,7 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
         timeout = 1;
 
     op_start = time(NULL);
-    //LOGINFO("[%.36s] broadcasting network info\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, timeout=%d, dolock=%d\n", SP(pMeta->correlationId), timeout, dolock);
+    LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -2398,8 +2393,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
         timeout = 1;
 
     op_start = time(NULL);
-    //LOGINFO("[%.36s] refreshing resources\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, timeout=%d, dolock=%d\n", SP(pMeta->correlationId), timeout, dolock);
+    LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -2430,7 +2424,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     powerUp(&(resourceCacheStage->resources[i]));
 
                     if (resourceCacheStage->resources[i].state == RESWAKING && ((time(NULL) - resourceCacheStage->resources[i].stateChange) < config->wakeThresh)) {
-                        LOGDEBUG("resource still waking up (%ld more seconds until marked as down)\n",
+                        LOGDEBUG("resource still waking up (%ld more seconds until marked as down)\n", 
                                  config->wakeThresh - (time(NULL) - resourceCacheStage->resources[i].stateChange));
                     } else {
                         LOGERROR("bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
@@ -2664,8 +2658,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
     op_start = time(NULL);
 
-//    LOGINFO("[%.36s] refreshing instances\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, timeout=%d, dolock=%d\n", SP(pMeta->correlationId), timeout, dolock);
+    LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
     set_clean_instanceCache();
 
     // critical NC call section
@@ -2678,7 +2671,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
     pids = EUCA_ZALLOC(resourceCacheStage->numResources, sizeof(int));
     if (!pids) {
-        LOGFATAL("out of memory!\n");
+        LOGFATAL("out of memory!\n" );
         unlock_exit(1);
     }
 
@@ -2782,7 +2775,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0"))
                                 && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
                                 // CC has network info, NC does not
-                                LOGDEBUG("sending ncAssignAddress to sync NC\n");
+                                LOGDEBUG("sending ncAssignAddress to sync NC\n" );
                                 rc = ncClientCall(pMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
                                                   "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
                                 if (rc) {
@@ -2890,8 +2883,7 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
 {
 
     time_t op_start = time(NULL);
-//    LOGINFO("[%.36s] refreshing sensors\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, timeout=%d, dolock=%d\n", SP(pMeta->correlationId), timeout, dolock);
+    LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
 
     int history_size;
     long long collection_interval_time_ms;
@@ -3000,8 +2992,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
     int i, rc, count;
     time_t op_start;
    
-    //LOGINFO("[%.36s] describing instances\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, instIdsLen=%d\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), instIdsLen);
+    LOGDEBUG("invoked: userId=%s, instIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), instIdsLen);
 
     op_start = time(NULL);
 
@@ -3044,7 +3035,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
     sem_mypost(INSTCACHE);
 
     for (i = 0; i < (*outInstsLen); i++) {
-        LOGDEBUG("instances summary: instanceId=%s, state=%s, migration_state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId,
+        LOGDEBUG("instances summary: instanceId=%s, state=%s, migration_state=%s, publicIp=%s, privateIp=%s\n", 
+                 (*outInsts)[i].instanceId,
                  (*outInsts)[i].state, migration_state_names[(*outInsts)[i].migration_state], (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
     }
 
@@ -3836,10 +3828,10 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         return (1);
     }
     print_abbreviated_instances("running", instIds, instIdsLen);
-    LOGINFO("[%.36s] running instances\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
+    LOGINFO("running instances\n");
+    LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId),
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId),
              SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
@@ -4207,8 +4199,8 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
         return (EUCA_ERROR);
     }
 
-    LOGINFO("[%.36s][%s] requesting console output\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s, instId=%s\n", SP(pMeta->correlationId), SP(instanceId));
+    LOGINFO("[%s] requesting console output\n", SP(instanceId));
+    LOGDEBUG("invoked: instId=%s\n", SP(instanceId));
 
     sem_mywait(RESCACHE);
     {
@@ -4301,8 +4293,8 @@ int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen)
         return (1);
     }
 
-    LOGINFO("[%.36s] rebooting %d instances\n", SP(pMeta->correlationId), instIdsLen);
-    LOGDEBUG("invoked: correlationId=%s, instIdsLen=%d\n", SP(pMeta->correlationId), instIdsLen);
+    LOGINFO("rebooting %d instances\n", instIdsLen);
+    LOGDEBUG("invoked: instIdsLen=%d\n", instIdsLen);
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -4374,8 +4366,8 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
     set_dirty_instanceCache();
 
     print_abbreviated_instances("terminating", instIds, instIdsLen);
-    LOGINFO("[%.36s] terminating instances\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
+    LOGINFO("terminating instances\n");
+    LOGDEBUG("invoked: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -4483,8 +4475,8 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
         return (1);
     }
 
-    LOGINFO("[%.36s][%s] creating image\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s, userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(pMeta->correlationId), SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev));
+    LOGINFO("[%s] creating image\n", SP(instanceId));
+    LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev));
     if (!volumeId || !instanceId || !remoteDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -4562,9 +4554,8 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
         return (1);
     }
 
-//    LOGINFO("[%.36s] describing sensors\n", SP(pMeta->correlationId));
-    LOGDEBUG("invoked: correlationId=%s historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n",
-             SP(pMeta->correlationId), historySize, collectionIntervalTimeMs, instIdsLen, ((instIdsLen > 0) ? instIds[0] : "*"), sensorIdsLen, ((sensorIdsLen > 0) ? sensorIds[0] : "*"));
+    LOGDEBUG("invoked: historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n",
+             historySize, collectionIntervalTimeMs, instIdsLen, ((instIdsLen > 0) ? instIds[0] : "*"), sensorIdsLen, ((sensorIdsLen > 0) ? sensorIds[0] : "*"));
 
     // update the config parameters if they are different
     if ((err = sensor_config(historySize, collectionIntervalTimeMs)) != 0)
@@ -4681,8 +4672,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         LOGERROR("bad input params\n");
         return (1);
     }
-    LOGDEBUG("invoked: correlationId=%s\n", SP(pMeta->correlationId));
-    LOGINFO("[%.36s] modifying node %s with state=%s\n", SP(pMeta->correlationId), SP(nodeName), SP(stateName));
+    LOGINFO("modifying node %s with state=%s\n", SP(nodeName), SP(stateName));
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -4764,7 +4754,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     ccInstance **cc_instances = NULL;
     ncInstance **nc_instances = NULL;
 
-    LOGINFO("[%.36s] migrating instances\n", SP(pMeta->correlationId));
+    LOGINFO("migrating instances\n");
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -4777,9 +4767,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
     if (!strcmp(nodeAction, "prepare")) {
         if (actionNode && instanceId) {
-            LOGWARN
-                ("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n",
-                 SP(instanceId), SP(actionNode));
+            LOGWARN("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n", SP(instanceId), SP(actionNode));
         }
         if (instanceId) {
             LOGINFO("preparing migration for specific instance %s\n", SP(instanceId));
@@ -4911,16 +4899,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
         // Generate migration credentials.
         const char cred_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        srand(tv.tv_sec * tv.tv_usec * getpid());
         for (int ci = 0; ci < (CREDENTIAL_SIZE - 1); ci++) {
             credentials[ci] = cred_chars[rand() % (sizeof(cred_chars) - 1)];
         }
         credentials[CREDENTIAL_SIZE - 1] = 0;
 
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n", 
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
 
         //Populate service metadata in request. Needed for ebs-volume attachment
@@ -4961,7 +4946,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
             LOGDEBUG("about to ncClientCall destination node[s] with nc_instances (%s %d) [creds='%s']\n", nodeAction, found_instances, credentials);
             for (int idx = 0; idx < found_instances; idx++) {
-                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n",
+                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n", 
                          SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
 
                 dst_index = -1;
@@ -4997,7 +4982,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     } else if (committing) {
         // call commit on source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",  
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
 
         //Populate service metadata in request. Needed for ebs-volume attachment
@@ -5033,7 +5018,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             strncpy(nc_instances[0]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
         }
 
-        LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n",
+        LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n", 
                  SP(resourceCacheLocal.resources[dst_index].hostname), SP(found_instances == 1 ? nc_instances[0]->migration_dst : ""), nodeAction, found_instances,
                  SP(found_instances == 1 ? nc_instances[0]->instanceId : ""), resourceCacheLocal.resources[dst_index].ncURL);
 
@@ -5098,8 +5083,8 @@ int doStartInstance(ncMetadata * pMeta, char *instanceId)
     if (rc || ccIsEnabled())
         return (1);
 
-    LOGINFO("[%.36s][%s] instance start requested\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s instanceId=%s userId=%s\n", SP(pMeta->correlationId), SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGINFO("[%s] instance start requested\n", SP(instanceId));
+    LOGDEBUG("invoked: instanceId=%s userId=%s\n", SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
     if (instanceId == NULL) {
         LOGERROR("bad input params\n");
         return (1);
@@ -5170,8 +5155,8 @@ int doStopInstance(ncMetadata * pMeta, char *instanceId)
     if (rc || ccIsEnabled())
         return (1);
 
-    LOGINFO("[%.36s][%s] instance shutdown requested\n", SP(pMeta->correlationId), SP(instanceId));
-    LOGDEBUG("invoked: correlationId=%s instanceId=%s userId=%s\n", SP(pMeta->correlationId), SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGINFO("[%s] instance shutdown requested\n", SP(instanceId));
+    LOGDEBUG("invoked: instanceId=%s userId=%s\n", SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
     if (instanceId == NULL) {
         LOGERROR("bad input params\n");
         return (1);
@@ -6157,7 +6142,8 @@ int init_thread(void)
         // thread has already been initialized
     } else {
         // this thread has not been initialized, set up shared memory segments
-        srand(time(NULL));
+
+        euca_srand(); // seed the random number generator
 
         bzero(locks, sizeof(sem_t *) * ENDLOCK);
         bzero(mylocks, sizeof(int) * ENDLOCK);

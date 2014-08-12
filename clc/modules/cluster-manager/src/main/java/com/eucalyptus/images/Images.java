@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -90,6 +91,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
 import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -455,6 +457,7 @@ public class Images {
     AllowSuppressMapping,
     AllowEbsMapping,
     AllowDevSda1,
+    SkipExtraEphemeral,
     ;
 
     /**
@@ -467,7 +470,7 @@ public class Images {
   
   /**
    * <p>Validates the correctness of a block device mapping</p>
-   * 
+   * <p>Returns block device mapping that has only one ephemeral device if multiple were passed</p>
    * <p>Invalid cases:</p> 
    * <ul>
    * <li>Device name is assigned multiple times</li>
@@ -482,20 +485,30 @@ public class Images {
    * @param options Validation options
    * @throws MetadataException for any validation failure
    */
-  public static void validateBlockDeviceMappings(
+  public static ArrayList<BlockDeviceMappingItemType> validateBlockDeviceMappings(
       final List<BlockDeviceMappingItemType> bdms,
       final Set<DeviceMappingValidationOption> options
   ) throws MetadataException {
+    ArrayList<BlockDeviceMappingItemType> resultedBdms = new ArrayList<>();
     if ( bdms != null ) {
       Set<String> deviceNames = Sets.newHashSet();
+      boolean ephemeralAlreadyPresent = false;
       int ephemeralCount = 0;
-
       for ( final BlockDeviceMappingItemType bdm : bdms ) {
         checkParam( bdm, notNullValue( ) );
         checkParam( bdm.getDeviceName( ), notNullValue( ) );
         if( !deviceNames.add( bdm.getDeviceName( ).replace("/dev/","") ) ) {
           throw new MetadataException( bdm.getDeviceName() + " is assigned multiple times" );
         }
+        if ( DeviceMappingValidationOption.SkipExtraEphemeral.present(options) && StringUtils.isNotBlank(bdm.getVirtualName( )) ) {
+	      if( !ephemeralAlreadyPresent ) {
+	        ephemeralAlreadyPresent = true;
+	      } else {
+	        // skip all ephemerals except the first one
+	        continue;
+	      }
+        }
+        resultedBdms.add(bdm);
       }
       final Set<String> fullDeviceNames = Sets.newHashSet();
       for(final String name : deviceNames){
@@ -503,7 +516,7 @@ public class Images {
       }
       deviceNames = fullDeviceNames;
 
-      for ( final BlockDeviceMappingItemType bdm : bdms ) {
+      for ( final BlockDeviceMappingItemType bdm : resultedBdms ) {
     	if ( !bdm.getDeviceName().matches("(/dev/)?([svh]|xv)d[a-z]([1-9])*")){
     		throw new MetadataException("Device name " + bdm.getDeviceName() + " is invalid");
     	} else if( bdm.getDeviceName().matches(".*\\d\\Z") && 
@@ -517,9 +530,11 @@ public class Images {
           if ( !bdm.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
             throw new MetadataException( "Virtual device name must be of the form ephemeral[0123]. Fix the mapping for " + bdm.getDeviceName() );
           }
-          ephemeralCount ++;
-          if( ephemeralCount > 1 ) {
-            throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+          if ( !DeviceMappingValidationOption.SkipExtraEphemeral.present(options) ){
+            ephemeralCount++;
+            if( ephemeralCount > 1 ) {
+              throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+            }
           }
         } else if ( null != bdm.getEbs( ) ) {
           if ( !DeviceMappingValidationOption.AllowEbsMapping.present( options ) ) {
@@ -546,6 +561,7 @@ public class Images {
         }
       }
     }
+    return resultedBdms;
   }
   
   public static boolean isImageNameValid(final String imgName){
@@ -834,9 +850,9 @@ public class Images {
       String eki,
       String eri,
       final String rootDeviceName, 
-      final List<BlockDeviceMappingItemType> blockDeviceMappings 
+      final List<BlockDeviceMappingItemType> blockDeviceMappings,
+      final Architecture imageArch
   ) throws EucalyptusCloudException {
-    final ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     final ImageMetadata.Platform imagePlatform = platform;
     if(ImageMetadata.Platform.windows.equals(imagePlatform)){
       eki = null;
@@ -906,7 +922,6 @@ public class Images {
 		  ImageMetadata.Platform imagePlatform,
 		  final List<BlockDeviceMappingItemType> blockDeviceMappings
 		  ) throws Exception {
-
 	  final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
 			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
@@ -919,12 +934,11 @@ public class Images {
 	  }
 	  if(toRemove!=null)
 		  blockDeviceMappings.remove(toRemove);
-	  
 	  final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
 	  try {
 		  ret = Entities.merge( ret );
 		  ret.setState(ImageMetadata.State.pending);
-      ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
+		  ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
 	      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, -1 ) ) );
 		  tx.commit( );
 		  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );

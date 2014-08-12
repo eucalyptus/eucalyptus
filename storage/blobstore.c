@@ -738,9 +738,6 @@ void blobstore_set_error_function(void (*fn) (const char *msg))
 //!
 static void gen_id(char *str, unsigned int size)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    srandom((unsigned int)((unsigned long long)str * (unsigned long long)tv.tv_usec));
     snprintf(str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
@@ -1462,6 +1459,7 @@ int blobstore_init(void)
                 initialized = 1;
             }
         }
+        euca_srand(); // seed the random number generator
     }
 
     return ret;

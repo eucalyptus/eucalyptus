@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,18 +60,76 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.exceptions;
+package com.eucalyptus.blockstorage;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-@SuppressWarnings("serial")
-public class UnknownFileSizeException extends EucalyptusCloudException {
+import edu.ucsb.eucalyptus.util.SystemUtil;
+import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
-	public UnknownFileSizeException(String fileName, Throwable ex) {
-		super("Unable to determine file size of " + fileName, ex);
+public class BlockDeviceResource extends StorageResource {
+
+	private static final int ATTEMPTS = 10;
+	private static Logger LOG = Logger.getLogger(BlockDeviceResource.class);
+
+	public BlockDeviceResource(String id, String name) {
+		super(id, name, StorageResource.Type.BLOCK);
 	}
 
-	public UnknownFileSizeException(String fileName) {
-		super("Unable to determine file size of " + fileName);
+	@Override
+	public Long getSize() throws EucalyptusCloudException {
+		Long size = 0L;
+		try {
+			CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", this.getPath() });
+			size = Long.parseLong(StringUtils.trimToEmpty(result.output));
+			return size;
+		} catch (Exception e) {
+			throw new UnknownSizeException("Failed to determine size for " + this.getId() + " mounted at " + this.getPath(), e);
+		}
 	}
+
+	@Override
+	public InputStream getInputStream() throws FileNotFoundException {
+		return new FileInputStream(new File(this.getPath()));
+	}
+
+	@Override
+	public OutputStream getOutputStream() throws IOException {
+		FileOutputStream outStream = null;
+		int failedAttempts = 0;
+		do {
+			try {
+				outStream = new FileOutputStream(new File(this.getPath()));
+				return outStream;
+			} catch (FileNotFoundException e) { // Output stream to block devices may throw permission denied error, retry a few times
+				if ((++failedAttempts) < ATTEMPTS) {
+					LOG.debug("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + ". Will retry");
+				} else {
+					LOG.warn("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + " after " + failedAttempts + " attempts");
+					throw e;
+				}
+			}
+		} while (failedAttempts < ATTEMPTS);
+
+		throw new IOException("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath());
+	}
+
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.TRUE;
+	}
+
 }

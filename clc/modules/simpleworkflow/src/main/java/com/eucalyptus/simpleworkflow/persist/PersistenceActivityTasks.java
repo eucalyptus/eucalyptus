@@ -20,17 +20,35 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTaskMetadata;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.ActivityTask;
 import com.eucalyptus.simpleworkflow.ActivityTasks;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  *
  */
+@ComponentNamed
 public class PersistenceActivityTasks extends SwfPersistenceSupport<ActivityTaskMetadata,ActivityTask> implements ActivityTasks {
 
   public PersistenceActivityTasks( ) {
     super( "activity-task" );
+  }
+
+  public <T> List<T> listTimedOut( final Function<? super ActivityTask,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        ActivityTask.exampleWithOwner( null ),
+        Predicates.alwaysTrue(),
+        Restrictions.lt( "timeoutTimestamp", new Date( ) ),
+        Collections.<String,String>emptyMap( ),
+        transform );
   }
 
   @Override
@@ -40,6 +58,6 @@ public class PersistenceActivityTasks extends SwfPersistenceSupport<ActivityTask
 
   @Override
   protected ActivityTask exampleWithName( final OwnerFullName ownerFullName, final String name ) {
-    return ActivityTask.exampleWithName( ownerFullName, name );
+    return ActivityTask.exampleWithActivityId( ownerFullName, null, null, name );
   }
 }

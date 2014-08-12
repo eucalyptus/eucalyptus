@@ -616,7 +616,7 @@ public class DASManager implements LogicalStorageManager {
 		return "euca-ebs-storage-vg-" + baseName;
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		if(snapshotPointId != null) {
 			throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");			
 		}
@@ -624,7 +624,7 @@ public class DASManager implements LogicalStorageManager {
 		updateVolumeGroup();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		ArrayList<String> returnValues = new ArrayList<String>();
+		StorageResource snapInfo = null;
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
@@ -671,8 +671,7 @@ public class DASManager implements LogicalStorageManager {
 				snapshotInfo.setSize(size);
 				volumeManager = new VolumeEntityWrapperManager();
 				volumeManager.add(snapshotInfo);
-				returnValues.add(snapRawFileName);
-				returnValues.add(String.valueOf(size * ObjectStorageProperties.G));
+				snapInfo = new FileResource(snapshotId, snapRawFileName);
 				// } catch(EucalyptusCloudException ex) {
 			} catch(Exception ex) {
 				if(volumeManager != null)
@@ -684,7 +683,7 @@ public class DASManager implements LogicalStorageManager {
 
 		}
 		volumeManager.finish();
-		return returnValues;
+		return snapInfo;
 	}
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
@@ -951,7 +950,7 @@ public class DASManager implements LogicalStorageManager {
 
 	}
 	@Override
-	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
 			throws EucalyptusCloudException {
 		String deviceName = null;
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -966,7 +965,7 @@ public class DASManager implements LogicalStorageManager {
 		}
 
 		volumeManager.finish();		
-		return deviceName;
+		return new FileResource(snapshotId, deviceName);
 		// return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
 	}
 

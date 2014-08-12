@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionTimedOut</code> event.
  * </p>
  */
-public class WorkflowExecutionTimedOutEventAttributes implements Serializable {
+public class WorkflowExecutionTimedOutEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The type of timeout that caused this event.
@@ -313,7 +313,12 @@ public class WorkflowExecutionTimedOutEventAttributes implements Serializable {
         return this;
     }
 
-    /**
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionTimedOutEventAttributes( this );
+    }
+
+  /**
      * Returns a string representation of this object; useful for testing and
      * debugging.
      *

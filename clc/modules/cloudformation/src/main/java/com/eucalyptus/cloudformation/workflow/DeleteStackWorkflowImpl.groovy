@@ -120,7 +120,9 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             // let's make it an and promise...
             List<Promise<String>> allDeletedResources = Lists.newArrayList();
             allDeletedResources.addAll(deletedResourcePromiseMap.values());
-            waitFor(allDeletedResources) {
+            AndPromise allDeletedResourcePromises = new AndPromise(allDeletedResources);
+            waitFor(allDeletedResourcePromises) {
+              promiseFor(activities.logInfo("In theory done with delete resources"));
               // Was everything done correctly?
               Collection<String> failedDeletedResources = Lists.newArrayList();
               for (String resourceName: deletedResourcePromiseMap.keySet()) {

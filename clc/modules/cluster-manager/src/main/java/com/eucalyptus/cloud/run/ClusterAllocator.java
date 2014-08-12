@@ -211,7 +211,16 @@ public class ClusterAllocator implements Runnable {
             return Boolean.TRUE;
           }
         };
-        Threads.enqueue( config, 32, runnable );
+        BaseMessage baseReq = null; 
+        for(final String instId : allocInfo.getInstanceIds()){
+          baseReq = MessageContexts.lookupLast(instId, Sets.<Class>newHashSet(
+              edu.ucsb.eucalyptus.msgs.RunInstancesType.class,
+              edu.ucsb.eucalyptus.msgs.StartInstancesType.class
+              ));
+          if(baseReq!=null)
+            break;
+        }
+        Threads.enqueue( config, 32, runnable, baseReq == null ? null : baseReq.getCorrelationId() );
         return true;
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
@@ -269,13 +278,6 @@ public class ClusterAllocator implements Runnable {
       cb.setSubject( cluster );
      
       Request<DescribeResourcesType,DescribeResourcesResponseType> request = AsyncRequests.newRequest( cb );
-      try{
-        final BaseMessage originMsg = MessageContexts.lookup(this.allocInfo.getReservationId(), 
-            edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
-        request.getRequest().regardingRequest(originMsg);
-      }catch(final Exception ex){
-        ;
-      }
       this.messages.addRequest( State.UPDATE_RESOURCES, request );
     }
   }
@@ -486,15 +488,6 @@ public class ClusterAllocator implements Runnable {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo );
       final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( callback );
-      
-      try{
-        final BaseMessage parentReq = MessageContexts.lookup(req.getRequest().getInstanceId(), 
-            edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
-        if(parentReq!=null)
-          req.getRequest().regardingRequest(parentReq);
-      }catch(final Exception ex){
-        LOG.warn("Failed to set correlation id to VmRunType", ex);
-      }
       
       this.messages.addRequest( State.CREATE_VMS, req );
       this.messages.addCleanup( new Runnable( ) {

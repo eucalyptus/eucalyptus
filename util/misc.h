@@ -99,8 +99,9 @@
 #define TRUE                                     1  //!< Defines the "TRUE" boolean value
 #undef FALSE
 #define FALSE                                    0  //!< Defines the "FALSE" boolean value
-
 //! @}
+
+#define NANOSECONDS_IN_SECOND           1000000000  //!< constant for conversion
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -185,7 +186,16 @@ int euca_execlp(int *pStatus, const char *file, ...);
 int euca_run_workflow_parser(const char *line, void *data);
 int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
-char* get_correlation_id(const char*);
+int euca_nanosleep(unsigned long long nsec);
+void euca_srand(void);
+
+//! global variable and functions for setting correlation id
+//! 
+char *get_corrid(const char*);
+extern char thread_correlation_id[256];
+extern pid_t thread_pid;
+void set_corrid(const char* corr_id);
+void unset_corrid();
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

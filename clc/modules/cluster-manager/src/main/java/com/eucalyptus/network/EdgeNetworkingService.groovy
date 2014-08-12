@@ -38,10 +38,12 @@ import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.vpc.Subnet
+import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.Cidr
+import com.eucalyptus.util.Strings
 import com.google.common.base.Function
 import com.google.common.collect.Iterables
 import com.google.common.collect.Iterators
@@ -110,19 +112,11 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           }
           break
         case PrivateIPResource:
-          try {
-            PrivateAddresses.release( request.vpc, networkResource.value, networkResource.ownerId )
-          } catch ( e ) {
-            logger.error( "Error releasing private IP address: ${networkResource.value}", e )
-          }
+          releasePrivateIp( request.vpc, networkResource.value, networkResource.ownerId, networkResource.ownerId )
           break
         case VpcNetworkInterfaceResource:
           String ip = ((VpcNetworkInterfaceResource)networkResource).privateIp
-          try {
-            PrivateAddresses.release( request.vpc, ip, networkResource.ownerId )
-          } catch ( e ) {
-            logger.error( "Error releasing private IP address ${ip} for ${networkResource.value}", e )
-          }
+          releasePrivateIp( request.vpc, ip, networkResource.ownerId, networkResource.value )
           break
       }
     }
@@ -155,11 +149,17 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       final PrepareNetworkResourcesType request,
       final VpcNetworkInterfaceResource vpcNetworkInterfaceResource
   ) {
-    VpcNetworkInterfaceResource resource = preparePrivateIp( request, new PrivateIPResource(
-        ownerId: vpcNetworkInterfaceResource.ownerId,
-        value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
-      vpcNetworkInterfaceResource.privateIp = value
-      vpcNetworkInterfaceResource
+    VpcNetworkInterfaceResource resource
+
+    if ( vpcNetworkInterfaceResource.mac == null ) { // using existing network interface, nothing to do
+      resource = vpcNetworkInterfaceResource
+    } else {
+      resource = preparePrivateIp( request, new PrivateIPResource(
+          ownerId: vpcNetworkInterfaceResource.ownerId,
+          value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
+        vpcNetworkInterfaceResource.privateIp = value
+        vpcNetworkInterfaceResource
+      }
     }
 
     resource ?
@@ -183,6 +183,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           resource = new PrivateIPResource(
               value: PrivateAddresses.allocate(
                   vpcId,
+                  subnetId,
                   [ PrivateAddresses.asInteger( privateIPResource.value ) ] ),
               ownerId: privateIPResource.ownerId )
         } catch ( NotEnoughResourcesException e ) {
@@ -202,8 +203,12 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       }
     } else {
       resource = new PrivateIPResource(
-          value: PrivateAddresses.allocate( vpcId, addresses ),
+          value: PrivateAddresses.allocate( vpcId, subnetId, addresses ),
           ownerId: privateIPResource.ownerId )
+    }
+
+    if ( resource && subnetId ) {
+      updateFreeAddressesForSubnet( subnetId )
     }
 
     resource ?
@@ -211,11 +216,37 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       [ ]
   }
 
+  private void releasePrivateIp( final String vpcId,
+                                 final String ip,
+                                 final String ownerId,
+                                 final String relatedResource ) {
+    try {
+      String tag = PrivateAddresses.release( vpcId, ip, ownerId )
+      if ( Strings.startsWith( 'subnet-' ).apply( tag ) ) {
+        updateFreeAddressesForSubnet( tag )
+      }
+    } catch ( e ) {
+      logger.error( "Error releasing private IP address ${ip} for ${relatedResource}", e )
+    }
+  }
+
   protected Cidr cidrForSubnet( final String subnetId ) {
     Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Cidr>( ){
       @Override
       Cidr apply( final Subnet subnet ) {
         return subnet != null ? Cidr.parse( subnet.getCidr( ) ) : null;
+      }
+    } )
+  }
+
+  protected void updateFreeAddressesForSubnet( final String subnetId ) {
+    Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Void>( ){
+      @Override
+      Void apply( final Subnet subnet ) {
+        subnet.setAvailableIpAddressCount(
+          Subnet.usableAddressesForSubnet( subnet.getCidr( ) ) - (int) Entities.count( PrivateAddress.tagged( subnetId ) )
+        )
+        null
       }
     } )
   }

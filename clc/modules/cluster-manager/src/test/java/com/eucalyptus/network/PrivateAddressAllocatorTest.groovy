@@ -57,7 +57,7 @@ class PrivateAddressAllocatorTest {
 
   private void verifyBasicAllocation( TestPrivateAddressPersistence persistence,
                                       PrivateAddressAllocator allocator ) {
-    String address = allocator.allocate( null, ranges( '10.0.0.0-10.0.0.10' ) )
+    String address = allocator.allocate( null, null, ranges( '10.0.0.0-10.0.0.10' ) )
     assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
     allocator.associate( address, instance( ) )
     assertTrue( 'address ownership can be verified', allocator.verify( null, address, 'i-12345678' ) )
@@ -67,10 +67,10 @@ class PrivateAddressAllocatorTest {
 
   private void verifyAddressesExhaustedFailure( TestPrivateAddressPersistence persistence,
                                                 PrivateAddressAllocator allocator ) {
-    allocator.allocate( null, ranges( '10.0.0.0' ) )
+    allocator.allocate( null, null, ranges( '10.0.0.0' ) )
     assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
     try {
-      allocator.allocate( null, ranges( '10.0.0.0' ) )
+      allocator.allocate( null, null, ranges( '10.0.0.0' ) )
       fail( 'Allocation should have failed due to no available addresses' )
     } catch ( NotEnoughResourcesException ) {
       assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
@@ -79,7 +79,7 @@ class PrivateAddressAllocatorTest {
 
   private void verifyEarlyRelease( TestPrivateAddressPersistence persistence,
                                    PrivateAddressAllocator allocator ) {
-    String address = allocator.allocate( null, ranges( '10.0.0.0-10.0.0.10' ) )
+    String address = allocator.allocate( null, null, ranges( '10.0.0.0-10.0.0.10' ) )
     assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
     allocator.release( null, address, null )
     assertTrue( 'no address allocated', persistence.addresses.isEmpty( ) );
@@ -87,7 +87,7 @@ class PrivateAddressAllocatorTest {
 
   private void verifyLazyAllocation( TestPrivateAddressPersistence persistence,
                                      PrivateAddressAllocator allocator ) {
-    allocator.allocate( null, Iterables.concat( [ ranges( '10.0.0.0-10.0.0.10' ), new Iterable<Integer>(){
+    allocator.allocate( null, null, Iterables.concat( [ ranges( '10.0.0.0-10.0.0.10' ), new Iterable<Integer>(){
       @Override
       Iterator<Integer> iterator() {
         fail( 'iterator should not be required for allocation' )
@@ -99,7 +99,7 @@ class PrivateAddressAllocatorTest {
 
   private void verifyFullRange( TestPrivateAddressPersistence persistence,
                                 PrivateAddressAllocator allocator ) {
-    ( 1..100 ).each{ allocator.allocate( null, ranges( '0.0.0.0-255.255.255.255' ) ) }
+    ( 1..100 ).each{ allocator.allocate( null, null, ranges( '0.0.0.0-255.255.255.255' ) ) }
     assertTrue( 'one address allocated', persistence.addresses.size( ) == 100 );
   }
 
@@ -118,10 +118,10 @@ class PrivateAddressAllocatorTest {
     final Map<String,PrivateAddress> addresses = Maps.newHashMapWithExpectedSize( 20000 )
 
     @Override
-    Optional<PrivateAddress> tryCreate( final String scope, final String address ) {
+    Optional<PrivateAddress> tryCreate( final String scope, final String tag, final String address ) {
       addresses.containsKey( address ) ?
           Optional.absent( ) :
-          Optional.of( add( PrivateAddress.create( scope, address ).allocate( ) ) )
+          Optional.of( add( PrivateAddress.create( scope, tag, address ).allocate( ) ) )
     }
 
     @Override

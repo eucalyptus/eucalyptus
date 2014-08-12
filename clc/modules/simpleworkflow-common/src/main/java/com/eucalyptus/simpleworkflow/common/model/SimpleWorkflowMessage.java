@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;

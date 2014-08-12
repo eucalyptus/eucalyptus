@@ -26,11 +26,15 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Tag;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
@@ -146,5 +150,17 @@ public interface Vpcs extends Lister<Vpc> {
         return vpc.getDefaultVpc( );
       }
     },
+  }
+
+  @RestrictedTypes.QuantityMetricFunction( VpcMetadata.class )
+  public enum CountVpcs implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( @Nullable final OwnerFullName input ) {
+      try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
+        return Entities.count( Vpc.exampleWithOwner( input ) );
+      }
+    }
   }
 }

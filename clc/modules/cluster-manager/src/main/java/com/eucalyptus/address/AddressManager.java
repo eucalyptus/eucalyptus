@@ -148,7 +148,6 @@ public class AddressManager {
         throw new EucalyptusCloudException( "couldn't allocate addresses" );
       }
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
@@ -188,7 +187,6 @@ public class AddressManager {
     Addresses.release( address );
 
     reply.set_return( true );
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
   
@@ -217,7 +215,6 @@ public class AddressManager {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Address.Domain.standard.toString(), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
-    LOG.debug(request.toSimpleString());
     return reply;
   }
 
@@ -296,6 +293,7 @@ public class AddressManager {
             Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces() ) :
             RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
       }
+      reply.set_return( true );
 
       if ( !address.isAssigned( ) || !networkInterface.getDisplayName( ).equals( address.getNetworkInterfaceId( ) ) ) {
         if ( address.isAssigned( ) && !request.getAllowReassociation( ) ) {
@@ -411,7 +409,6 @@ public class AddressManager {
         tx.commit( );
       }
     }
-    LOG.debug(reply.toSimpleString());
     return reply;
   }
 

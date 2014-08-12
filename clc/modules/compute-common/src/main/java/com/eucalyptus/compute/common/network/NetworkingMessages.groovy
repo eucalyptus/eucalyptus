@@ -69,6 +69,7 @@ abstract class NetworkResource extends EucalyptusData {
   String privateIp
   String description
   Boolean deleteOnTerminate
+  ArrayList<String> networkGroupIds
 }
 
 abstract class NetworkFeature extends EucalyptusData {}

@@ -62,7 +62,9 @@
       <inbound>
         <inbound-endpoint ref="SimpleWorkflowWS" />
       </inbound>
-      <component class="com.eucalyptus.simpleworkflow.SimpleWorkflowService" />
+      <component>
+        <spring-object bean="simpleWorkflowService"/>
+      </component>
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -85,7 +87,9 @@
         <inbound-endpoint ref="SimpleWorkflowInternalWS" />
         <inbound-endpoint ref="SimpleWorkflowInternalVM" />
       </inbound>
-      <component class="com.eucalyptus.simpleworkflow.SimpleWorkflowService" />
+      <component>
+        <spring-object bean="simpleWorkflowService"/>
+      </component>
     </service>
   </model>
 

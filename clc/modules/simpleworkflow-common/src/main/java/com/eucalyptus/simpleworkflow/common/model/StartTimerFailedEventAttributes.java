@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>StartTimerFailed</code> event.
  * </p>
  */
-public class StartTimerFailedEventAttributes implements Serializable {
+public class StartTimerFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The timerId provided in the <code>StartTimer</code> decision that
@@ -315,6 +315,11 @@ public class StartTimerFailedEventAttributes implements Serializable {
     public StartTimerFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setStartTimerFailedEventAttributes( this );
     }
 
     /**

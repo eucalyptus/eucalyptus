@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionSignaled</code> event.
  * </p>
  */
-public class WorkflowExecutionSignaledEventAttributes implements Serializable {
+public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The name of the signal received. The decider can use the signal name
@@ -282,6 +282,11 @@ public class WorkflowExecutionSignaledEventAttributes implements Serializable {
     public WorkflowExecutionSignaledEventAttributes withExternalInitiatedEventId(Long externalInitiatedEventId) {
         this.externalInitiatedEventId = externalInitiatedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionSignaledEventAttributes( this );
     }
 
     /**

@@ -83,6 +83,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -105,8 +106,10 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
+
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
+
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -124,6 +127,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -135,7 +139,35 @@ public class Threads {
   private final static Integer                           NUM_QUEUE_WORKERS = 32;                                          //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
+  private final static Map<Long, String> correlationIdMap = new ConcurrentHashMap<Long, String>();
   
+  public static void setCorrelationId(final String corrId){
+    setCorrelationId(Thread.currentThread().getId(), corrId);
+  }
+
+  public static void setCorrelationId(final long threadId, final String corrId){
+    if(threadId>0 && corrId!=null)
+      correlationIdMap.put(threadId, corrId);
+  }
+  
+  public static void unsetCorrelationId(){
+    unsetCorrelationId(Thread.currentThread().getId());
+  }
+
+  public static void unsetCorrelationId(final long threadId){
+    correlationIdMap.remove(threadId);
+  }
+  
+  public static String getCorrelationId(){
+    return getCorrelationId(Thread.currentThread().getId());
+  }
+  
+  public static String getCorrelationId(final long threadId){
+    if (correlationIdMap.containsKey(threadId))
+      return correlationIdMap.get(threadId);
+    return null;
+  }
+
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
     return lookup( ComponentIds.lookup( group ).name( ) + ":"
                    + owningClass.getSimpleName( ) );
@@ -184,6 +216,11 @@ public class Threads {
   public static Thread newThread( final Runnable r ) {
     LOG.debug( "CREATE new thread using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r );
+  }
+  
+  /// Callable interface with associated correlation Id 
+  public static interface EucaCallable <C> extends Callable<C> {
+    public String getCorrelationId();
   }
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
@@ -639,7 +676,34 @@ public class Threads {
       return Threads.lookup( this.componentId, this.owner.getClass( ), this.name );
     }
     
+    // FutureTask that is associated with a correlation ID
+    // the ID is being used with log4j layout
+    static class EucaFutureTask <C> extends FutureTask<C> {
+      private String correlationId = null;
+      
+      public EucaFutureTask(final String correlationId, Callable<C> callable) {
+        super(callable);
+        this.correlationId = correlationId;
+        if(callable instanceof EucaCallable && correlationId == null)
+          this.correlationId = ((EucaCallable) callable).getCorrelationId();
+      }
+     
+      @Override
+      public void run(){
+        try{
+          Threads.setCorrelationId(this.correlationId);
+          super.run();
+        }finally{
+          Threads.unsetCorrelationId();
+        }
+      }
+    }
+    
     private <C> Future<C> submit( final Runnable run ) {
+      return submit( null, run );
+    }
+    
+    private <C> Future<C> submit( final String correlationId, final Runnable run) {
       final GenericCheckedListenableFuture<C> f = new GenericCheckedListenableFuture<C>( );
       final Callable<C> call = new Callable<C>( ) {
         
@@ -659,11 +723,15 @@ public class Threads {
           return run.toString( ) + super.toString( );
         }
       };
-      return submit( call );
+      return submit( correlationId, call );
     }
     
     private <C> Future<C> submit( final Callable<C> call ) {
-      FutureTask<C> f = new FutureTask<C>( call ) {
+      return submit(null, call);
+    }
+    
+    private <C> Future<C> submit( final String correlationId, final Callable<C> call ) {
+      FutureTask<C> f = new EucaFutureTask<C>( correlationId, call ) {
         @Override
         public String toString( ) {
           return Thread.currentThread( ).getName( ) + ":" + super.toString( ) + " " + call.toString( );
@@ -783,5 +851,10 @@ public class Threads {
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<C> callable, final String correlationId ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( correlationId, callable );
   }
 }

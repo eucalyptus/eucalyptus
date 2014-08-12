@@ -66,7 +66,9 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -74,6 +76,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
@@ -81,6 +84,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.TwiceChecked;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Iterables;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
@@ -236,6 +240,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       }
     };
     try {
+      try{
+        this.getRequest().lookupAndSetCorrelationId();
+      }catch(final Exception ex){
+        ;
+      }
       Future<CheckedListenableFuture<R>> res = Threads.enqueue( serviceConfig, call );//TODO:GRZE: what happens to 'res'?
       return this.getResponse( );
     } catch ( Exception ex1 ) {
@@ -267,6 +276,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public R sendSync( ServiceConfiguration serviceConfig ) throws ExecutionException, InterruptedException {
+    try{
+      this.getRequest().lookupAndSetCorrelationId();
+    }catch(final Exception ex){
+      ;
+    }
     Request<Q, R> asyncRequest = this.execute( serviceConfig );
     return asyncRequest.getResponse( ).get( );
   }
@@ -274,7 +288,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   public Request<Q, R> execute( ServiceConfiguration config ) {
     this.doInitializeCallback( config );
     try {
-      Logs.extreme( ).debug( "fire: endpoint " + config );
+     Logs.extreme( ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
         Logs.extreme( ).error( "Error occurred while trying to send request: " + this.request );
         RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );

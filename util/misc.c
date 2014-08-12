@@ -2451,7 +2451,7 @@ char *get_username(void)
 }
 
 //! Make a correlation ID that is prefixed with the ID received from other components
-char* get_correlation_id(const char* id) 
+char* get_corrid(const char* id) 
 {
     char*new_corr_id = NULL;
     if(id==NULL)
@@ -2467,6 +2467,60 @@ char* get_correlation_id(const char* id)
         }
     }
     return new_corr_id;
+}
+
+pid_t thread_pid = -1;
+char thread_correlation_id[256];
+
+void set_corrid(const char* corr_id) {
+    if(corr_id == NULL || strstr(corr_id, "::") == NULL) {
+        unset_corrid();
+        return;
+    }
+    thread_pid = getpid();    
+    euca_strncpy(thread_correlation_id, corr_id, strlen(corr_id));
+}
+
+void unset_corrid(){
+    thread_pid = -1;
+    memset(thread_correlation_id, 0x00, 256);
+}
+
+//!
+//! High-precision sleep function that splits the value in
+//! nanoseconds into the form needed by nanosleep(3).
+//!
+int euca_nanosleep(unsigned long long nsec)
+{
+    struct timespec tv;
+    tv.tv_sec  = nsec / NANOSECONDS_IN_SECOND;
+    tv.tv_nsec = nsec % NANOSECONDS_IN_SECOND;
+    return nanosleep(&tv, NULL);
+}
+
+//!
+//! Random-number seeding function, to be used once in each
+//! process, that gives a reasonably good seed.
+//!
+void euca_srand(void)
+{
+    int pid = getpid();
+    if (pid == 0) {
+        pid = 1;
+    }
+
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if (tv.tv_sec == 0) {
+        tv.tv_sec = 1;
+    }
+    if (tv.tv_usec == 0) {
+        tv.tv_usec = 1;
+    }
+
+    unsigned int seed = tv.tv_sec * tv.tv_usec * pid;
+    LOGDEBUG("seeding random number generator with %u\n", seed);
+    srand(seed);
 }
 
 #ifdef _UNIT_TEST
@@ -2545,6 +2599,29 @@ int main(int argc, char **argv)
         printf("Failed to retrieve the current working directory information.\n");
         return (1);
     }
+
+    // sanity-check euca_nanosleep()
+    printf("checking euca_nanosleep\n");
+    struct timeval tv1, tv2, tv3;
+    gettimeofday(&tv1, NULL);
+    euca_nanosleep(100000L); // try a 100-microsecond sleep
+    gettimeofday(&tv2, NULL);
+    euca_nanosleep(2000000000L); // try a 2-second sleep
+    gettimeofday(&tv3, NULL);
+    unsigned diff1 = (unsigned)tv2.tv_usec - (unsigned)tv1.tv_usec;
+    unsigned diff2 = (unsigned)tv3.tv_sec - (unsigned)tv2.tv_sec;
+    assert (diff1 > 100 && diff1 < 200); // microsecond delays aren't precise
+    assert (diff2 == 2); // second delays should be right, usually
+
+    // sanity-check euca_srand()
+    printf("checking euca_srand\n");
+    euca_srand();
+    int r1 = rand();
+    euca_nanosleep(1001); // sleep for over 1 microsecond
+    euca_srand(); // this should produce a different seed
+    int r2 = rand();
+    assert(r1 != r2);
+
     // a nice big buffer with random chars
     char buf[1048576];
     bzero(buf, sizeof(buf));
@@ -2712,4 +2789,5 @@ int main(int argc, char **argv)
 
     return (0);
 }
+
 #endif // _UNIT_TEST

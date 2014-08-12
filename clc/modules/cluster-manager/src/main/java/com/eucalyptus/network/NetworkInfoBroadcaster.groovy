@@ -379,8 +379,9 @@ class NetworkInfoBroadcaster {
                 deviceIndex: networkInterface.deviceIndex,
                 macAddress: networkInterface.macAddress,
                 privateIp: networkInterface.privateIp,
+                publicIp: networkInterface.publicIp,
                 sourceDestCheck: networkInterface.sourceDestCheck,
-                securityGroups: instance.securityGroupIds //TODO:STEVE: use network interface security groups here
+                securityGroups: networkInterface.securityGroupIds
             )
           } ?: [ ] as List<NINetworkInterface>
       )
@@ -893,6 +894,7 @@ class NetworkInfoBroadcaster {
     Integer deviceIndex
     String macAddress
     String privateIp
+    String publicIp
     Boolean sourceDestCheck
     List<String> securityGroupIds
   }
@@ -910,8 +912,9 @@ class NetworkInfoBroadcaster {
           networkInterface.attachment?.deviceIndex,
           networkInterface.macAddress,
           networkInterface.privateIpAddress,
+          networkInterface?.association?.publicIp,
           networkInterface.sourceDestCheck,
-          [ ] as List<String> //TODO:STEVE: security groups for network interfaces
+          networkInterface.networkGroups.collect{ NetworkGroup group -> group.groupId }
       )
     }
   }

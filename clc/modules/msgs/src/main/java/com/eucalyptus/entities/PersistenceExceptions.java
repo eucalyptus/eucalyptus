@@ -190,7 +190,11 @@ public class PersistenceExceptions {
     }
     
   }
-  
+
+  public static boolean isStaleUpdate( final Throwable throwable ) {
+    return Exceptions.isCausedBy( throwable, OptimisticLockException.class );
+  }
+
   public static ErrorCategory classify( final Throwable e ) {
     final List<ErrorCategory> res = Lists.transform( Exceptions.causes( e ), ClassifySingleException.INSTANCE );
     if ( res.isEmpty( ) ) {

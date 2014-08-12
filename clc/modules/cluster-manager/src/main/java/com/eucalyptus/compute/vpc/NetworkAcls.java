@@ -57,6 +57,10 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
                     Predicate<? super NetworkAcl> filter,
                     Function<? super NetworkAcl,T> transform ) throws VpcMetadataException;
 
+  long countByExample( NetworkAcl example,
+                       Criterion criterion,
+                       Map<String,String> aliases ) throws VpcMetadataException;
+
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
                       Function<? super NetworkAcl,T> transform ) throws VpcMetadataException;

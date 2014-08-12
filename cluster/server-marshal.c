@@ -199,7 +199,9 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doAttachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev);
+        unset_corrid();
         if (rc) {
             LOGERROR("doAttachVolume() failed\n");
             status = AXIS2_FALSE;
@@ -267,7 +269,9 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doDetachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev, force);
+        unset_corrid();
         if (rc) {
             LOGERROR("doDetachVolume() failed\n");
             status = AXIS2_FALSE;
@@ -333,7 +337,9 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        unset_corrid();
         if (rc) {
             LOGERROR("doBundleInstance() failed\n");
             status = AXIS2_FALSE;
@@ -389,11 +395,13 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     instanceId = adb_bundleRestartInstanceType_get_instanceId(bit, env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         if ((rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
             LOGERROR("doBundleRestartInstance() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
+        unset_corrid();
     }
 
     birt = adb_bundleRestartInstanceResponseType_create(env);
@@ -440,12 +448,14 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doCancelBundleTask(&ccMeta, instanceId);
         if (rc) {
             LOGERROR("doCancelBundleTask() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
+        unset_corrid();
     }
 
     birt = adb_cancelBundleTaskResponseType_create(env);
@@ -522,7 +532,9 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         sensorResource **outResources = NULL;
         int outResourcesLen = 0;
 
+        set_corrid(meta.correlationId);
         int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+        unset_corrid();
         if (error) {
             LOGERROR("doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
@@ -609,7 +621,9 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doStopNetwork(&ccMeta, accountId, netName, vlan);
+        unset_corrid();
         if (rc) {
             LOGERROR("doStopNetwork() failed\n");
             status = AXIS2_FALSE;
@@ -682,7 +696,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     snrt = adb_describeNetworksResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doDescribeNetworks(&ccMeta, vmsubdomain, nameservers, clusterControllers, clusterControllersLen, outvnetConfig);
+        unset_corrid();
         if (rc) {
             LOGERROR("doDescribeNetworks() failed with %d\n", rc);
             status = AXIS2_FALSE;
@@ -781,7 +797,9 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
 
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doDescribePublicAddresses(&ccMeta, &outAddresses, &outAddressesLen);
+        unset_corrid();
     }
 
     if (rc == 2) {
@@ -863,7 +881,9 @@ adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNet
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doBroadcastNetworkInfo(&ccMeta, networkInfo);
+        unset_corrid();
         if (rc) {
             LOGERROR("doBroadcastNetworkInfo() failed\n");
             status = AXIS2_FALSE;
@@ -921,7 +941,9 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doAssignAddress(&ccMeta, uuid, src, dst);
+        unset_corrid();
         if (rc) {
             LOGERROR("doAssignAddress() failed\n");
             status = AXIS2_FALSE;
@@ -976,7 +998,9 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doUnassignAddress(&ccMeta, src, dst);
+        unset_corrid();
         if (rc) {
             LOGERROR("doUnassignAddress() failed\n");
             status = AXIS2_FALSE;
@@ -1117,7 +1141,9 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
+            set_corrid(ccMeta.correlationId);
             rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
+            unset_corrid();
         }
 
         EUCA_FREE(userNames);
@@ -1185,7 +1211,9 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     status = AXIS2_TRUE;
     output = NULL;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doGetConsoleOutput(&ccMeta, instId, &output);
+        unset_corrid();
         if (rc) {
             LOGERROR("doGetConsoleOutput() failed with %d\n", rc);
             status = AXIS2_FALSE;
@@ -1264,7 +1292,9 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     snrt = adb_startNetworkResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, vmsubdomain, nameservers, clusterControllers, clusterControllersLen);
+        unset_corrid();
         if (rc) {
             LOGERROR("doStartNetwork() failed with %d\n", rc);
             status = AXIS2_FALSE;
@@ -1339,7 +1369,9 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 
     rc = 1;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outNodes, &outNodesLen);
+        unset_corrid();
     }
 
     if (rc) {
@@ -1420,7 +1452,6 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
 
     dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
     EUCA_MESSAGE_UNMARSHAL(describeInstancesType, dit, (&ccMeta));
-
     instIdsLen = adb_describeInstancesType_sizeof_instanceIds(dit, env);
     instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
 
@@ -1432,7 +1463,9 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
 
     rc = 1;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doDescribeInstances(&ccMeta, instIds, instIdsLen, &outInsts, &outInstsLen);
+        unset_corrid();
     }
 
     EUCA_FREE(instIds);
@@ -1728,9 +1761,11 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     rirt = adb_runInstancesResponseType_create(env);
     rc = 1;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
                             reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
+        unset_corrid();
     }
 
     if (rc) {
@@ -1806,7 +1841,9 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
 
     rc = 1;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doRebootInstances(&ccMeta, instIds, instIdsLen);
+        unset_corrid();
     }
 
     EUCA_FREE(instIds);
@@ -1881,7 +1918,9 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
     rc = 1;
     if (!DONOTHING) {
         outStatus = EUCA_ZALLOC(instIdsLen, sizeof(int));
+        set_corrid(ccMeta.correlationId);
         rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, force, &outStatus);
+        unset_corrid();
     }
 
     EUCA_FREE(instIds);
@@ -1949,7 +1988,9 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
     remoteDev = adb_createImageType_get_remoteDev(cit, env);
 
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doCreateImage(&ccMeta, instanceId, volumeId, remoteDev);
+        unset_corrid();
     }
 
     cirt = adb_createImageResponseType_create(env);
@@ -2024,7 +2065,9 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doModifyNode(&ccMeta, nodeName, stateName);
+        unset_corrid();
         if (rc) {
             LOGERROR("doModifyNode() failed\n");
             status = AXIS2_FALSE;
@@ -2091,7 +2134,9 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare");
+        unset_corrid();
         if (rc) {
             LOGERROR("doMigrateInstances() failed\n");
             status = AXIS2_FALSE;
@@ -2151,7 +2196,9 @@ adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startIns
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doStartInstance(&ccMeta, instanceId);
+        unset_corrid();
         if (rc) {
             LOGERROR("doStartInstance() failed\n");
             status = AXIS2_FALSE;
@@ -2211,7 +2258,9 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
+        set_corrid(ccMeta.correlationId);
         rc = doStopInstance(&ccMeta, instanceId);
+        unset_corrid();
         if (rc) {
             LOGERROR("doStopInstance() failed\n");
             status = AXIS2_FALSE;

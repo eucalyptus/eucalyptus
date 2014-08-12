@@ -62,11 +62,14 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -81,6 +84,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nullable;
@@ -96,6 +100,7 @@ import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
@@ -103,6 +108,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.eucalyptus.auth.principal.Role;
@@ -119,7 +125,6 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotFinalizeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotInitializeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotUploadPartException;
-import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
@@ -132,9 +137,6 @@ import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
-
-import edu.ucsb.eucalyptus.util.SystemUtil;
-import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 /**
  * S3SnapshotTransfer manages snapshot transfers between SC and S3 API such as objectstorage gateway. An instance of the class must be obtained using one of the
@@ -162,15 +164,16 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	private Long partSize;
 	private Integer queueSize;
 	private Integer transferRetries;
-	private Integer uploadTimeout;
+	private Integer transferTimeout;
 	private Integer poolSize;
+	private Integer readBufferSize;
+	private Integer writeBufferSize;
 	private ServiceConfiguration serviceConfig;
 
 	// Static parameters
 	private static Role role;
 
 	// Constants
-	private static final Integer READ_BUFFER_SIZE = 1024 * 1024;
 	private static final Integer TX_RETRIES = 20;
 	private static final Integer REFRESH_TOKEN_RETRIES = 1;
 	private static final String UNCOMPRESSED_SIZE_KEY = "uncompressedsize";
@@ -192,12 +195,12 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		this.keyName = keyName;
 	}
 
-    // for using in unit tests
-    protected S3SnapshotTransfer(boolean mock) {
-        // for mocking, do not initialize s3 client
-    }
+	// for using in unit tests
+	protected S3SnapshotTransfer(boolean mock) {
+		// for mocking, do not initialize s3 client
+	}
 
-    public String getSnapshotId() {
+	public String getSnapshotId() {
 		return snapshotId;
 	}
 
@@ -251,7 +254,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	 *            absolute path to the snapshot on the file system
 	 */
 	@Override
-	public void upload(String sourceFileName) throws SnapshotTransferException {
+	public void upload(StorageResource storageResource) throws SnapshotTransferException {
 		validateInput(); // Validate input
 		loadTransferConfig(); // Load the transfer configuration parameters from database
 		SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
@@ -263,7 +266,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		Future<List<PartETag>> uploadPartsFuture = null;
 		Future<String> completeUploadFuture = null;
 
-		byte[] buffer = new byte[READ_BUFFER_SIZE];
+		byte[] buffer = new byte[readBufferSize];
 		Long readOffset = 0L;
 		Long bytesRead = 0L;
 		Long bytesWritten = 0L;
@@ -272,14 +275,14 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
 		try {
 			// Get the uncompressed file size for uploading as metadata
-			Long uncompressedSize = getFileSize(sourceFileName);
+			Long uncompressedSize = storageResource.getSize();
 
 			// Setup the snapshot and part entities.
 			snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
 			Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
 			part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
 
-			FileInputStream inputStream = new FileInputStream(sourceFileName);
+			InputStream inputStream = storageResource.getInputStream();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			GZIPOutputStream gzipStream = new GZIPOutputStream(baos);
 			FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
@@ -355,13 +358,25 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				throw new SnapshotTransferException("Failed to upload " + snapshotId + " due to: ", e);
 			} finally {
 				if (inputStream != null) {
-					inputStream.close();
+					try {
+						inputStream.close();
+					} catch (Exception e) {
+
+					}
 				}
 				if (gzipStream != null) {
-					gzipStream.close();
+					try {
+						gzipStream.close();
+					} catch (Exception e) {
+
+					}
 				}
 				if (outputStream != null) {
-					outputStream.close();
+					try {
+						outputStream.close();
+					} catch (Exception e) {
+
+					}
 				}
 				baos.reset();
 			}
@@ -442,33 +457,154 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	 * Not implemented
 	 */
 	@Override
-	public void resumeUpload(String sourceFileName) throws SnapshotTransferException {
+	public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
 		throw new SnapshotTransferException("Not supported yet");
 	}
 
 	/**
 	 * Downloads the compressed snapshot from objectstorage gateway to the filesystem
 	 */
-	@Override
-	public void download(final String destinationFileName) throws SnapshotTransferException {
-		LOG.debug("Downloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName + ", destinationFile="
-				+ destinationFileName);
+	public void download(StorageResource storageResource) throws SnapshotTransferException {
 		validateInput();
-		try {
-			retryAfterRefresh(new Function<GetObjectRequest, ObjectMetadata>() {
+		loadTransferConfig();
 
-				@Override
-				@Nullable
-				public ObjectMetadata apply(@Nullable GetObjectRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					return eucaS3Client.getObject(arg0, new File(destinationFileName));
+		S3Object snapObj = download();
+
+		if (snapObj != null && snapObj.getObjectContent() != null) {
+			byte[] buffer = new byte[10 * readBufferSize];
+			int len;
+			GZIPInputStream gzipInputStream = null;
+
+			try {
+				gzipInputStream = new GZIPInputStream(new BufferedInputStream(snapObj.getObjectContent(), buffer.length * 3), buffer.length * 2);
+
+				if (storageResource.isDownloadSynchronous()) { // Download and unzip snapshot to the storage device directly
+					OutputStream outputStream = null;
+					try {
+						outputStream = storageResource.getOutputStream();
+						while ((len = gzipInputStream.read(buffer)) > 0) {
+							// Write to the output stream
+							outputStream.write(buffer, 0, len);
+						}
+
+						// Close the streams and free the resources
+						gzipInputStream.close();
+						outputStream.close();
+						buffer = null;
+					} finally {
+						try {
+							if (outputStream != null)
+								outputStream.close();
+						} catch (Exception e) {
+
+						}
+					}
+				} else { // Download and unzip snpashot to disk in parts and write the parts to storage backend in parallel
+					ArrayBlockingQueue<SnapshotPart> partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
+					Future<String> storageWriterFuture = Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue,
+							storageResource));
+
+					FileOutputStream fileOutputStream = null;
+					long bytesWritten = 0;
+					int partNumber = 1;
+
+					try {
+						Path filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(partNumber));
+						fileOutputStream = new FileOutputStream(filePath.toString());
+						SnapshotPart part = new SnapshotPart();
+						part.setFileName(filePath.toString());
+						part.setPartNumber(partNumber);
+						part.setIsLast(Boolean.FALSE);
+
+						while ((len = gzipInputStream.read(buffer)) > 0) {
+							if ((bytesWritten + len) < writeBufferSize) {
+								fileOutputStream.write(buffer, 0, len);
+								bytesWritten += len;
+							} else {
+								fileOutputStream.write(buffer, 0, len);
+								bytesWritten += len;
+								fileOutputStream.close();
+
+								// Check if writer is still relevant
+								if (storageWriterFuture.isDone()) {
+									throw new SnapshotTransferException(
+											"Error writing snapshot to backend, check previous log messages for more details. Aborting download and unzip process");
+								}
+
+								// Add the part to the queue
+								part.setSize(bytesWritten);
+								partQueue.put(part);
+
+								// Prep for the next part
+								bytesWritten = 0;
+								filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(++partNumber));
+								fileOutputStream = new FileOutputStream(filePath.toString());
+								part = new SnapshotPart();
+								part.setFileName(filePath.toString());
+								part.setPartNumber(partNumber);
+								part.setIsLast(Boolean.FALSE);
+							}
+						}
+
+						// Close the streams and free the resources
+						gzipInputStream.close();
+						fileOutputStream.close();
+						buffer = null;
+
+						// Add the last part to the queue
+						part.setSize(bytesWritten);
+						part.setIsLast(Boolean.TRUE);
+						partQueue.put(part);
+
+						if (StringUtils.isNotBlank(storageWriterFuture.get(transferTimeout, TimeUnit.HOURS))) {
+							LOG.info("Downloaded snapshot " + snapshotId + " to storage backend");
+						} else {
+							throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend");
+						}
+					} catch (Exception e) {
+						// Clean up the files that were created
+						try {
+							if (!storageWriterFuture.isDone()) {
+								storageWriterFuture.cancel(true);
+							}
+							List<SnapshotPart> remainingParts = new ArrayList<SnapshotPart>();
+							partQueue.drainTo(remainingParts);
+							for (SnapshotPart part : remainingParts) {
+								deleteFile(part.getFileName());
+							}
+						} catch (Exception ex) {
+							LOG.warn("Unable to clean up artifacts left by a failed attempt to download " + snapshotId + " to storage backend", ex);
+						}
+						throw e;
+					} finally {
+						try {
+							if (fileOutputStream != null)
+								fileOutputStream.close();
+						} catch (Exception e) {
+
+						}
+					}
 				}
+			} catch (SnapshotTransferException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend", e);
+			} finally {
+				try {
+					if (gzipInputStream != null)
+						gzipInputStream.close();
+				} catch (Exception e) {
 
-			}, new GetObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
-		} catch (Exception e) {
-			LOG.warn("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			throw new SnapshotTransferException("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
-					+ ", key=" + keyName, e);
+				}
+				try {
+					snapObj.getObjectContent().close();
+				} catch (Exception e) {
+
+				}
+			}
+		} else {
+			LOG.warn("No snapshot content available from objectstorage gateway: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+			throw new SnapshotTransferException("No snapshot content available: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
 		}
 	}
 
@@ -498,27 +634,59 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 	}
 
 	@Override
-	public Long getSizeInBytes() {
-		return null;
+	public Long getSizeInBytes() throws SnapshotTransferException {
+		LOG.debug("Fetching snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+
+		validateInput();
+		ObjectMetadata metadata = null;
+		Map<String, String> userMetadata = null;
+		try {
+			metadata = retryAfterRefresh(new Function<GetObjectMetadataRequest, ObjectMetadata>() {
+
+				@Override
+				@Nullable
+				public ObjectMetadata apply(@Nullable GetObjectMetadataRequest arg0) {
+					eucaS3Client.refreshEndpoint();
+					return eucaS3Client.getObjectMetadata(arg0);
+				}
+
+			}, new GetObjectMetadataRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+		} catch (Exception e) {
+			LOG.warn("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+			throw new SnapshotTransferException("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
+					+ ", key=" + keyName, e);
+		}
+
+		if (metadata != null && (userMetadata = metadata.getUserMetadata()) != null && userMetadata.containsKey(UNCOMPRESSED_SIZE_KEY)) {
+			try {
+				return Long.parseLong(userMetadata.get(UNCOMPRESSED_SIZE_KEY));
+			} catch (Exception e) {
+				throw new SnapshotTransferException("Unable to parse size from snapshot metadata: snapshotId=" + snapshotId + ", bucket=" + bucketName
+						+ ", key=" + keyName + ", metadata key:value pair=" + UNCOMPRESSED_SIZE_KEY + ":" + userMetadata.get(UNCOMPRESSED_SIZE_KEY), e);
+			}
+		} else {
+			throw new SnapshotTransferException("Snapshot metadata from objectstorage does not contain uncompressed size: snapshotId=" + snapshotId
+					+ ", bucket=" + bucketName + ", key=" + keyName);
+		}
 	}
 
 	private void initializeEucaS3Client() throws SnapshotTransferException {
-        if (role == null) {
-            try {
-                role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
-            } catch (Exception e) {
-                LOG.error("Failed to initialize account for snapshot transfers due to " + e);
-                throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
-            }
-        }
+		if (role == null) {
+			try {
+				role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
+			} catch (Exception e) {
+				LOG.error("Failed to initialize account for snapshot transfers due to " + e);
+				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
+			}
+		}
 
-        try {
-            SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
-            eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
-        } catch (Exception e) {
-            LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
-            throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
-        }
+		try {
+			SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
+			eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
+		} catch (Exception e) {
+			LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
+			throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
+		}
 	}
 
 	private void loadTransferConfig() {
@@ -526,9 +694,11 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		this.partSize = (long) (info.getSnapshotPartSizeInMB() * 1024 * 1024);
 		this.queueSize = info.getMaxSnapshotPartsQueueSize();
 		this.transferRetries = info.getMaxSnapTransferRetries();
-		this.uploadTimeout = info.getSnapshotUploadTimeoutInHours();
+		this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
 		this.serviceConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-		this.poolSize = info.getMaxConcurrentSnapshotUploads();
+		this.poolSize = info.getMaxConcurrentSnapshotTransfers();
+		this.readBufferSize = info.getReadBuffferSizeInMB() * 1024 * 1024;
+		this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
 	}
 
 	private void validateInput() throws SnapshotTransferException {
@@ -544,19 +714,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		if (eucaS3Client == null) {
 			throw new SnapshotTransferException("S3 client reference is invalid. Cannot upload snapshot " + snapshotId);
 		}
-	}
-
-	private Long getFileSize(String fileName) throws UnknownFileSizeException {
-		Long size = 0L;
-		if ((size = new File(fileName).length()) <= 0) {
-			try {
-				CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", fileName });
-				size = Long.parseLong(StringUtils.trimToEmpty(result.output));
-			} catch (Exception ex) {
-				throw new UnknownFileSizeException(fileName, ex);
-			}
-		}
-		return size;
 	}
 
 	private String createAndReturnBucketName() throws SnapshotTransferException {
@@ -613,6 +770,26 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		} while (bucketCreationRetries > 0);
 
 		return bucket;
+	}
+
+	private S3Object download() throws SnapshotTransferException {
+		try {
+			LOG.debug("Dowloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+			return retryAfterRefresh(new Function<GetObjectRequest, S3Object>() {
+
+				@Override
+				@Nullable
+				public S3Object apply(@Nullable GetObjectRequest arg0) {
+					eucaS3Client.refreshEndpoint();
+					return eucaS3Client.getObject(arg0);
+				}
+
+			}, new GetObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+		} catch (Exception e) {
+			LOG.warn("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+			throw new SnapshotTransferException("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
+					+ ", key=" + keyName, e);
+		}
 	}
 
 	private PutObjectResult uploadSnapshotAsSingleObject(String compressedSnapFileName, Long actualSize, Long uncompressedSize,
@@ -915,7 +1092,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 			Boolean error = Boolean.FALSE;
 			String etag = null;
 			try {
-				List<PartETag> partETags = uploadTaskFuture.get(uploadTimeout, TimeUnit.HOURS);
+				List<PartETag> partETags = uploadTaskFuture.get(transferTimeout, TimeUnit.HOURS);
 				if (partETags != null && partETags.size() == totalParts) {
 					try {
 						etag = finalizeMultipartUpload(partETags);
@@ -936,7 +1113,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				}
 			} catch (TimeoutException tex) {
 				error = Boolean.TRUE;
-				LOG.error("Failed to upload " + snapshotId + ". Complete upload task timed out waiting on upload part task after " + uploadTimeout + " hours");
+				LOG.error("Failed to upload " + snapshotId + ". Complete upload task timed out waiting on upload part task after " + transferTimeout + " hours");
 			} catch (Exception ex) {
 				error = Boolean.TRUE;
 				LOG.error("Failed to upload " + snapshotId, ex);
@@ -947,6 +1124,68 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				}
 			}
 			return etag;
+		}
+	}
+
+	class StorageWriterTask implements Callable<String> {
+
+		private ArrayBlockingQueue<SnapshotPart> partQueue;
+		private StorageResource storageResource;
+
+		public StorageWriterTask(ArrayBlockingQueue<SnapshotPart> partQueue, StorageResource storageResource) {
+			this.partQueue = partQueue;
+			this.storageResource = storageResource;
+		}
+
+		@Override
+		public String call() throws Exception {
+			String returnValue = null;
+			SnapshotPart part = null;
+			OutputStream outStream = null;
+			byte[] buffer = new byte[writeBufferSize];
+			int len;
+
+			try {
+				outStream = storageResource.getOutputStream();
+				do {
+					part = partQueue.take();
+
+					FileInputStream inStream = null;
+					try {
+						inStream = new FileInputStream(part.getFileName());
+						while ((len = inStream.read(buffer)) > 0) {
+							outStream.write(buffer, 0, len);
+						}
+						inStream.close();
+					} finally {
+						if (inStream != null) {
+							try {
+								inStream.close();
+							} catch (Exception e) {
+
+							}
+						}
+						deleteFile(part.getFileName());
+					}
+				} while (!part.getIsLast());
+
+				outStream.close();
+				buffer = null;
+
+				returnValue = storageResource.getId();
+			} catch (Exception e) {
+				LOG.error("Failed to write snapshot " + snapshotId + " to storage backend due to:", e);
+			} finally {
+				if (outStream != null) {
+					try {
+						outStream.close();
+					} catch (Exception e) {
+
+					}
+				}
+			}
+
+			return returnValue;
 		}
 	}
 }

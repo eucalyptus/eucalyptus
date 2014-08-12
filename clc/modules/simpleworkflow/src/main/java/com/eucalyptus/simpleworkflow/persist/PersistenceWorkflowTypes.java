@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowTypeMetadata;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.WorkflowTypes;
 import com.eucalyptus.simpleworkflow.WorkflowType;
 import com.eucalyptus.util.OwnerFullName;
@@ -27,6 +28,7 @@ import com.eucalyptus.util.OwnerFullName;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceWorkflowTypes extends SwfPersistenceSupport<WorkflowTypeMetadata,WorkflowType> implements WorkflowTypes {
 
   public PersistenceWorkflowTypes( ) {

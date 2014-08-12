@@ -26,10 +26,17 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
@@ -63,6 +70,20 @@ public interface Subnets extends Lister<Subnet> {
                           OwnerFullName ownerFullName,
                           String key,
                           Callback<Subnet> updateCallback ) throws VpcMetadataException;
+
+  @RestrictedTypes.Resolver( Subnet.class )
+  public enum Lookup implements Function<String, Subnet> {
+    INSTANCE;
+
+    @Override
+    public Subnet apply( final String identifier ) {
+      try ( final TransactionResource tx = Entities.transactionFor( Subnet.class ) ) {
+        return Entities.uniqueResult( Subnet.exampleWithName( null, identifier ) );
+      } catch ( TransactionException e ) {
+        throw Exceptions.toUndeclared( e );
+      }
+    }
+  }
 
   @TypeMapper
   public enum SubnetToSubnetTypeTransform implements Function<Subnet,SubnetType> {

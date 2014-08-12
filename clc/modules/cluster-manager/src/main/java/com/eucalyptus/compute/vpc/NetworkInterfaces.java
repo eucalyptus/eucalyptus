@@ -26,17 +26,29 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAssociationType;
 import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAttachmentType;
 import edu.ucsb.eucalyptus.msgs.NetworkInterfaceType;
@@ -65,6 +77,20 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
                                     String key,
                                     Callback<NetworkInterface> updateCallback ) throws VpcMetadataException;
 
+  @RestrictedTypes.Resolver( NetworkInterface.class )
+  public enum Lookup implements Function<String, NetworkInterface> {
+    INSTANCE;
+
+    @Override
+    public NetworkInterface apply( final String identifier ) {
+      try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+        return Entities.uniqueResult( NetworkInterface.exampleWithName( null, identifier ) );
+      } catch ( TransactionException e ) {
+        throw Exceptions.toUndeclared( e );
+      }
+    }
+  }
+
   @TypeMapper
   public enum NetworkInterfaceToNetworkInterfaceTypeTransform implements Function<NetworkInterface,NetworkInterfaceType> {
     INSTANCE;
@@ -72,7 +98,6 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
     @Nullable
     @Override
     public NetworkInterfaceType apply( @Nullable final NetworkInterface networkInterface ) {
-      //TODO:STEVE: security groups, attachments, associations and private ips
       return networkInterface == null ?
           null :
           new NetworkInterfaceType(
@@ -94,7 +119,9 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
                   TypeMappers.transform( networkInterface.getAssociation( ), NetworkInterfaceAssociationType.class ),
               networkInterface.getAttachment( ) == null ?
                   null :
-                  TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class )
+                  TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class ),
+              Collections2.transform( networkInterface.getNetworkGroups( ),
+                  TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) )
           );
     }
   }
@@ -161,8 +188,8 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withBooleanProperty( "attachment.delete-on-termination", FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION )
               .withStringProperty( "availability-zone", FilterStringFunctions.AVAILABILITY_ZONE )
               .withStringProperty( "description", FilterStringFunctions.DESCRIPTION )
-              .withUnsupportedProperty( "group-id" ) //TODO:STEVE: filters for network interface security groups
-              .withUnsupportedProperty( "group-name" )
+              .withStringSetProperty( "group-id", FilterStringSetFunctions.GROUP_ID )
+              .withStringSetProperty( "group-name", FilterStringSetFunctions.GROUP_NAME )
               .withStringProperty( "mac-address", FilterStringFunctions.MAC_ADDRESS )
               .withStringProperty( "network-interface-id", CloudMetadatas.toDisplayName() )
               .withStringProperty( "owner-id", FilterStringFunctions.OWNER_ID )
@@ -174,8 +201,9 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "status", FilterStringFunctions.STATE )
               .withStringProperty( "subnet-id", FilterStringFunctions.SUBNET_ID )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
-              .withPersistenceAlias( "vpc", "vpc" )
+              .withPersistenceAlias( "networkGroups", "networkGroups" )
               .withPersistenceAlias( "subnet", "subnet" )
+              .withPersistenceAlias( "vpc", "vpc" )
               .withPersistenceFilter( "addresses.private-ip-address", "privateIpAddress" )
               .withPersistenceFilter( "addresses.association.public-ip", "association.publicIp", Collections.<String>emptySet() )
               .withPersistenceFilter( "addresses.association.owner-id", "association.ipOwnerId", Collections.<String>emptySet() )
@@ -193,6 +221,8 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withPersistenceFilter( "attachment.delete-on-termination", "attachment.deleteOnTerminate", Collections.<String>emptySet(), Type.Boolean )
               .withPersistenceFilter( "availability-zone", "availabilityZone" )
               .withPersistenceFilter( "description" )
+              .withPersistenceFilter( "group-id", "networkGroups.groupId" )
+              .withPersistenceFilter( "group-name", "networkGroups.displayName" )
               .withPersistenceFilter( "mac-address", "macAddress" )
               .withPersistenceFilter( "network-interface-id", "displayName" )
               .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
@@ -325,6 +355,29 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
         return CloudMetadatas.toDisplayName().apply( networkInterface.getVpc( ) );
       }
     },
+  }
+
+  public enum FilterStringSetFunctions implements Function<NetworkInterface,Set<String>> {
+    GROUP_ID {
+      @Override
+      public Set<String> apply( final NetworkInterface networkInterface ) {
+        return networkGroupSet( networkInterface, NetworkGroups.groupId( ) );
+      }
+    },
+    GROUP_NAME {
+      @Override
+      public Set<String> apply( final NetworkInterface networkInterface ) {
+        return networkGroupSet( networkInterface, CloudMetadatas.toDisplayName( ) );
+      }
+    },
+    ;
+
+    private static <T> Set<T> networkGroupSet( final NetworkInterface networkInterface,
+                                               final Function<? super NetworkGroup,T> transform ) {
+      return networkInterface.getNetworkGroups( ) != null ?
+          Sets.newHashSet( Iterables.transform( networkInterface.getNetworkGroups(), transform ) ) :
+          Collections.<T>emptySet( );
+    }
   }
 
   public enum FilterBooleanFunctions implements Function<NetworkInterface,Boolean> {

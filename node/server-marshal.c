@@ -196,7 +196,7 @@ adb_ncBroadcastNetworkInfoResponse_t *ncBroadcastNetworkInfoMarshal(adb_ncBroadc
 
         // get operation-specific fields from input
         EUCA_MESSAGE_UNMARSHAL(ncBroadcastNetworkInfoType, input, (&meta));
-
+        set_corrid(meta.correlationId);
         if ((error = doBroadcastNetworkInfo(&meta, networkInfo)) != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncBroadcastNetworkInfoResponseType_set_correlationId(output, env, meta.correlationId);
@@ -214,6 +214,7 @@ adb_ncBroadcastNetworkInfoResponse_t *ncBroadcastNetworkInfoMarshal(adb_ncBroadc
             // set operation-specific fields in output
             adb_ncBroadcastNetworkInfoResponseType_set_statusMessage(output, env, "0");
         }
+        unset_corrid();
 
         // set response to output
         adb_ncBroadcastNetworkInfoResponse_set_ncBroadcastNetworkInfoResponse(response, env, output);
@@ -252,6 +253,7 @@ adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * nc
         // get operation-specific fields from input
         EUCA_MESSAGE_UNMARSHAL(ncAssignAddressType, input, (&meta));
 
+        set_corrid(meta.correlationId);
         if ((error = doAssignAddress(&meta, instanceId, publicIp)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
@@ -269,6 +271,7 @@ adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * nc
             // set operation-specific fields in output
             adb_ncAssignAddressResponseType_set_statusMessage(output, env, "0");
         }
+        unset_corrid();
 
         // set response to output
         adb_ncAssignAddressResponse_set_ncAssignAddressResponse(response, env, output);
@@ -360,6 +363,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
 
+            set_corrid(meta.correlationId);
             if ((error = doStartNetwork(&meta, uuid, peers, peersLen, port, vlan)) != EUCA_OK) {
                 LOGERROR("StartNetwork() invocation failed (error=%d)\n", error);
                 adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
@@ -377,6 +381,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
                 adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
                 adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
             }
+            unset_corrid();
 
             EUCA_FREE(peers);
 
@@ -420,6 +425,7 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncDescribeResourceType, input, (&meta));
 
+        set_corrid(meta.correlationId);
         if ((error = doDescribeResource(&meta, resourceType, &outRes)) != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncDescribeResourceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -442,7 +448,7 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
             adb_ncDescribeResourceResponseType_set_publicSubnets(output, env, outRes->publicSubnets);
             free_resource(&outRes);
         }
-
+        unset_corrid();
         // set response to output
         adb_ncDescribeResourceResponse_set_ncDescribeResourceResponse(response, env, output);
     }
@@ -537,8 +543,10 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
+            set_corrid(meta.correlationId);
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
                                   ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
+            unset_corrid();
 
             if (error != EUCA_OK) {
                 LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -607,7 +615,7 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
 
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncDescribeInstancesType, input, (&meta));
-
+            set_corrid(meta.correlationId);
             if ((error = doDescribeInstances(&meta, instIds, instIdsLen, &outInsts, &outInstsLen)) != EUCA_OK) {
                 LOGERROR("failed error=%d\n", error);
                 adb_ncDescribeInstancesResponseType_set_return(output, env, AXIS2_FALSE);
@@ -629,8 +637,8 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
 
                 EUCA_FREE(outInsts);
             }
+            unset_corrid();
         }
-
         EUCA_FREE(instIds);
 
         // set response to output
@@ -668,7 +676,8 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncRebootInstanceType, input, (&meta));
-
+       
+        set_corrid(meta.correlationId);
         if ((error = doRebootInstance(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncRebootInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -681,6 +690,7 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
             // set operation-specific fields in output
             adb_ncRebootInstanceResponseType_set_status(output, env, 0);
         }
+        unset_corrid();
 
         // set response to output
         adb_ncRebootInstanceResponse_set_ncRebootInstanceResponse(response, env, output);
@@ -718,7 +728,8 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncGetConsoleOutputType, input, (&meta));
-
+        
+        set_corrid(meta.correlationId);
         if ((error = doGetConsoleOutput(&meta, instanceId, &consoleOutput)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncGetConsoleOutputResponseType_set_return(output, env, AXIS2_FALSE);
@@ -731,6 +742,7 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
         }
+        unset_corrid();
 
         EUCA_FREE(consoleOutput);
 
@@ -780,7 +792,8 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
-
+        
+        set_corrid(meta.correlationId);
         if ((error = doTerminateInstance(&meta, instanceId, force, &shutdownState, &previousState)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncTerminateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -804,7 +817,7 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
             snprintf(s, 128, "%d", previousState);
             adb_ncTerminateInstanceResponseType_set_previousState(output, env, s);
         }
-
+        unset_corrid();
         // set response to output
         adb_ncTerminateInstanceResponse_set_ncTerminateInstanceResponse(response, env, output);
     }
@@ -848,6 +861,7 @@ adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAtt
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncAttachVolumeType, input, (&meta));
 
+            set_corrid(meta.correlationId);
             if ((error = doAttachVolume(&meta, instanceId, volumeId, remoteDev, localDev)) != EUCA_OK) {
                 LOGERROR("[%s][%s] failed error=%d\n", instanceId, volumeId, error);
                 adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
@@ -860,6 +874,7 @@ adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAtt
                 adb_ncAttachVolumeResponseType_set_userId(output, env, meta.userId);
                 // no operation-specific fields in output
             }
+            unset_corrid();
         }
 
         // set response to output
@@ -912,6 +927,7 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
 
+        set_corrid(meta.correlationId);
         if ((error = doDetachVolume(&meta, instanceId, volumeId, remoteDev, localDev, force, 1)) != EUCA_OK) {
             LOGERROR("[%s][%s] failed error=%d\n", instanceId, volumeId, error);
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
@@ -924,7 +940,7 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
             adb_ncDetachVolumeResponseType_set_userId(output, env, meta.userId);
             // no operation-specific fields in output
         }
-
+        unset_corrid();
         // set response to output
         adb_ncDetachVolumeResponse_set_ncDetachVolumeResponse(response, env, output);
     }
@@ -966,6 +982,7 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncCreateImageType, input, (&meta));
 
+            set_corrid(meta.correlationId);
             if ((error = doCreateImage(&meta, instanceId, volumeId, remoteDev)) != EUCA_OK) {
                 LOGERROR("[%s][%s] failed error=%d\n", instanceId, volumeId, error);
                 adb_ncCreateImageResponseType_set_return(output, env, AXIS2_FALSE);
@@ -978,6 +995,7 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
                 adb_ncCreateImageResponseType_set_userId(output, env, meta.userId);
                 // no operation-specific fields in output
             }
+            unset_corrid();
         }
         // set response to output
         adb_ncCreateImageResponse_set_ncCreateImageResponse(response, env, output);
@@ -1036,6 +1054,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         meta.correlationId = correlationId;
         meta.userId = userId;
 
+        set_corrid(meta.correlationId);
         if ((error = doBundleInstance(&meta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1048,6 +1067,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
             adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
             // no operation-specific fields in output
         }
+        unset_corrid();
 
         // set response to output
         adb_ncBundleInstanceResponse_set_ncBundleInstanceResponse(response, env, output);
@@ -1095,13 +1115,15 @@ adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBund
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-
+    
+        set_corrid(meta.correlationId);
         if ((error = doBundleRestartInstance(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_TRUE);
         }
+        unset_corrid();
 
         adb_ncBundleRestartInstanceResponseType_set_correlationId(output, env, correlationId);
         adb_ncBundleRestartInstanceResponseType_set_userId(output, env, userId);
@@ -1152,7 +1174,8 @@ adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTa
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-
+  
+        set_corrid(meta.correlationId);
         if ((error = doCancelBundleTask(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1165,6 +1188,7 @@ adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTa
             adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
             // no operation-specific fields in output
         }
+        unset_corrid();
 
         // set response to output
         adb_ncCancelBundleTaskResponse_set_ncCancelBundleTaskResponse(response, env, output);
@@ -1224,7 +1248,8 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
             // do it
             meta.correlationId = correlationId;
             meta.userId = userId;
-
+ 
+            set_corrid(meta.correlationId);
             if ((error = doDescribeBundleTasks(&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen)) != EUCA_OK) {
                 LOGERROR("failed error=%d\n", error);
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1245,6 +1270,7 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
 
                 EUCA_FREE(outBundleTasks);
             }
+            unset_corrid();
         }
 
         // set response to output
@@ -1322,7 +1348,9 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
 
+        set_corrid(meta.correlationId);
         error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+        unset_corrid();
 
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
@@ -1400,7 +1428,9 @@ adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNod
         meta.correlationId = correlationId;
         meta.userId = userId;
 
+        set_corrid(meta.correlationId);
         error = doModifyNode(&meta, stateName);
+        unset_corrid();
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1472,7 +1502,9 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         eventlog("NC", meta.userId, meta.correlationId, "MigrateInstances", "begin");
 
         // do it
+        set_corrid(meta.correlationId);
         error = doMigrateInstances(&meta, instances, instancesLen, action, credentials);
+        unset_corrid();
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
 mi_error:
@@ -1541,8 +1573,11 @@ adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * nc
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-
+   
+        set_corrid(meta.correlationId);
         error = doStartInstance(&meta, instanceId);
+        unset_corrid();
+
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncStartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1600,8 +1635,11 @@ adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncSto
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-
+     
+        set_corrid(meta.correlationId);
         error = doStopInstance(&meta, instanceId);
+        unset_corrid();
+
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncStopInstanceResponseType_set_return(output, env, AXIS2_FALSE);

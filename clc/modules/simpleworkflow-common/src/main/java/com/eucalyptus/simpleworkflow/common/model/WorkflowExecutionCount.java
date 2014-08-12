@@ -44,7 +44,7 @@ import java.io.Serializable;
  * CountOpenWorkflowExecutions or CountClosedWorkflowExecutions
  * </p>
  */
-public class WorkflowExecutionCount implements Serializable {
+public class WorkflowExecutionCount extends SimpleWorkflowMessage {
 
     /**
      * The number of workflow executions.

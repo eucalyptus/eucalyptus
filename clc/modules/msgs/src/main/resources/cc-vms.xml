@@ -220,6 +220,7 @@
     <value name="state" field="state" usage="required" />
   </mapping>
   <mapping name="BundleInstance" class="com.eucalyptus.vm.BundleInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="bucketName" field="bucket" usage="required" />
     <value name="filePrefix" field="prefix" usage="required" />
@@ -238,6 +239,7 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
   <mapping name="CancelBundleTask" class="com.eucalyptus.vm.CancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
   <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.vm.CancelBundleTaskResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

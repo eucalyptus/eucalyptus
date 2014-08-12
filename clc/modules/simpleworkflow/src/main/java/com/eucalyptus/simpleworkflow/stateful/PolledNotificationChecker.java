@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,12 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.simpleworkflow.stateful;
 
-package com.eucalyptus.objectstorage.providers.s3;
-
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
+import com.google.common.base.Predicate;
 
 /**
- * Implementation for Ceph Rados Gateway. Add any additional Ceph RGW specific behavior here.
+ * Checks for existing notifications.
  */
-@ObjectStorageProviderClientProperty("ceph-rgw")
-public class CephRGWProviderClient extends S3ProviderClient {
+public interface PolledNotificationChecker extends Predicate<String> {
 }

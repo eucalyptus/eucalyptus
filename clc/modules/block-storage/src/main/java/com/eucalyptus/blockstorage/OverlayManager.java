@@ -756,14 +756,14 @@ public class OverlayManager extends DASManager {
 		}
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		if(snapshotPointId != null) {
 			throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
 		}
 
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		ArrayList<String> returnValues = new ArrayList<String>();
+		StorageResource snapInfo = null;
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
@@ -828,9 +828,8 @@ public class OverlayManager extends DASManager {
 						LOG.info("Snapshot complete. Detaching loop device" + volLoDevName);
 						LVMWrapper.disableLogicalVolume(absoluteVolLVName);
 						removeLoopback(volLoDevName);
-					}		
-					returnValues.add(snapRawFileName);
-					returnValues.add(String.valueOf(size * ObjectStorageProperties.G));
+					}
+					snapInfo = new FileResource(snapshotId, snapRawFileName);
 					volumeManager = new VolumeEntityWrapperManager();
 					LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
 					foundSnapshotInfo.setLoFileName(snapRawFileName);
@@ -845,7 +844,7 @@ public class OverlayManager extends DASManager {
 				throw new EucalyptusCloudException(error);
 			}
 		}
-		return returnValues;
+		return snapInfo;
 	}
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
@@ -1001,7 +1000,7 @@ public class OverlayManager extends DASManager {
 	}
 
 	@Override
-	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
 			throws EucalyptusCloudException {
 		String deviceName = null;
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -1016,9 +1015,7 @@ public class OverlayManager extends DASManager {
 			volumeManager.add(snapshotInfo);
 		}
 		volumeManager.finish();
-		return deviceName;
-
-		// return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
+		return new FileResource(snapshotId, deviceName);
 	}
 
 	@Override

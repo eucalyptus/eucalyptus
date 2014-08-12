@@ -79,6 +79,7 @@ import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.Vpc;
+import com.eucalyptus.compute.vpc.VpcConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -152,10 +153,14 @@ public class NetworkGroupManager {
         
         @Override
         public NetworkGroup get( ) {
+          final String vpcId = ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) );
           try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
+            if ( vpcId != null && Entities.count( NetworkGroup.namedForVpc( vpcId, null ) ) >= VpcConfiguration.getSecurityGroupsPerVpc( ) ) {
+              throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded for " + request.getVpcId( ) ) );
+            }
             final Vpc vpc = request.getVpcId() == null ?
                 null :
-                Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) ) ) );
+                Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), vpcId ) );
             final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, groupDescription );
             tx.commit();
             return group;
@@ -337,6 +342,9 @@ public class NetworkGroupManager {
         return reply;
       } else {
         ruleGroup.getNetworkRules( ).addAll( ruleList );
+        if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
+          throw new ClientComputeException(" RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
+        }
         reply.set_return( true );
       }
       tx.commit( );
@@ -388,6 +396,9 @@ public class NetworkGroupManager {
         return reply;
       } else {
         ruleGroup.getNetworkRules( ).addAll( ruleList );
+        if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
+          throw new ClientComputeException(" RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
+        }
         reply.set_return( true );
       }
       tx.commit( );

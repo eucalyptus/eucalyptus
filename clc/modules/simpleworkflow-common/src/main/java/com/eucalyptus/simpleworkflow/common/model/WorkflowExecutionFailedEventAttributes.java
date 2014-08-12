@@ -43,7 +43,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionFailed</code> event.
  * </p>
  */
-public class WorkflowExecutionFailedEventAttributes implements Serializable {
+public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The descriptive reason provided for the failure (if any).
@@ -209,6 +209,11 @@ public class WorkflowExecutionFailedEventAttributes implements Serializable {
     public WorkflowExecutionFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setWorkflowExecutionFailedEventAttributes( this );
     }
 
     /**

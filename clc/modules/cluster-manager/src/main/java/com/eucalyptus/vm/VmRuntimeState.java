@@ -66,6 +66,7 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -77,11 +78,13 @@ import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
@@ -108,10 +111,14 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.system.Threads.EucaCallable;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
 import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
@@ -339,7 +346,8 @@ public class VmRuntimeState {
                                              final Predicate<VmInstance> cleaner ) {
     Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
       Exceptions.filterStackTrace( new RuntimeException( ) ) );
-    return new Callable<Boolean>( ) {
+    final String instanceId = this.getVmInstance( ).getInstanceId( );
+    return new EucaCallable<Boolean>( ) {
       @Override
       public Boolean call( ) {
         cleaner.apply( VmRuntimeState.this.getVmInstance( ) );
@@ -347,6 +355,15 @@ public class VmRuntimeState {
           VmRuntimeState.this.addReasonDetail( reason );
         }
         return Boolean.TRUE;
+      }
+
+      @Override
+      public String getCorrelationId() {
+        final BaseMessage req = MessageContexts.lookupLast(instanceId , 
+            Sets.<Class>newHashSet(edu.ucsb.eucalyptus.msgs.TerminateInstancesType.class,
+                edu.ucsb.eucalyptus.msgs.StopInstancesType.class
+                ));
+        return req == null ? null : req.getCorrelationId();
       }
     };
   }
