@@ -285,7 +285,9 @@ public class ImageManager {
     	else if (ImageMetadata.Platform.windows.name( ).equals( eki ))
     	  platform = ImageMetadata.Platform.windows;
     	final ImageMetadata.Platform imagePlatform = platform;
-    	
+    	final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
+    			? ImageMetadata.Architecture.i386
+    			: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
     	allocator = new Supplier<ImageInfo>( ) {
 
     		@Override
@@ -293,7 +295,7 @@ public class ImageManager {
     			try {
     				return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
     						request.getDescription( ), imagePlatform, eki, eri, rootDevName,
-    						request.getBlockDeviceMappings( ) );
+    						request.getBlockDeviceMappings( ), arch );
     			} catch ( EucalyptusCloudException ex ) {
     				throw new RuntimeException( ex );
     			}
