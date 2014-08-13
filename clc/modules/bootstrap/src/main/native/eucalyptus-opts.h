@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef ARGUMENTS_VERSION
 /** @brief the program version */
-#define ARGUMENTS_VERSION "4.0.1"
+#define ARGUMENTS_VERSION "4.0.2"
 #endif
 
 /** @brief Where the command line options are stored */
