@@ -3923,36 +3923,49 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
         LOGDEBUG("running instance %s\n", instId);
 
-        // generate new mac
+        foundnet = 0;
+
         bzero(mac, 32);
         bzero(pubip, 32);
         bzero(privip, 32);
 
+        // pubip is handled outside of doRunInstances
         strncpy(pubip, "0.0.0.0", 32);
 
-        if (privateIpsLen > 0) {
+        // if private IP is passed in, set it here
+        if (privateIpsLen > 0 && privateIps[i] && strlen(privateIps[i])) {
             snprintf(privip, 32, "%s", privateIps[i]);
         } else {
             strncpy(privip, "0.0.0.0", 32);
         }
 
-        sem_mywait(VNET);
-        {
-            if (nidx == -1) {
-                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
-                thenidx = -1;
-            } else {
-                rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
-                thenidx = nidx;
-                nidx++;
+        // either set up the mac from input, or make the calls to generate some combo of priv/pub/mac values from networking subsystem
+        if (!strcmp(vnetconfig->mode, NETMODE_VPCMIDO) && macAddrsLen > 0 && macAddrs[i] && strlen(macAddrs[i])) {
+            // new modes, no net generation, all vals come in as input
+            foundnet = 1;
+            thenidx = -1;
+            snprintf(mac, 32, "%s", macAddrs[i]);
+            LOGDEBUG("setting instance '%s' macAddr to CLC input value '%s'\n", instId, mac);
+        } else {
+            // old modes - need to generate some values instead of reading them all from input
+            sem_mywait(VNET);
+            {
+                if (nidx == -1) {
+                    rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, -1, mac, pubip, privip);
+                    thenidx = -1;
+                } else {
+                    rc = vnetGenerateNetworkParams(vnetconfig, instId, vlan, networkIndexList[nidx], mac, pubip, privip);
+                    thenidx = nidx;
+                    nidx++;
+                }
+                if (rc) {
+                    foundnet = 0;
+                } else {
+                    foundnet = 1;
+                }
             }
-            if (rc) {
-                foundnet = 0;
-            } else {
-                foundnet = 1;
-            }
+            sem_mypost(VNET);
         }
-        sem_mypost(VNET);
 
         if (thenidx != -1) {
             LOGDEBUG("assigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, networkIndexList[thenidx]);
