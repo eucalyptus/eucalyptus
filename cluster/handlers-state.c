@@ -958,8 +958,8 @@ int clean_network_state(void)
     char rootwrap[EUCA_MAX_PATH] = "";
     vnetConfig *tmpvnetconfig = NULL;
 
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        LOGDEBUG("no network cleanup required for EDGE\n");
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+        LOGDEBUG("no network cleanup required for EDGE or VPCMIDO\n");
         return (0);
     }
 

@@ -62,7 +62,7 @@ typedef struct gni_instance_t {
     char name[16];
     char accountId[128];
     u8 macAddress[6];
-    char vpc[16];
+    char vpc[16], subnet[16];
     u32 publicIp, privateIp;
     char node[HOSTNAME_SIZE], nodehostname[HOSTNAME_SIZE];
     gni_name *secgroup_names;
