@@ -42,6 +42,8 @@ public interface WorkflowExecutions {
 
   Set<String> ACTIVITY_CLOSE_EVENT_TYPES = ImmutableSet.of( "ActivityTaskCompleted", "ActivityTaskFailed", "ActivityTaskTimedOut", "ActivityTaskCanceled" );
 
+  Set<String> TIMER_CLOSE_EVENT_TYPES = ImmutableSet.of( "TimerCanceled", "TimerFired" );
+
   <T> List<T> listByExample( WorkflowExecution example,
                              Predicate<? super WorkflowExecution> filter,
                              Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
