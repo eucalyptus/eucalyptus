@@ -788,8 +788,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 char *groupName = instance->groupNames[i];
                 euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
                 instance->groupNamesSize++;
-                EUCA_FREE(res_array[i]);
             }
+
+            // Free our allocated memory
+            for (int i = 0; res_array[i] != NULL; i++)
+                EUCA_FREE(res_array[i]);
             EUCA_FREE(res_array);
         }
     }
@@ -895,8 +898,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 instance->params.virtualBootRecordLen++;
 
                 LOGTRACE("found vbr '%s' typeName='%s' instance->params.virtualBootRecordLen\n", vbr->resourceLocation, vbr->typeName);
-                EUCA_FREE(res_array[i]);
             }
+
+            // Free our allocated memory
+            for (int i = 0; res_array[i] != NULL; i++)
+                EUCA_FREE(res_array[i]);
             EUCA_FREE(res_array);
         }
     }
@@ -921,8 +927,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR(volxpath, v->stateName);
                 MKVOLPATH("connectionString");
                 XGET_STR(volxpath, v->connectionString);
-                EUCA_FREE(res_array[i]);
             }
+
+            // Free our allocated memory
+            for (int i = 0; res_array[i] != NULL; i++)
+                EUCA_FREE(res_array[i]);
             EUCA_FREE(res_array);
         }
     }
@@ -1246,6 +1255,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
                 if ((result = xmlXPathEvalExpression(((const xmlChar *)xpath), context)) != NULL) {
                     if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
                         nodeset = result->nodesetval;
+                        // We will add one more to have a NULL entry at the end
                         res = EUCA_ZALLOC(nodeset->nodeNr + 1, sizeof(char *));
                         for (i = 0; ((i < nodeset->nodeNr) && (res != NULL)); i++) {
                             if ((nodeset->nodeTab[i]->children != NULL) && (nodeset->nodeTab[i]->children->content != NULL)) {
