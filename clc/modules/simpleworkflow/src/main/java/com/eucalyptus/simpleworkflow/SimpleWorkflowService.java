@@ -1359,28 +1359,26 @@ public class SimpleWorkflowService {
                     case "CancelWorkflowExecution":
                       final CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecution =
                           decision.getCancelWorkflowExecutionDecisionAttributes();
-                      workflowExecution.setState( WorkflowExecution.ExecutionStatus.Closed );
-                      workflowExecution.setCloseStatus( WorkflowExecution.CloseStatus.Canceled );
-                      workflowExecution.setCloseTimestamp( new Date( ) );
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new WorkflowExecutionCanceledEventAttributes( )
-                              .withDecisionTaskCompletedEventId( completedId )
-                              .withDetails( cancelWorkflowExecution.getDetails() )
+                      workflowExecution.closeWorkflow(
+                          WorkflowExecution.CloseStatus.Canceled,
+                          WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new WorkflowExecutionCanceledEventAttributes( )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withDetails( cancelWorkflowExecution.getDetails() )
                       ) );
                       deleteActivities( activityTasks, accountFullName, workflowExecution );
                       break;
                     case "CompleteWorkflowExecution":
                       final CompleteWorkflowExecutionDecisionAttributes completed =
                           decision.getCompleteWorkflowExecutionDecisionAttributes( );
-                      workflowExecution.setState( WorkflowExecution.ExecutionStatus.Closed );
-                      workflowExecution.setCloseStatus( WorkflowExecution.CloseStatus.Completed );
-                      workflowExecution.setCloseTimestamp( new Date( ) );
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new WorkflowExecutionCompletedEventAttributes( )
-                            .withDecisionTaskCompletedEventId( completedId )
-                            .withResult( completed.getResult( ) )
+                      workflowExecution.closeWorkflow(
+                          WorkflowExecution.CloseStatus.Completed,
+                          WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new WorkflowExecutionCompletedEventAttributes( )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withResult( completed.getResult( ) )
                       ) );
                       break;
                     case "ContinueAsNewWorkflowExecution":
@@ -1395,15 +1393,14 @@ public class SimpleWorkflowService {
                     case "FailWorkflowExecution":
                       final FailWorkflowExecutionDecisionAttributes failed =
                           decision.getFailWorkflowExecutionDecisionAttributes();
-                      workflowExecution.setState( WorkflowExecution.ExecutionStatus.Closed );
-                      workflowExecution.setCloseStatus( WorkflowExecution.CloseStatus.Failed );
-                      workflowExecution.setCloseTimestamp( new Date( ) );
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new WorkflowExecutionFailedEventAttributes( )
-                              .withDecisionTaskCompletedEventId( completedId )
-                              .withDetails( failed.getDetails( ) )
-                              .withReason( failed.getReason( ) ) ) );
+                      workflowExecution.closeWorkflow(
+                          WorkflowExecution.CloseStatus.Failed,
+                          WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new WorkflowExecutionFailedEventAttributes( )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withDetails( failed.getDetails( ) )
+                                  .withReason( failed.getReason( ) ) ) );
                       deleteActivities( activityTasks, accountFullName, workflowExecution );
                       break;
                     case "RecordMarker":
@@ -1739,10 +1736,9 @@ public class SimpleWorkflowService {
               @Override
               public Void apply( final WorkflowExecution workflowExecution ) {
                 if ( accessible.apply( workflowExecution ) ) {
-                  workflowExecution.setState( WorkflowExecution.ExecutionStatus.Closed );
-                  workflowExecution.setCloseStatus( WorkflowExecution.CloseStatus.Terminated );
-                  workflowExecution.setCloseTimestamp( new Date( ) );
-                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                  workflowExecution.closeWorkflow(
+                      WorkflowExecution.CloseStatus.Terminated,
+                      WorkflowHistoryEvent.create(
                           workflowExecution,
                           new WorkflowExecutionTerminatedEventAttributes()
                               .withChildPolicy( Objects.firstNonNull(

@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow;
+package com.eucalyptus.simpleworkflow.stateful;
 
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Pending;
 import java.util.Date;
@@ -29,6 +29,12 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.simpleworkflow.ActivityTask;
+import com.eucalyptus.simpleworkflow.ActivityTasks;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
+import com.eucalyptus.simpleworkflow.WorkflowExecution;
+import com.eucalyptus.simpleworkflow.WorkflowExecutions;
+import com.eucalyptus.simpleworkflow.WorkflowHistoryEvent;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskTimedOutEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.DecisionTaskScheduledEventAttributes;
@@ -66,11 +72,11 @@ public class TimeoutManager {
               final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution();
               workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                   workflowExecution,
-                  new ActivityTaskTimedOutEventAttributes( )
-                      .withDetails( activityTask.getHeartbeatDetails( ) )
-                      .withScheduledEventId( activityTask.getScheduledEventId( ) )
-                      .withStartedEventId( activityTask.getStartedEventId( ) )
-                      .withTimeoutType( timeout.getLeft( ) )
+                  new ActivityTaskTimedOutEventAttributes()
+                      .withDetails( activityTask.getHeartbeatDetails() )
+                      .withScheduledEventId( activityTask.getScheduledEventId() )
+                      .withStartedEventId( activityTask.getStartedEventId() )
+                      .withTimeoutType( timeout.getLeft() )
               ) );
               if ( workflowExecution.getDecisionStatus( ) != Pending ) {
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
@@ -100,14 +106,13 @@ public class TimeoutManager {
             final Date timeout = workflowExecution.calculateNextTimeout( );
             if ( timeout != null ) {
               if ( workflowExecution.isWorkflowTimedOut( ) ) {
-                workflowExecution.setState( WorkflowExecution.ExecutionStatus.Closed );
-                workflowExecution.setCloseStatus( WorkflowExecution.CloseStatus.Timed_Out );
-                workflowExecution.setCloseTimestamp( new Date( ) );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new WorkflowExecutionTimedOutEventAttributes()
-                        .withTimeoutType( "START_TO_CLOSE" )
-                        .withChildPolicy( workflowExecution.getChildPolicy( ) )
+                workflowExecution.closeWorkflow(
+                    WorkflowExecution.CloseStatus.Timed_Out,
+                    WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new WorkflowExecutionTimedOutEventAttributes()
+                            .withTimeoutType( "START_TO_CLOSE" )
+                            .withChildPolicy( workflowExecution.getChildPolicy() )
                 ) );
               } else { // decision task timed out
                 final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
@@ -140,8 +145,20 @@ public class TimeoutManager {
           }
         } );
       }
-    } catch ( SwfMetadataException e ) {
+    } catch ( final SwfMetadataException e ) {
       logger.error( "Error processing workflow execution/decision task timeouts", e );
+    }
+  }
+
+  public void doExpunge( ) {
+    try {
+      for ( final WorkflowExecution workflowExecution : workflowExecutions.listRetentionExpired( Functions.<WorkflowExecution>identity() ) ) {
+        logger.debug( "Removing workflow execution with expired retention period: " +
+            workflowExecution.getDisplayName() + "/" + workflowExecution.getWorkflowId() );
+        workflowExecutions.deleteByExample( workflowExecution );
+      }
+    } catch ( final SwfMetadataException e ) {
+      logger.error( "Error processing workflow execution retention expiry", e );
     }
   }
 
@@ -155,8 +172,10 @@ public class TimeoutManager {
     @Override
     public void fireEvent( final ClockTick event ) {
       if ( Bootstrap.isOperational( ) &&
-          Topology.isEnabledLocally( SimpleWorkflow.class ) ) {
+          Topology.isEnabledLocally( PolledNotifications.class ) &&
+          Topology.isEnabled( SimpleWorkflow.class ) ) {
         timeoutManager.doTimeouts( );
+        timeoutManager.doExpunge( );
       }
     }
   }

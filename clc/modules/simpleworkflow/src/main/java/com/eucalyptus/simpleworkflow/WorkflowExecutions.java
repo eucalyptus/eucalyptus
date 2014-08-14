@@ -54,6 +54,8 @@ public interface WorkflowExecutions {
 
   <T> List<T> listTimedOut( Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
 
+  <T> List<T> listRetentionExpired( Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
+
   <T> T lookupByExample( WorkflowExecution example,
                          @Nullable OwnerFullName ownerFullName,
                          String key,
@@ -67,7 +69,7 @@ public interface WorkflowExecutions {
 
   WorkflowExecution save( WorkflowExecution workflowExecution ) throws SwfMetadataException;
 
-
+  List<WorkflowExecution> deleteByExample( WorkflowExecution example ) throws SwfMetadataException;
 
   @TypeMapper
   public enum WorkflowExecutionToWorkflowExecutionDetailTransform implements Function<WorkflowExecution,WorkflowExecutionDetail> {

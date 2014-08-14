@@ -51,6 +51,15 @@ public class PersistenceWorkflowExecutions extends SwfPersistenceSupport<Workflo
         transform );
   }
 
+  public <T> List<T> listRetentionExpired( final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        WorkflowExecution.exampleForClosedWorkflow( ),
+        Predicates.alwaysTrue( ),
+        Restrictions.lt( "retentionTimestamp", new Date( ) ),
+        Collections.<String,String>emptyMap( ),
+        transform );
+  }
+
   @Override
   protected WorkflowExecution exampleWithOwner( final OwnerFullName ownerFullName ) {
     return WorkflowExecution.exampleWithOwner( ownerFullName );

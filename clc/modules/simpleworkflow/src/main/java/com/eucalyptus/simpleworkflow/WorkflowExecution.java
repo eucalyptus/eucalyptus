@@ -154,6 +154,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Temporal( TemporalType.TIMESTAMP )
   private Date closeTimestamp;
 
+  @Column( name = "retention_timestamp" )
+  @Temporal( TemporalType.TIMESTAMP )
+  private Date retentionTimestamp;
+
   @ElementCollection
   @CollectionTable( name = "swf_workflow_execution_tags" )
   @JoinColumn( name = "workflow_execution_id" )
@@ -294,6 +298,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return workflowExecution;
   }
 
+  public static WorkflowExecution exampleForClosedWorkflow( ) {
+    return exampleForClosedWorkflow( null, null, null );
+  }
+
   public static WorkflowExecution exampleForClosedWorkflow( final OwnerFullName owner,
                                                             final String domain,
                                                             final String workflowId ) {
@@ -325,6 +333,17 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     event.setEventOrder( (long) workflowHistory.size( ) );
     workflowHistory.add( event );
     return event.getEventId();
+  }
+
+  public void closeWorkflow( final CloseStatus closeStatus,
+                             final WorkflowHistoryEvent event ) {
+    setState( WorkflowExecution.ExecutionStatus.Closed );
+    setCloseStatus( closeStatus );
+    setCloseTimestamp( new Date( ) );
+    setRetentionTimestamp( new Date(
+        getCloseTimestamp( ).getTime( ) +
+            TimeUnit.DAYS.toMillis( getDomain( ).getWorkflowExecutionRetentionPeriodInDays( ) ) ) );
+    addHistoryEvent( event );
   }
 
   @Override
@@ -444,6 +463,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   public void setCloseTimestamp( final Date closeTimestamp ) {
     this.closeTimestamp = closeTimestamp;
+  }
+
+  public Date getRetentionTimestamp() {
+    return retentionTimestamp;
+  }
+
+  public void setRetentionTimestamp( final Date retentionTimestamp ) {
+    this.retentionTimestamp = retentionTimestamp;
   }
 
   public List<String> getTagList( ) {
