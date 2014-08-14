@@ -4441,6 +4441,8 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
                 goto cleanup;          // ditto
             }
         }
+    } else {
+        EUCA_FREE(main_dm_table);
     }
 
     goto free;
