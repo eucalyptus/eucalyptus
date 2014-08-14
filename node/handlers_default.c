@@ -398,6 +398,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_THREAD_ERROR;
         goto error;
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , instance->tcb); 
     pthread_attr_destroy(attr);
     EUCA_FREE(attr);
 
@@ -759,6 +760,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
         LOGERROR("[%s] failed to start VM termination thread\n", instanceId);
     } else {
+        set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tid);
         // previous and shutdown state are ignored by CC anyway
         *previousState = 0;
         *shutdownState = 0;
@@ -1690,6 +1692,7 @@ static void *createImage_thread(void *arg)
             LOGINFO("[%s] failed while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
         }
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1708,7 +1711,7 @@ static void *createImage_thread(void *arg)
             LOGINFO("[%s] failed while createImage for instance (rc=%d)\n", instance->instanceId, rc);
         }
     }
-
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1776,7 +1779,8 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
         LOGERROR("[%s][%s] failed to start VM createImage thread\n", instanceId, volumeId);
         return cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
     }
-
+    
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
     return EUCA_OK;
 }
 
@@ -1863,12 +1867,14 @@ static void *bundling_thread(void *arg)
             LOGINFO("[%s] failed while bundling instance\n", pInstance->instanceId);
             cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         }
+        unset_corrid(get_corrid());
         return NULL;
     }
     // check if bundling was cancelled while we waited
     if (pInstance->bundleCanceled) {
         LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", pInstance->instanceId);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1876,6 +1882,7 @@ static void *bundling_thread(void *arg)
     if (realpath(pInstance->params.root->backingPath, backing_dev) == NULL || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
         LOGERROR("[%s] failed to resolve backing path (%s) or to chown it\n", pInstance->instanceId, backing_dev);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1923,6 +1930,7 @@ static void *bundling_thread(void *arg)
         LOGERROR("[%s] failed while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
     }
 
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -2045,6 +2053,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
 
     return EUCA_OK;
 }
@@ -2350,6 +2359,7 @@ static void *startstop_thread(void *arg)
         find_and_start_instance(pParams->instanceId);
     }
 
+    unset_corrid(get_corrid());
     EUCA_FREE(pParams);
     return (NULL);
 }
@@ -2393,6 +2403,7 @@ static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {
@@ -2442,6 +2453,7 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {

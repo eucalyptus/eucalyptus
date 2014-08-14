@@ -1790,6 +1790,7 @@ shutoff:                              // escape point for error conditions
 free:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
+    unset_corrid(get_corrid());    
     return NULL;
 }
 
@@ -1808,8 +1809,7 @@ void *terminating_thread(void *arg)
 
     int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        EUCA_FREE(arg);
-        return NULL;
+        goto free; 
     }
 
     {
@@ -1817,8 +1817,7 @@ void *terminating_thread(void *arg)
         ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
-            EUCA_FREE(arg);
-            return NULL;
+            goto free;
         }
         // change the state and let the monitoring_thread clean up state
         if (instance->state != TEARDOWN && instance->state != CANCELED) {
@@ -1832,8 +1831,9 @@ void *terminating_thread(void *arg)
         copy_instances();
         sem_v(inst_sem);
     }
-
+free:
     EUCA_FREE(arg);
+    unset_corrid(get_corrid());    
     return NULL;
 }
 
