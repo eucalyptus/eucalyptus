@@ -393,7 +393,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
     psPrivateMac = strdup(psMacAddr);
     psPrivateIP = strdup("10.0.0.202");
-    euca_srand(); // seed the random number generator
+    euca_srand();                      // seed the random number generator
     while (nbInstances--) {
         if ((psInstanceId == NULL) || (nbInstances > 1)) {
             snprintf(sTempBuffer, sizeof(sTempBuffer), "i-%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());

@@ -3331,7 +3331,7 @@ int main(int argc, char **argv)
     char cwd[1024];
 
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        euca_srand(); // seed the random number generator
+        euca_srand();                  // seed the random number generator
         blobstore_set_error_function(dummy_err_fn);
 
         printf("testing vbr.c\n");

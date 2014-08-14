@@ -2451,18 +2451,18 @@ char *get_username(void)
 }
 
 //! Make a correlation ID that is prefixed with the ID received from other components
-char* get_corrid(const char* id) 
+char *get_corrid(const char *id)
 {
-    char*new_corr_id = NULL;
-    if(id==NULL)
+    char *new_corr_id = NULL;
+    if (id == NULL)
         return NULL;
     // correlation_id = [prefix(36)::new_id(36)]
-    if(id!=NULL && strstr(id, "::")!=NULL && strlen(id)>=74){ 
-        char* newid = system_output("uuidgen");
-        if(newid!=NULL){
-            new_corr_id = calloc(75,sizeof(char));
+    if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
+        char *newid = system_output("uuidgen");
+        if (newid != NULL) {
+            new_corr_id = calloc(75, sizeof(char));
             strncpy(new_corr_id, id, 38);
-            strncpy(new_corr_id+38, newid, 36);
+            strncpy(new_corr_id + 38, newid, 36);
             EUCA_FREE(newid);
         }
     }
@@ -2472,16 +2472,18 @@ char* get_corrid(const char* id)
 pid_t thread_pid = -1;
 char thread_correlation_id[256];
 
-void set_corrid(const char* corr_id) {
-    if(corr_id == NULL || strstr(corr_id, "::") == NULL) {
+void set_corrid(const char *corr_id)
+{
+    if (corr_id == NULL || strstr(corr_id, "::") == NULL) {
         unset_corrid();
         return;
     }
-    thread_pid = getpid();    
+    thread_pid = getpid();
     euca_strncpy(thread_correlation_id, corr_id, strlen(corr_id));
 }
 
-void unset_corrid(){
+void unset_corrid()
+{
     thread_pid = -1;
     memset(thread_correlation_id, 0x00, 256);
 }
@@ -2493,7 +2495,7 @@ void unset_corrid(){
 int euca_nanosleep(unsigned long long nsec)
 {
     struct timespec tv;
-    tv.tv_sec  = nsec / NANOSECONDS_IN_SECOND;
+    tv.tv_sec = nsec / NANOSECONDS_IN_SECOND;
     tv.tv_nsec = nsec % NANOSECONDS_IN_SECOND;
     return nanosleep(&tv, NULL);
 }
@@ -2599,26 +2601,25 @@ int main(int argc, char **argv)
         printf("Failed to retrieve the current working directory information.\n");
         return (1);
     }
-
     // sanity-check euca_nanosleep()
     printf("checking euca_nanosleep\n");
     struct timeval tv1, tv2, tv3;
     gettimeofday(&tv1, NULL);
-    euca_nanosleep(100000L); // try a 100-microsecond sleep
+    euca_nanosleep(100000L);           // try a 100-microsecond sleep
     gettimeofday(&tv2, NULL);
-    euca_nanosleep(2000000000L); // try a 2-second sleep
+    euca_nanosleep(2000000000L);       // try a 2-second sleep
     gettimeofday(&tv3, NULL);
     unsigned diff1 = (unsigned)tv2.tv_usec - (unsigned)tv1.tv_usec;
     unsigned diff2 = (unsigned)tv3.tv_sec - (unsigned)tv2.tv_sec;
-    assert (diff1 > 100 && diff1 < 200); // microsecond delays aren't precise
-    assert (diff2 == 2); // second delays should be right, usually
+    assert(diff1 > 100 && diff1 < 200); // microsecond delays aren't precise
+    assert(diff2 == 2);                // second delays should be right, usually
 
     // sanity-check euca_srand()
     printf("checking euca_srand\n");
     euca_srand();
     int r1 = rand();
-    euca_nanosleep(1001); // sleep for over 1 microsecond
-    euca_srand(); // this should produce a different seed
+    euca_nanosleep(1001);              // sleep for over 1 microsecond
+    euca_srand();                      // this should produce a different seed
     int r2 = rand();
     assert(r1 != r2);
 

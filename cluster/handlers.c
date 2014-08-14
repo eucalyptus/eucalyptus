@@ -275,7 +275,8 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     }
 
     LOGINFO("[%s] bundling requested\n", instanceId);
-    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
+    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n",
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
@@ -361,7 +362,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
     if (rc || ccIsEnabled())
         return (1);
 
-    LOGINFO("[%s] bundling instance restart\n",  SP(instanceId));
+    LOGINFO("[%s] bundling instance restart\n", SP(instanceId));
     LOGDEBUG("invoked: instanceId=%s userId=%s\n", SP(instanceId), SP(pMeta ? pMeta->userId : "UNSET"));
     if (instanceId == NULL) {
         LOGERROR("bad input params\n");
@@ -1330,7 +1331,8 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     }
 
     LOGINFO("[%s][%s] attaching volume\n", SP(instanceId), SP(volumeId));
-    LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+    LOGDEBUG("invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev),
+             SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         LOGERROR("bad input params\n");
         return (1);
@@ -1490,7 +1492,8 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
     LOGDEBUG("invoked: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
              pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         fail = 0;
     } else {
 
@@ -1560,7 +1563,8 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
         return (1);
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         return (0);
     }
 
@@ -1939,7 +1943,8 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
         LOGERROR("bad input params\n");
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         ret = 0;
     } else {
 
@@ -2078,7 +2083,8 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     LOGDEBUG("invoked: userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
              SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
@@ -2147,7 +2153,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
     int j;
     ccResource *res;
     ccResourceCache resourceCacheLocal;
-    
+
     LOGDEBUG("invoked: userId=%s, vmLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), vmLen);
 
     rc = initialize(pMeta, FALSE);
@@ -2424,7 +2430,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     powerUp(&(resourceCacheStage->resources[i]));
 
                     if (resourceCacheStage->resources[i].state == RESWAKING && ((time(NULL) - resourceCacheStage->resources[i].stateChange) < config->wakeThresh)) {
-                        LOGDEBUG("resource still waking up (%ld more seconds until marked as down)\n", 
+                        LOGDEBUG("resource still waking up (%ld more seconds until marked as down)\n",
                                  config->wakeThresh - (time(NULL) - resourceCacheStage->resources[i].stateChange));
                     } else {
                         LOGERROR("bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
@@ -2671,7 +2677,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
     pids = EUCA_ZALLOC(resourceCacheStage->numResources, sizeof(int));
     if (!pids) {
-        LOGFATAL("out of memory!\n" );
+        LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
 
@@ -2775,7 +2781,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0"))
                                 && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
                                 // CC has network info, NC does not
-                                LOGDEBUG("sending ncAssignAddress to sync NC\n" );
+                                LOGDEBUG("sending ncAssignAddress to sync NC\n");
                                 rc = ncClientCall(pMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
                                                   "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
                                 if (rc) {
@@ -2991,7 +2997,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 {
     int i, rc, count;
     time_t op_start;
-   
+
     LOGDEBUG("invoked: userId=%s, instIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), instIdsLen);
 
     op_start = time(NULL);
@@ -3035,7 +3041,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
     sem_mypost(INSTCACHE);
 
     for (i = 0; i < (*outInstsLen); i++) {
-        LOGDEBUG("instances summary: instanceId=%s, state=%s, migration_state=%s, publicIp=%s, privateIp=%s\n", 
+        LOGDEBUG("instances summary: instanceId=%s, state=%s, migration_state=%s, publicIp=%s, privateIp=%s\n",
                  (*outInsts)[i].instanceId,
                  (*outInsts)[i].state, migration_state_names[(*outInsts)[i].migration_state], (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
     }
@@ -3831,8 +3837,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     LOGINFO("running instances\n");
     LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId),
-             SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL),
+             SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId), SP(reservationId),
+             SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
         char objectStorageURL[EUCA_MAX_PATH], *strptr = NULL, newURL[EUCA_MAX_PATH];
@@ -3880,7 +3887,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         return (-1);
     }
     // check health of the networkIndexList
-    if ((!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) || networkIndexList == NULL) {
+    if ((!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+         || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) || networkIndexList == NULL) {
         // disabled
         nidx = -1;
         if (vlan > 0) {
@@ -4780,7 +4788,9 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
     if (!strcmp(nodeAction, "prepare")) {
         if (actionNode && instanceId) {
-            LOGWARN("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n", SP(instanceId), SP(actionNode));
+            LOGWARN
+                ("[%s] specified migration preparation using both instance ID and source node (%s). Ignoring source-node specification and migrating the single specfied instance.\n",
+                 SP(instanceId), SP(actionNode));
         }
         if (instanceId) {
             LOGINFO("preparing migration for specific instance %s\n", SP(instanceId));
@@ -4918,7 +4928,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         credentials[CREDENTIAL_SIZE - 1] = 0;
 
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n", 
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) [creds='%s'] %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, credentials, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
 
         //Populate service metadata in request. Needed for ebs-volume attachment
@@ -4959,7 +4969,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
             LOGDEBUG("about to ncClientCall destination node[s] with nc_instances (%s %d) [creds='%s']\n", nodeAction, found_instances, credentials);
             for (int idx = 0; idx < found_instances; idx++) {
-                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n", 
+                LOGDEBUG("[%s] about to ncClientCall destination node '%s' with nc_instances (%s %d) [creds='%s']\n",
                          SP(nc_instances[idx]->instanceId), SP(nc_instances[idx]->migration_dst), nodeAction, 1, credentials);
 
                 dst_index = -1;
@@ -4995,7 +5005,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     } else if (committing) {
         // call commit on source
         timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",  
+        LOGDEBUG("about to ncClientCall source node '%s' with nc_instances (%s %d) %s\n",
                  SP(resourceCacheLocal.resources[src_index].hostname), nodeAction, found_instances, SP(found_instances == 1 ? nc_instances[0]->instanceId : ""));
 
         //Populate service metadata in request. Needed for ebs-volume attachment
@@ -5031,7 +5041,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             strncpy(nc_instances[0]->migration_dst, resourceCacheLocal.resources[dst_index].hostname, HOSTNAME_SIZE);
         }
 
-        LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n", 
+        LOGDEBUG("about to ncClientCall node %s (> %s) with nc_instances (%s %d) %s using URL %s\n",
                  SP(resourceCacheLocal.resources[dst_index].hostname), SP(found_instances == 1 ? nc_instances[0]->migration_dst : ""), nodeAction, found_instances,
                  SP(found_instances == 1 ? nc_instances[0]->instanceId : ""), resourceCacheLocal.resources[dst_index].ncURL);
 
@@ -6156,7 +6166,7 @@ int init_thread(void)
     } else {
         // this thread has not been initialized, set up shared memory segments
 
-        euca_srand(); // seed the random number generator
+        euca_srand();                  // seed the random number generator
 
         bzero(locks, sizeof(sem_t *) * ENDLOCK);
         bzero(mylocks, sizeof(int) * ENDLOCK);
@@ -7235,7 +7245,8 @@ int restoreNetworkState(void)
 
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
         if (rc) {
             LOGERROR("could not (re)assign public/private IP mappings\n");

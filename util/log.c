@@ -939,9 +939,9 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     }
 
     pid_t cur_pid = getpid();
-    if (cur_pid == thread_pid && thread_correlation_id!=NULL) {
+    if (cur_pid == thread_pid && thread_correlation_id != NULL) {
         snprintf(new_format, 512, "[%.8s] %s", thread_correlation_id, format);
-    }else{
+    } else {
         snprintf(new_format, 512, "%s", format);
     }
 

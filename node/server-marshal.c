@@ -676,7 +676,7 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncRebootInstanceType, input, (&meta));
-       
+
         set_corrid(meta.correlationId);
         if ((error = doRebootInstance(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -728,7 +728,7 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncGetConsoleOutputType, input, (&meta));
-        
+
         set_corrid(meta.correlationId);
         if ((error = doGetConsoleOutput(&meta, instanceId, &consoleOutput)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -792,7 +792,7 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
 
         // do it
         EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
-        
+
         set_corrid(meta.correlationId);
         if ((error = doTerminateInstance(&meta, instanceId, force, &shutdownState, &previousState)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -1115,7 +1115,7 @@ adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBund
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-    
+
         set_corrid(meta.correlationId);
         if ((error = doBundleRestartInstance(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -1174,7 +1174,7 @@ adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTa
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-  
+
         set_corrid(meta.correlationId);
         if ((error = doCancelBundleTask(&meta, instanceId)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -1248,7 +1248,7 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
             // do it
             meta.correlationId = correlationId;
             meta.userId = userId;
- 
+
             set_corrid(meta.correlationId);
             if ((error = doDescribeBundleTasks(&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen)) != EUCA_OK) {
                 LOGERROR("failed error=%d\n", error);
@@ -1573,7 +1573,7 @@ adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * nc
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-   
+
         set_corrid(meta.correlationId);
         error = doStartInstance(&meta, instanceId);
         unset_corrid();
@@ -1635,7 +1635,7 @@ adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncSto
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
-     
+
         set_corrid(meta.correlationId);
         error = doStopInstance(&meta, instanceId);
         unset_corrid();

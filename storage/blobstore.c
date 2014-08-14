@@ -1459,7 +1459,7 @@ int blobstore_init(void)
                 initialized = 1;
             }
         }
-        euca_srand(); // seed the random number generator
+        euca_srand();                  // seed the random number generator
     }
 
     return ret;

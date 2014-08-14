@@ -1724,7 +1724,7 @@ void *startup_thread(void *arg)
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
                         //    snprintf(nc_state.rootwrap_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
                         snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                        system(cmd);
+                        rc = system(cmd);
                     }
 
                     exit(0);
@@ -2539,8 +2539,8 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp
-        && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE)
+                 || !strcmp(tmp, NETMODE_VPCMIDO))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2549,7 +2549,8 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp
+        && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
             LOGFATAL("in 'SYSTEM', 'STATIC', 'EDGE', or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
@@ -3217,7 +3218,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s][%s] attaching volume (localDev=%s)\n", instanceId, volumeId, localDev );
+    LOGINFO("[%s][%s] attaching volume (localDev=%s)\n", instanceId, volumeId, localDev);
     LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
     if (nc_state.H->doAttachVolume)
@@ -3481,7 +3482,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
 
     LOGINFO("migrating %d instances\n", instancesLen);
     LOGTRACE("invoked\n");
-  
+
     LOGDEBUG("verifying %d instance[s] for migration...\n", instancesLen);
     for (int i = 0; i < instancesLen; i++) {
         LOGDEBUG("verifying instance # %d...\n", i);

@@ -191,10 +191,10 @@ void euca_srand(void);
 
 //! global variable and functions for setting correlation id
 //! 
-char *get_corrid(const char*);
+char *get_corrid(const char *);
 extern char thread_correlation_id[256];
 extern pid_t thread_pid;
-void set_corrid(const char* corr_id);
+void set_corrid(const char *corr_id);
 void unset_corrid();
 
 /*----------------------------------------------------------------------------*\
