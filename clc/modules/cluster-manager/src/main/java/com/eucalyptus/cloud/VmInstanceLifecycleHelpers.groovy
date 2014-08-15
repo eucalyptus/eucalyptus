@@ -502,7 +502,7 @@ class VmInstanceLifecycleHelpers {
         final Allocation allocation
     ) {
       vmInfo?.netParams?.with {
-        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) != null && !VmNetworkConfig.DEFAULT_IP == ignoredPublicIp ) {
+        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) && !VmNetworkConfig.DEFAULT_IP.equals( ignoredPublicIp ) ) {
           allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
             resourceToken.instanceUuid == vmInfo.uuid
           }?.getAttribute(NetworkResourcesKey)?.add( new PublicIPResource( ownerId: vmInfo.instanceId, value: ignoredPublicIp ) )
@@ -558,7 +558,7 @@ class VmInstanceLifecycleHelpers {
 
           db.commit( )
         } catch ( final Exception e ) {
-          logger.error( "Failed to restore address state " + input.getNetParams( )
+          Logger.getLogger( PublicIPVmInstanceLifecycleHelper ).error( "Failed to restore address state " + input.getNetParams( )
               + " for instance "
               + input.getInstanceId( )
               + " because of: "

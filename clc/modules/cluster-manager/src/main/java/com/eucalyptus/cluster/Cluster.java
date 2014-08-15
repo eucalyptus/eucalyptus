@@ -359,7 +359,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       } else {
         ServiceConfiguration config = parent.getConfiguration( );
         for ( ServiceStatusType status : serviceStatuses ) {
-          if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
+          if ( "self".equals( status.getServiceId( ).getName( ) ) || !config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
             status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
           }
           if ( status.getServiceId() == null || status.getServiceId().getName() == null || status.getServiceId().getType() == null ) {

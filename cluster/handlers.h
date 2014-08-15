@@ -185,8 +185,9 @@ enum {
 };
 
 enum {
-    RESINVALID,
-    RESVALID,
+    RES_UNCONFIGURED = 0,
+    RES_CONFIGURED,
+    RES_UNKNOWN
 };
 
 enum {
@@ -461,12 +462,6 @@ int add_instanceCache(char *instanceId, ccInstance * in);
 int del_instanceCacheId(char *instanceId);
 int find_instanceCacheId(char *instanceId, ccInstance ** out);
 int find_instanceCacheIP(char *ip, ccInstance ** out);
-void print_resourceCache(void);
-void invalidate_resourceCache(void);
-int refresh_resourceCache(char *host, ccResource * in);
-int add_resourceCache(char *host, ccResource * in);
-int del_resourceCacheId(char *host);
-int find_resourceCacheId(char *host, ccResource ** out);
 void unlock_exit(int code);
 int sem_mywait(int lockno);
 int sem_mypost(int lockno);
