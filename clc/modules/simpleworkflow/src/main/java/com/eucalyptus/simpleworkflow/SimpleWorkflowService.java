@@ -119,7 +119,7 @@ public class SimpleWorkflowService {
               userFullName,
               request.getName( ),
               request.getDescription( ),
-              parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ) );
+              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ), 0 ) );
           return domains.save( domain );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -284,6 +284,11 @@ public class SimpleWorkflowService {
           Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( ActivityType.class, ActivityTypeInfo.class ) ) );
+      final Ordering<ActivityTypeInfo> ordering =
+          Ordering.natural( ).onResultOf( ActivityTypes.ActivityTypeInfoStringFunctions.NAME );
+      Collections.sort(
+          activityTypeInfos.getTypeInfos( ),
+          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -333,7 +338,7 @@ public class SimpleWorkflowService {
               request.getDescription( ),
               request.getDefaultTaskList( ) == null ? null : request.getDefaultTaskList( ).getName( ),
               request.getDefaultChildPolicy( ),
-              parsePeriod( request.getDefaultExecutionStartToCloseTimeout( ) ), //TODO:STEVE: validate not NONE
+              parsePeriod( request.getDefaultExecutionStartToCloseTimeout( ) ),
               parsePeriod( request.getDefaultTaskStartToCloseTimeout( ) )
           );
           return workflowTypes.save( workflowType );
@@ -394,12 +399,17 @@ public class SimpleWorkflowService {
         .byPrivileges( )
         .buildPredicate( );
     try {
-      workflowTypeInfos.getTypeInfos( ).addAll( workflowTypes.list( //TODO:STEVE: result ordering
+      workflowTypeInfos.getTypeInfos( ).addAll( workflowTypes.list(
           accountFullName,
           Restrictions.conjunction( ),
           Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( WorkflowType.class, WorkflowTypeInfo.class ) ) );
+      final Ordering<WorkflowTypeInfo> ordering =
+          Ordering.natural( ).onResultOf( WorkflowTypes.WorkflowTypeInfoStringFunctions.NAME );
+      Collections.sort(
+          workflowTypeInfos.getTypeInfos( ),
+          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -734,12 +744,12 @@ public class SimpleWorkflowService {
           final String taskList = request.getTaskList( ) == null ?
               workflowType.getDefaultTaskList( ):
               request.getTaskList( ).getName( );
-          final Integer executionStartToCloseTimeout = Objects.firstNonNull(  //TODO:STEVE: validate not NONE
-              parsePeriod( request.getExecutionStartToCloseTimeout( ) ),
-              workflowType.getDefaultExecutionStartToCloseTimeout( ) );
-          final Integer taskStartToCloseTimeout = Objects.firstNonNull(
-              parsePeriod( request.getTaskStartToCloseTimeout( ) ),
-              workflowType.getDefaultTaskStartToCloseTimeout( ) );
+          final Integer executionStartToCloseTimeout = requireDefault(
+              parsePeriod( request.getExecutionStartToCloseTimeout() ),
+              workflowType.getDefaultExecutionStartToCloseTimeout(), "ExecutionStartToCloseTimeout" );
+          final Integer taskStartToCloseTimeout = requireDefault(
+              parsePeriod( request.getTaskStartToCloseTimeout() ),
+              workflowType.getDefaultTaskStartToCloseTimeout(), "TaskStartToCloseTimeout" );
           final WorkflowExecution workflowExecution = WorkflowExecution.create(
               userFullName,
               UUID.randomUUID( ).toString( ),
@@ -1506,8 +1516,8 @@ public class SimpleWorkflowService {
                               new TimerStartedEventAttributes()
                                   .withControl( startTimer.getControl( ) )
                                   .withDecisionTaskCompletedEventId( completedId )
-                                  .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) ) //TODO:STEVE: validate not NONE
-                                  .withTimerId( startTimer.getTimerId( ) )
+                                  .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) )
+                                  .withTimerId( startTimer.getTimerId() )
                           ) );
                           timers.save( Timer.create(
                               userFullName,
@@ -1810,7 +1820,6 @@ public class SimpleWorkflowService {
     if ( parameters.getCloseStatusFilter( ) != null ) {
       filter.add( Restrictions.eq( "closeStatus", WorkflowExecution.CloseStatus.fromString( parameters.getCloseStatusFilter().getStatus( ) ) ) );
     }
-    //TODO:STEVE: fix issue with incorrect date deserialization
     if ( parameters.getCloseTimeFilter( ) != null ) {
       if ( parameters.getCloseTimeFilter( ).getOldestDate( ) != null ) {
         filter.add( Restrictions.ge( "closeTimestamp", parameters.getCloseTimeFilter( ).getOldestDate( ) ) );
@@ -1880,7 +1889,7 @@ public class SimpleWorkflowService {
     throw exception;
   }
 
-  private Integer parsePeriod( final String period ) {
+  private static Integer parsePeriod( final String period ) {
     if ( period == null || "NONE".equals( period ) ) {
       return null;
     } else {
@@ -1888,7 +1897,7 @@ public class SimpleWorkflowService {
     }
   }
 
-  private Integer parsePeriod( final String period, final Integer defaultValue ) {
+  private static Integer parsePeriod( final String period, final Integer defaultValue ) {
     if ( period == null ) {
       return defaultValue;
     } else if ( "NONE".equals( period ) ) {
@@ -1896,6 +1905,17 @@ public class SimpleWorkflowService {
     } else {
       return Integer.parseInt( period );
     }
+  }
+
+  private static Integer requireDefault( final Integer value,
+                                         final Integer defaultValue,
+                                         final String description ) throws SimpleWorkflowClientException {
+    if ( value == null && defaultValue == null ) {
+      throw new SimpleWorkflowClientException(
+          "DefaultUndefinedFault" ,
+          description + " is required" );
+    }
+    return Objects.firstNonNull( value, defaultValue );
   }
 
   private static void notifyTaskList( final AccountFullName accountFullName,

@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -90,6 +91,8 @@ public class DeprecateDomainRequest extends SimpleWorkflowMessage implements Ser
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String name;
 
     /**

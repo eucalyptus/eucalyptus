@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -123,6 +124,8 @@ public class RecordActivityTaskHeartbeatRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 1024<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.STRING_1024 )
     private String taskToken;
 
     /**
@@ -131,6 +134,7 @@ public class RecordActivityTaskHeartbeatRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String details;
 
     /**

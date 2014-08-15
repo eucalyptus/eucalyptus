@@ -22,6 +22,7 @@ package com.eucalyptus.autoscaling.common.msgs
 
 import com.eucalyptus.autoscaling.common.AutoScaling
 import com.eucalyptus.autoscaling.common.AutoScalingMessageValidation
+import com.eucalyptus.util.MessageValidation
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.component.annotation.ComponentMessage
@@ -36,6 +37,8 @@ import com.google.common.base.Function
 import com.eucalyptus.util.CollectionUtils
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.google.common.base.Predicate
+
+import static com.eucalyptus.util.MessageValidation.validateRecursively
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -76,67 +79,11 @@ public class AutoScalingMessage extends BaseMessage {
   }
 
   Map<String,String> validate( ) {
-    Map<String,String> errors = Maps.newTreeMap()
-    validateRecursively( errors, "", this )
-    errors
-  }
-
-  static void validateRecursively( Map<String,String> errorMap,
-                                   String prefix,
-                                   Object target ) {
-    target.class.declaredFields.each { Field field ->
-      Ats fieldAts = Ats.from( field )
-      field.setAccessible( true )
-      Object value = field.get( target );
-      String displayName = prefix + AutoScalingMessageValidation.displayName( field )
-
-      // validate null constraint
-      if ( fieldAts.has( Nonnull.class ) && value == null ) {
-        errorMap.put( displayName, displayName + " is required" )
-      }
-
-      // validate regex
-      AutoScalingMessageValidation.FieldRegex regex = fieldAts.get( AutoScalingMessageValidation.FieldRegex.class )
-      if ( regex && value != null && !(value instanceof Iterable) && !regex.value().pattern().matcher( String.valueOf( value ) ).matches( ) ) {
-        errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
-      } else if ( regex && value instanceof Iterable ) {
-        value.eachWithIndex { Object item, int index  ->
-          if ( !regex.value().pattern().matcher( String.valueOf( item ) ).matches( ) ) {
-            errorMap.put( displayName + "." + (index + 1), String.valueOf(item) + " for parameter " + displayName + "." + (index + 1) + " is invalid" )
-          }
-        }
-      }
-
-      // validate range
-      AutoScalingMessageValidation.FieldRange range = fieldAts.get( AutoScalingMessageValidation.FieldRange.class )
-      if ( range != null && value instanceof Number ) {
-        Long longValue = ((Number) value).longValue()
-        if ( longValue < range.min() || longValue > range.max() ) {
-          errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
-        }
-      }
-      if ( range != null && value instanceof List ) {
-        Long longValue = (long) ((List)value).size()
-        if ( longValue < range.min() && range.min() == 1 ) {
-          errorMap.put( displayName + ".1", displayName + ".1 is required" )
-        } else if ( longValue < range.min() ) {
-          errorMap.put( displayName, displayName + " length too short" )
-        } else if ( longValue > range.max() ) {
-          errorMap.put( displayName, displayName + " length too long" )
-        }
-      }
-
-      // validate recursively
-      if ( value instanceof EucalyptusData ) {
-        validateRecursively( errorMap, displayName + ".", value )
-      } else if ( value instanceof Iterable ) {
-        value.eachWithIndex { Object item, int index ->
-          if ( item instanceof EucalyptusData ) {
-            validateRecursively( errorMap, displayName + "." + (index + 1) + ".", item )
-          }
-        }
-      }
-    }
+    validateRecursively(
+        Maps.<String,String>newTreeMap( ),
+        new AutoScalingMessageValidation.AutoScalingMessageValidationAssistant(),
+        "",
+        this )
   }
 }
 public class SuspendProcessesResponseType extends AutoScalingMessage {

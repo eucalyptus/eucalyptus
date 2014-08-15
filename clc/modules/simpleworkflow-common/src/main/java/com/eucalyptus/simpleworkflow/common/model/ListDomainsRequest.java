@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -92,6 +93,7 @@ public class ListDomainsRequest extends SimpleWorkflowMessage implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String nextPageToken;
 
     /**
@@ -100,6 +102,8 @@ public class ListDomainsRequest extends SimpleWorkflowMessage implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>REGISTERED, DEPRECATED
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.REGISTRATION_STATUS )
     private String registrationStatus;
 
     /**
@@ -113,6 +117,7 @@ public class ListDomainsRequest extends SimpleWorkflowMessage implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      */
+    @FieldRange( max = 1000 )
     private Integer maximumPageSize;
 
     /**

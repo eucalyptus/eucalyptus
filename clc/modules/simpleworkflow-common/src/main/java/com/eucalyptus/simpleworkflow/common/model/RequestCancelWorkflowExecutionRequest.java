@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -97,6 +98,8 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -105,6 +108,8 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
@@ -113,6 +118,7 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 64<br/>
      */
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String runId;
 
     /**

@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -96,12 +97,15 @@ public class CountOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
      * Specifies the start time criteria that workflow executions must meet
      * in order to be counted.
      */
+    @Nonnull
     private ExecutionTimeFilter startTimeFilter;
 
     /**

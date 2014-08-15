@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -94,6 +95,8 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -102,6 +105,8 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
@@ -110,6 +115,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 64<br/>
      */
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String runId;
 
     /**
@@ -119,6 +125,8 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.STRING_256 )
     private String signalName;
 
     /**
@@ -128,6 +136,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**

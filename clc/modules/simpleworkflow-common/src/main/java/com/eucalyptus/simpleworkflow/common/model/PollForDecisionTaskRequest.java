@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -109,6 +110,8 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -118,6 +121,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      * (vertical bar), or any control characters (\u0000-\u001f | \u007f -
      * \u009f). Also, it must not contain the literal string "arn".
      */
+    @Nonnull
     private TaskList taskList;
 
     /**
@@ -129,6 +133,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_256 )
     private String identity;
 
     /**
@@ -146,6 +151,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String nextPageToken;
 
     /**
@@ -159,6 +165,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      */
+    @FieldRange( max = 1000 )
     private Integer maximumPageSize;
 
     /**

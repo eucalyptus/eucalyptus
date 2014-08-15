@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -99,6 +100,8 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -107,6 +110,8 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
@@ -115,6 +120,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 64<br/>
      */
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String runId;
 
     /**
@@ -123,6 +129,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_256 )
     private String reason;
 
     /**
@@ -131,6 +138,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String details;
 
     /**
@@ -153,6 +161,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
      */
+    @FieldRegex( FieldRegexValue.CHILD_POLICY )
     private String childPolicy;
 
     /**

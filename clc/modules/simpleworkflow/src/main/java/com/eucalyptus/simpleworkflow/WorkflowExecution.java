@@ -117,16 +117,16 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowType workflowType;
 
-  @Column( name = "workflow_id", nullable = false, updatable = false )
+  @Column( name = "workflow_id", length = 256, nullable = false, updatable = false )
   private String workflowId;
 
   @Column( name = "child_policy", nullable = false, updatable = false )
   private String childPolicy;
 
-  @Column( name = "domain", nullable = false, updatable = false )
+  @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domainName;
 
-  @Column( name = "task_list", nullable = false, updatable = false )
+  @Column( name = "task_list", length = 256, nullable = false, updatable = false )
   private String taskList;
 
   @Column( name = "exec_start_to_close_timeout", nullable = false, updatable = false )
@@ -160,6 +160,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   @ElementCollection
   @CollectionTable( name = "swf_workflow_execution_tags" )
+  @Column( name = "tag", length = 256 )
   @JoinColumn( name = "workflow_execution_id" )
   @OrderColumn( name = "tag_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

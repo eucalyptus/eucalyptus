@@ -127,4 +127,16 @@ public interface WorkflowTypes {
       }
     },
   }
+
+  enum WorkflowTypeInfoStringFunctions implements Function<WorkflowTypeInfo,String> {
+    NAME {
+      @Nullable
+      @Override
+      public String apply( @Nullable final WorkflowTypeInfo workflowTypeInfo ) {
+        return workflowTypeInfo == null || workflowTypeInfo.getWorkflowType( ) == null ?
+            null :
+            workflowTypeInfo.getWorkflowType( ).getName( );
+      }
+    },
+  }
 }

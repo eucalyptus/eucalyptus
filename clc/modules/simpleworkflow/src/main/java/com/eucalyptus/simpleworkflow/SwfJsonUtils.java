@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.FieldPosition;
@@ -30,11 +31,21 @@ import java.text.ParseException;
 import java.text.ParsePosition;
 import java.util.Date;
 import java.util.Locale;
+import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.map.DeserializationContext;
+import org.codehaus.jackson.map.JsonDeserializer;
+import org.codehaus.jackson.map.JsonSerializer;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
+import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.codehaus.jackson.map.deser.DateDeserializer;
+import org.codehaus.jackson.map.module.SimpleModule;
+import org.codehaus.jackson.Version;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStatus;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskTimeoutType;
 import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedCause;
@@ -78,7 +89,11 @@ public class SwfJsonUtils {
 
   private static final ObjectMapper mapper = new ObjectMapper( );
   static {
-    mapper.setDateFormat( new EpochSecondsDateFormat( ) );
+    final SimpleModule module = new SimpleModule( "SwfModule", new Version(1, 0, 0, null) )
+              .addSerializer( Date.class, new EpochSecondsDateSerializer( )  )
+              .addDeserializer( Date.class, new EpochSecondsDateDeserializer( ) );
+    mapper.registerModule( module );
+    mapper.setDateFormat( new EpochSecondsDateFormat() );
     mapper.getSerializationConfig().addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class );
     mapper.getSerializationConfig().addMixInAnnotations( Decision.class, BindingMixIn.class );
@@ -157,6 +172,31 @@ public class SwfJsonUtils {
     @JsonIgnore Boolean isTruncated( );
   }
 
+  private static final class EpochSecondsDateDeserializer extends JsonDeserializer<Date> {
+
+    @Override
+    public Date deserialize( final JsonParser jsonParser,
+                             final DeserializationContext deserializationContext ) throws IOException {
+      final JsonToken token = jsonParser.getCurrentToken( );
+      switch ( token ) {
+        case VALUE_NUMBER_FLOAT:
+          return new Date( jsonParser.getDecimalValue( ).movePointRight( 3 ).longValue( ) );
+        case VALUE_NUMBER_INT:
+          return new Date( jsonParser.getLongValue( ) * 1000L );
+        default:
+          return new DateDeserializer( ).deserialize( jsonParser, deserializationContext );
+      }
+    }
+  }
+
+  private static final class EpochSecondsDateSerializer extends JsonSerializer<Date> {
+    @Override
+    public void serialize( final Date date,
+                           final JsonGenerator jsonGenerator,
+                           final SerializerProvider serializerProvider ) throws IOException {
+      jsonGenerator.writeRawValue( String.valueOf( date.getTime( ) / 1000 ) + "." + Strings.padStart( Long.toString( date.getTime( ) % 1000 ), 3, '0' ) );
+    }
+  }
 
   private static final class EpochSecondsDateFormat extends DateFormat implements Cloneable {
     private static final long serialVersionUID = 1L;
@@ -177,7 +217,7 @@ public class SwfJsonUtils {
       if ( source != null ) try {
         Number number = DecimalFormat.getInstance( new Locale( "en" ) ).parse( source );
         pos.setIndex( source.length( ) ) ;
-        return new Date( number.longValue() * 1000 );
+        return new Date( (long)(number.doubleValue() * 1000d) );
       } catch ( ParseException e ) {
       }
       return null;

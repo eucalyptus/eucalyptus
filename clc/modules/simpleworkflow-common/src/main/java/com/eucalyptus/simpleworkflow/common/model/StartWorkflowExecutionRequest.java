@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 
 /**
@@ -105,6 +106,8 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -122,11 +125,14 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
      * The type of the workflow to start.
      */
+    @Nonnull
     private WorkflowType workflowType;
 
     /**
@@ -153,6 +159,7 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**
@@ -172,6 +179,7 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8 )
     private String executionStartToCloseTimeout;
 
     /**
@@ -183,6 +191,8 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 5<br/>
      */
+    @FieldRange( max = 5 )
+    @FieldRegex( FieldRegexValue.STRING_256 )
     private com.amazonaws.internal.ListWithAutoConstructFlag<String> tagList;
 
     /**
@@ -202,6 +212,7 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String taskStartToCloseTimeout;
 
     /**
@@ -226,6 +237,7 @@ public class StartWorkflowExecutionRequest extends SimpleWorkflowMessage impleme
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
      */
+    @FieldRegex( FieldRegexValue.CHILD_POLICY )
     private String childPolicy;
 
     /**
