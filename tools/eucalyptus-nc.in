@@ -348,6 +348,7 @@ do_start() {
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config
 
+	ulimit -n 10000 # to avoid "Too many open files" (EUCA-9557)
 	if ! $HTTPD -f $RUNDIR/httpd-nc.conf ; then
 		echo
 		echo "Failed to start the NC!"

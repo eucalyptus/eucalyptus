@@ -92,11 +92,6 @@
     <value name="key" field="key" usage="required" />
     <value name="value" field="value" usage="required" />
   </mapping>
-  <mapping class="com.eucalyptus.compute.common.UserData" abstract="true">
-    <value name="data" field="data" usage="optional" />
-    <value name="version" field="version" usage="required" style="attribute" />
-    <value name="encoding" field="encoding" usage="required" style="attribute" />
-  </mapping>
   <mapping class="com.eucalyptus.compute.common.ImportInstanceLaunchSpecification" abstract="true">
     <value name="architecture" field="architecture" usage="required" />
     <collection name="groupName" field="groupName" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
@@ -104,7 +99,11 @@
         <value name="value" />
       </structure>
     </collection>
-    <structure name="userData" field="userData" usage="optional" type="com.eucalyptus.compute.common.UserData" />
+    <structure name="userData" usage="optional">
+      <value name="data" field="userData" usage="optional" />
+      <value name="version" field="version" usage="optional" />
+      <value name="encoding" field="encoding" usage="optional" />
+    </structure>
     <value name="instanceType" field="instanceType" usage="required" />
     <structure name="placement" field="placement" usage="optional" type="com.eucalyptus.compute.common.InstancePlacement" />
     <structure name="monitoring" field="monitoring" usage="optional" type="com.eucalyptus.compute.common.MonitoringInstance" />

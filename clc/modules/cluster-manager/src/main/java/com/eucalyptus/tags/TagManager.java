@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
@@ -193,13 +194,17 @@ public class TagManager {
     final Context context = Contexts.lookup();
 
     final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
+    final Predicate<? super Tag> requestedAndAccessible = CloudMetadatas.filteringFor(Tag.class)
+        .byPredicate( filter.asPredicate( ) )
+        .byPrivileges( )
+        .buildPredicate( );
     final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
         .compound( Ordering.natural().onResultOf( Tags.key() ) )
         .compound( Ordering.natural().onResultOf( Tags.value() ) );
     Iterables.addAll( reply.getTagSet(), Iterables.transform(
         ordering.sortedCopy( Tags.list(
             context.getUserFullName().asAccountFullName(),
-            Predicates.and( filter.asPredicate(), RestrictedTypes.<Tag>filterPrivileged() ),
+            requestedAndAccessible,
             filter.asCriterion(),
             filter.getAliases() ) ),
         TypeMappers.lookup( Tag.class, TagInfo.class )
