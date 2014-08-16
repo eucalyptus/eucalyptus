@@ -38,6 +38,15 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
+import com.eucalyptus.objectstorage.entities.BucketTags;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -150,6 +159,8 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
+import com.eucalyptus.storage.msgs.s3.BucketTag;
+import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.Grant;
@@ -161,6 +172,7 @@ import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -1595,7 +1607,90 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw ex;
         }
         return response;
+  }
 
+    @Override
+    public SetBucketTaggingResponseType setBucketTagging(SetBucketTaggingType request) throws S3Exception {
+      SetBucketTaggingResponseType reply = request.getReply( );
+      Bucket bucket = getBucketAndCheckAuthorization( request );
+
+      try {
+        TaggingConfiguration taggingConfiguration = request.getTaggingConfiguration( );
+        List<BucketTag> bucketTagList = taggingConfiguration.getBucketTagSet( ).getBucketTags( );
+
+        if ( bucketTagList.isEmpty( ) || bucketTagList.size( ) > 10 ) {
+          throw new MalformedXMLException( );
+        }
+
+        BucketTaggingManagers.getInstance( ).addBucketTagging( bucketTagList, bucket.getBucketUuid( ) );
+      } catch ( Exception ex ) {
+        if ( ex instanceof MalformedXMLException ) {
+          throw new MalformedXMLException( bucket.getBucketName( ) );
+        } else if ( ex instanceof InvalidTagErrorException ) {
+          throw new InvalidTagErrorException( bucket.getBucketName( ) );
+        } else {
+          LOG.error( "Error while setting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+          InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
+          e.setMessage("An exception was caught while setting TagSets for bucket - " + bucket.getBucketName( ) );
+          throw e;
+        }
+      }
+
+      return reply;
+    }
+
+    @Override
+    public GetBucketTaggingResponseType getBucketTagging(GetBucketTaggingType request) throws S3Exception {
+      GetBucketTaggingResponseType reply = ( GetBucketTaggingResponseType )request.getReply( );
+      Bucket bucket = getBucketAndCheckAuthorization( request );
+
+      try {
+        TaggingConfiguration tagging = new TaggingConfiguration( );
+        List<BucketTag> bucketTagList = new ArrayList<>( );
+        List<BucketTags> bucketTagsList =
+                BucketTaggingManagers.getInstance( ).getBucketTagging( bucket.getBucketUuid( ) );
+
+        for ( BucketTags bucketTags : bucketTagsList ) {
+          BucketTag bucketTag = new BucketTag( );
+          bucketTag.setKey( bucketTags.getKey( ) );
+          bucketTag.setValue( bucketTags.getValue( ) );
+          bucketTagList.add( bucketTag );
+        }
+
+        BucketTagSet tagSet = new BucketTagSet( );
+        tagSet.setBucketTags( bucketTagList );
+        tagging.setBucketTagSet( tagSet );
+
+        reply.setTaggingConfiguration( tagging );
+      } catch ( Exception ex ) {
+        if ( ex instanceof NoSuchEntityException ) {
+          throw new NoSuchTagSetException( bucket.getBucketName( ) );
+        } else {
+          LOG.error( "Error while getting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+          InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
+          e.setMessage("An exception was caught while getting TagSets for bucket - " + bucket.getBucketName( ) );
+          throw e;
+        }
+      }
+
+      return reply;
+    }
+
+    @Override
+    public DeleteBucketTaggingResponseType deleteBucketTagging( DeleteBucketTaggingType request ) throws S3Exception {
+      DeleteBucketTaggingResponseType reply = request.getReply( );
+      Bucket bucket = getBucketAndCheckAuthorization( request );
+
+      try {
+        BucketTaggingManagers.getInstance( ).deleteBucketTagging( bucket.getBucketUuid( ) );
+      } catch ( Exception ex ) {
+        LOG.error( "Error while deleting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
+        e.setMessage("An exception was caught while deleting TagSets for bucket - " + bucket.getBucketName( ) );
+        throw e;
+      }
+
+      return reply;
     }
 
     private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {

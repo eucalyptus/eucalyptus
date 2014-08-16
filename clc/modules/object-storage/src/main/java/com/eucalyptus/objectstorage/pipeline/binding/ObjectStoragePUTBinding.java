@@ -82,6 +82,7 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
         newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
         newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
         newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
+        newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
 
         //Object operations
         newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
@@ -108,10 +109,7 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
         opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
 
         // Notification
-        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
-
-        // Tagging
-        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "PUT Bucket tagging");
+//        opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
 
         // Website
         opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");

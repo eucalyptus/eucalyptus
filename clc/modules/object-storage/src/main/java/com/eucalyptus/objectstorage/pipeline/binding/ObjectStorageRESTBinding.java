@@ -74,6 +74,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
@@ -93,6 +94,8 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.BucketTag;
+import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.Grant;
@@ -103,6 +106,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
@@ -128,7 +132,6 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.w3c.dom.Node;
-
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -143,6 +146,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected static Logger LOG = Logger.getLogger( ObjectStorageRESTBinding.class );
@@ -586,6 +590,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
         if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.lifecycle.toString())) {
             operationParams.put("lifecycleConfiguration", getLifecycle(httpRequest));
+        }
+
+        if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.tagging.toString())) {
+          operationParams.put("taggingConfiguration", getTagging(httpRequest));
         }
 
         ArrayList paramsToRemove = new ArrayList();
@@ -1173,6 +1181,65 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         buffer.readBytes( read );
         return new String( read );
     }
+
+    private TaggingConfiguration getTagging(MappingHttpRequest httpRequest) throws S3Exception {
+      TaggingConfiguration taggingConfiguration = new TaggingConfiguration();
+      BucketTagSet tagSet = new BucketTagSet();
+      tagSet.setBucketTags( new ArrayList<BucketTag>( ) );
+      taggingConfiguration.setBucketTagSet( tagSet );
+
+      String message = getMessageString( httpRequest );
+
+      if ( message.length() > 0) {
+        try {
+          XMLParser xmlParser = new XMLParser( message );
+          DTMNodeList bucketTagSets = xmlParser.getNodes( "//Tagging/TagSet" );
+
+          if ( bucketTagSets == null || bucketTagSets.getLength( ) != 1) {
+            throw new MalformedXMLException( "/Tagging/TagSet" );
+          }
+          bucketTagSets = xmlParser.getNodes( "//Tagging/TagSet/Tag" );
+
+          for ( int i = 0; i < bucketTagSets.getLength( ); i++ ) {
+            taggingConfiguration.getBucketTagSet( ).getBucketTags( )
+                    .add( extractBucketTag( xmlParser, bucketTagSets.item( i ) ) );
+          }
+        } catch ( Exception e ) {
+          throw e;
+        }
+      }
+      return taggingConfiguration;
+    }
+
+  private BucketTag extractBucketTag( XMLParser parser, Node node ) throws InvalidTagErrorException {
+    BucketTag bucketTag = new BucketTag( );
+    String key = parser.getValue( node, "Key" );
+    String value = parser.getValue( node, "Value" );
+
+    if ( isInValidTagSet( key, value ) ) {
+      throw new InvalidTagErrorException( );
+    }
+
+    bucketTag.setKey( key );
+    bucketTag.setValue( value );
+
+    return bucketTag;
+  }
+
+  private boolean isInValidTagSet( String key, String value ) {
+    final Pattern pattern = Pattern.compile("[a-zA-Z0-9\\s+-=._:]+");
+
+    if ( key == null || key.equals( "" ) || value == null || value.equals( "" ) ) {
+      return true;
+    } else if ( key.equals( " " ) || key.charAt( 0 ) == ' ' || value.charAt( 0 ) == ' ' || value.equals( " " ) ) {
+      return true;
+    } else if ( key.length( ) > 128 || value.length( ) > 256 ) {
+      return true;
+    } else if( !pattern.matcher( key ).matches( ) || !pattern.matcher( value ).matches( ) ) {
+      return true;
+    }
+    return false;
+  }
 
     private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws S3Exception {
         LifecycleConfiguration lifecycleConfigurationType = new LifecycleConfiguration();

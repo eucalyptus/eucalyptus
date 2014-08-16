@@ -229,4 +229,20 @@
         <value name="Date" field="effectiveDate" usage="optional" />
     </mapping>
 
+    <!-- bucket tagging -->
+    <mapping name="Tagging" class="com.eucalyptus.storage.msgs.s3.TaggingConfiguration">
+        <structure name="TagSet" field="bucketTagSet" usage="optional"/>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.BucketTagSet" abstract="true">
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="bucketTags">
+            <structure name="Tag" map-as="com.eucalyptus.storage.msgs.s3.BucketTag" />
+        </collection>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.BucketTag" abstract="true">
+        <value name="Key" field="key" />
+        <value name="Value" field="value" />
+    </mapping>
+
 </binding>

@@ -89,6 +89,7 @@ import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -174,14 +175,17 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 				if (msg instanceof PutObjectResponseType || msg instanceof UploadPartResponseType) {
 					removeResponseBody(msg, httpResponse);
 				}
-			} else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
+      } else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
 				// Remove the content in response for certain operations
 				if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
 						|| msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-						|| msg instanceof SetObjectAccessControlPolicyResponseType) {
+						|| msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType ) {
 					if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
 						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
 					}
+          if ( msg instanceof SetBucketTaggingResponseType ) {
+            httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
+          }
 					removeResponseBody(msg, httpResponse);
 				}
 			}

@@ -342,36 +342,54 @@ public class WebsiteRedirectConfiguration {
  * --------------------
  */
 
+public class TaggingConfiguration {
+  BucketTagSet bucketTagSet;
+}
+
+public class BucketTagSet {
+  List<BucketTag> bucketTags;
+}
+
 /*
  * GET /bucket/?tagging
  */
+/*
 public class GetBucketTaggingRequest extends S3Request {}
-public class Tag {
+*/
+public class BucketTag {
 	String key;
 	String value;
 }
 
+/*
 public class GetBucketTaggingResponse extends S3Response {
 	ArrayList<Tag> tagSet;
 }
+*/
+
 
 /*
  * PUT /bucket/?tagging
  */
+
+/*
 public class SetBucketTaggingRequest extends S3Request {
 	ArrayList<Tag> tagSet;
 }
 public class SetBucketTaggingResponse extends S3Response {}
+*/
 
 /*
  * DELETE /bucket/?tagging
  */
+
+/*
 public class DeleteBucketTaggingRequest extends S3Request {
 	ArrayList<Tag> tagSet;
 }
 
 public class DeleteBucketTaggingResponse extends S3Response {}
-
+*/
 /*
  * --------------------
  * BUCKET LIFECYCLE
