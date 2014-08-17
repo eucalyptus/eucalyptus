@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -77,6 +78,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#registerDomain(RegisterDomainRequest)
  */
+@PolicyAction( vendor = "swf", action = "registerdomain" )
 public class RegisterDomainRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

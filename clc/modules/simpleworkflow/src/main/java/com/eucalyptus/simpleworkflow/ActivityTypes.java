@@ -63,7 +63,7 @@ public interface ActivityTypes {
 
   ActivityType save( ActivityType activityType ) throws SwfMetadataException;
 
-
+  long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
 
   @TypeMapper
   public enum ActivityTypeToActivityTypeDetailTransform implements Function<ActivityType,ActivityTypeDetail> {

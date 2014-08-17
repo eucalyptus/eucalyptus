@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -83,6 +84,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#deprecateDomain(DeprecateDomainRequest)
  */
+@PolicyAction( vendor = "swf", action = "deprecatedomain" )
 public class DeprecateDomainRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

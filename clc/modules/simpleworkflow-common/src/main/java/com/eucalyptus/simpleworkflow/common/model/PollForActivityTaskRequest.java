@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -89,6 +90,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#pollForActivityTask(PollForActivityTaskRequest)
  */
+@PolicyAction( vendor = "swf", action = "pollforactivitytask" )
 public class PollForActivityTaskRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

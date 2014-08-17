@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -79,6 +80,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listActivityTypes(ListActivityTypesRequest)
  */
+@PolicyAction( vendor = "swf", action = "listactivitytypes" )
 public class ListActivityTypesRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

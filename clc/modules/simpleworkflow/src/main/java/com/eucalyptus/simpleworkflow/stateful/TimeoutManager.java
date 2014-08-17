@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow.stateful;
 
 import static com.eucalyptus.simpleworkflow.NotifyClient.NotifyTaskList;
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionDurationMillis;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Pending;
 import java.util.Collection;
 import java.util.Date;
@@ -52,6 +53,7 @@ import com.eucalyptus.simpleworkflow.persist.PersistenceActivityTasks;
 import com.eucalyptus.simpleworkflow.persist.PersistenceTimers;
 import com.eucalyptus.simpleworkflow.persist.PersistenceWorkflowExecutions;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -77,9 +79,9 @@ public class TimeoutManager {
   }
 
   public void doTimers( ) {
+    final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
-      final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
-      for ( final Timer timer : timers.listFired( Functions.<Timer>identity( ) ) ) {
+      for ( final Timer timer : timers.listFired( Functions.<Timer>identity( ) ) ) try {
         timers.updateByExample( timer, timer.getOwner( ), timer.getDisplayName( ), new Function<Timer, Void>( ) {
           @Override
           public Void apply( final Timer timer ) {
@@ -105,19 +107,25 @@ public class TimeoutManager {
             return null;
           }
         } );
+      } catch ( SwfMetadataException e ) {
+        if ( !handleException( e ) ) {
+          logger.error( "Error processing fired timer: " +  timer.getWorkflowRunId() + "/" + timer.getStartedEventId( ), e );
+        }
       }
-      notifyLists( taskLists );
     } catch ( SwfMetadataException e ) {
       logger.error( "Error processing fired timers", e );
     }
+    notifyLists( taskLists );
   }
 
   public void doExpunge( ) {
     try {
-      for ( final WorkflowExecution workflowExecution : workflowExecutions.listRetentionExpired( Functions.<WorkflowExecution>identity() ) ) {
+      for ( final WorkflowExecution workflowExecution :
+          workflowExecutions.listRetentionExpired( System.currentTimeMillis( ), Functions.<WorkflowExecution>identity() ) ) {
         logger.debug( "Removing workflow execution with expired retention period: " +
             workflowExecution.getDisplayName() + "/" + workflowExecution.getWorkflowId() );
         workflowExecutions.deleteByExample( workflowExecution );
+        //TODO:STEVE: do we need to remove deprecated domain / activity / workflows here?
       }
     } catch ( final SwfMetadataException e ) {
       logger.error( "Error processing workflow execution retention expiry", e );
@@ -125,9 +133,9 @@ public class TimeoutManager {
   }
 
   private void timeoutActivityTasks( ) {
+    final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
-      final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
-      for ( final ActivityTask task : activityTasks.listTimedOut( Functions.<ActivityTask>identity( ) ) ) {
+      for ( final ActivityTask task : activityTasks.listTimedOut( Functions.<ActivityTask>identity( ) ) ) try {
         activityTasks.updateByExample( task, task.getOwner( ), task.getDisplayName(), new Function<ActivityTask, Void>() {
           @Override
           public Void apply( final ActivityTask activityTask ) {
@@ -158,23 +166,28 @@ public class TimeoutManager {
             return null;
           }
         } );
+      } catch ( SwfMetadataException e ) {
+        if ( !handleException( e ) ) {
+          logger.error( "Error processing activity task timeout: " + task.getWorkflowRunId() + "/" + task.getScheduledEventId(), e );
+        }
       }
-      notifyLists( taskLists );
     } catch ( SwfMetadataException e ) {
       logger.error( "Error processing activity task timeouts", e );
     }
+    notifyLists( taskLists );
   }
 
   private void timeoutDecisionTasksAndWorkflows( ) {
+    final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
-      final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
-      for ( final WorkflowExecution workflowExecution : workflowExecutions.listTimedOut( Functions.<WorkflowExecution>identity( ) ) ) {
+      final long now = System.currentTimeMillis();
+      for ( final WorkflowExecution workflowExecution : workflowExecutions.listTimedOut( now, Functions.<WorkflowExecution>identity( ) ) ) try {
         workflowExecutions.updateByExample( workflowExecution, workflowExecution.getOwner( ), workflowExecution.getDisplayName(), new Function<WorkflowExecution, Void>() {
           @Override
           public Void apply( final WorkflowExecution workflowExecution ) {
             final Date timeout = workflowExecution.calculateNextTimeout( );
             if ( timeout != null ) {
-              if ( workflowExecution.isWorkflowTimedOut( ) ) {
+              if ( workflowExecution.isWorkflowTimedOut( now, getWorkflowExecutionDurationMillis( ) ) ) {
                 workflowExecution.closeWorkflow(
                     WorkflowExecution.CloseStatus.Timed_Out,
                     WorkflowHistoryEvent.create(
@@ -199,7 +212,6 @@ public class TimeoutManager {
                         .withScheduledEventId( scheduled.getEventId( ) )
                         .withStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).orNull( ) )
                 ) );
-                //TODO:STEVE: limit event history here ...
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                     workflowExecution,
                     new DecisionTaskScheduledEventAttributes( )
@@ -214,11 +226,30 @@ public class TimeoutManager {
             return null;
           }
         } );
+      } catch ( final SwfMetadataException e ) {
+        if ( !handleException( e ) ) {
+          logger.error( "Error processing workflow execution/decision task timeout: " + workflowExecution.getDisplayName(), e );
+        }
       }
-      notifyLists( taskLists );
     } catch ( final SwfMetadataException e ) {
       logger.error( "Error processing workflow execution/decision task timeouts", e );
     }
+    notifyLists( taskLists );
+  }
+
+  private boolean handleException( final Throwable e ) {
+    final WorkflowExecution.WorkflowHistorySizeLimitException historySizeLimitCause =
+        Exceptions.findCause( e, WorkflowExecution.WorkflowHistorySizeLimitException.class );
+    if ( historySizeLimitCause != null ) {
+      WorkflowExecutions.Utils.terminateWorkflowExecution(
+          workflowExecutions,
+          "EVENT_LIMIT_EXCEEDED",
+          historySizeLimitCause.getAccountNumber( ),
+          historySizeLimitCause.getDomain( ),
+          historySizeLimitCause.getWorkflowId( ) );
+      return true;
+    }
+    return false;
   }
 
   private void addToNotifyLists( final Collection<NotifyTaskList> taskLists,

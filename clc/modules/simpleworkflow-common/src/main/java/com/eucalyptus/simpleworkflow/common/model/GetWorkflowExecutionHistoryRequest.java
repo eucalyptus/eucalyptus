@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -81,6 +82,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#getWorkflowExecutionHistory(GetWorkflowExecutionHistoryRequest)
  */
+@PolicyAction( vendor = "swf", action = "getworkflowexecutionhistory" )
 public class GetWorkflowExecutionHistoryRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

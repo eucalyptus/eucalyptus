@@ -238,9 +238,12 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return timeout == Long.MAX_VALUE ? null : new Date( timeout );
   }
 
-  public boolean isWorkflowTimedOut( ){
+  public boolean isWorkflowTimedOut( final long timestamp,
+                                     final long maximumDurationMillis ){
     final Long timeout = toTimeout( getCreationTimestamp( ), getExecutionStartToCloseTimeout( ) );
-    return timeout != null && timeout < System.currentTimeMillis( );
+    return
+        ( timeout != null && timeout < timestamp ) ||
+        ( maximumDurationMillis > 0 && ( getCreationTimestamp( ).getTime( ) + maximumDurationMillis ) < timestamp );
   }
 
   private static Long toTimeout( final Date from, final Integer period ) {
@@ -328,11 +331,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return accountNumber + ":" + domain + ":" + runId;
   }
 
-  public Long addHistoryEvent( final WorkflowHistoryEvent event ) {
+  public Long addHistoryEvent( final WorkflowHistoryEvent event ) throws WorkflowHistorySizeLimitException {
     // Order would be filled in on save, but we may need the event
     // identifier before the entity is stored
     event.setEventOrder( (long) workflowHistory.size( ) );
     workflowHistory.add( event );
+    if ( workflowHistory.size( ) > SimpleWorkflowConfiguration.getWorkflowExecutionHistorySize( ) ) {
+      throw new WorkflowHistorySizeLimitException( this );
+    }
     return event.getEventId();
   }
 
@@ -519,5 +525,49 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   protected void updateTimeout( ) {
     updateTimeStamps( );
     setTimeoutTimestamp( calculateNextTimeout( ) );
+  }
+
+  public static final class WorkflowHistorySizeLimitException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    private final String accountNumber;
+    private final String domain;
+    private final String runId;
+    private final String workflowId;
+
+    public WorkflowHistorySizeLimitException( final WorkflowExecution workflowExecution ) {
+      this(
+          workflowExecution.getOwnerAccountNumber( ),
+          workflowExecution.getDomainName( ),
+          workflowExecution.getDisplayName( ),
+          workflowExecution.getWorkflowId( )
+      );
+    }
+
+    public WorkflowHistorySizeLimitException( final String accountNumber,
+                                              final String domain,
+                                              final String runId,
+                                              final String workflowId ) {
+      this.accountNumber = accountNumber;
+      this.domain = domain;
+      this.runId = runId;
+      this.workflowId = workflowId;
+    }
+
+    public String getAccountNumber() {
+      return accountNumber;
+    }
+
+    public String getDomain() {
+      return domain;
+    }
+
+    public String getRunId() {
+      return runId;
+    }
+
+    public String getWorkflowId() {
+      return workflowId;
+    }
   }
 }

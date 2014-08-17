@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.*;
+import static com.eucalyptus.simpleworkflow.WorkflowExecution.WorkflowHistorySizeLimitException;
 import static com.eucalyptus.simpleworkflow.WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE;
 import java.lang.System;
 import java.sql.SQLException;
@@ -78,6 +79,7 @@ import com.google.common.collect.Sets;
 /**
  *
  */
+@SuppressWarnings( "UnusedDeclaration" )
 @ComponentNamed
 public class SimpleWorkflowService {
 
@@ -208,6 +210,10 @@ public class SimpleWorkflowService {
         try {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( activityTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getActivityTypesPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: activity-type" ) );
+          }
           final ActivityType activityType = ActivityType.create(
               userFullName,
               request.getName( ),
@@ -222,7 +228,7 @@ public class SimpleWorkflowService {
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     }, ActivityType.class, request.getName( ) );
@@ -330,6 +336,10 @@ public class SimpleWorkflowService {
         try {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( workflowTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getWorkflowTypesPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: workflow-type" ) );
+          }
           final WorkflowType workflowType = WorkflowType.create(
               userFullName,
               request.getName( ),
@@ -727,6 +737,10 @@ public class SimpleWorkflowService {
 
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( workflowExecutions.countOpenByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getOpenWorkflowExecutionsPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for open workflow executions" ) );
+          }
           final WorkflowType workflowType =
               workflowTypes.lookupByExample(
                   WorkflowType.exampleWithUniqueName(
@@ -1450,6 +1464,15 @@ public class SimpleWorkflowService {
                         final String list = scheduleActivity.getTaskList() == null ?
                             activityType.getDefaultTaskList() :
                             scheduleActivity.getTaskList().getName();
+                        if ( activityTasks.countByWorkflowExecution(
+                            accountFullName,
+                            domain.getDisplayName( ),
+                            workflowExecution.getDisplayName( ) ) >=
+                            SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
+                          throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                              "LimitExceededFault",
+                              "Request would exceed limit for open activity tasks per workflow execution" ) );
+                        }
                         activityTasks.save( com.eucalyptus.simpleworkflow.ActivityTask.create(
                             userFullName,
                             workflowExecution,
@@ -1519,6 +1542,15 @@ public class SimpleWorkflowService {
                                   .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) )
                                   .withTimerId( startTimer.getTimerId() )
                           ) );
+                          if ( timers.countByWorkflowExecution(
+                              accountFullName,
+                              domain.getDisplayName( ),
+                              workflowExecution.getDisplayName( ) ) >=
+                              SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution( ) ) {
+                            throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                                "LimitExceededFault",
+                                "Request would exceed limit for open timers per workflow execution" ) );
+                          }
                           timers.save( Timer.create(
                               userFullName,
                               workflowExecution,
@@ -1528,7 +1560,7 @@ public class SimpleWorkflowService {
                               parsePeriod( startTimer.getStartToFireTimeout( ) ),
                               completedId,
                               startedId
-                              ) ); //TODO:STEVE: check timer limit here
+                              ) );
                         } else {
                           workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                               workflowExecution,
@@ -1864,15 +1896,27 @@ public class SimpleWorkflowService {
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
-  private static SimpleWorkflowException handleException( final Exception e ) throws SimpleWorkflowException {
+  private SimpleWorkflowException handleException( final Exception e ) throws SimpleWorkflowException {
     final SimpleWorkflowException cause = Exceptions.findCause( e, SimpleWorkflowException.class );
     if ( cause != null ) {
       throw cause;
     }
 
+    final WorkflowHistorySizeLimitException historySizeLimitCause =
+        Exceptions.findCause( e, WorkflowHistorySizeLimitException.class );
+    if ( historySizeLimitCause != null ) {
+      WorkflowExecutions.Utils.terminateWorkflowExecution(
+          workflowExecutions,
+          "EVENT_LIMIT_EXCEEDED",
+          historySizeLimitCause.getAccountNumber( ),
+          historySizeLimitCause.getDomain( ),
+          historySizeLimitCause.getWorkflowId( ) );
+      throw new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed history limit for workflow execution" );
+    }
+
     final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
     if ( quotaCause != null ) {
-      throw new SimpleWorkflowClientException( "ResourceLimitExceeded", "Request would exceed quota for type: " + quotaCause.getType( ) );
+      throw new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed quota for type: " + quotaCause.getType( ) );
     }
 
     final TaskTokenException tokenCause = Exceptions.findCause( e, TaskTokenException.class );

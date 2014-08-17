@@ -24,11 +24,15 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
 import com.eucalyptus.simpleworkflow.common.model.DomainConfiguration;
 import com.eucalyptus.simpleworkflow.common.model.DomainDetail;
 import com.eucalyptus.simpleworkflow.common.model.DomainInfo;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -108,6 +112,18 @@ public interface Domains {
         return domain == null ?
             null :
             Objects.toString( domain.getState( ), null );
+      }
+    }
+  }
+
+  @RestrictedTypes.QuantityMetricFunction( SimpleWorkflowMetadata.DomainMetadata.class )
+  public enum CountDomains implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( @Nullable final OwnerFullName input ) {
+      try ( final TransactionResource tx = Entities.transactionFor( Domain.class ) ) {
+        return Entities.count( Domain.exampleWithOwner( input ) );
       }
     }
   }

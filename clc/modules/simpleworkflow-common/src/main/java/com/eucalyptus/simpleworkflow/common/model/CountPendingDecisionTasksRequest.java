@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -78,6 +79,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#countPendingDecisionTasks(CountPendingDecisionTasksRequest)
  */
+@PolicyAction( vendor = "swf", action = "countpendingdecisiontasks" )
 public class CountPendingDecisionTasksRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

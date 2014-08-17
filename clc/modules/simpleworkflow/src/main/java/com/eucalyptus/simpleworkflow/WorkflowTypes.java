@@ -62,6 +62,8 @@ public interface WorkflowTypes {
 
   WorkflowType save( WorkflowType workflowType ) throws SwfMetadataException;
 
+  long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
   @TypeMapper
   public enum WorkflowTypeToWorkflowTypeDetailTransform implements Function<WorkflowType,WorkflowTypeDetail> {
     INSTANCE;

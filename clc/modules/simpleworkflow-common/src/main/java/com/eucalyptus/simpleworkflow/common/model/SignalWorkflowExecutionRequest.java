@@ -38,6 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -87,6 +88,7 @@ import javax.annotation.Nonnull;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#signalWorkflowExecution(SignalWorkflowExecutionRequest)
  */
+@PolicyAction( vendor = "swf", action = "signalworkflowexecution" )
 public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**

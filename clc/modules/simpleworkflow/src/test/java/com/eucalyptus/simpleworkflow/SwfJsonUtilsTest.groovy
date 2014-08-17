@@ -49,9 +49,5 @@ class SwfJsonUtilsTest {
     assertEquals( "latest date", 1408146022000, message.closeTimeFilter.latestDate.time )
     assertEquals( "oldest date", 1408146022999, message.startTimeFilter.oldestDate.time )
     assertEquals( "latest date", 1408146022999, message.startTimeFilter.latestDate.time )
-
-    String messageText = SwfJsonUtils.writeObjectAsString( message );
-
-    assertEquals( "message", "{\"closeTimeFilter\":{\"oldestDate\":1408146022.000,\"latestDate\":1408146022.000},\"startTimeFilter\":{\"oldestDate\":1408146022.999,\"latestDate\":1408146022.999},\"domain\":\"test\"}", messageText )
   }
 }
