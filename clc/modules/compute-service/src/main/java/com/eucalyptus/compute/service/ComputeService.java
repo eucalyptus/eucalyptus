@@ -19,8 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.compute.service;
 
+import static com.eucalyptus.util.MessageValidation.ValidatableMessage;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -58,10 +60,23 @@ public class ComputeService {
 
   public ComputeMessage dispatchAction( final ComputeMessage request ) throws EucalyptusCloudException {
     LOG.debug(request.toSimpleString());
+
+    // Authorization check
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( request ), user ) ) {
       throw new ComputeServiceAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
+
+    // Validation
+    if ( request instanceof ValidatableMessage ) {
+      final Map<String, String> validationErrorsByField = ((ValidatableMessage)request).validate( );
+      if ( !validationErrorsByField.isEmpty() ) {
+        final String error = validationErrorsByField.values().iterator().next();
+        throw new ComputeServiceClientException( "InvalidParameterValue", error );
+      }
+    }
+
+    // Dispatch
     try {
       BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );

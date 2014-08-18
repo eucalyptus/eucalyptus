@@ -85,7 +85,7 @@ import edu.ucsb.eucalyptus.msgs.Filter;
 /**
  *
  */
-@SuppressWarnings( "UnnecessaryLocalVariable" )
+@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration" } )
 @ComponentNamed
 public class VpcManager {
 
@@ -250,7 +250,6 @@ public class VpcManager {
 
   public CreateDhcpOptionsResponseType createDhcpOptions( final CreateDhcpOptionsType request ) throws EucalyptusCloudException {
     final CreateDhcpOptionsResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for DhcpOptionSets
     final Context ctx = Contexts.lookup();
     final Supplier<DhcpOptionSet> allocator = new Supplier<DhcpOptionSet>( ) {
       @Override
@@ -299,7 +298,6 @@ public class VpcManager {
 
   public CreateInternetGatewayResponseType createInternetGateway( final CreateInternetGatewayType request ) throws EucalyptusCloudException {
     final CreateInternetGatewayResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for internet gateways
     final Context ctx = Contexts.lookup();
     final Supplier<InternetGateway> allocator = new Supplier<InternetGateway>( ) {
       @Override
@@ -448,7 +446,6 @@ public class VpcManager {
 
   public CreateNetworkInterfaceResponseType createNetworkInterface( final CreateNetworkInterfaceType request ) throws EucalyptusCloudException {
     final CreateNetworkInterfaceResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for NetworkInterfaces
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String subnetId = Identifier.subnet.normalize( request.getSubnetId( ) );
