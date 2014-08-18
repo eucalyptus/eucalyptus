@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -90,6 +92,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#registerActivityType(RegisterActivityTypeRequest)
  */
+@PolicyAction( vendor = "swf", action = "registeractivitytype" )
 public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -98,6 +101,8 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -110,6 +115,8 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String name;
 
     /**
@@ -124,6 +131,8 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String version;
 
     /**
@@ -132,6 +141,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 1024<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_1024 )
     private String description;
 
     /**
@@ -146,6 +156,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String defaultTaskStartToCloseTimeout;
 
     /**
@@ -167,6 +178,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String defaultTaskHeartbeatTimeout;
 
     /**
@@ -189,6 +201,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String defaultTaskScheduleToStartTimeout;
 
     /**
@@ -203,6 +216,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String defaultTaskScheduleToCloseTimeout;
 
     /**

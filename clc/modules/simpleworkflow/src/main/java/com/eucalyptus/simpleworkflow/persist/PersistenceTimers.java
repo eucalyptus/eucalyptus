@@ -52,6 +52,13 @@ public class PersistenceTimers extends SwfPersistenceSupport<SimpleWorkflowMetad
   }
 
   @Override
+  public long countByWorkflowExecution( final OwnerFullName ownerFullName,
+                                        final String domain,
+                                        final String runId ) throws SwfMetadataException {
+    return countByExample( Timer.exampleWithWorkflowExecution( ownerFullName, domain, runId ) );
+  }
+
+  @Override
   protected Timer exampleWithOwner( final OwnerFullName ownerFullName ) {
     return Timer.exampleWithOwner( ownerFullName );
   }

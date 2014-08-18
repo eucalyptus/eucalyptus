@@ -44,4 +44,8 @@ public interface Timers {
   Timer save( Timer timer ) throws SwfMetadataException;
 
   List<Timer> deleteByExample( Timer example ) throws SwfMetadataException;
+
+  long countByWorkflowExecution( OwnerFullName ownerFullName,
+                                 String domain,
+                                 String runId ) throws SwfMetadataException;
 }

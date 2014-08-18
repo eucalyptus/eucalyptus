@@ -20,7 +20,10 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowTypeMetadata;
+import java.util.Collections;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowTypes;
 import com.eucalyptus.simpleworkflow.WorkflowType;
 import com.eucalyptus.util.OwnerFullName;
@@ -33,6 +36,14 @@ public class PersistenceWorkflowTypes extends SwfPersistenceSupport<WorkflowType
 
   public PersistenceWorkflowTypes( ) {
     super( "workflow-type" );
+  }
+
+  public long countByDomain( final OwnerFullName ownerFullName,
+                             final String domain ) throws SwfMetadataException {
+    return countByExample(
+        WorkflowType.exampleWithOwner( ownerFullName ),
+        Restrictions.eq( "domain.displayName", domain ),
+        Collections.singletonMap( "domain", "domain" ) );
   }
 
   @Override

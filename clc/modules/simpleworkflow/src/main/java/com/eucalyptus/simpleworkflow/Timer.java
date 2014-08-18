@@ -54,7 +54,7 @@ public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMeta
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowExecution workflowExecution;
 
-  @Column( name = "domain", nullable = false, updatable = false )
+  @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domain;
 
   @Column( name = "workflow_run_id", nullable = false, updatable = false )

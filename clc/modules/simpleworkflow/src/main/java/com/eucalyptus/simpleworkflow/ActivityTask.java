@@ -73,13 +73,13 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Enumerated( EnumType.STRING )
   private State state;
 
-  @Column( name = "domain", nullable = false, updatable = false )
+  @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domain;
 
   @Column( name = "workflow_run_id", nullable = false, updatable = false )
   private String workflowRunId;
 
-  @Column( name = "task_list", nullable = false, updatable = false  )
+  @Column( name = "task_list", length = 256, nullable = false, updatable = false  )
   private String taskList;
 
   @Column( name = "scheduled_event_id", nullable = false, updatable = false  )
@@ -91,10 +91,10 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Column( name = "cancel_requested_event_id" )
   private Long cancelRequestedEventId;
 
-  @Column( name = "activity_type", nullable = false, updatable = false  )
+  @Column( name = "activity_type", length = 256, nullable = false, updatable = false  )
   private String activityType;
 
-  @Column( name = "activity_version", nullable = false, updatable = false  )
+  @Column( name = "activity_version", length = 64, nullable = false, updatable = false  )
   private String activityVersion;
 
   @Column( name = "input", updatable = false  )
