@@ -922,6 +922,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 
     euca_strncpy(outInst->guestStateName, (char *)adb_instanceType_get_guestStateName(instance, env), CHAR_BUFFER_SIZE);
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    outInst->bundleTaskProgress = adb_instanceType_get_bundleTaskProgress(instance, env);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
     outInst->migration_state = migration_state_from_string(adb_instanceType_get_migrationStateName(instance, env));

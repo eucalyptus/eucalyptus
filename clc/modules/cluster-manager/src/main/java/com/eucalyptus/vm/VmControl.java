@@ -1110,7 +1110,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
       
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
+        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling, 0.0d );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
@@ -1213,6 +1213,8 @@ public class VmControl {
     }
     
     VmInstance bundledVm = Entities.asTransaction( VmInstance.class, bundleFunc ).apply( instanceId );
+    final ImageInfo imageInfo = Images.lookupImage(bundledVm.getImageId());
+
     try {
       ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
       BundleInstanceType reqInternal = new BundleInstanceType(){
@@ -1225,6 +1227,7 @@ public class VmControl {
   			setUploadPolicySignature(request.getUploadPolicySignature());
   			setUrl(request.getUrl());
   			setUserKey(request.getUserKey());
+  			setArchitecture(imageInfo != null ? imageInfo.getArchitecture().name() : "i386");
 			}
 		}.regardingUserRequest(request);      
       AsyncRequests.newRequest( Bundles.createCallback(reqInternal)).dispatch( cluster );

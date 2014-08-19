@@ -321,6 +321,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     char *userPublicKey = NULL;
     char *S3Policy = NULL;
     char *S3PolicySig = NULL;
+    char *architecture = NULL;
     ncMetadata ccMeta = { 0 };
 
     bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
@@ -334,11 +335,12 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
     S3Policy = adb_bundleInstanceType_get_S3Policy(bit, env);
     S3PolicySig = adb_bundleInstanceType_get_S3PolicySig(bit, env);
+    architecture = adb_bundleInstanceType_get_architecture(bit, env);
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
-        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
         unset_corrid(corr_id);
         if (rc) {
             LOGERROR("doBundleInstance() failed\n");
@@ -1546,6 +1548,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     if (strlen(src->bundleTaskStateName)) {
         adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
     }
+    adb_ccInstanceType_set_bundleTaskProgress(dst, env, src->bundleTaskProgress);
     //GRZE: these strings should be made an enum indexed by the migration_states_t
     if (src->migration_state == MIGRATION_PREPARING) {
         adb_ccInstanceType_set_migrationStateName(dst, env, "preparing");

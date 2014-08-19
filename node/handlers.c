@@ -3273,10 +3273,11 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture image/instance architecture
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBundleInstance() handler call.
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
 {
     int ret = EUCA_OK;
 
@@ -3285,13 +3286,13 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     DISABLED_CHECK;
 
     LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
-    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
-             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s, architecture=%s\n",
+             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     if (nc_state.H->doBundleInstance)
-        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
     else
-        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     return ret;
 }

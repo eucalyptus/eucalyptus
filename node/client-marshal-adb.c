@@ -1080,11 +1080,12 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture the image/instance architecture
 //!
 //! @return Always return EUCA_OK
 //!
 int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig)
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig, char* architecture)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1118,6 +1119,7 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
     adb_ncBundleInstanceType_set_userPublicKey(request, env, userPublicKey);
     adb_ncBundleInstanceType_set_S3Policy(request, env, S3Policy);
     adb_ncBundleInstanceType_set_S3PolicySig(request, env, S3PolicySig);
+    adb_ncBundleInstanceType_set_architecture(request, env, architecture);
     adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
 
     // do it

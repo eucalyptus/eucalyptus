@@ -254,6 +254,7 @@ void doInitCC(void)
 //! @param[in] userPublicKey
 //! @param[in] S3Policy
 //! @param[in] S3PolicySig
+//! @param[in] architecture
 //!
 //! @return
 //!
@@ -261,7 +262,7 @@ void doInitCC(void)
 //!
 //! @note
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
 {
     int i, j, rc, start = 0, stop = 0, ret = 0, timeout, done;
     char internalObjectStorageURL[EUCA_MAX_PATH], theObjectStorageURL[EUCA_MAX_PATH];
@@ -279,8 +280,8 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     }
 
     LOGINFO("[%s] bundling requested\n", instanceId);
-    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n",
-             SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
+    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s, architecture=%s\n",
+       SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig), SP(architecture));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
@@ -321,7 +322,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     for (j = start; j < stop && !done; j++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, j);
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncBundleInstance",
-                          instanceId, bucketName, filePrefix, theObjectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+                          instanceId, bucketName, filePrefix, theObjectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
         if (rc) {
             ret = 1;
         } else {
@@ -876,8 +877,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *userPublicKey = va_arg(al, char *);
             char *S3Policy = va_arg(al, char *);
             char *S3PolicySig = va_arg(al, char *);
+            char *architecture = va_arg(al, char *);
 
-            rc = ncBundleInstanceStub(ncs, localmeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+            rc = ncBundleInstanceStub(ncs, localmeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
         } else if (!strcmp(ncOp, "ncBundleRestartInstance")) {
             char *instanceId = va_arg(al, char *);
             rc = ncBundleRestartInstanceStub(ncs, localmeta, instanceId);
@@ -3203,6 +3205,7 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
     euca_strncpy(dst->platform, src->platform, 64);
     euca_strncpy(dst->guestStateName, src->guestStateName, 64);
     euca_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
+    dst->bundleTaskProgress = src->bundleTaskProgress;
     euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
     euca_strncpy(dst->userData, src->userData, 16384);
     euca_strncpy(dst->state, src->stateName, 16);
@@ -4141,7 +4144,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                     allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, accountId, "Pending",
                                         "", time(NULL), reservationId, &ncnet, &ncnet, ccvm, resid, keyName, resourceCache->resources[resid].ncURL,
                                         userData, launchIndex, platform, myInstance->guestStateName, myInstance->bundleTaskStateName, myInstance->groupNames, myInstance->volumes,
-                                        myInstance->volumesSize);
+                                        myInstance->volumesSize, myInstance->bundleTaskProgress);
 
                     sensor_add_resource(myInstance->instanceId, "instance", uuid);
                     sensor_set_resource_alias(myInstance->instanceId, myInstance->ncnet.privateIp);
@@ -7739,9 +7742,9 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
 //! @note
 //!
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
-                        char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet,
-                        netConfig * ncnet, virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex,
-                        char *platform, char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize)
+                        char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet, netConfig * ncnet,
+                        virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform,
+                        char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize, double bundleTaskProgress)
 {
     if (out != NULL) {
         bzero(out, sizeof(ccInstance));
@@ -7787,6 +7790,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
             euca_strncpy(out->guestStateName, guestStateName, 64);
         if (bundleTaskStateName)
             euca_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
+        out->bundleTaskProgress = bundleTaskProgress;
         if (groupNames) {
             int i;
             for (i = 0; i < 64; i++) {
@@ -8016,10 +8020,11 @@ void print_ccInstance(char *tag, ccInstance * in)
 
     LOGDEBUG("%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s "
              "vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
-             "bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s guestStateName=%s\n", tag, in->instanceId, in->reservationId, in->state,
-             in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan,
-             in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex,
-             in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf, migration_state_names[in->migration_state], in->guestStateName);
+             "bundleTaskStateName=%s, bundleTaskProgress=%0.4f volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s guestStateName=%s\n",
+             tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp,
+             in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk,
+             in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->bundleTaskProgress,
+             in->volumesSize, volbuf, groupbuf, migration_state_names[in->migration_state], in->guestStateName);
 
     EUCA_FREE(volbuf);
     EUCA_FREE(groupbuf);
@@ -8182,7 +8187,7 @@ int add_instanceCache(char *instanceId, ccInstance * in)
     allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
                         in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet),
                         &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->guestStateName, in->bundleTaskStateName,
-                        in->groupNames, in->volumes, in->volumesSize);
+                        in->groupNames, in->volumes, in->volumesSize, in->bundleTaskProgress);
     instanceCache->numInsts++;
     instanceCache->lastseen[firstNull] = time(NULL);
     instanceCache->cacheState[firstNull] = INSTVALID;
@@ -8262,7 +8267,8 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
                                 &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName,
                                 instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex,
                                 instanceCache->instances[i].platform, instanceCache->instances[i].guestStateName, instanceCache->instances[i].bundleTaskStateName,
-                                instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
+                                instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize,
+                                instanceCache->instances[i].bundleTaskProgress);
             LOGTRACE("found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId,
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
             // migration-related
@@ -8322,7 +8328,7 @@ int find_instanceCacheIP(char *ip, ccInstance ** out)
                                     instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData,
                                     instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform,
                                     instanceCache->instances[i].guestStateName, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames,
-                                    instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
+                                    instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize, instanceCache->instances[i].bundleTaskProgress);
                 done++;
             }
         }

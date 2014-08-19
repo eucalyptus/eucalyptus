@@ -1025,6 +1025,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
     axis2_char_t *userPublicKey = NULL;
     axis2_char_t *S3Policy = NULL;
     axis2_char_t *S3PolicySig = NULL;
+    axis2_char_t *architecture = NULL;
     adb_ncBundleInstanceType_t *input = NULL;
     adb_ncBundleInstanceResponse_t *response = NULL;
     adb_ncBundleInstanceResponseType_t *output = NULL;
@@ -1047,6 +1048,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
         S3Policy = adb_ncBundleInstanceType_get_S3Policy(input, env);
         S3PolicySig = adb_ncBundleInstanceType_get_S3PolicySig(input, env);
+        architecture = adb_ncBundleInstanceType_get_architecture(input, env);
 
         eventlog("NC", userId, correlationId, "BundleInstance", "begin");
 
@@ -1055,7 +1057,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         meta.userId = userId;
 
         threadCorrelationId* corr_id = set_corrid(meta.correlationId);
-        if ((error = doBundleInstance(&meta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig)) != EUCA_OK) {
+        if ((error = doBundleInstance(&meta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);

@@ -569,7 +569,7 @@ static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
 static int ncClientBundleInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
 {
     int rc = EUCA_OK;
-    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
+    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig", "x86_64");
     printf("ncBundleInstanceStub = %d\n", rc);
     return (rc);
 }

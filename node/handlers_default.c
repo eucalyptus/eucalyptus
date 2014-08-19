@@ -216,7 +216,7 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t *params, bundling_progress result);
 static void *bundling_thread(void *arg);
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                            char *userPublicKey, char *S3Policy, char *S3PolicySig);
+                            char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -1905,7 +1905,7 @@ static void *bundling_thread(void *arg)
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
                          "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
-                         "--arch", "x86_64", /* @TODO: obtain arch from instance*/ \
+                         "--arch",  pParams->architecture, \
                          "--account", pParams->accountId, \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
@@ -1980,6 +1980,7 @@ static int verify_bucket_name(const char *name)
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture image architecture
 //!
 //! @return EUCA_OK on success or proper error code. known error code returned include: EUCA_ERROR and
 //!         EUCA_NOT_FOUND_ERROR. Error code from cleanup_bundling_task() and find_and_terminate_instance()
@@ -1989,7 +1990,7 @@ static int verify_bucket_name(const char *name)
 //! @see find_and_terminate_instance()
 //!
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey,
-                            char *S3Policy, char *S3PolicySig)
+                            char *S3Policy, char *S3PolicySig, char *architecture)
 {
     pthread_t tid = { 0 };
     pthread_attr_t tattr = { {0} };
@@ -2027,6 +2028,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->ncBundleUploadCmd = strdup(nc->ncBundleUploadCmd);
     pParams->ncCheckBucketCmd = strdup(nc->ncCheckBucketCmd);
     pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
+    pParams->architecture = strdup(architecture);
 
     pParams->workPath = strdup(pInstance->instancePath);
     if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId[0] != '\0') && (pInstance->ramdiskId[0] != '\0')) {
@@ -2043,6 +2045,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         pInstance->bundlingTime = time(NULL);
         change_state(pInstance, BUNDLING_SHUTDOWN);
         change_bundling_state(pInstance, BUNDLING_IN_PROGRESS);
+        pInstance->bundleTaskProgress = 0.0;
     }
     sem_v(inst_sem);
 
@@ -2097,6 +2100,7 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
         pInstance->bundleCanceled = 0;
         pInstance->bundleBucketExists = 0;
         pInstance->bundleTaskState = NOT_BUNDLING;
+        pInstance->bundleTaskProgress = 0.0;
 
         // Set our state strings
         euca_strncpy(pInstance->stateName, instance_state_names[pInstance->stateCode], CHAR_BUFFER_SIZE);
