@@ -75,6 +75,7 @@ import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.StatefulMessageSet
+import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
@@ -825,6 +826,9 @@ class VmInstanceLifecycleHelpers {
                   resource.value,
                   resource.mac,
                   resource.privateIp,
+                  instance.bootRecord.vpc.dnsHostnames ?
+                      VmInstances.dnsName( resource.privateIp, DomainNames.internalSubdomain( ) ) :
+                      null as String,
                   firstNonNull( resource.description, "" )
               ) )
           instance.updateMacAddress( networkInterface.macAddress )
@@ -845,13 +849,15 @@ class VmInstanceLifecycleHelpers {
           if ( address != null ) {
             address.assign( networkInterface, instance )
             networkInterface.associate( NetworkInterfaceAssociation.create(
-                address.getAssociationId( ),
-                address.getAllocationId( ),
-                address.getOwnerAccountNumber( ),
-                address.getDisplayName( ),
-                null as String // TODO:STEVE: DNS name for ENI public ip
+                address.associationId,
+                address.allocationId,
+                address.ownerAccountNumber,
+                address.displayName,
+                networkInterface.vpc.dnsHostnames ?
+                    VmInstances.dnsName( address.displayName, DomainNames.externalSubdomain( ) ) :
+                    null as String
             ) )
-            instance.updatePublicAddress( address.getDisplayName( ) );
+            instance.updatePublicAddress( address.displayName );
           }
           // Add so eni information is available from instance, not for
           // persistence

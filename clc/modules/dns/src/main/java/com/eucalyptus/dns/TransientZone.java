@@ -173,9 +173,7 @@ public class TransientZone extends Zone {
         try {
           VmInstances.lookupByPublicIp( ipCandidate );
         } catch ( Exception e ) {
-          try {
-            VmInstances.lookupByPrivateIp( ipCandidate );
-          } catch ( Exception e1 ) {
+          if ( !VmInstances.privateIpInUse( ipCandidate ) ) {
             return super.findRecords( name, type, listenerAddress );
           }
         }

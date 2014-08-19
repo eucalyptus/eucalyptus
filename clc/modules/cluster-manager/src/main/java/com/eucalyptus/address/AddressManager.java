@@ -90,6 +90,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
@@ -329,13 +330,20 @@ public class AddressManager {
           }
 
           address.assign( eni, eni.isAttached() ? eni.getAttachment( ).getInstance( ) : null );
+          final boolean hostnamesEnabled = eni.getVpc( ).getDnsHostnames( );
           eni.associate( NetworkInterfaceAssociation.create(
             address.getAssociationId( ),
             address.getAllocationId( ),
             address.getOwnerAccountNumber( ),
             address.getName( ),
-            null // TODO:STEVE: DNS name for ENI public ip
+            hostnamesEnabled ?
+                VmInstances.dnsName( address.getName( ), DomainNames.externalSubdomain( ) ) :
+                null
           ) );
+          eni.setPrivateDnsName( hostnamesEnabled ?
+                  VmInstances.dnsName( eni.getPrivateIpAddress( ), DomainNames.internalSubdomain( ) ) :
+                  null
+          );
           if ( eni.isAttached( ) ) {
             eni.getAttachment( ).getInstance( ).updatePublicAddress( address.getName( ) );
           }
