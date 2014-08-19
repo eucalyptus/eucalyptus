@@ -701,7 +701,7 @@ public class NetworkGroups {
     }
   }
 
-  static void flushRules( ) {
+  public static void flushRules( ) {
     if ( EdgeNetworking.isEnabled( ) ) {
       NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
     }

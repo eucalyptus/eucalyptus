@@ -929,6 +929,7 @@ public class VmControl {
         vm.getNetworkGroups( ).clear( );
         vm.getNetworkGroups( ).addAll( groups );
         tx.commit();
+        NetworkGroups.flushRules( );
       } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {
         // not currently supported
       } else if ( request.getSourceDestCheck( ) != null ) {
