@@ -34,6 +34,10 @@ import java.util.regex.Pattern
 @CompileStatic
 class MessageValidation {
 
+  static interface ValidatableMessage {
+    Map<String,String> validate( );
+  }
+
   static interface ValidationAssistant {
     boolean validate( Object object )
     Pair<Long,Long> range( Ats ats )
