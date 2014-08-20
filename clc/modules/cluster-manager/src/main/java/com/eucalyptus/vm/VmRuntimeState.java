@@ -704,6 +704,8 @@ public class VmRuntimeState {
       currentTask.setProgress((int) Math.round(progress * 100D));
       if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current ) ) {
         currentTask.setState( state );
+        // set progress to 100% if complete is reached
+        currentTask.setProgress( 100 );
         bundleRestartInstance( currentTask );
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
