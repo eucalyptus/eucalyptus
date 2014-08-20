@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -86,6 +88,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#respondActivityTaskFailed(RespondActivityTaskFailedRequest)
  */
+@PolicyAction( vendor = "swf", action = "respondactivitytaskfailed" )
 public class RespondActivityTaskFailedRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -98,6 +101,8 @@ public class RespondActivityTaskFailedRequest extends SimpleWorkflowMessage impl
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 1024<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.STRING_1024 )
     private String taskToken;
 
     /**
@@ -106,6 +111,7 @@ public class RespondActivityTaskFailedRequest extends SimpleWorkflowMessage impl
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_256 )
     private String reason;
 
     /**
@@ -114,6 +120,7 @@ public class RespondActivityTaskFailedRequest extends SimpleWorkflowMessage impl
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String details;
 
     /**

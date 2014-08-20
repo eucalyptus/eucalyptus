@@ -109,7 +109,7 @@
 #include "euca_auth.h"
 #include "log.h"
 #include "euca_string.h"
-
+#include "ipc.h"
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -1993,7 +1993,7 @@ void log_argv(char **argv)
 //!
 //! Eucalyptus wrapper function around exec with file-descriptor support and argv[]
 //!
-//! This is the low-level function that actually sets up file descriptors, forks, 
+//! This is the low-level function that actually sets up file descriptors, forks,
 //! and calls execvp(). The function does not wait for the child process to finish:
 //! that can and probably should be done with the complementary low-level function:
 //! euca_waitpid().  Consider higher-level alternatives, too:
@@ -2440,7 +2440,7 @@ int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *
 //!
 //! Returns username of the real user ID of the calling process
 //!
-//! @return on success, a pointer to a string (in static memory, 
+//! @return on success, a pointer to a string (in static memory,
 //!         no need to free it) or NULL on failure
 //!
 char *get_username(void)
@@ -2451,10 +2451,9 @@ char *get_username(void)
 }
 
 //! Make a correlation ID that is prefixed with the ID received from other components
-char *get_corrid(const char *id)
-{
-    char *new_corr_id = NULL;
-    if (id == NULL)
+char* create_corrid(const char* id) {
+    char*new_corr_id = NULL;
+    if(id==NULL)
         return NULL;
     // correlation_id = [prefix(36)::new_id(36)]
     if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
@@ -2469,23 +2468,86 @@ char *get_corrid(const char *id)
     return new_corr_id;
 }
 
-pid_t thread_pid = -1;
-char thread_correlation_id[256];
-
-void set_corrid(const char *corr_id)
-{
-    if (corr_id == NULL || strstr(corr_id, "::") == NULL) {
-        unset_corrid();
-        return;
+threadCorrelationId *corr_ids = NULL;
+sem *corr_sem = NULL;
+threadCorrelationId* set_corrid_impl(const char* corr_id, pid_t* pid, pthread_t* tid){
+    if (corr_sem == NULL)
+        corr_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    if(corr_id == NULL || strstr(corr_id, "::") == NULL) {
+        return NULL;
     }
-    thread_pid = getpid();
-    euca_strncpy(thread_correlation_id, corr_id, strlen(corr_id));
+    threadCorrelationId *newId = EUCA_ZALLOC(1, sizeof(threadCorrelationId));
+    if (newId == NULL) {
+        return NULL;
+    }
+    newId->pthread = FALSE;
+    if (pid == NULL)
+        newId->pid = getpid();
+    else
+        newId->pid = *pid;
+
+    if (tid == NULL)
+        newId->tid = pthread_self();
+    else {
+        newId->pthread = TRUE;
+        newId->tid = *tid;
+        newId->pid = -1;
+    }
+    euca_strncpy(newId->correlation_id , corr_id, strlen(corr_id));
+
+    sem_p(corr_sem);
+    newId->next = corr_ids;
+    corr_ids = newId;            
+    sem_v(corr_sem);
+
+    return newId;
 }
 
-void unset_corrid()
-{
-    thread_pid = -1;
-    memset(thread_correlation_id, 0x00, 256);
+threadCorrelationId* set_corrid(const char* corr_id) {
+    return set_corrid_impl(corr_id, NULL, NULL);
+}
+threadCorrelationId* set_corrid_fork(const char* corr_id, pid_t pid ) {
+    return set_corrid_impl(corr_id, &pid, NULL);
+}
+threadCorrelationId* set_corrid_pthread(const char* corr_id, pthread_t tid) {
+    return set_corrid_impl(corr_id, NULL, &tid);
+}
+
+void unset_corrid( threadCorrelationId* corr_id) {
+    threadCorrelationId* cur = corr_ids;
+    threadCorrelationId* pre = NULL;
+    if (corr_id == NULL)
+        return;
+    sem_p(corr_sem);
+    if(corr_ids == corr_id) {
+        corr_ids = corr_ids->next;
+        EUCA_FREE(corr_id); 
+        sem_v(corr_sem);
+        return;
+    }
+
+    while (cur != NULL) {
+        if (cur == corr_id){
+            pre->next = cur->next;
+            EUCA_FREE(corr_id);
+            break;        
+        }
+        pre = cur;
+        cur = cur->next; 
+    }
+    sem_v(corr_sem);
+}
+
+threadCorrelationId * get_corrid() {
+    threadCorrelationId* cur = corr_ids;
+    while(cur!=NULL) {
+        if (cur->pthread && pthread_equal(cur->tid, pthread_self()))
+            return cur;
+        else if (cur->pid == getpid())
+            return cur;
+        cur = cur->next; 
+    }
+    return NULL;
 }
 
 //!

@@ -147,7 +147,7 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 
 int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);

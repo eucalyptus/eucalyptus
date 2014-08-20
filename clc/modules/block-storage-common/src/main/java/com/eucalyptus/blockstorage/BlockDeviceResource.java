@@ -90,7 +90,7 @@ public class BlockDeviceResource extends StorageResource {
 	}
 
 	@Override
-	public Long getSize() throws EucalyptusCloudException {
+	public Long getSize() throws UnknownSizeException {
 		Long size = 0L;
 		try {
 			CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", this.getPath() });

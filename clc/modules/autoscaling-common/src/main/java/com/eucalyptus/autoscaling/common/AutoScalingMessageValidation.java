@@ -23,16 +23,39 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
 import java.util.regex.Pattern;
-import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.system.Ats;
-import com.google.common.base.CaseFormat;
+import com.eucalyptus.util.MessageValidation;
+import com.eucalyptus.util.Pair;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 /**
  *
  */
 public class AutoScalingMessageValidation {
+
+  public static class AutoScalingMessageValidationAssistant implements MessageValidation.ValidationAssistant {
+    @Override
+    public boolean validate( final Object object ) {
+      return object instanceof EucalyptusData;
+    }
+
+    @Override
+    public Pair<Long, Long> range( final Ats ats ) {
+      final FieldRange range = ats.get( FieldRange.class );
+      return range == null ?
+          null :
+          Pair.pair( range.min( ), range.max( ) );
+    }
+
+    @Override
+    public Pattern regex( final Ats ats ) {
+      final FieldRegex regex = ats.get( FieldRegex.class );
+      return regex == null ?
+          null :
+          regex.value( ).pattern( );
+    }
+  }
 
   @Target( ElementType.FIELD)
   @Retention( RetentionPolicy.RUNTIME)
@@ -97,12 +120,7 @@ public class AutoScalingMessageValidation {
     }
   }
 
-  public static String displayName( Field field ) {
-    HttpParameterMapping httpParameterMapping = Ats.from( field ).get( HttpParameterMapping.class );
-    return httpParameterMapping != null ?
-        httpParameterMapping.parameter()[0] :
-        CaseFormat.LOWER_CAMEL.to( CaseFormat.UPPER_CAMEL, field.getName() );
-  }
+
 
 
 }

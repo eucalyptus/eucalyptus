@@ -360,6 +360,7 @@ typedef struct ncInstance_t {
     //! @name state as reported to CC & CLC
     char stateName[CHAR_BUFFER_SIZE];  //!< Instance state as a string
     char bundleTaskStateName[CHAR_BUFFER_SIZE]; //!< Instance's bundle task state as a string
+    double bundleTaskProgress;         //!< Bundling task progress
     char createImageTaskStateName[CHAR_BUFFER_SIZE];    //!< Instance's image task state as a string
     //! @}
 

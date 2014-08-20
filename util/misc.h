@@ -83,6 +83,7 @@
 #include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
 #include <stdint.h>                    // uint32_t
+#include <pthread.h>
 
 #include <eucalyptus.h>
 
@@ -191,12 +192,19 @@ void euca_srand(void);
 
 //! global variable and functions for setting correlation id
 //! 
-char *get_corrid(const char *);
-extern char thread_correlation_id[256];
-extern pid_t thread_pid;
-void set_corrid(const char *corr_id);
-void unset_corrid();
-
+typedef struct threadCorrelationId_t {
+    char correlation_id[128];
+    pid_t pid;
+    pthread_t tid; 
+    boolean pthread;
+    struct threadCorrelationId_t *next;
+} threadCorrelationId;
+char *create_corrid(const char*);
+threadCorrelationId* set_corrid(const char* corr_id);
+threadCorrelationId* set_corrid_pthread(const char* corr_id, pthread_t);
+threadCorrelationId* set_corrid_fork(const char* corr_id, pid_t);
+void unset_corrid( threadCorrelationId* );
+threadCorrelationId *get_corrid();
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

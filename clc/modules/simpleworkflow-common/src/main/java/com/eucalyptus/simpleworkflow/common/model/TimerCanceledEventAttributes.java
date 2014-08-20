@@ -36,14 +36,12 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
-import java.io.Serializable;
-
 /**
  * <p>
  * Provides details of the <code>TimerCanceled</code> event.
  * </p>
  */
-public class TimerCanceledEventAttributes implements Serializable {
+public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The unique Id of the timer that was canceled.
@@ -204,6 +202,11 @@ public class TimerCanceledEventAttributes implements Serializable {
     public TimerCanceledEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setTimerCanceledEventAttributes( this );
     }
 
     /**

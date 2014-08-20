@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.*;
+import static com.eucalyptus.simpleworkflow.WorkflowExecution.WorkflowHistorySizeLimitException;
 import static com.eucalyptus.simpleworkflow.WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE;
 import java.lang.System;
 import java.sql.SQLException;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -40,7 +40,6 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -49,124 +48,22 @@ import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCancelRequestedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCanceledEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskCompletedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskScheduledEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStartedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStatus;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTypeDetail;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfo;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfos;
-import com.eucalyptus.simpleworkflow.common.model.CancelTimerDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.CancelWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ClosedWorkflowExecutionFilterParameters;
-import com.eucalyptus.simpleworkflow.common.model.CompleteWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.CountClosedWorkflowExecutionsRequest;
-import com.eucalyptus.simpleworkflow.common.model.CountOpenWorkflowExecutionsRequest;
-import com.eucalyptus.simpleworkflow.common.model.CountPendingActivityTasksRequest;
-import com.eucalyptus.simpleworkflow.common.model.CountPendingDecisionTasksRequest;
-import com.eucalyptus.simpleworkflow.common.model.Decision;
-import com.eucalyptus.simpleworkflow.common.model.DecisionTask;
-import com.eucalyptus.simpleworkflow.common.model.DecisionTaskCompletedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.DecisionTaskScheduledEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.DecisionTaskStartedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.DeprecateActivityTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.DeprecateDomainRequest;
-import com.eucalyptus.simpleworkflow.common.model.DeprecateWorkflowTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.DescribeActivityTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.DescribeDomainRequest;
-import com.eucalyptus.simpleworkflow.common.model.DescribeWorkflowExecutionRequest;
-import com.eucalyptus.simpleworkflow.common.model.DescribeWorkflowTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.DomainDetail;
-import com.eucalyptus.simpleworkflow.common.model.DomainInfo;
-import com.eucalyptus.simpleworkflow.common.model.DomainInfos;
-import com.eucalyptus.simpleworkflow.common.model.FailWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.GetWorkflowExecutionHistoryRequest;
-import com.eucalyptus.simpleworkflow.common.model.History;
-import com.eucalyptus.simpleworkflow.common.model.HistoryEvent;
-import com.eucalyptus.simpleworkflow.common.model.ListActivityTypesRequest;
-import com.eucalyptus.simpleworkflow.common.model.ListClosedWorkflowExecutionsRequest;
-import com.eucalyptus.simpleworkflow.common.model.ListDomainsRequest;
-import com.eucalyptus.simpleworkflow.common.model.ListOpenWorkflowExecutionsRequest;
-import com.eucalyptus.simpleworkflow.common.model.ListWorkflowTypesRequest;
-import com.eucalyptus.simpleworkflow.common.model.MarkerRecordedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.PendingTaskCount;
-import com.eucalyptus.simpleworkflow.common.model.PollForActivityTaskRequest;
-import com.eucalyptus.simpleworkflow.common.model.PollForDecisionTaskRequest;
-import com.eucalyptus.simpleworkflow.common.model.RecordActivityTaskHeartbeatRequest;
-import com.eucalyptus.simpleworkflow.common.model.RecordMarkerDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.RegisterActivityTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.RegisterDomainRequest;
-import com.eucalyptus.simpleworkflow.common.model.RegisterWorkflowTypeRequest;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelWorkflowExecutionRequest;
-import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskCanceledRequest;
-import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskCompletedRequest;
-import com.eucalyptus.simpleworkflow.common.model.RespondActivityTaskFailedRequest;
-import com.eucalyptus.simpleworkflow.common.model.RespondDecisionTaskCompletedRequest;
-import com.eucalyptus.simpleworkflow.common.model.Run;
-import com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.SignalWorkflowExecutionRequest;
-import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
-import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.StartTimerDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.StartTimerFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.StartTimerFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.StartWorkflowExecutionRequest;
-import com.eucalyptus.simpleworkflow.common.model.TaskList;
-import com.eucalyptus.simpleworkflow.common.model.TerminateWorkflowExecutionRequest;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCancelRequestedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCanceledEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCompletedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCount;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionDetail;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionFailedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionFilterParameters;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionInfo;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionInfos;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionOpenCounts;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionSignaledEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionStartedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTerminatedEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeDetail;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfo;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfos;
-import com.eucalyptus.simpleworkflow.stateful.NotifyResponseType;
-import com.eucalyptus.simpleworkflow.stateful.NotifyType;
-import com.eucalyptus.simpleworkflow.stateful.PollForNotificationResponseType;
-import com.eucalyptus.simpleworkflow.stateful.PollForNotificationType;
-import com.eucalyptus.simpleworkflow.stateful.PolledNotifications;
+import com.eucalyptus.simpleworkflow.common.model.*;
 import com.eucalyptus.simpleworkflow.tokens.TaskToken;
 import com.eucalyptus.simpleworkflow.tokens.TaskTokenException;
 import com.eucalyptus.simpleworkflow.tokens.TaskTokenManager;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Consumer;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.concurrent.ListenableFuture;
 import com.eucalyptus.ws.Role;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -182,11 +79,11 @@ import com.google.common.collect.Sets;
 /**
  *
  */
+@SuppressWarnings( "UnusedDeclaration" )
 @ComponentNamed
 public class SimpleWorkflowService {
 
   private static final Logger logger = Logger.getLogger( SimpleWorkflowService.class );
-  private static final Object pollNotifier = new Object( );
 
   private final Domains domains;
   private final ActivityTasks activityTasks;
@@ -194,6 +91,7 @@ public class SimpleWorkflowService {
   private final WorkflowTypes workflowTypes;
   private final WorkflowExecutions workflowExecutions;
   private final TaskTokenManager taskTokenManager;
+  private final Timers timers;
 
   @Inject
   public SimpleWorkflowService( final Domains domains,
@@ -201,13 +99,15 @@ public class SimpleWorkflowService {
                                 final ActivityTypes activityTypes,
                                 final WorkflowTypes workflowTypes,
                                 final WorkflowExecutions workflowExecutions,
-                                final TaskTokenManager taskTokenManager ) {
+                                final TaskTokenManager taskTokenManager,
+                                final Timers timers ) {
     this.domains = domains;
     this.activityTasks = activityTasks;
     this.activityTypes = activityTypes;
     this.workflowTypes = workflowTypes;
     this.workflowExecutions = workflowExecutions;
     this.taskTokenManager = taskTokenManager;
+    this.timers = timers;
   }
 
   public synchronized SimpleWorkflowMessage registerDomain( final RegisterDomainRequest request ) throws SimpleWorkflowException {
@@ -221,7 +121,7 @@ public class SimpleWorkflowService {
               userFullName,
               request.getName( ),
               request.getDescription( ),
-              parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ) );
+              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ), 0 ) );
           return domains.save( domain );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -310,6 +210,10 @@ public class SimpleWorkflowService {
         try {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( activityTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getActivityTypesPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: activity-type" ) );
+          }
           final ActivityType activityType = ActivityType.create(
               userFullName,
               request.getName( ),
@@ -324,7 +228,7 @@ public class SimpleWorkflowService {
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     }, ActivityType.class, request.getName( ) );
@@ -386,6 +290,11 @@ public class SimpleWorkflowService {
           Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( ActivityType.class, ActivityTypeInfo.class ) ) );
+      final Ordering<ActivityTypeInfo> ordering =
+          Ordering.natural( ).onResultOf( ActivityTypes.ActivityTypeInfoStringFunctions.NAME );
+      Collections.sort(
+          activityTypeInfos.getTypeInfos( ),
+          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -427,6 +336,10 @@ public class SimpleWorkflowService {
         try {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( workflowTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getWorkflowTypesPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: workflow-type" ) );
+          }
           final WorkflowType workflowType = WorkflowType.create(
               userFullName,
               request.getName( ),
@@ -435,7 +348,7 @@ public class SimpleWorkflowService {
               request.getDescription( ),
               request.getDefaultTaskList( ) == null ? null : request.getDefaultTaskList( ).getName( ),
               request.getDefaultChildPolicy( ),
-              parsePeriod( request.getDefaultExecutionStartToCloseTimeout( ) ), //TODO:STEVE: validate not NONE
+              parsePeriod( request.getDefaultExecutionStartToCloseTimeout( ) ),
               parsePeriod( request.getDefaultTaskStartToCloseTimeout( ) )
           );
           return workflowTypes.save( workflowType );
@@ -496,12 +409,17 @@ public class SimpleWorkflowService {
         .byPrivileges( )
         .buildPredicate( );
     try {
-      workflowTypeInfos.getTypeInfos( ).addAll( workflowTypes.list( //TODO:STEVE: result ordering
+      workflowTypeInfos.getTypeInfos( ).addAll( workflowTypes.list(
           accountFullName,
           Restrictions.conjunction( ),
           Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( WorkflowType.class, WorkflowTypeInfo.class ) ) );
+      final Ordering<WorkflowTypeInfo> ordering =
+          Ordering.natural( ).onResultOf( WorkflowTypes.WorkflowTypeInfoStringFunctions.NAME );
+      Collections.sort(
+          workflowTypeInfos.getTypeInfos( ),
+          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -558,11 +476,16 @@ public class SimpleWorkflowService {
                       CollectionUtils.propertyPredicate( "ActivityTaskScheduled", EVENT_TYPE ) ) ) -
                   CollectionUtils.reduce( events, 0, CollectionUtils.count(
                       CollectionUtils.propertyPredicate( WorkflowExecutions.ACTIVITY_CLOSE_EVENT_TYPES, EVENT_TYPE ) ) );
+              final int openTimers =
+                  CollectionUtils.reduce( events, 0, CollectionUtils.count(
+                      CollectionUtils.propertyPredicate( "TimerStarted", EVENT_TYPE ) ) ) -
+                      CollectionUtils.reduce( events, 0, CollectionUtils.count(
+                          CollectionUtils.propertyPredicate( WorkflowExecutions.TIMER_CLOSE_EVENT_TYPES, EVENT_TYPE ) ) );
               detail.withOpenCounts( new WorkflowExecutionOpenCounts( )
                 .withOpenActivityTasks( openActivities )
                 .withOpenChildWorkflowExecutions( 0 )
                 .withOpenDecisionTasks( workflowExecution.getDecisionStatus( ) != Idle ? 1 : 0 )
-                .withOpenTimers( 0 ) );
+                .withOpenTimers( openTimers ) );
               return detail;
             }
           }
@@ -814,6 +737,10 @@ public class SimpleWorkflowService {
 
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          if ( workflowExecutions.countOpenByDomain( accountFullName, domain.getDisplayName( ) ) >=
+              SimpleWorkflowConfiguration.getOpenWorkflowExecutionsPerDomain( ) ) {
+            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for open workflow executions" ) );
+          }
           final WorkflowType workflowType =
               workflowTypes.lookupByExample(
                   WorkflowType.exampleWithUniqueName(
@@ -831,12 +758,12 @@ public class SimpleWorkflowService {
           final String taskList = request.getTaskList( ) == null ?
               workflowType.getDefaultTaskList( ):
               request.getTaskList( ).getName( );
-          final Integer executionStartToCloseTimeout = Objects.firstNonNull(  //TODO:STEVE: validate not NONE
-              parsePeriod( request.getExecutionStartToCloseTimeout( ) ),
-              workflowType.getDefaultExecutionStartToCloseTimeout( ) );
-          final Integer taskStartToCloseTimeout = Objects.firstNonNull(
-              parsePeriod( request.getTaskStartToCloseTimeout( ) ),
-              workflowType.getDefaultTaskStartToCloseTimeout( ) );
+          final Integer executionStartToCloseTimeout = requireDefault(
+              parsePeriod( request.getExecutionStartToCloseTimeout() ),
+              workflowType.getDefaultExecutionStartToCloseTimeout(), "ExecutionStartToCloseTimeout" );
+          final Integer taskStartToCloseTimeout = requireDefault(
+              parsePeriod( request.getTaskStartToCloseTimeout() ),
+              workflowType.getDefaultTaskStartToCloseTimeout(), "TaskStartToCloseTimeout" );
           final WorkflowExecution workflowExecution = WorkflowExecution.create(
               userFullName,
               UUID.randomUUID( ).toString( ),
@@ -1347,14 +1274,40 @@ public class SimpleWorkflowService {
                   switch ( decision.getDecisionType( ) ) {
                     case "CancelTimer":
                       final CancelTimerDecisionAttributes cancelTimer = decision.getCancelTimerDecisionAttributes( );
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new CancelTimerFailedEventAttributes()
-                              .withCause( CancelTimerFailedCause.TIMER_ID_UNKNOWN )
-                              .withDecisionTaskCompletedEventId( completedId )
-                              .withTimerId( cancelTimer.getTimerId( ) )
-                      ) );
-                      scheduleDecisionTask = true;
+                      try {
+                        final List<Timer> timerList = timers.listByExample(
+                            Timer.exampleWithTimerId(
+                                accountFullName,
+                                workflowExecution.getDomainName( ),
+                                workflowExecution.getDisplayName( ),
+                                cancelTimer.getTimerId( ) ),
+                            Predicates.alwaysTrue( ),
+                            Functions.<Timer>identity( )
+                        );
+
+                        if ( !timerList.isEmpty( ) ) {
+                          final Timer timer = Iterables.getOnlyElement( timerList );
+                          timers.deleteByExample( timer );
+                          workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new TimerCanceledEventAttributes( )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withStartedEventId( timer.getStartedEventId( ) )
+                                  .withTimerId( cancelTimer.getTimerId( ) )
+                          ) );
+                        } else {
+                          workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new CancelTimerFailedEventAttributes()
+                                  .withCause( CancelTimerFailedCause.TIMER_ID_UNKNOWN )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withTimerId( cancelTimer.getTimerId( ) )
+                          ) );
+                          scheduleDecisionTask = true;
+                        }
+                      } catch ( SwfMetadataException e ) {
+                        throw Exceptions.toUndeclared( e );
+                      }
                       break;
                     case "CancelWorkflowExecution":
                       final CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecution =
@@ -1511,6 +1464,15 @@ public class SimpleWorkflowService {
                         final String list = scheduleActivity.getTaskList() == null ?
                             activityType.getDefaultTaskList() :
                             scheduleActivity.getTaskList().getName();
+                        if ( activityTasks.countByWorkflowExecution(
+                            accountFullName,
+                            domain.getDisplayName( ),
+                            workflowExecution.getDisplayName( ) ) >=
+                            SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
+                          throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                              "LimitExceededFault",
+                              "Request would exceed limit for open activity tasks per workflow execution" ) );
+                        }
                         activityTasks.save( com.eucalyptus.simpleworkflow.ActivityTask.create(
                             userFullName,
                             workflowExecution,
@@ -1561,15 +1523,57 @@ public class SimpleWorkflowService {
                       scheduleDecisionTask = true;
                       break;
                     case "StartTimer":
-                      final StartTimerDecisionAttributes startTimer = decision.getStartTimerDecisionAttributes();
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new StartTimerFailedEventAttributes()
-                              .withCause( StartTimerFailedCause.OPERATION_NOT_PERMITTED )
-                              .withDecisionTaskCompletedEventId( completedId )
-                              .withTimerId( startTimer.getTimerId() )
-                      ) );
-                      scheduleDecisionTask = true;
+                      final StartTimerDecisionAttributes startTimer = decision.getStartTimerDecisionAttributes( );
+                      try {
+                        if ( timers.listByExample(
+                            Timer.exampleWithTimerId(
+                                accountFullName,
+                                workflowExecution.getDomainName( ),
+                                workflowExecution.getDisplayName( ),
+                                startTimer.getTimerId( ) ),
+                            Predicates.alwaysTrue( ),
+                            Functions.<Timer>identity( )
+                        ).isEmpty( ) ) {
+                         final Long startedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new TimerStartedEventAttributes()
+                                  .withControl( startTimer.getControl( ) )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) )
+                                  .withTimerId( startTimer.getTimerId() )
+                          ) );
+                          if ( timers.countByWorkflowExecution(
+                              accountFullName,
+                              domain.getDisplayName( ),
+                              workflowExecution.getDisplayName( ) ) >=
+                              SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution( ) ) {
+                            throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                                "LimitExceededFault",
+                                "Request would exceed limit for open timers per workflow execution" ) );
+                          }
+                          timers.save( Timer.create(
+                              userFullName,
+                              workflowExecution,
+                              workflowExecution.getDomainName( ),
+                              startTimer.getTimerId( ),
+                              startTimer.getControl( ),
+                              parsePeriod( startTimer.getStartToFireTimeout( ) ),
+                              completedId,
+                              startedId
+                              ) );
+                        } else {
+                          workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                              workflowExecution,
+                              new StartTimerFailedEventAttributes()
+                                  .withCause( StartTimerFailedCause.TIMER_ID_ALREADY_IN_USE )
+                                  .withDecisionTaskCompletedEventId( completedId )
+                                  .withTimerId( startTimer.getTimerId() )
+                          ) );
+                          scheduleDecisionTask = true;
+                        }
+                      } catch ( SwfMetadataException e ) {
+                        throw Exceptions.toUndeclared( e );
+                      }
                       break;
                     default:
                       throw Exceptions.toUndeclared( new SimpleWorkflowException(
@@ -1848,7 +1852,6 @@ public class SimpleWorkflowService {
     if ( parameters.getCloseStatusFilter( ) != null ) {
       filter.add( Restrictions.eq( "closeStatus", WorkflowExecution.CloseStatus.fromString( parameters.getCloseStatusFilter().getStatus( ) ) ) );
     }
-    //TODO:STEVE: fix issue with incorrect date deserialization
     if ( parameters.getCloseTimeFilter( ) != null ) {
       if ( parameters.getCloseTimeFilter( ).getOldestDate( ) != null ) {
         filter.add( Restrictions.ge( "closeTimestamp", parameters.getCloseTimeFilter( ).getOldestDate( ) ) );
@@ -1893,15 +1896,27 @@ public class SimpleWorkflowService {
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
-  private static SimpleWorkflowException handleException( final Exception e ) throws SimpleWorkflowException {
+  private SimpleWorkflowException handleException( final Exception e ) throws SimpleWorkflowException {
     final SimpleWorkflowException cause = Exceptions.findCause( e, SimpleWorkflowException.class );
     if ( cause != null ) {
       throw cause;
     }
 
+    final WorkflowHistorySizeLimitException historySizeLimitCause =
+        Exceptions.findCause( e, WorkflowHistorySizeLimitException.class );
+    if ( historySizeLimitCause != null ) {
+      WorkflowExecutions.Utils.terminateWorkflowExecution(
+          workflowExecutions,
+          "EVENT_LIMIT_EXCEEDED",
+          historySizeLimitCause.getAccountNumber( ),
+          historySizeLimitCause.getDomain( ),
+          historySizeLimitCause.getWorkflowId( ) );
+      throw new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed history limit for workflow execution" );
+    }
+
     final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
     if ( quotaCause != null ) {
-      throw new SimpleWorkflowClientException( "ResourceLimitExceeded", "Request would exceed quota for type: " + quotaCause.getType( ) );
+      throw new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed quota for type: " + quotaCause.getType( ) );
     }
 
     final TaskTokenException tokenCause = Exceptions.findCause( e, TaskTokenException.class );
@@ -1918,7 +1933,7 @@ public class SimpleWorkflowService {
     throw exception;
   }
 
-  private Integer parsePeriod( final String period ) throws SimpleWorkflowException {
+  private static Integer parsePeriod( final String period ) {
     if ( period == null || "NONE".equals( period ) ) {
       return null;
     } else {
@@ -1926,7 +1941,7 @@ public class SimpleWorkflowService {
     }
   }
 
-  private Integer parsePeriod( final String period, final Integer defaultValue ) throws SimpleWorkflowException {
+  private static Integer parsePeriod( final String period, final Integer defaultValue ) {
     if ( period == null ) {
       return defaultValue;
     } else if ( "NONE".equals( period ) ) {
@@ -1936,31 +1951,22 @@ public class SimpleWorkflowService {
     }
   }
 
+  private static Integer requireDefault( final Integer value,
+                                         final Integer defaultValue,
+                                         final String description ) throws SimpleWorkflowClientException {
+    if ( value == null && defaultValue == null ) {
+      throw new SimpleWorkflowClientException(
+          "DefaultUndefinedFault" ,
+          description + " is required" );
+    }
+    return Objects.firstNonNull( value, defaultValue );
+  }
+
   private static void notifyTaskList( final AccountFullName accountFullName,
                                       final String domain,
                                       final String type,
                                       final String taskList ) {
-    final NotifyType notify = new NotifyType( );
-    notify.setChannel( channelName( accountFullName, type, domain, taskList ) );
-    try {
-      final ListenableFuture<NotifyResponseType> dispatchFuture =
-          AsyncRequests.dispatch( Topology.lookup( PolledNotifications.class ), notify );
-      dispatchFuture.addListener( new Runnable( ) {
-        @Override
-        public void run() {
-          try {
-            dispatchFuture.get( );
-          } catch ( final InterruptedException e ) {
-            logger.info( "Interrupted while sending notification for " + notify.getChannel(), e );
-          } catch ( final ExecutionException e ) {
-            logger.error( "Error sending notification for " + notify.getChannel( ), e );
-            //TODO:STEVE: should retry notification?
-          }
-        }
-      } );
-    } catch ( final Exception e ) {
-      logger.error( "Error sending notification for " + notify.getChannel( ), e );
-    }
+    NotifyClient.notifyTaskList( accountFullName, domain, type, taskList );
   }
 
   private static void handleTaskPolling( final AccountFullName accountFullName,
@@ -1970,18 +1976,14 @@ public class SimpleWorkflowService {
                                          final String correlationId,
                                          final SimpleWorkflowMessage emptyResponse,
                                          final Callable<? extends SimpleWorkflowMessage> responseCallable ) {
-    final PollForNotificationType poll = new PollForNotificationType( );
-    poll.setChannel( channelName( accountFullName, type, domain, taskList ) );
+    final String list = Joiner.on('/').join( type, domain, taskList );
     try {
-      final ListenableFuture<PollForNotificationResponseType> dispatchFuture =
-          AsyncRequests.dispatch( Topology.lookup( PolledNotifications.class ), poll );
-      dispatchFuture.addListener( Contexts.runnableWithCurrentContext( new Runnable( ) {
+      NotifyClient.pollTaskList( accountFullName, domain, type, taskList, Contexts.consumerWithCurrentContext( new Consumer<Boolean>() {
         @Override
-        public void run() {
+        public void accept( final Boolean notified ) {
           try {
-            final PollForNotificationResponseType response = dispatchFuture.get( );
-            if ( Objects.firstNonNull( response.getNotified( ), false ) ) {
-              final SimpleWorkflowMessage taskResponse = responseCallable.call( );
+            if ( notified ) {
+              final SimpleWorkflowMessage taskResponse = responseCallable.call();
               if ( taskResponse != null ) {
                 taskResponse.setCorrelationId( correlationId );
                 Contexts.response( taskResponse );
@@ -1989,25 +1991,19 @@ public class SimpleWorkflowService {
               }
             }
           } catch ( final InterruptedException e ) {
-            logger.info( "Interrupted while polling for task " + poll.getChannel(), e );
+            logger.info( "Interrupted while polling for task " + list, e );
           } catch ( final Exception e ) {
-            logger.error( "Error polling for task " + poll.getChannel( ), e );
+            logger.error( "Error polling for task " + list, e );
           }
           emptyResponse.setCorrelationId( correlationId );
           Contexts.response( emptyResponse );
         }
       } ) );
     } catch ( Exception e ) {
-      logger.error( "Error polling for task " + poll.getChannel( ), e );
+      logger.error( "Error polling for task " + list, e );
       emptyResponse.setCorrelationId( correlationId );
       Contexts.response( emptyResponse );
     }
   }
 
-  private static String channelName( final AccountFullName accountFullName,
-                                     final String domain,
-                                     final String type,
-                                     final String taskList ) {
-    return accountFullName.getAccountNumber() + ":" + type + ":" + domain + ":" + taskList;
-  }
 }

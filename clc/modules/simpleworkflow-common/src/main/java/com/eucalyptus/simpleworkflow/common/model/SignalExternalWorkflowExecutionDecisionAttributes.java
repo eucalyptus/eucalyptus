@@ -36,7 +36,10 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -79,6 +82,8 @@ public class SignalExternalWorkflowExecutionDecisionAttributes implements Serial
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
@@ -87,6 +92,7 @@ public class SignalExternalWorkflowExecutionDecisionAttributes implements Serial
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 64<br/>
      */
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String runId;
 
     /**
@@ -96,6 +102,8 @@ public class SignalExternalWorkflowExecutionDecisionAttributes implements Serial
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.STRING_256 )
     private String signalName;
 
     /**
@@ -105,6 +113,7 @@ public class SignalExternalWorkflowExecutionDecisionAttributes implements Serial
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**
@@ -114,6 +123,7 @@ public class SignalExternalWorkflowExecutionDecisionAttributes implements Serial
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String control;
 
     /**

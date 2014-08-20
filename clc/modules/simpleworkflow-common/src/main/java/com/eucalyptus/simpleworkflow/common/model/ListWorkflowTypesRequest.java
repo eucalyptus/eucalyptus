@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -75,6 +77,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listWorkflowTypes(ListWorkflowTypesRequest)
  */
+@PolicyAction( vendor = "swf", action = "listworkflowtypes" )
 public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -84,6 +87,8 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -92,6 +97,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String name;
 
     /**
@@ -100,6 +106,8 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>REGISTERED, DEPRECATED
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.REGISTRATION_STATUS )
     private String registrationStatus;
 
     /**
@@ -111,6 +119,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String nextPageToken;
 
     /**
@@ -124,6 +133,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      */
+    @FieldRange( max = 1000 )
     private Integer maximumPageSize;
 
     /**

@@ -309,7 +309,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
      **/
     BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
     if ( !BundleState.none.equals( bundleState ) ) {
-      vm.getRuntimeState( ).updateBundleTaskState( bundleState );
+      vm.getRuntimeState( ).updateBundleTaskState( bundleState, 0.0d );
       VmInstances.terminated( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );

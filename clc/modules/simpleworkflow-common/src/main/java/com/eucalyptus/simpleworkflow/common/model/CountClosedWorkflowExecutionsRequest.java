@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -88,6 +90,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#countClosedWorkflowExecutions(CountClosedWorkflowExecutionsRequest)
  */
+@PolicyAction( vendor = "swf", action = "countclosedworkflowexecutions" )
 public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable, ClosedWorkflowExecutionFilterParameters {
 
     /**
@@ -96,6 +99,8 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**

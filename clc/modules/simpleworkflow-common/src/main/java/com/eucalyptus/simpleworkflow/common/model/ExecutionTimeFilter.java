@@ -37,6 +37,7 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -53,6 +54,7 @@ public class ExecutionTimeFilter implements Serializable {
     /**
      * Specifies the oldest start or close date and time to return.
      */
+    @Nonnull
     private java.util.Date oldestDate;
 
     /**

@@ -47,7 +47,7 @@ import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
-  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTITION, KERNEL, RAMDISK };
+  public enum IMAGE_FORMAT {  RAW, PARTITION, KERNEL, RAMDISK };
   private static Object lock = new Object();
   
   public static ImportVolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {

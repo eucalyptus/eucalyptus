@@ -136,6 +136,7 @@ struct nc_state_t {
     boolean convert_to_disk;
     boolean do_inject_key;
     int concurrent_disk_ops, concurrent_cleanup_ops;
+    int sc_request_timeout_sec;
     int disable_snapshots;
     int staging_cleanup_threshold;
     int booting_cleanup_threshold;
@@ -231,7 +232,7 @@ struct handlers {
     int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
+                             char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
     int (*doBundleRestartInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doCancelBundleTask) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doDescribeBundleTasks) (struct nc_state_t * nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -253,6 +254,7 @@ struct bundling_params_t {
     char *userPublicKey;
     char *S3Policy;
     char *S3PolicySig;
+    char *architecture;
     char *workPath;                    //!< work directory path
     char *diskPath;                    //!< disk file path
     char *kernelId;
@@ -308,7 +310,7 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
 int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);

@@ -541,6 +541,16 @@ public class Entities {
     getTransaction( obj ).getTxState( ).getSession( ).evict( obj );
   }
 
+  public static void evictCache( final Object obj ) {
+    final org.hibernate.Cache cache =
+        getTransaction( obj ).getTxState( ).getSession( ).getSessionFactory( ).getCache( );
+    cache.evictQueryRegions( );
+    cache.evictDefaultQueryRegion( );
+    cache.evictCollectionRegions( );
+    cache.evictEntityRegions( );
+    LOG.debug( "Evicted cache for " + obj );
+  }
+
   private static <T> String resolveNaturalId( final T example ) {
     if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
       return ( ( HasNaturalId ) example ).getNaturalId( );

@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -76,6 +78,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#registerDomain(RegisterDomainRequest)
  */
+@PolicyAction( vendor = "swf", action = "registerdomain" )
 public class RegisterDomainRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -89,6 +92,8 @@ public class RegisterDomainRequest extends SimpleWorkflowMessage implements Seri
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String name;
 
     /**
@@ -97,6 +102,7 @@ public class RegisterDomainRequest extends SimpleWorkflowMessage implements Seri
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 1024<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_1024 )
     private String description;
 
     /**
@@ -110,6 +116,8 @@ public class RegisterDomainRequest extends SimpleWorkflowMessage implements Seri
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 8<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String workflowExecutionRetentionPeriodInDays;
 
     /**

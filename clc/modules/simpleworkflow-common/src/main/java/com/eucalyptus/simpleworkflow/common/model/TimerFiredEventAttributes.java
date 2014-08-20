@@ -36,14 +36,12 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
-import java.io.Serializable;
-
 /**
  * <p>
  * Provides details of the <code>TimerFired</code> event.
  * </p>
  */
-public class TimerFiredEventAttributes implements Serializable {
+public class TimerFiredEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The unique Id of the timer that fired.
@@ -145,6 +143,11 @@ public class TimerFiredEventAttributes implements Serializable {
     public TimerFiredEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setTimerFiredEventAttributes( this );
     }
 
     /**

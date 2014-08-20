@@ -243,6 +243,22 @@ extern struct nc_state_t nc_state;
 	}                                                                                  \
 }
 
+#define XGET_DOUBLE(_XPATH, _dest)                                                     \
+{                                                                                      \
+	char __sBuf[32];                                                                   \
+	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+		LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                    \
+	} else {                                                                           \
+        double __v = atof(__sBuf);                                                     \
+        if (errno == 0) {                                                              \
+            (_dest) = __v;                                                             \
+        } else {                                                                       \
+            LOGDEBUG("failed to parse %s as a double in %s\n", (_XPATH), xml_path);    \
+            return (EUCA_ERROR);                                                       \
+        }                                                                              \
+    }                                                                                  \
+}
+
 #define XGET_INT(_XPATH, _dest)                                                        \
 {                                                                                      \
 	char __sBuf[32];                                                                   \
@@ -691,6 +707,8 @@ int gen_instance_xml(const ncInstance * instance)
             _ELEMENT(states, "retries", str);
             _ELEMENT(states, "stateName", instance->stateName);
             _ELEMENT(states, "bundleTaskStateName", instance->bundleTaskStateName);
+            snprintf(str, sizeof(str), "%0.4f", instance->bundleTaskProgress);
+            _ELEMENT(states, "bundleTaskProgress", str);
             _ELEMENT(states, "createImageTaskStateName", instance->createImageTaskStateName);
             snprintf(str, sizeof(str), "%d", instance->stateCode);
             _ELEMENT(states, "stateCode", str);
@@ -814,6 +832,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/states/retries", instance->retries);
     XGET_STR("/instance/states/stateName", instance->stateName);
     XGET_STR("/instance/states/bundleTaskStateName", instance->bundleTaskStateName);
+    XGET_DOUBLE("/instance/states/bundleTaskProgress", instance->bundleTaskProgress);
     XGET_STR("/instance/states/createImageTaskStateName", instance->createImageTaskStateName);
     XGET_INT("/instance/states/stateCode", instance->stateCode);
     XGET_ENUM("/instance/states/state", instance->state, instance_state_from_string);
@@ -1485,6 +1504,7 @@ static void create_dummy_instance(const char *file)
     _ELEMENT(states, "retries", "3");
     _ELEMENT(states, "stateName", "Extant");
     _ELEMENT(states, "bundleTaskStateName", "None");
+    _ELEMENT(states, "bundleTaskProgress", "0.0");
     _ELEMENT(states, "createImageTaskStateName", "None");
     _ELEMENT(states, "stateCode", "4");
     _ELEMENT(states, "state", "Extant");

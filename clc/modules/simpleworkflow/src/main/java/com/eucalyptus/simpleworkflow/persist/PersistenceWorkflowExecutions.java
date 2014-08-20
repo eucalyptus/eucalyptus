@@ -19,12 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.persist;
 
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionDurationMillis;
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionRetentionDurationMillis;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;
@@ -42,22 +45,34 @@ public class PersistenceWorkflowExecutions extends SwfPersistenceSupport<Workflo
     super( "workflow-execution" );
   }
 
-  public <T> List<T> listTimedOut( final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
+  public <T> List<T> listTimedOut( final long time,
+                                   final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
     return listByExample(
-        WorkflowExecution.exampleForOpenWorkflow( ),
+        WorkflowExecution.exampleForOpenWorkflow(),
         Predicates.alwaysTrue( ),
-        Restrictions.lt( "timeoutTimestamp", new Date( ) ),
+        Restrictions.disjunction( )
+            .add( Restrictions.lt( "timeoutTimestamp", new Date( time ) ) )
+            .add( Restrictions.lt( "creationTimestamp", new Date( time - getWorkflowExecutionDurationMillis() ) ) ),
         Collections.<String,String>emptyMap( ),
         transform );
   }
 
-  public <T> List<T> listRetentionExpired( final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
+  public <T> List<T> listRetentionExpired( final long time,
+                                           final Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException {
     return listByExample(
-        WorkflowExecution.exampleForClosedWorkflow( ),
-        Predicates.alwaysTrue( ),
-        Restrictions.lt( "retentionTimestamp", new Date( ) ),
-        Collections.<String,String>emptyMap( ),
+        WorkflowExecution.exampleForClosedWorkflow(),
+        Predicates.alwaysTrue(),
+        Restrictions.disjunction()
+            .add( Restrictions.lt( "retentionTimestamp", new Date( time ) ) )
+            .add( Restrictions.lt( "closeTimestamp", new Date( time - getWorkflowExecutionRetentionDurationMillis() ) ) ),
+        Collections.<String, String>emptyMap(),
         transform );
+  }
+
+  @Override
+  public long countOpenByDomain( final OwnerFullName ownerFullName,
+                                 final String domain ) throws SwfMetadataException {
+    return countByExample( WorkflowExecution.exampleForOpenWorkflow( ownerFullName, domain, null ) );
   }
 
   @Override

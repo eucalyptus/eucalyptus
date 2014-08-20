@@ -1790,6 +1790,7 @@ shutoff:                              // escape point for error conditions
 free:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
+    unset_corrid(get_corrid());    
     return NULL;
 }
 
@@ -1808,8 +1809,7 @@ void *terminating_thread(void *arg)
 
     int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        EUCA_FREE(arg);
-        return NULL;
+        goto free; 
     }
 
     {
@@ -1817,8 +1817,7 @@ void *terminating_thread(void *arg)
         ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
-            EUCA_FREE(arg);
-            return NULL;
+            goto free;
         }
         // change the state and let the monitoring_thread clean up state
         if (instance->state != TEARDOWN && instance->state != CANCELED) {
@@ -1832,8 +1831,9 @@ void *terminating_thread(void *arg)
         copy_instances();
         sem_v(inst_sem);
     }
-
+free:
     EUCA_FREE(arg);
+    unset_corrid(get_corrid());    
     return NULL;
 }
 
@@ -2199,6 +2199,7 @@ static int init(void)
     GET_VAR_INT(nc_state.config_max_cores, CONFIG_MAX_CORES, 0);
     GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
+    GET_VAR_INT(nc_state.sc_request_timeout_sec, CONFIG_SC_REQUEST_TIMEOUT, 45);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
     GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
@@ -2274,7 +2275,7 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if (init_ebs_utils() != 0) {
+    if (init_ebs_utils(nc_state.sc_request_timeout_sec) != 0) {
         LOGFATAL("Failed to initialize ebs utils\n");
         return (EUCA_FATAL_ERROR);
     }
@@ -3272,10 +3273,11 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture image/instance architecture
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBundleInstance() handler call.
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
 {
     int ret = EUCA_OK;
 
@@ -3284,13 +3286,13 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     DISABLED_CHECK;
 
     LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
-    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
-             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s, architecture=%s\n",
+             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     if (nc_state.H->doBundleInstance)
-        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
     else
-        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     return ret;
 }

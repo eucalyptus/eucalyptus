@@ -46,4 +46,7 @@ public interface SimpleWorkflowMetadata extends RestrictedType {
   @PolicyResourceType( "workflow-execution" ) // Not an AWS/SWF type
   interface WorkflowExecutionMetadata extends SimpleWorkflowMetadata {}
 
+  @PolicyResourceType( "timer" ) // Not an AWS/SWF type
+  interface TimerMetadata extends SimpleWorkflowMetadata {}
+
 }

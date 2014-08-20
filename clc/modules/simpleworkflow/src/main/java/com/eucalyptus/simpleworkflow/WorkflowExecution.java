@@ -117,16 +117,16 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowType workflowType;
 
-  @Column( name = "workflow_id", nullable = false, updatable = false )
+  @Column( name = "workflow_id", length = 256, nullable = false, updatable = false )
   private String workflowId;
 
   @Column( name = "child_policy", nullable = false, updatable = false )
   private String childPolicy;
 
-  @Column( name = "domain", nullable = false, updatable = false )
+  @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domainName;
 
-  @Column( name = "task_list", nullable = false, updatable = false )
+  @Column( name = "task_list", length = 256, nullable = false, updatable = false )
   private String taskList;
 
   @Column( name = "exec_start_to_close_timeout", nullable = false, updatable = false )
@@ -160,6 +160,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   @ElementCollection
   @CollectionTable( name = "swf_workflow_execution_tags" )
+  @Column( name = "tag", length = 256 )
   @JoinColumn( name = "workflow_execution_id" )
   @OrderColumn( name = "tag_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -237,9 +238,12 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return timeout == Long.MAX_VALUE ? null : new Date( timeout );
   }
 
-  public boolean isWorkflowTimedOut( ){
+  public boolean isWorkflowTimedOut( final long timestamp,
+                                     final long maximumDurationMillis ){
     final Long timeout = toTimeout( getCreationTimestamp( ), getExecutionStartToCloseTimeout( ) );
-    return timeout != null && timeout < System.currentTimeMillis( );
+    return
+        ( timeout != null && timeout < timestamp ) ||
+        ( maximumDurationMillis > 0 && ( getCreationTimestamp( ).getTime( ) + maximumDurationMillis ) < timestamp );
   }
 
   private static Long toTimeout( final Date from, final Integer period ) {
@@ -327,11 +331,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     return accountNumber + ":" + domain + ":" + runId;
   }
 
-  public Long addHistoryEvent( final WorkflowHistoryEvent event ) {
+  public Long addHistoryEvent( final WorkflowHistoryEvent event ) throws WorkflowHistorySizeLimitException {
     // Order would be filled in on save, but we may need the event
     // identifier before the entity is stored
     event.setEventOrder( (long) workflowHistory.size( ) );
     workflowHistory.add( event );
+    if ( workflowHistory.size( ) > SimpleWorkflowConfiguration.getWorkflowExecutionHistorySize( ) ) {
+      throw new WorkflowHistorySizeLimitException( this );
+    }
     return event.getEventId();
   }
 
@@ -518,5 +525,49 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   protected void updateTimeout( ) {
     updateTimeStamps( );
     setTimeoutTimestamp( calculateNextTimeout( ) );
+  }
+
+  public static final class WorkflowHistorySizeLimitException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    private final String accountNumber;
+    private final String domain;
+    private final String runId;
+    private final String workflowId;
+
+    public WorkflowHistorySizeLimitException( final WorkflowExecution workflowExecution ) {
+      this(
+          workflowExecution.getOwnerAccountNumber( ),
+          workflowExecution.getDomainName( ),
+          workflowExecution.getDisplayName( ),
+          workflowExecution.getWorkflowId( )
+      );
+    }
+
+    public WorkflowHistorySizeLimitException( final String accountNumber,
+                                              final String domain,
+                                              final String runId,
+                                              final String workflowId ) {
+      this.accountNumber = accountNumber;
+      this.domain = domain;
+      this.runId = runId;
+      this.workflowId = workflowId;
+    }
+
+    public String getAccountNumber() {
+      return accountNumber;
+    }
+
+    public String getDomain() {
+      return domain;
+    }
+
+    public String getRunId() {
+      return runId;
+    }
+
+    public String getWorkflowId() {
+      return workflowId;
+    }
   }
 }

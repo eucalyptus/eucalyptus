@@ -938,10 +938,12 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         offset += size;
     }
 
-    pid_t cur_pid = getpid();
-    if (cur_pid == thread_pid && thread_correlation_id != NULL) {
-        snprintf(new_format, 512, "[%.8s] %s", thread_correlation_id, format);
-    } else {
+    /* spark: This logging format is likely a temporary change
+    */ 
+    threadCorrelationId *corr_id = get_corrid();
+    if (corr_id != NULL && corr_id->correlation_id != NULL){
+        snprintf(new_format, 512, "[%.8s] %s", corr_id->correlation_id, format);
+    }else{
         snprintf(new_format, 512, "%s", format);
     }
 
@@ -951,7 +953,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         buf[offset] = '\0';
     }
     // append the log message passed via va_list
-    va_start(ap, new_format);
+    va_start(ap, format);
     {
         rc = vsnprintf(buf + offset, sizeof(buf) - offset - 1, new_format, ap);
     }

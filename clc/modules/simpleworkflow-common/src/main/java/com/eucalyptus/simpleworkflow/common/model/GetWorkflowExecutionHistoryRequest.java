@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -80,6 +82,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#getWorkflowExecutionHistory(GetWorkflowExecutionHistoryRequest)
  */
+@PolicyAction( vendor = "swf", action = "getworkflowexecutionhistory" )
 public class GetWorkflowExecutionHistoryRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -88,11 +91,14 @@ public class GetWorkflowExecutionHistoryRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
      * Specifies the workflow execution for which to return the history.
      */
+    @Nonnull
     private WorkflowExecution execution;
 
     /**
@@ -103,6 +109,7 @@ public class GetWorkflowExecutionHistoryRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String nextPageToken;
 
     /**
@@ -118,6 +125,7 @@ public class GetWorkflowExecutionHistoryRequest extends SimpleWorkflowMessage im
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      */
+    @FieldRange( max = 1000 )
     private Integer maximumPageSize;
 
     /**

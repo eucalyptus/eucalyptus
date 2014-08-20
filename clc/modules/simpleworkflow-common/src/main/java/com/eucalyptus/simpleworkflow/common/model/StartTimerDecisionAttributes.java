@@ -36,7 +36,10 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -81,6 +84,8 @@ public class StartTimerDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String timerId;
 
     /**
@@ -90,6 +95,7 @@ public class StartTimerDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String control;
 
     /**
@@ -100,6 +106,8 @@ public class StartTimerDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 8<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.DURATION_8 )
     private String startToFireTimeout;
 
     /**
