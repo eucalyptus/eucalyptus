@@ -2574,6 +2574,19 @@ static int init(void)
     if (initFail)
         return (EUCA_FATAL_ERROR);
 
+    //
+    // Fix EUCA-9807. Only in SYSTEM mode, we unset and reset the CLC IP for
+    // metadata redirect rule to handle NC reboot case
+    //
+    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
+        if (nc_state.vnetconfig->cloudIp != 0) {
+            if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) != EUCA_OK) {
+                LOGDEBUG("Failed to unset metadata redirect on NC startup. Ignore if this wan't set previously.");
+            }
+            vnetSetMetadataRedirect(nc_state.vnetconfig);
+        }
+    }
+
     // set NC helper path
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
     if (tmp) {
