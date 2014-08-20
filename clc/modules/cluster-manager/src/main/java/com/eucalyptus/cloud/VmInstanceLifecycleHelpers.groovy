@@ -34,7 +34,6 @@ import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.compute.ClientComputeException
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -63,7 +62,6 @@ import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
-import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
@@ -94,7 +92,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo
 import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType
 import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetRequestType
 import edu.ucsb.eucalyptus.msgs.PrivateIpAddressesSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -847,7 +844,7 @@ class VmInstanceLifecycleHelpers {
           ) )
           Address address = getAddress( resourceToken )
           if ( address != null ) {
-            address.assign( networkInterface, instance )
+            address.assign( networkInterface ).start( instance )
             networkInterface.associate( NetworkInterfaceAssociation.create(
                 address.associationId,
                 address.allocationId,
@@ -858,6 +855,8 @@ class VmInstanceLifecycleHelpers {
                     null as String
             ) )
             instance.updatePublicAddress( address.displayName );
+          } else {
+            NetworkInterfaceHelper.start( networkInterface, instance )
           }
           // Add so eni information is available from instance, not for
           // persistence
@@ -867,14 +866,25 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
+    void startVmInstance( final ResourceToken resourceToken, final VmInstance instance ) {
+      for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        NetworkInterfaceHelper.start( networkInterface, instance )
+      }
+    }
+
+    @Override
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
-      if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
-        for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+      for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
           if ( networkInterface?.attachment?.deleteOnTerminate ) {
             NetworkInterfaceHelper.release( networkInterface )
             Entities.delete( networkInterface )
+          } else if ( networkInterface.associated ) {
+            NetworkInterfaceHelper.stop( networkInterface )
           }
           networkInterface.detach( )
+        } else if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) && Entities.isPersistent( instance ) ) {
+          NetworkInterfaceHelper.stop( networkInterface )
         }
       }
     }

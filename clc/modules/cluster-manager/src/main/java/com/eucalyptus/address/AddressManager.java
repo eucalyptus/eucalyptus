@@ -329,7 +329,10 @@ public class AddressManager {
             }
           }
 
-          address.assign( eni, eni.isAttached() ? eni.getAttachment( ).getInstance( ) : null );
+          address.assign( eni );
+          if ( eni.isAttached( ) && VmInstance.VmStateSet.RUN.apply( eni.getAttachment( ).getInstance( ) ) ) {
+            address.start( eni.getAttachment( ).getInstance( ) );
+          }
           final boolean hostnamesEnabled = eni.getVpc( ).getDnsHostnames( );
           eni.associate( NetworkInterfaceAssociation.create(
             address.getAssociationId( ),
@@ -409,6 +412,9 @@ public class AddressManager {
       final NetworkInterface networkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
       try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
         final NetworkInterface eni = Entities.merge( networkInterface );
+        if ( address.isStarted( ) ) {
+          address.stop( );
+        }
         address.unassign( eni );
         eni.disassociate( );
         if ( eni.isAttached( ) ) {
