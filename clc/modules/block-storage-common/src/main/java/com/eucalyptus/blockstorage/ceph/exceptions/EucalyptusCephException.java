@@ -60,82 +60,27 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.ceph.exceptions;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
- * Abstract class for encapsulating a storage device and mechanisms for IO operations
+ * Created by wesw on 7/14/14.
  */
-public abstract class StorageResource {
+public class EucalyptusCephException extends RuntimeException {
 
-	public static enum Type {
-		FILE, BLOCK, CEPH;
+	public EucalyptusCephException(String message, Throwable cause) {
+		super(message, cause);
 	}
 
-	private String id;
-	private String path;
-	private Type type;
-
-	public StorageResource(String id, String path, Type type) {
-		this.id = id;
-		this.path = path;
-		this.type = type;
+	public EucalyptusCephException() {
+		super();
 	}
 
-	public String getId() {
-		return id;
+	public EucalyptusCephException(String message) {
+		super(message);
 	}
 
-	public void setId(String id) {
-		this.id = id;
+	public EucalyptusCephException(Throwable cause) {
+		super(cause);
 	}
-
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	public void setType(Type type) {
-		this.type = type;
-	}
-
-	/**
-	 * Compute and return the size of the storage device in bytes
-	 * 
-	 * @return Size in bytes
-	 * @throws Exception
-	 */
-	public abstract Long getSize() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.InputStream} object to the storage device
-	 * 
-	 * @return InputStream
-	 * @throws Exception
-	 */
-	public abstract InputStream getInputStream() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.OutputStream} object to the storage device
-	 * 
-	 * @return OuputStream
-	 * @throws Exception
-	 */
-	public abstract OutputStream getOutputStream() throws Exception;
-
-	/**
-	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
-	 * 
-	 * @return true or false
-	 */
-	public abstract Boolean isDownloadSynchronous();
 }

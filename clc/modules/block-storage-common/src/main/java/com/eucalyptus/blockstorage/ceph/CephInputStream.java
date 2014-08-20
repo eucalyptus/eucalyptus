@@ -60,82 +60,107 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.ceph;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
-/**
- * Abstract class for encapsulating a storage device and mechanisms for IO operations
- */
-public abstract class StorageResource {
+import org.apache.log4j.Logger;
 
-	public static enum Type {
-		FILE, BLOCK, CEPH;
+import com.ceph.rbd.RbdImage;
+import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
+
+public class CephInputStream extends InputStream {
+
+	private static final Logger LOG = Logger.getLogger(CephInputStream.class);
+
+	private CephConnectionManager conn;
+	private RbdImage rbdImage;
+	private long position;
+	private boolean isOpen;
+
+	public CephInputStream(String poolImage, CephInfo info) throws IOException {
+		try {
+			String[] imageDetails = poolImage.split(CephInfo.POOL_IMAGE_DELIMITER);
+			if (imageDetails == null || imageDetails.length != 2) {
+				LOG.warn("Invalid format, expected pool/image but got " + poolImage);
+				throw new EucalyptusCephException("Invalid format, expected pool/image but got " + poolImage);
+			}
+			conn = CephConnectionManager.getConnection(info, imageDetails[0]);
+			rbdImage = conn.getRbd().open(imageDetails[1]);
+			isOpen = true;
+			position = 0;
+		} catch (Exception e) {
+			throw new IOException("Failed to open CephInputStream for " + poolImage, e);
+		}
 	}
 
-	private String id;
-	private String path;
-	private Type type;
-
-	public StorageResource(String id, String path, Type type) {
-		this.id = id;
-		this.path = path;
-		this.type = type;
+	@Override
+	public int read() throws IOException {
+		if (isOpen) {
+			byte[] buffer = new byte[1];
+			int bytesRead = 0;
+			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+				position += bytesRead;
+				return buffer[0];
+			} else { // nothing was read
+				return -1;
+			}
+		} else {
+			throw new IOException("Stream is not open/initialized");
+		}
 	}
 
-	public String getId() {
-		return id;
+	@Override
+	public int read(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
+		if (null == b) {
+			throw new NullPointerException("Input byte buffer cannot be null");
+		}
+		if (off < 0 || len < 0 || len > (b.length - off)) {
+			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
+		}
+
+		if (isOpen) {
+			byte[] buffer = new byte[len];
+			int bytesRead = 0;
+			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+				position += bytesRead;
+				for (int i = 0; i < bytesRead; i++) {
+					b[off + i] = buffer[i];
+				}
+				return bytesRead;
+			} else { // nothing was read
+				return -1;
+			}
+		} else {
+			throw new IOException("Stream is not open/initialized");
+		}
 	}
 
-	public void setId(String id) {
-		this.id = id;
+	@Override
+	public int read(byte[] b) throws NullPointerException, IOException {
+		if (null == b) {
+			throw new NullPointerException("Input byte buffer cannot be null");
+		}
+		return read(b, 0, b.length);
 	}
 
-	public String getPath() {
-		return path;
+	@Override
+	public void close() {
+		if (isOpen) {
+			try {
+				conn.getRbd().close(rbdImage);
+			} catch (Exception e) {
+
+			} finally {
+				isOpen = false;
+				conn.disconnect();
+				conn = null;
+				rbdImage = null;
+			}
+		} else {
+			// nothing to do here, stream is not open/already closed
+		}
 	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	public void setType(Type type) {
-		this.type = type;
-	}
-
-	/**
-	 * Compute and return the size of the storage device in bytes
-	 * 
-	 * @return Size in bytes
-	 * @throws Exception
-	 */
-	public abstract Long getSize() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.InputStream} object to the storage device
-	 * 
-	 * @return InputStream
-	 * @throws Exception
-	 */
-	public abstract InputStream getInputStream() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.OutputStream} object to the storage device
-	 * 
-	 * @return OuputStream
-	 * @throws Exception
-	 */
-	public abstract OutputStream getOutputStream() throws Exception;
-
-	/**
-	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
-	 * 
-	 * @return true or false
-	 */
-	public abstract Boolean isDownloadSynchronous();
 }

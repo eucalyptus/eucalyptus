@@ -60,82 +60,60 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.ceph;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 
-/**
- * Abstract class for encapsulating a storage device and mechanisms for IO operations
- */
-public abstract class StorageResource {
+import com.ceph.rbd.RbdImage;
+import com.eucalyptus.blockstorage.StorageResource;
+import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
-	public static enum Type {
-		FILE, BLOCK, CEPH;
+public class CephImageResource extends StorageResource {
+
+	private CephInfo info = null;
+
+	public CephImageResource(String id, String path) {
+		super(id, path, StorageResource.Type.CEPH);
+		info = CephInfo.getStorageInfo();
 	}
 
-	private String id;
-	private String path;
-	private Type type;
-
-	public StorageResource(String id, String path, Type type) {
-		this.id = id;
-		this.path = path;
-		this.type = type;
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.FALSE;
 	}
 
-	public String getId() {
-		return id;
+	@Override
+	public Long getSize() throws UnknownSizeException {
+		CephConnectionManager conn = null;
+		try {
+			conn = CephConnectionManager.getConnection(info);
+			RbdImage rbdImage = null;
+			try {
+				rbdImage = conn.getRbd().open(this.getId());
+				return rbdImage.stat().size;
+			} finally {
+				if (rbdImage != null) {
+					conn.getRbd().close(rbdImage);
+				}
+			}
+		} catch (Exception e) {
+			throw new UnknownSizeException("Failed to determine size of ceph image " + this.getId(), e);
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
 	}
 
-	public void setId(String id) {
-		this.id = id;
+	@Override
+	public InputStream getInputStream() throws Exception {
+		return new CephInputStream(this.getPath(), info);
 	}
 
-	public String getPath() {
-		return path;
+	@Override
+	public OutputStream getOutputStream() throws Exception {
+		return new CephOutputStream(this.getPath(), info);
 	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	public void setType(Type type) {
-		this.type = type;
-	}
-
-	/**
-	 * Compute and return the size of the storage device in bytes
-	 * 
-	 * @return Size in bytes
-	 * @throws Exception
-	 */
-	public abstract Long getSize() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.InputStream} object to the storage device
-	 * 
-	 * @return InputStream
-	 * @throws Exception
-	 */
-	public abstract InputStream getInputStream() throws Exception;
-
-	/**
-	 * Returns an {@link java.io.OutputStream} object to the storage device
-	 * 
-	 * @return OuputStream
-	 * @throws Exception
-	 */
-	public abstract OutputStream getOutputStream() throws Exception;
-
-	/**
-	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
-	 * 
-	 * @return true or false
-	 */
-	public abstract Boolean isDownloadSynchronous();
 }

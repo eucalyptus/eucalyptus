@@ -60,82 +60,81 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.ceph;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.util.List;
+
+import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
 
 /**
- * Abstract class for encapsulating a storage device and mechanisms for IO operations
+ * Created by wesw on 7/14/14.
  */
-public abstract class StorageResource {
-
-	public static enum Type {
-		FILE, BLOCK, CEPH;
-	}
-
-	private String id;
-	private String path;
-	private Type type;
-
-	public StorageResource(String id, String path, Type type) {
-		this.id = id;
-		this.path = path;
-		this.type = type;
-	}
-
-	public String getId() {
-		return id;
-	}
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	public void setType(Type type) {
-		this.type = type;
-	}
+public interface EucaRbd {
 
 	/**
-	 * Compute and return the size of the storage device in bytes
+	 * Use this to change the ceph configuration after the class is instantiated
 	 * 
-	 * @return Size in bytes
-	 * @throws Exception
+	 * @param cephInfo
 	 */
-	public abstract Long getSize() throws Exception;
+	public void setCephConfig(CephInfo cephInfo);
 
 	/**
-	 * Returns an {@link java.io.InputStream} object to the storage device
+	 * Create a new RBD image
 	 * 
-	 * @return InputStream
-	 * @throws Exception
+	 * @param imageName Name of the image to be created
+	 * @param imageSize Size of the image in bytes
+	 * @return Returns a representation of the newly created image
 	 */
-	public abstract InputStream getInputStream() throws Exception;
+	public String createImage(String imageName, long imageSize);
 
 	/**
-	 * Returns an {@link java.io.OutputStream} object to the storage device
+	 * Delete RBD image
 	 * 
-	 * @return OuputStream
-	 * @throws Exception
+	 * @param imageName Name of the image to be deleted
 	 */
-	public abstract OutputStream getOutputStream() throws Exception;
+	public void deleteImage(String imageName);
 
 	/**
-	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
+	 * Check if the image exists
 	 * 
-	 * @return true or false
+	 * @param imageName Name of the image to be checked on
+	 * @return Returns true if the image exists and false otherwise
 	 */
-	public abstract Boolean isDownloadSynchronous();
+	public boolean imageExists(String imageName);
+
+	/**
+	 * List all RBD images in the pool
+	 * 
+	 * @return Returns a list of image names
+	 */
+	public List<String> listImages();
+
+	/**
+	 * Create an RBD snapshot
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot
+	 * @return Returns a representation of the newly created snapshot
+	 */
+	public String createSnapshot(String parentName, String snapName);
+
+	/**
+	 * Delete the RBD snapshot
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot
+	 */
+	public void deleteSnapshot(String parentName, String snapName);
+
+	/**
+	 * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for cloning.
+	 * Resize the cloned image if size is passed in
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot on parent image to be used for cloning
+	 * @param cloneName Name of the image to be cloned
+	 * @param size Size of the cloned image if it needs to resized
+	 * @return Returns a representation of the cloned image
+	 */
+	public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
 }

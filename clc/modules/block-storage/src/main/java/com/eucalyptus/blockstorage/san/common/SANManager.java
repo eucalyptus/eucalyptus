@@ -646,6 +646,9 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	public void initialize() {
+		LOG.info("Initializing SANInfo entity");
+		SANInfo.getStorageInfo();
+		connectionManager.initialize();
 	}
 
 	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
@@ -1072,7 +1075,7 @@ public class SANManager implements LogicalStorageManager {
 	// If the desire is to make this idempotent then a calculation is ideal since the original may have been lost (i.e. restart)
 	public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException {
 		if (connectionManager != null) {
-			connectionManager.deleteSnapshotPoint(snapshotPointId);
+			connectionManager.deleteSnapshotPoint(parentVolumeId, snapshotPointId);
 		} else {
 			throw new EucalyptusCloudException("Cannot delete snapshot point, no SAN provider found");
 		}
