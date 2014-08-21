@@ -877,6 +877,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         VmInstance vmInst = builder
                                                      .owner( allocInfo.getOwnerFullName( ) )
                                                      .withIds( token.getInstanceId(),
+                                                               token.getInstanceUuid(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
                                                                allocInfo.getUniqueClientToken( token.getLaunchIndex( ) ) )
@@ -894,7 +895,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
-        vmInst.setNaturalId( token.getInstanceUuid( ) );
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -924,6 +924,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static class Builder {
     private VmId                vmId;
+    private String              uuid;
     private VmBootRecord        vmBootRecord;
     private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
@@ -961,10 +962,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public Builder withIds( @Nonnull  final String instanceId,
+                            @Nonnull  final String instanceUuid,
                             @Nonnull  final String reservationId,
                             @Nullable final String clientToken,
                             @Nullable final String uniqueClientToken ) {
       this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken );
+      this.uuid = instanceUuid;
       return this;
     }
     
@@ -995,6 +998,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
       VmInstance instance = new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
+      instance.setNaturalId( uuid );
       for ( final Callback<VmInstance> callback : callbacks ) {
         callback.fire( instance );
       }

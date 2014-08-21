@@ -270,11 +270,12 @@ class VmInstanceLifecycleHelpers {
 
     @Nullable
     static String getPrimaryPrivateIp(
-        final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface
+        final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface,
+        final String privateIp
     ) {
       instanceNetworkInterface?.privateIpAddressesSet?.item?.find{ PrivateIpAddressesSetItemRequestType item ->
         item.primary?:false
-      }?.privateIpAddress ?: instanceNetworkInterface?.privateIpAddress
+      }?.privateIpAddress ?: instanceNetworkInterface?.privateIpAddress ?: privateIp
     }
 
     @Nullable
@@ -680,6 +681,10 @@ class VmInstanceLifecycleHelpers {
                 )
             ] as ArrayList<InstanceNetworkInterfaceSetItemRequestType>
         )
+        allocation.subnet = instance.bootRecord.subnet
+
+        final Partition partition = Partitions.lookupByName( allocation.subnet.availabilityZone );
+        allocation.setPartition( partition );
       }
     }
 
@@ -689,7 +694,7 @@ class VmInstanceLifecycleHelpers {
 
       final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface =
           getPrimaryNetworkInterface( runInstances )
-      final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface )
+      final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
       final String subnetId = ResourceIdentifiers.tryNormalize( ).apply( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
       if ( !Strings.isNullOrEmpty( subnetId ) || instanceNetworkInterface != null ) {
@@ -732,7 +737,7 @@ class VmInstanceLifecycleHelpers {
 
         allocation.subnet = subnet
 
-        final Partition partition = Partitions.lookupByName( subnet.getAvailabilityZone( ) );
+        final Partition partition = Partitions.lookupByName( subnet.availabilityZone );
         allocation.setPartition( partition );
       }
     }
@@ -759,9 +764,8 @@ class VmInstanceLifecycleHelpers {
             } else {
               final String identifier = ResourceIdentifiers.generateString( 'eni' )
               final String mac = NetworkInterfaceHelper.mac( identifier )
-              final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface )
+              final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
               final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
-              // TODO:STEVE: track address usage and update subnet free address count
               resources = [
                   new VpcNetworkInterfaceResource(
                       ownerId: token.instanceId,
