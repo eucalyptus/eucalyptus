@@ -216,7 +216,7 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t *params, bundling_progress result);
 static void *bundling_thread(void *arg);
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                            char *userPublicKey, char *S3Policy, char *S3PolicySig);
+                            char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -398,6 +398,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_THREAD_ERROR;
         goto error;
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , instance->tcb); 
     pthread_attr_destroy(attr);
     EUCA_FREE(attr);
 
@@ -759,6 +760,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
         LOGERROR("[%s] failed to start VM termination thread\n", instanceId);
     } else {
+        set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tid);
         // previous and shutdown state are ignored by CC anyway
         *previousState = 0;
         *shutdownState = 0;
@@ -1690,6 +1692,7 @@ static void *createImage_thread(void *arg)
             LOGINFO("[%s] failed while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
         }
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1708,7 +1711,7 @@ static void *createImage_thread(void *arg)
             LOGINFO("[%s] failed while createImage for instance (rc=%d)\n", instance->instanceId, rc);
         }
     }
-
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1776,7 +1779,8 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
         LOGERROR("[%s][%s] failed to start VM createImage thread\n", instanceId, volumeId);
         return cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
     }
-
+    
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
     return EUCA_OK;
 }
 
@@ -1863,12 +1867,14 @@ static void *bundling_thread(void *arg)
             LOGINFO("[%s] failed while bundling instance\n", pInstance->instanceId);
             cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         }
+        unset_corrid(get_corrid());
         return NULL;
     }
     // check if bundling was cancelled while we waited
     if (pInstance->bundleCanceled) {
         LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", pInstance->instanceId);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1876,6 +1882,7 @@ static void *bundling_thread(void *arg)
     if (realpath(pInstance->params.root->backingPath, backing_dev) == NULL || diskutil_ch(backing_dev, EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) { //! @TODO remove EUCALYPTUS_ADMIN
         LOGERROR("[%s] failed to resolve backing path (%s) or to chown it\n", pInstance->instanceId, backing_dev);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
+        unset_corrid(get_corrid());
         return NULL;
     }
 
@@ -1898,7 +1905,7 @@ static void *bundling_thread(void *arg)
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
                          "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
-                         "--arch", "x86_64", /* @TODO: obtain arch from instance*/ \
+                         "--arch",  pParams->architecture, \
                          "--account", pParams->accountId, \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
                          "--object-store-url", pParams->objectStorageURL,\
@@ -1923,6 +1930,7 @@ static void *bundling_thread(void *arg)
         LOGERROR("[%s] failed while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
     }
 
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1972,6 +1980,7 @@ static int verify_bucket_name(const char *name)
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture image architecture
 //!
 //! @return EUCA_OK on success or proper error code. known error code returned include: EUCA_ERROR and
 //!         EUCA_NOT_FOUND_ERROR. Error code from cleanup_bundling_task() and find_and_terminate_instance()
@@ -1981,7 +1990,7 @@ static int verify_bucket_name(const char *name)
 //! @see find_and_terminate_instance()
 //!
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey,
-                            char *S3Policy, char *S3PolicySig)
+                            char *S3Policy, char *S3PolicySig, char *architecture)
 {
     pthread_t tid = { 0 };
     pthread_attr_t tattr = { {0} };
@@ -2019,6 +2028,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->ncBundleUploadCmd = strdup(nc->ncBundleUploadCmd);
     pParams->ncCheckBucketCmd = strdup(nc->ncCheckBucketCmd);
     pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
+    pParams->architecture = strdup(architecture);
 
     pParams->workPath = strdup(pInstance->instancePath);
     if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId[0] != '\0') && (pInstance->ramdiskId[0] != '\0')) {
@@ -2035,6 +2045,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         pInstance->bundlingTime = time(NULL);
         change_state(pInstance, BUNDLING_SHUTDOWN);
         change_bundling_state(pInstance, BUNDLING_IN_PROGRESS);
+        pInstance->bundleTaskProgress = 0.0;
     }
     sem_v(inst_sem);
 
@@ -2045,6 +2056,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
 
     return EUCA_OK;
 }
@@ -2088,6 +2100,7 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
         pInstance->bundleCanceled = 0;
         pInstance->bundleBucketExists = 0;
         pInstance->bundleTaskState = NOT_BUNDLING;
+        pInstance->bundleTaskProgress = 0.0;
 
         // Set our state strings
         euca_strncpy(pInstance->stateName, instance_state_names[pInstance->stateCode], CHAR_BUFFER_SIZE);
@@ -2350,6 +2363,7 @@ static void *startstop_thread(void *arg)
         find_and_start_instance(pParams->instanceId);
     }
 
+    unset_corrid(get_corrid());
     EUCA_FREE(pParams);
     return (NULL);
 }
@@ -2393,6 +2407,7 @@ static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {
@@ -2442,6 +2457,7 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
+    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {

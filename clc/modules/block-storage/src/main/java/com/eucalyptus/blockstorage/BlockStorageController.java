@@ -72,7 +72,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.eucalyptus.entities.EntityWrapper;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -170,6 +172,18 @@ public class BlockStorageController {
     //static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
     public static Random randomGenerator = new Random();
+
+    //Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
+    static boolean setUseTestingDelegateManager(boolean enableDelegate) {
+        if(enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to use delegating storage manager for testing");
+            blockManager = new StorageManagerTestingProxy(blockManager);
+        } else if(!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
+            LOG.info("Switching to NOT use delegating storage manager anymore");
+            blockManager = ((StorageManagerTestingProxy)blockManager).getDelegateStorageManager();
+        }
+        return enableDelegate;
+    }
 
     public static void configure() throws EucalyptusCloudException {
     	BlockStorageGlobalConfiguration.getInstance();
@@ -281,7 +295,6 @@ public class BlockStorageController {
     }
     
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
-      LOG.debug(request.toSimpleString());  
       UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
             throw new AccessDeniedException("Only admin can change walrus properties.");
@@ -300,12 +313,10 @@ public class BlockStorageController {
             }
             blockManager.setStorageProps(request.getStorageParams());
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
         StorageProperties.updateName();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
@@ -315,12 +326,10 @@ public class BlockStorageController {
             ArrayList<ComponentProperty> storageParams = blockManager.getStorageProps();
             reply.setStorageParams(storageParams);
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetVolumeTokenResponseType GetVolumeToken(GetVolumeTokenType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         GetVolumeTokenResponseType reply = (GetVolumeTokenResponseType) request.getReply();
         String volumeId = request.getVolumeId();
         LOG.info("Processing GetVolumeToken request for volume " + volumeId);
@@ -359,7 +368,6 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         UnexportVolumeResponseType reply = request.getReply();
         final String token = request.getToken();
         final String volumeId = request.getVolumeId();
@@ -426,7 +434,6 @@ public class BlockStorageController {
             LOG.error("Failed UnexportVolume due to: " + e.getMessage(), e);
             throw new EucalyptusCloudException(e);
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -442,7 +449,6 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         final ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();
         final String volumeId = request.getVolumeId();
         final String token = request.getToken();
@@ -544,12 +550,10 @@ public class BlockStorageController {
             LOG.error("Failed ExportVolume transaction due to: " + e.getMessage(), e);
             throw new EucalyptusCloudException("Failed to add export",e);
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
         if(!StorageProperties.enableStorage) {
             LOG.error("BlockStorage has been disabled. Please check your setup");
@@ -579,12 +583,10 @@ public class BlockStorageController {
             }
             tran.commit();
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
     public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
         if(!StorageProperties.enableStorage) {
             LOG.error("BlockStorage has been disabled. Please check your setup");
@@ -618,8 +620,9 @@ public class BlockStorageController {
             tran.commit();
         } catch(NoSuchElementException e) {
             // Set the response element to false if the volume entity does not exist in the SC database
-            LOG.error("Unable to find volume in SC database: " + volumeId);
-            throw new EucalyptusCloudException("Volume record not found",e);
+            // if record is not found, delete is idempotent
+            LOG.warn("Got delete request, but unable to find volume in SC database: " + volumeId);
+            reply.set_return(Boolean.TRUE);
         } catch(EucalyptusCloudException e) {
             LOG.error("Error marking volume " + volumeId + " for deletion: " + e.getMessage());
             throw e;
@@ -627,7 +630,6 @@ public class BlockStorageController {
             LOG.error("Exception looking up volume: " + volumeId, e);
             throw new EucalyptusCloudException(e);
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -803,7 +805,6 @@ public class BlockStorageController {
 
     //returns snapshots in progress or at the SC
     public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         DescribeStorageSnapshotsResponseType reply = ( DescribeStorageSnapshotsResponseType ) request.getReply();
         checker.transferPendingSnapshots();
         List<String> snapshotSet = request.getSnapshotSet();
@@ -833,7 +834,6 @@ public class BlockStorageController {
             }
             tran.commit();
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -845,7 +845,6 @@ public class BlockStorageController {
      * @throws EucalyptusCloudException
      */
     public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
         StorageProperties.updateWalrusUrl();
@@ -881,7 +880,6 @@ public class BlockStorageController {
                 tran.rollback();
             }
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -919,7 +917,6 @@ public class BlockStorageController {
 	}*/
 
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
         if(!StorageProperties.enableStorage) {
@@ -996,7 +993,6 @@ public class BlockStorageController {
         VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, parentVolumeId, sizeAsInt);
         volumeService.add(volumeCreator);
 
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -1018,7 +1014,6 @@ public class BlockStorageController {
     }
 
     public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
 
         List<String> volumeSet = request.getVolumeSet();
@@ -1043,19 +1038,19 @@ public class BlockStorageController {
             ArrayList<StorageVolume> volumes = reply.getVolumeSet();
             for (VolumeInfo volumeInfo : volumeInfos) {
                 volumes.add(convertVolumeInfo(volumeInfo));
-                if (volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
+                if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString()) &&
+                    (System.currentTimeMillis() - volumeInfo.getLastUpdateTimestamp().getTime() > StorageProperties.FAILED_STATE_CLEANUP_THRESHOLD_MS)) {
                     LOG.warn("Failed volume, cleaning it: " + volumeInfo.getVolumeId());
                     checker.cleanFailedVolume(volumeInfo.getVolumeId());
                 }
             }
             tran.commit();
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
+
     }
 
     public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
         String provider = request.getOriginalProvider();
         provider = "com.eucalyptus.storage." + provider;
@@ -1077,7 +1072,6 @@ public class BlockStorageController {
                 throw new EucalyptusCloudException(e);
             }
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -1116,7 +1110,6 @@ public class BlockStorageController {
     }
 
     public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
-        LOG.debug(request.toSimpleString());
         DetachStorageVolumeResponseType reply = request.getReply();
         String volumeId = request.getVolumeId();
         LOG.info("Processing DetachVolume request for volume " + volumeId);
@@ -1129,7 +1122,6 @@ public class BlockStorageController {
             LOG.error("Failed to fully detach volume " + volumeId);
             reply.set_return(false);
         }
-        LOG.debug(reply.toSimpleString());
         return reply;
     }
 
@@ -1784,6 +1776,7 @@ public class BlockStorageController {
     //TODO: This is a mess. Transactional access should be handled at a lower level
     //instead of multiple calls to EntityWrapper. It is error prone and hard to enforce correctly closed transactions
     public static class VolumeDeleterTask extends CheckerTask {
+        private final AtomicBoolean running = new AtomicBoolean( false );
 
         public VolumeDeleterTask() {
             this.name = "VolumeDeleter";
@@ -1791,71 +1784,79 @@ public class BlockStorageController {
 
         @Override
         public void run() {
-            try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
-                //Check if deleted volumes need to expire
-                VolumeInfo searchVolume = new VolumeInfo();
-                searchVolume.setStatus(StorageProperties.Status.deleted.toString());
-                List<VolumeInfo> deletedVolumes = Entities.query(searchVolume);
-                for (VolumeInfo deletedVolume : deletedVolumes) {
-                    if(deletedVolume.cleanupOnDeletion()) {
-                        LOG.info("Volume deletion time expired for: " + deletedVolume.getVolumeId() + " ...cleaning up.");
-                        Entities.delete(deletedVolume);
+            if ( running.compareAndSet( false, true ) ) try {
+                EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+                try {
+                    //Check if deleted volumes need to expire
+                    VolumeInfo searchVolume = new VolumeInfo();
+                    searchVolume.setStatus(StorageProperties.Status.deleted.toString());
+                    List<VolumeInfo> deletedVolumes = db.query(searchVolume);
+                    for (VolumeInfo deletedVolume : deletedVolumes) {
+                        if(deletedVolume.cleanupOnDeletion()) {
+                            LOG.info("Volume deletion time expired for: " + deletedVolume.getVolumeId() + " ...cleaning up.");
+                            db.delete(deletedVolume);
+                        }
                     }
-                }
-                tran.commit();
-                List<VolumeInfo> volumes;
-                try ( TransactionResource tran2 = Entities.transactionFor(VolumeInfo.class) ) {
+                    db.commit();
+                    db = StorageProperties.getEntityWrapper();
                     searchVolume = new VolumeInfo();
                     searchVolume.setStatus(StorageProperties.Status.deleting.toString());
-                    volumes = Entities.query(searchVolume);
-                    tran2.commit();
-                }
-                for (VolumeInfo vol : volumes) {
-                    //Do separate transaction for each volume so we don't
-                    // keep the transaction open for a long time
-                    try (TransactionResource tran3 = Entities.transactionFor(VolumeInfo.class)) {
-                        vol = Entities.uniqueResult(vol);
-                        final String volumeId = vol.getVolumeId();
-                        LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
-                        if(Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {
-                            @Override
-                            public boolean apply(VolumeToken token) {
-                                //Return true if attachment is valid or export exists.
+                    List<VolumeInfo> volumes = db.query(searchVolume);
+                    db.rollback();
+                    for (VolumeInfo vol : volumes) {
+                        //Do separate transaction for each volume so we don't
+                        // keep the transaction open for a long time
+                        db = StorageProperties.getEntityWrapper();
+                        try {
+                            vol = db.getUnique(vol);
+                            final String volumeId = vol.getVolumeId();
+                            LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
+                            if(Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {
+                                @Override
+                                public boolean apply(VolumeToken token) {
+                                    //Return true if attachment is valid or export exists.
+                                    try {
+                                        return token.hasActiveExports();
+                                    } catch(EucalyptusCloudException e) {
+                                        LOG.warn("Failure checking for active exports for volume " + volumeId);
+                                        return false;
+                                    }
+                                }
+                            })) {
+                                //Exports exists... try un exporting the volume before deleting.
+                                LOG.info("Volume: " + volumeId + " found to be exported. Detaching volume from all hosts");
                                 try {
-                                    return token.hasActiveExports();
-                                } catch(EucalyptusCloudException e) {
-                                    LOG.warn("Failure checking for active exports for volume " + volumeId);
-                                    return false;
+                                    Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
+                                } catch(Exception e) {
+                                    LOG.error("Failed to fully detach volume " + volumeId, e);
                                 }
                             }
-                        })) {
-                            //Exports exists... try un exporting the volume before deleting.
-                            LOG.info("Volume: " + volumeId + " found to be exported. Detaching volume from all hosts");
-                            try {
-                                Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
-                            } catch(Exception e) {
-                                LOG.error("Failed to fully detach volume " + volumeId, e);
-                            }
-                        }
 
-                        LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
-                        try {
-                            blockManager.deleteVolume(volumeId);
-                        } catch (EucalyptusCloudException e) {
-                            LOG.error(e, e);
-                            continue;
+                            LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
+                            try {
+                                blockManager.deleteVolume(volumeId);
+                            } catch (EucalyptusCloudException e) {
+                                LOG.error(e, e);
+                                continue;
+                            }
+                            vol.setStatus(StorageProperties.Status.deleted.toString());
+                            vol.setDeletionTime(new Date());
+                            EucaSemaphoreDirectory.removeSemaphore(volumeId);
+                            db.commit();
+                        } catch(Exception e) {
+                            LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
+                            LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
+                        } finally {
+                            db.rollback();
                         }
-                        vol.setStatus(StorageProperties.Status.deleted.toString());
-                        vol.setDeletionTime(new Date());
-                        EucaSemaphoreDirectory.removeSemaphore(volumeId); // who put it there ?
-                        tran3.commit();
-                    } catch(Exception e) {
-                        LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
-                        LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
                     }
+                } catch(Exception e) {
+                    LOG.error("Failed during delete task.",e);
                 }
-            } catch(Exception e) {
-                LOG.error("Failed during delete task.",e);
+            } finally {
+                running.set( false );
+            } else {
+                LOG.warn( "Skipping task (busy)" );
             }
         }
     }

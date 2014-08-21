@@ -43,6 +43,7 @@
 #include <euca_auth.h>
 #include <misc.h>
 #include <map.h>
+#include <euca_string.h>
 
 #include "vmdk.h" // vmdk_init()
 #include "imager.h"

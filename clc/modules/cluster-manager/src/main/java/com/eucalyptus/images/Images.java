@@ -91,6 +91,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
 import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -849,9 +850,9 @@ public class Images {
       String eki,
       String eri,
       final String rootDeviceName, 
-      final List<BlockDeviceMappingItemType> blockDeviceMappings 
+      final List<BlockDeviceMappingItemType> blockDeviceMappings,
+      final Architecture imageArch
   ) throws EucalyptusCloudException {
-    final ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     final ImageMetadata.Platform imagePlatform = platform;
     if(ImageMetadata.Platform.windows.equals(imagePlatform)){
       eki = null;
@@ -1107,7 +1108,9 @@ public class Images {
   }
   
   private static PutGetImageInfo persistRegistration( UserFullName creator, ImageManifest manifest, PutGetImageInfo ret ) throws Exception {
-    
+    // check manifest's signature
+    if ( !manifest.checkManifestSignature( Accounts.lookupUserById(creator.getUserId()) ) )
+      throw new EucalyptusCloudException("Manifest has invalid signature");
     EntityTransaction tx = Entities.get( PutGetImageInfo.class );
     try {
       ret = Entities.merge( ret );

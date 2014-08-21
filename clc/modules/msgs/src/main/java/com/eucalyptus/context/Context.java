@@ -103,7 +103,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
   private static Logger                LOG       = Logger.getLogger( Context.class );
-  private final String                 correlationId;
+  private String                 correlationId;
   private Long                         creationTime;
   private BaseMessage                  request   = null;
   private final MappingHttpRequest     httpRequest;
@@ -164,6 +164,10 @@ public class Context {
   
   public MappingHttpRequest getHttpRequest( ) {
     return check( this.httpRequest );
+  }
+  
+  public void setCorrelationId(final String corrId){
+    this.correlationId = corrId;
   }
   
   public String getCorrelationId( ) {

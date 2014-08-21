@@ -63,13 +63,13 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Domain domain;
 
-  @Column( name = "activity_version", nullable = false, updatable = false )
+  @Column( name = "activity_version", length = 64, nullable = false, updatable = false )
   private String activityVersion;
 
-  @Column( name = "description", updatable = false )
+  @Column( name = "description", length = 1024, updatable = false )
   private String description;
 
-  @Column( name = "default_task_list", updatable = false  )
+  @Column( name = "default_task_list", length = 256, updatable = false  )
   private String defaultTaskList;
 
   @Column( name = "default_task_heartbeat_timeout", updatable = false  )

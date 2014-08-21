@@ -274,6 +274,9 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
+        } else if (!strcmp(mode, NETMODE_VPCMIDO)) {
+            if (role == NC) {
+            }
         } else if (!strcmp(mode, NETMODE_MANAGED_NOVLAN)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
@@ -481,7 +484,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->addrIndexMin = NUMBER_OF_CCS + 1;
                     vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
                 }
-            } else if (!strcmp(mode, NETMODE_EDGE)) {
+            } else if (!strcmp(mode, NETMODE_EDGE) || !strcmp(mode, NETMODE_VPCMIDO)) {
                 vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
                 vnetconfig->addrIndexMin = NUMBER_OF_CCS + 1;
                 vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
@@ -1630,7 +1633,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
                 ret = EUCA_OK;
             }
         }
-    } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {
                 LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
@@ -2339,9 +2342,6 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
             }
         } else {
             snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
-            if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-                //ebtables rule(s) here, need mac/ip mapping and ethernet device
-            }
         }
 
         *outbrname = strdup(newbrname);
@@ -2982,7 +2982,8 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
         return (EUCA_INVALID_ERROR);
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         if (vnetconfig->role == NC) {
             *outbrname = strdup(vnetconfig->bridgedev);
         } else {
@@ -3643,7 +3644,8 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
 //!
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName)
 {
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         return (EUCA_OK);
     }
     return (vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));

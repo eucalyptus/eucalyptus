@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -88,6 +90,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#deprecateActivityType(DeprecateActivityTypeRequest)
  */
+@PolicyAction( vendor = "swf", action = "deprecateactivitytype" )
 public class DeprecateActivityTypeRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -96,11 +99,14 @@ public class DeprecateActivityTypeRequest extends SimpleWorkflowMessage implemen
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
      * The activity type to deprecate.
      */
+    @Nonnull
     private ActivityType activityType;
 
     /**

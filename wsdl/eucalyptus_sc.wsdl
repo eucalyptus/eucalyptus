@@ -49,22 +49,19 @@
 			attributeFormDefault="qualified" elementFormDefault="qualified"
 			targetNamespace="http://storagecontroller.eucalyptus.ucsb.edu" xmlns:tns="http://storagecontroller.eucalyptus.ucsb.edu">
 
-		<!--
 			<xs:complexType name="StorageMessageType" abstract="true">
 				<xs:sequence>
 					<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
-	  			<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
-	  			<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
-	  			<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
-          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
-	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
-    	
+	  				<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+	  				<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
+	  				<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+          				<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
+         				<xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
+          				<xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
+          				<xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
+	  				<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
 				</xs:sequence>
-			</xs:complexType>
-			
+			</xs:complexType> 
 			<xs:complexType abstract="true" name="serviceInfoType">
 				<xs:sequence>
 					<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="partition" type="xs:string" />
@@ -73,20 +70,18 @@
 					<xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string" />
 				</xs:sequence>
 			</xs:complexType>
-		-->
-			<xs:complexType name="ExportVolumeType" abstract="true">
-				<!-- <xs:complexContent>
-						<xs:extension base="tns:StorageMessageType">-->
-						<xs:sequence>
+			<xs:complexType name="ExportVolumeType">
+				<xs:complexContent>
+						<xs:extension base="tns:StorageMessageType"> 
+					<xs:sequence> 
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="volumeId" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="token" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="ip" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="iqn" type="xs:string" />
-						</xs:sequence>
-						<!--  </xs:extension>
-					</xs:complexContent>-->
+					</xs:sequence>
+						</xs:extension>
+				</xs:complexContent> 
 			</xs:complexType>
-
 			<xs:complexType name="ExportVolumeResponseType">
 					<!--<xs:complexContent>
 						<xs:extension base="tns:StorageMessageType">-->
@@ -99,16 +94,16 @@
 			</xs:complexType>
 
 			<xs:complexType name="UnexportVolumeType">
-			<!-- <xs:complexContent>
-						<xs:extension base="tns:StorageMessageType">-->
+				<xs:complexContent>
+						<xs:extension base="tns:StorageMessageType">
 						<xs:sequence>
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="volumeId" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="token" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="ip" type="xs:string" />
 							<xs:element nillable="false" minOccurs="1" maxOccurs="1" name="iqn" type="xs:string" />
 						</xs:sequence>
-						<!--</xs:extension>
-					</xs:complexContent>-->
+						</xs:extension>
+					</xs:complexContent>
 			</xs:complexType>
 
 			<xs:complexType name="UnexportVolumeResponseType">

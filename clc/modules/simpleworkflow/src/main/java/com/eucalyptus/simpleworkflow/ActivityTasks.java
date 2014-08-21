@@ -44,4 +44,8 @@ public interface ActivityTasks {
   ActivityTask save( ActivityTask activityTask ) throws SwfMetadataException;
 
   List<ActivityTask> deleteByExample( ActivityTask example ) throws SwfMetadataException;
+
+  long countByWorkflowExecution( OwnerFullName ownerFullName,
+                                 String domain,
+                                 String runId ) throws SwfMetadataException;
 }

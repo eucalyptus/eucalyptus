@@ -53,6 +53,10 @@ public interface RouteTables extends Lister<RouteTable> {
                     Predicate<? super RouteTable> filter,
                     Function<? super RouteTable, T> transform ) throws VpcMetadataException;
 
+  long countByExample( RouteTable example,
+                       Criterion criterion,
+                       Map<String,String> aliases ) throws VpcMetadataException;
+
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
                       Function<? super RouteTable, T> transform ) throws VpcMetadataException;

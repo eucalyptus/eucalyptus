@@ -133,6 +133,7 @@ import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -625,7 +626,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       BootableSet bootSet;
       try {
         bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-      } catch ( final NoSuchMetadataException e ) {
+      } catch ( final NoSuchMetadataException | NoSuchImageIdException e ) {
         LOG.error( "Using transient bootset in place of imageId " + imageId
             + ", kernelId " + kernelId
             + ", ramdiskId " + ramdiskId
@@ -1857,7 +1858,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   *
+   * Updates VM states from DescribeInstances call
    */
   public Predicate<VmInfo> doUpdate( ) {
     return new Predicate<VmInfo>( ) {
@@ -1872,7 +1873,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
               final BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
+              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState, runVm.getBundleTaskProgress() );
             } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );

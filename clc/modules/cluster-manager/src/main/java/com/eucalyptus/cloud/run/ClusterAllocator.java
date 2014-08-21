@@ -81,7 +81,9 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -389,29 +391,28 @@ public class ClusterAllocator implements Runnable {
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
     
-	if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
-	  List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
-		
-	  final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
+    if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
+      List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       
       final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );   	                
-      String rootDevName = imgInfo.getRootDeviceName();
+      final String rootDevName = imgInfo.getRootDeviceName();
       Long volSizeBytes = imgInfo.getImageSizeBytes( );
-    	        
+
       // Find out the root volume size so that device mappings that don't have a size or snapshot ID can use the root volume size
       for ( final BlockDeviceMappingItemType blockDevMapping : Iterables.filter( instanceDeviceMappings, findEbsRootOptionalSnapshot(rootDevName) ) ) {
-    	if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
-    	  volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
-    	}
+        if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
+          volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
+        }
       } 
-    	  
+
       int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
-    	        
+
       for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
-    	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+        final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
         if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) { // First time a bfebs instance starts up, there are no persistent volumes
           
-          for (BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
+          for (final BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
             if( Images.isEbsMapping( mapping ) ) {
               LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
               
@@ -419,28 +420,40 @@ public class ClusterAllocator implements Runnable {
               int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
               if(volumeSize<=0){
                 if(mapping.getEbs().getSnapshotId() != null){
-                  final Snapshot originalSnapshot =
-                      Snapshots.lookup(null, ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ) );
+                  final Snapshot originalSnapshot = Snapshots.lookup(null, ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ) );
                   volumeSize = originalSnapshot.getVolumeSize();
                 }else
                   volumeSize = rootVolSizeInGb;
               }
-              
-              final Volume volume = Volumes.createStorageVolume( sc,
-                  this.allocInfo.getOwnerFullName( ),
-                  ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ),
-                  volumeSize, this.allocInfo.getRequest( ) );
-              Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
+              final UserFullName fullName = this.allocInfo.getOwnerFullName();
+              final String snapshotId = ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() );
+              final int volSize = volumeSize;
+              final BaseMessage request = this.allocInfo.getRequest();
+              final Callable<Volume> createVolume = new Callable<Volume>( ) {
+                  public Volume call( ) throws Exception {
+                    return Volumes.createStorageVolume(sc, fullName, snapshotId, volSize, request);
+                  }
+              };
+
+              final Volume volume; // allocate in separate transaction to ensure metadata matches back-end
+              try {
+                volume = Threads.enqueue( Eucalyptus.class, ClusterAllocator.class, createVolume ).get( );
+              } catch ( InterruptedException e ) {
+                throw Exceptions.toUndeclared( "Interrupted when creating volume from snapshot.", e );
+              }
+
+              final Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
               if ( mapping.getEbs().getDeleteOnTermination() ) {
                 vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
               } else {
                 vm.addPermanentVolume( mapping.getDeviceName(), volume, isRootDevice );
               }
+
               // Populate all volumes into resource token so they can be used for attach ops and vbr construction
               if( isRootDevice ) {
-               	token.setRootVolume( volume ); 
+                token.setRootVolume( volume );
               } else {
-            	token.getEbsVolumes().put(mapping.getDeviceName(), volume);  
+                token.getEbsVolumes().put(mapping.getDeviceName(), volume);
               }
             } else if ( mapping.getVirtualName() != null ) {
               vm.addEphemeralAttachment(mapping.getDeviceName(), mapping.getVirtualName());
@@ -464,13 +477,13 @@ public class ClusterAllocator implements Runnable {
           
           // Root volume may have been detached. In that case throw an error and exit
           if ( !foundRoot ) {
-          	LOG.error("No volume attachment found for root device. Attach a volume to root device and retry");
-          	throw new MetadataException("No volume attachment found for root device. Attach a volume to root device and retry");
+            LOG.error("No volume attachment found for root device. Attach a volume to root device and retry");
+            throw new MetadataException("No volume attachment found for root device. Attach a volume to root device and retry");
           }
           
           // Go through all ephemeral attachment records and populate them into resource token so they can used for vbr construction
           for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphemeralStorage()) {
-        	token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
+            token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
           }
         }
       }

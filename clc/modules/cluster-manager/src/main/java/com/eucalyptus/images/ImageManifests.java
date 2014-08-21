@@ -91,6 +91,8 @@ import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
@@ -373,7 +375,7 @@ public class ImageManifests {
       }
     }
     
-    private boolean checkManifest( User user ) throws EucalyptusCloudException {
+    public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
       String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
       String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" )
                                                  .replaceAll( "</machine_configuration>.*",
@@ -401,24 +403,28 @@ public class ImageManifests {
           }
         }
       };
-      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> euareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
-        
+      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> activeEuareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
         @Override
         public X509Certificate apply( com.eucalyptus.auth.principal.Certificate input ) {
-          return input.getX509Certificate( );
+          return input.isActive() ? input.getX509Certificate( ) : null;
         }
       };
       
       try {
-        if ( Iterables.any( Lists.transform( user.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+        if ( Iterables.any( Lists.transform( user.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) ) {
           return true;
         } else if ( tryVerifyWithCert.apply( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
           return true;
         } else {
-          for ( User u : Accounts.listAllUsers( ) ) {
-            if ( Iterables.any( Lists.transform( u.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+          // check other users from the same account
+          for ( User u : user.getAccount().getUsers() ) {
+            if ( Iterables.any( Lists.transform( u.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) )
               return true;
-            }
+          }
+          // check bundle cases (use NC's certificates)
+          for(Partition p: Partitions.list( )) {
+            if ( tryVerifyWithCert.apply( p.getNodeCertificate() ) )
+              return true;
           }
         }
       } catch ( AuthException e ) {

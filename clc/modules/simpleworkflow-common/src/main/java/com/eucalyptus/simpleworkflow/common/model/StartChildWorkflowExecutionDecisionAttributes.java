@@ -36,7 +36,11 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRange;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -87,6 +91,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * The type of the workflow execution to be started. This field is
      * required.
      */
+    @Nonnull
     private WorkflowType workflowType;
 
     /**
@@ -100,6 +105,8 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String workflowId;
 
     /**
@@ -110,6 +117,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String control;
 
     /**
@@ -118,6 +126,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**
@@ -135,6 +144,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String executionStartToCloseTimeout;
 
     /**
@@ -168,6 +178,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String taskStartToCloseTimeout;
 
     /**
@@ -193,6 +204,7 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
      */
+    @FieldRegex( FieldRegexValue.CHILD_POLICY )
     private String childPolicy;
 
     /**
@@ -204,6 +216,8 @@ public class StartChildWorkflowExecutionDecisionAttributes implements Serializab
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 5<br/>
      */
+    @FieldRange( max = 5 )
+    @FieldRegex( FieldRegexValue.STRING_256 )
     private com.amazonaws.internal.ListWithAutoConstructFlag<String> tagList;
 
     /**

@@ -90,7 +90,7 @@ public class BlockDeviceResource extends StorageResource {
 	}
 
 	@Override
-	public Long getSize() throws EucalyptusCloudException {
+	public Long getSize() throws UnknownSizeException {
 		Long size = 0L;
 		try {
 			CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", this.getPath() });
@@ -125,6 +125,11 @@ public class BlockDeviceResource extends StorageResource {
 		} while (failedAttempts < ATTEMPTS);
 
 		throw new IOException("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath());
+	}
+
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.TRUE;
 	}
 
 }

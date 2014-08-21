@@ -121,6 +121,25 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
     }
   }
 
+  public long countByExample( final AP example ) throws PE {
+    try {
+      return Entities.count( example );
+    } catch ( Exception e ) {
+      throw metadataException( "Failed to count "+typeDescription+"s by example: " + LogUtil.dumpObject( example ), e );
+    }
+  }
+
+  public long countByExample( final AP example,
+                              final Criterion criterion,
+                              final Map<String,String> aliases ) throws PE {
+    try {
+      return Entities.count( example, criterion, aliases );
+    } catch ( Exception e ) {
+      throw metadataException( "Failed to count "+typeDescription+"s by example: " + LogUtil.dumpObject(example), e );
+    }
+  }
+
+
   public AP updateByExample( final AP example,
                               final OwnerFullName ownerFullName,
                               final String key,

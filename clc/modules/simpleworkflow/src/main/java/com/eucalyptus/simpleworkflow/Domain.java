@@ -52,7 +52,7 @@ public class Domain extends UserMetadata<Domain.Status> implements DomainMetadat
     }
   }
 
-  @Column( name = "description", updatable = false )
+  @Column( name = "description", length = 1024, updatable = false )
   private String description;
 
   @Column( name = "workflow_retention_days", nullable = false, updatable = false  )

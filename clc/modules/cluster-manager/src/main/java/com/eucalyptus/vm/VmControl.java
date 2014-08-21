@@ -89,6 +89,7 @@ import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -711,6 +712,24 @@ public class VmControl {
           throw ex;
         }
       }
+
+      for(final String instanceId : identifiers){
+        final VmInstance vm = VmInstances.lookup( instanceId );
+        // EUCA-9596: forget windows password
+        if(ImageMetadata.Platform.windows.name().equals(vm.getPlatform())){
+          try ( final TransactionResource db =
+              Entities.transactionFor( VmInstance.class )){
+            try{
+              final VmInstance updatedVm = Entities.uniqueResult(vm);
+              updatedVm.updatePasswordData(null);
+              Entities.persist(updatedVm);
+              db.commit();
+            }catch(final Exception ex){
+              throw new EucalyptusCloudException("Failed to erase Windows password");
+            }
+          }
+        }   
+      }
       
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
       Iterables.all( identifiers, stopTx );
@@ -910,6 +929,7 @@ public class VmControl {
         vm.getNetworkGroups( ).clear( );
         vm.getNetworkGroups( ).addAll( groups );
         tx.commit();
+        NetworkGroups.flushRules( );
       } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {
         // not currently supported
       } else if ( request.getSourceDestCheck( ) != null ) {
@@ -1091,7 +1111,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
       
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
+        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling, 0.0d );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
@@ -1194,6 +1214,8 @@ public class VmControl {
     }
     
     VmInstance bundledVm = Entities.asTransaction( VmInstance.class, bundleFunc ).apply( instanceId );
+    final ImageInfo imageInfo = Images.lookupImage(bundledVm.getImageId());
+
     try {
       ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
       BundleInstanceType reqInternal = new BundleInstanceType(){
@@ -1206,6 +1228,7 @@ public class VmControl {
   			setUploadPolicySignature(request.getUploadPolicySignature());
   			setUrl(request.getUrl());
   			setUserKey(request.getUserKey());
+  			setArchitecture(imageInfo != null ? imageInfo.getArchitecture().name() : "i386");
 			}
 		}.regardingUserRequest(request);      
       AsyncRequests.newRequest( Bundles.createCallback(reqInternal)).dispatch( cluster );

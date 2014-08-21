@@ -99,6 +99,7 @@
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	  <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="bundleTaskProgress" type="xs:double" nillable="true"/>
 	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
@@ -380,6 +381,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="S3PolicySig" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="architecture" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

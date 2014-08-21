@@ -28,6 +28,10 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import edu.ucsb.eucalyptus.msgs.VpcMessageValidation
+
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
 
 public class VmControlMessage extends ComputeMessage {
   
@@ -367,6 +371,7 @@ class PrivateIpAddressesSetRequestType extends EucalyptusData {
   ArrayList<PrivateIpAddressesSetItemRequestType> item = new ArrayList<PrivateIpAddressesSetItemRequestType>();
 }
 class PrivateIpAddressesSetItemRequestType extends EucalyptusData {
+  @FieldRegex( FieldRegexValue.IP_ADDRESS )
   String privateIpAddress;
   Boolean primary;
   PrivateIpAddressesSetItemRequestType() {  }

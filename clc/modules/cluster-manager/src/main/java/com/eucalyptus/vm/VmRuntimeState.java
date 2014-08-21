@@ -644,7 +644,7 @@ public class VmRuntimeState {
   
   public void updateBundleTaskState( String state ) {
     BundleState next = BundleState.mapper.apply( state );
-    updateBundleTaskState( next );
+    updateBundleTaskState( next, 0.0d );
   }
   
   public void bundleRestartInstance( VmBundleTask bundleTask ) {
@@ -697,21 +697,25 @@ public class VmRuntimeState {
 	  }
   }
   
-  public void updateBundleTaskState( BundleState state ) {
+  public void updateBundleTaskState( BundleState state, Double progress ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
+      VmBundleTask currentTask = this.getBundleTask();
+      currentTask.setProgress((int) Math.round(progress * 100D));
       if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current ) ) {
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        // set progress to 100% if complete is reached
+        currentTask.setProgress( 100 );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
           Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
-              this.getBundleTask().getBucket(), true);
+                  currentTask.getBucket(), true);
         }catch(final Exception ex){
           LOG.error("After bundle failure, failed to delete the bucket", ex);
         }
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
           Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
@@ -719,17 +723,17 @@ public class VmRuntimeState {
         }catch(final Exception ex){
           LOG.error("After bundle cancellation, failed to delete the bucket", ex);
         }
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.canceling.equals( state ) || BundleState.canceling.equals( current ) ) {
         //
       } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {
-        this.getBundleTask( ).setState( state );
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        currentTask.setState( state );
+        currentTask.setUpdateTime( new Date( ) );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       } else if ( BundleState.storing.equals( state ) ) {
-        this.getBundleTask( ).setState( state );
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        currentTask.setState( state );
+        currentTask.setUpdateTime( new Date( ) );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       }
     } else {

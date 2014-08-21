@@ -89,6 +89,7 @@
 
 #include <eucalyptus.h>
 #include <log.h>
+#include "misc.h"
 
 #ifndef _UNIT_TEST
 // http_ functions aren't part of the unit test
@@ -108,6 +109,7 @@
 #define MAX_TIMEOUT                              300    //!< in seconds, the cap for growing timeout values
 #define STRSIZE                                  245    //!< for short strings: files, hosts, URLs
 #endif /* ! _UNIT_TEST */
+#define RANDOM_DELAY_PERCENT                    0.01    //!< 1% of current timeout determines max delay duration
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -670,6 +672,16 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
     do {
         params.total_wrote = 0L;
         params.total_calls = 0L;
+
+        // Introduce a small random delay before each download to
+        // spread out parallel download attemps from multiple NCs.
+        {
+            unsigned long long max_delay_nanosec = (unsigned long long)
+                (((float)timeout * NANOSECONDS_IN_SECOND) * RANDOM_DELAY_PERCENT);
+            unsigned long long random_delay_nanosec = (unsigned long long)
+                ((double)max_delay_nanosec * (rand() / (RAND_MAX + 1.0)));
+            euca_nanosleep(random_delay_nanosec);
+        }
 
         result = curl_easy_perform(curl);   /* do it */
         LOGDEBUG("wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);

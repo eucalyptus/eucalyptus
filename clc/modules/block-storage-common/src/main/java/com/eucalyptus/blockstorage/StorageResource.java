@@ -65,6 +65,9 @@ package com.eucalyptus.blockstorage;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * Abstract class for encapsulating a storage device and mechanisms for IO operations
+ */
 public abstract class StorageResource {
 
 	public static enum Type {
@@ -105,9 +108,34 @@ public abstract class StorageResource {
 		this.type = type;
 	}
 
+	/**
+	 * Compute and return the size of the storage device in bytes
+	 * 
+	 * @return Size in bytes
+	 * @throws Exception
+	 */
 	public abstract Long getSize() throws Exception;
 
+	/**
+	 * Returns an {@link java.io.InputStream} object to the storage device
+	 * 
+	 * @return InputStream
+	 * @throws Exception
+	 */
 	public abstract InputStream getInputStream() throws Exception;
 
+	/**
+	 * Returns an {@link java.io.OutputStream} object to the storage device
+	 * 
+	 * @return OuputStream
+	 * @throws Exception
+	 */
 	public abstract OutputStream getOutputStream() throws Exception;
+
+	/**
+	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
+	 * 
+	 * @return true or false
+	 */
+	public abstract Boolean isDownloadSynchronous();
 }

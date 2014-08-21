@@ -25,7 +25,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.simpleworkflow.common.model.*;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowType;
 import com.eucalyptus.util.OwnerFullName;
@@ -42,6 +44,8 @@ public interface WorkflowExecutions {
 
   Set<String> ACTIVITY_CLOSE_EVENT_TYPES = ImmutableSet.of( "ActivityTaskCompleted", "ActivityTaskFailed", "ActivityTaskTimedOut", "ActivityTaskCanceled" );
 
+  Set<String> TIMER_CLOSE_EVENT_TYPES = ImmutableSet.of( "TimerCanceled", "TimerFired" );
+
   <T> List<T> listByExample( WorkflowExecution example,
                              Predicate<? super WorkflowExecution> filter,
                              Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
@@ -52,7 +56,11 @@ public interface WorkflowExecutions {
                              Map<String,String> aliases,
                              Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
 
-  <T> List<T> listTimedOut( Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
+  <T> List<T> listTimedOut( long timestamp,
+                            Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
+
+  <T> List<T> listRetentionExpired( long timestamp,
+                                    Function<? super WorkflowExecution,T> transform ) throws SwfMetadataException;
 
   <T> T lookupByExample( WorkflowExecution example,
                          @Nullable OwnerFullName ownerFullName,
@@ -67,7 +75,44 @@ public interface WorkflowExecutions {
 
   WorkflowExecution save( WorkflowExecution workflowExecution ) throws SwfMetadataException;
 
+  List<WorkflowExecution> deleteByExample( WorkflowExecution example ) throws SwfMetadataException;
 
+  long countOpenByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
+  public static class Utils {
+    private static final Logger logger = Logger.getLogger( WorkflowExecutions.class );
+
+    public static void terminateWorkflowExecution( final WorkflowExecutions workflowExecutions,
+                                                   final String cause,
+                                                   final String accountNumber,
+                                                   final String domain,
+                                                   final String workflowId ) {
+      try {
+        final AccountFullName accountFullName = AccountFullName.getInstance( accountNumber );
+        workflowExecutions.updateByExample(
+            WorkflowExecution.exampleForOpenWorkflow( accountFullName, domain, workflowId ),
+            accountFullName,
+            workflowId,
+            new Function<WorkflowExecution,Void>( ){
+              @Override
+              public Void apply( final WorkflowExecution workflowExecution ) {
+                workflowExecution.closeWorkflow(
+                    WorkflowExecution.CloseStatus.Terminated,
+                    WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new WorkflowExecutionTerminatedEventAttributes( )
+                            .withCause( cause )
+                            .withChildPolicy( workflowExecution.getChildPolicy( ) ) )
+                );
+                return null;
+              }
+            }
+        );
+      } catch ( SwfMetadataException e ) {
+        logger.error( "Error terminating workflow execution for account " + accountNumber + ", domain " + domain + ", " + workflowId, e );
+      }
+    }
+  }
 
   @TypeMapper
   public enum WorkflowExecutionToWorkflowExecutionDetailTransform implements Function<WorkflowExecution,WorkflowExecutionDetail> {

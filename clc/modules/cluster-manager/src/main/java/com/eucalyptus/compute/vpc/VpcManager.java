@@ -26,8 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -84,7 +86,7 @@ import edu.ucsb.eucalyptus.msgs.Filter;
 /**
  *
  */
-@SuppressWarnings( "UnnecessaryLocalVariable" )
+@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration" } )
 @ComponentNamed
 public class VpcManager {
 
@@ -98,6 +100,7 @@ public class VpcManager {
   private final SecurityGroups securityGroups;
   private final Subnets subnets;
   private final Vpcs vpcs;
+  private final VpcInvalidator vpcInvalidator;
 
   @Inject
   public VpcManager( final DhcpOptionSets dhcpOptionSets,
@@ -107,7 +110,8 @@ public class VpcManager {
                      final RouteTables routeTables,
                      final SecurityGroups securityGroups,
                      final Subnets subnets,
-                     final Vpcs vpcs ) {
+                     final Vpcs vpcs,
+                     final VpcInvalidator vpcInvalidator ) {
     this.dhcpOptionSets = dhcpOptionSets;
     this.internetGateways = internetGateways;
     this.networkAcls = networkAcls;
@@ -116,6 +120,7 @@ public class VpcManager {
     this.securityGroups = securityGroups;
     this.subnets = subnets;
     this.vpcs = vpcs;
+    this.vpcInvalidator = vpcInvalidator;
   }
 
   public AcceptVpcPeeringConnectionResponseType acceptVpcPeeringConnection(AcceptVpcPeeringConnectionType request) throws EucalyptusCloudException {
@@ -154,6 +159,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( vpcId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" );
     } catch ( Exception e ) {
@@ -188,6 +194,7 @@ public class VpcManager {
             }
           } );
       reply.setAssociationId( subnet.getRouteTableAssociationId( ) );
+      invalidate( subnetId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet ("+request.getSubnetId()+") not found " );
     } catch ( Exception e ) {
@@ -224,6 +231,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( vpcId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidInternetGatewayID.NotFound", "Internet gateway ("+request.getInternetGatewayId()+") not found " );
     } catch ( Exception e ) {
@@ -249,7 +257,6 @@ public class VpcManager {
 
   public CreateDhcpOptionsResponseType createDhcpOptions( final CreateDhcpOptionsType request ) throws EucalyptusCloudException {
     final CreateDhcpOptionsResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for DhcpOptionSets
     final Context ctx = Contexts.lookup();
     final Supplier<DhcpOptionSet> allocator = new Supplier<DhcpOptionSet>( ) {
       @Override
@@ -298,7 +305,6 @@ public class VpcManager {
 
   public CreateInternetGatewayResponseType createInternetGateway( final CreateInternetGatewayType request ) throws EucalyptusCloudException {
     final CreateInternetGatewayResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for internet gateways
     final Context ctx = Contexts.lookup();
     final Supplier<InternetGateway> allocator = new Supplier<InternetGateway>( ) {
       @Override
@@ -316,7 +322,6 @@ public class VpcManager {
 
   public CreateNetworkAclResponseType createNetworkAcl( final CreateNetworkAclType request ) throws EucalyptusCloudException {
     final CreateNetworkAclResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for NetworkAcls
     final Context ctx = Contexts.lookup( );
     final String vpcId = Identifier.vpc.normalize( request.getVpcId( ) );
     final Supplier<NetworkAcl> allocator = new Supplier<NetworkAcl>( ) {
@@ -324,6 +329,13 @@ public class VpcManager {
       public NetworkAcl get( ) {
         try {
           final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName( ).asAccountFullName( ), vpcId, Functions.<Vpc>identity( ) );
+          final long networkAclsForVpc = networkAcls.countByExample(
+              NetworkAcl.exampleWithOwner( ctx.getUserFullName( ).asAccountFullName( ) ),
+              Restrictions.eq( "vpc.displayName", vpcId ),
+              Collections.singletonMap( "vpc", "vpc" ) );
+          if ( networkAclsForVpc >= VpcConfiguration.getNetworkAclsPerVpc( ) ) {
+            throw new ClientComputeException( "NetworkAclLimitExceeded", "Network ACL limit exceeded for " + vpc.getDisplayName( ) );
+          }
           return networkAcls.save( NetworkAcl.create( ctx.getUserFullName( ), vpc, Identifier.acl.generate( ), false ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
@@ -375,6 +387,13 @@ public class VpcManager {
                           "Entry exists with rule number: " + request.getRuleNumber( ) );
                     }
 
+                    if ( CollectionUtils.reduce( entries, 0, CollectionUtils.count( entryPredicate( request.getEgress( ), null ) ) )
+                        >= VpcConfiguration.getRulesPerNetworkAcl( ) ) {
+                      throw new ClientComputeException(
+                          "NetworkAclEntryLimitExceeded",
+                          "Network ACL entry limit exceeded for " + request.getNetworkAclId() );
+                    }
+
                     final NetworkAclEntry entry;
                     switch ( protocolOptional.get( ) ) {
                       case 1:
@@ -410,6 +429,7 @@ public class VpcManager {
                     }
 
                     entries.add( entry );
+                    networkAcl.updateTimeStamps( ); // ensure version of table increments also
                   } catch ( Exception e ) {
                     throw Exceptions.toUndeclared( e );
                   }
@@ -425,6 +445,7 @@ public class VpcManager {
 
     try {
       allocator.get( );
+      invalidate( networkAclId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -434,7 +455,6 @@ public class VpcManager {
 
   public CreateNetworkInterfaceResponseType createNetworkInterface( final CreateNetworkInterfaceType request ) throws EucalyptusCloudException {
     final CreateNetworkInterfaceResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for NetworkInterfaces
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String subnetId = Identifier.subnet.normalize( request.getSubnetId( ) );
@@ -454,6 +474,9 @@ public class VpcManager {
               Sets.newHashSet( Iterables.transform(
                   request.getGroupSet( ).groupIds( ),
                   RestrictedTypes.resolver( NetworkGroup.class ) ) );
+          if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+            throw new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" );
+          }
           final String identifier = Identifier.eni.generate();
           if ( privateIp != null ) {
             final Cidr cidr = Cidr.parse( subnet.getCidr( ) );
@@ -520,9 +543,16 @@ public class VpcManager {
                             "Route exists for cidr: " + destinationCidr );
                       }
 
+                      if ( routeTable.getRoutes( ).size( ) >= VpcConfiguration.getRoutesPerTable( ) ) {
+                        throw new ClientComputeException(
+                            "RouteLimitExceeded",
+                            "Route limit exceeded for " + request.getRouteTableId() );
+                      }
+
                       routeTable.getRoutes().add(
                           Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway )
                       );
+                      routeTable.updateTimeStamps( ); // ensure version of table increments also
                     }
                   } catch ( Exception e ) {
                     throw Exceptions.toUndeclared( e );
@@ -538,6 +568,7 @@ public class VpcManager {
 
     try {
       allocator.get( );
+      invalidate( routeTableId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -547,7 +578,6 @@ public class VpcManager {
 
   public CreateRouteTableResponseType createRouteTable( final CreateRouteTableType request ) throws EucalyptusCloudException {
     final CreateRouteTableResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for RouteTables
     final Context ctx = Contexts.lookup( );
     final String vpcId = Identifier.vpc.normalize( request.getVpcId( ) );
     final Supplier<RouteTable> allocator = new Supplier<RouteTable>( ) {
@@ -555,6 +585,14 @@ public class VpcManager {
       public RouteTable get( ) {
         try {
           final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName().asAccountFullName(), vpcId, Functions.<Vpc>identity() );
+
+          final long routeTablesForVpc = routeTables.countByExample(
+              RouteTable.exampleWithOwner( ctx.getUserFullName( ).asAccountFullName( ) ),
+              Restrictions.eq( "vpc.displayName", vpcId ),
+              Collections.singletonMap( "vpc", "vpc" ) );
+          if ( routeTablesForVpc >= VpcConfiguration.getRouteTablesPerVpc( ) ) {
+            throw new ClientComputeException( " RouteTableLimitExceeded", "Route table limit exceeded for " + vpc.getDisplayName( ) );
+          }
           return routeTables.save( RouteTable.create( ctx.getUserFullName( ), vpc, Identifier.rtb.generate(), vpc.getCidr(), false ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
@@ -569,7 +607,6 @@ public class VpcManager {
 
   public CreateSubnetResponseType createSubnet( final CreateSubnetType request ) throws EucalyptusCloudException {
     final CreateSubnetResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for Subnets
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String vpcId = Identifier.vpc.normalize( request.getVpcId( ) );
@@ -593,13 +630,18 @@ public class VpcManager {
         try {
           final Vpc vpc =
               vpcs.lookupByName( accountFullName, vpcId, Functions.<Vpc>identity( ) );
+          final Iterable<Subnet> subnetsInVpc = subnets.listByExample(
+              Subnet.exampleWithOwner( accountFullName ),
+              CollectionUtils.propertyPredicate( vpc.getDisplayName(), Subnets.FilterStringFunctions.VPC_ID ),
+              Functions.<Subnet>identity( ) );
+          if ( Iterables.size( subnetsInVpc ) >= VpcConfiguration.getSubnetsPerVpc( ) ) {
+            throw new ClientComputeException( "SubnetLimitExceeded", "Subnet limit exceeded for " + vpc.getDisplayName( ) );
+          }
           if ( !Cidr.parse( vpc.getCidr( ) ).contains( subnetCidr.get( ) ) ) {
             throw new ClientComputeException( "InvalidParameterValue", "Cidr not valid for vpc " + request.getCidrBlock( ) );
           }
-          final Iterable<Cidr> existingCidrs = Iterables.transform( subnets.listByExample(
-              Subnet.exampleWithOwner( accountFullName ),
-              CollectionUtils.propertyPredicate( vpc.getDisplayName(), Subnets.FilterStringFunctions.VPC_ID ),
-              Subnets.FilterStringFunctions.CIDR ), Cidr.parseUnsafe() );
+          final Iterable<Cidr> existingCidrs = Iterables.transform(
+              subnetsInVpc, Functions.compose( Cidr.parseUnsafe(), Subnets.FilterStringFunctions.CIDR ) );
           if ( Iterables.any( existingCidrs, subnetCidr.get( ).contains( ) ) ||
               Iterables.any( existingCidrs, subnetCidr.get( ).containedBy() ) ) {
             throw new ClientComputeException( "InvalidSubnet.Conflict", "Cidr conflict for " + request.getCidrBlock( ) );
@@ -622,12 +664,12 @@ public class VpcManager {
       }
     };
     reply.setSubnet( allocate( allocator, Subnet.class, SubnetType.class ) );
+    invalidate( reply.getSubnet( ).getSubnetId( ) );
     return reply;
   }
 
   public CreateVpcResponseType createVpc( final CreateVpcType request ) throws EucalyptusCloudException {
     final CreateVpcResponseType reply = request.getReply( );
-    //TODO:STEVE: quota for VPCs
     final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName();
     final AccountFullName accountFullName = userFullName.asAccountFullName( );
@@ -674,6 +716,7 @@ public class VpcManager {
       }
     };
     reply.setVpc( allocate( allocator, Vpc.class, VpcType.class ) );
+    invalidate( reply.getVpc( ).getVpcId( ) );
     return reply;
   }
 
@@ -784,6 +827,7 @@ public class VpcManager {
                 if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
                   if ( entry.isPresent( ) ) {
                     networkAcl.getEntries( ).remove( entry.get( ) );
+                    networkAcl.updateTimeStamps( ); // ensure version of table increments also
                   } else {
                     throw new ClientComputeException(
                         "InvalidNetworkAclEntry.NotFound",
@@ -795,6 +839,7 @@ public class VpcManager {
               }
             }
           }) ;
+      invalidate( networkAclId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -849,6 +894,7 @@ public class VpcManager {
                 if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
                   if ( route.isPresent( ) ) {
                     routeTable.getRoutes( ).remove( route.get( ) );
+                    routeTable.updateTimeStamps( ); // ensure version of table increments also
                   } else {
                     throw new ClientComputeException(
                         "InvalidRoute.NotFound",
@@ -860,6 +906,7 @@ public class VpcManager {
               }
             }
           }) ;
+      invalidate( routeTableId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1183,6 +1230,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( vpcId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidInternetGatewayID.NotFound", "Internet gateway ("+request.getInternetGatewayId()+") not found " );
     } catch ( Exception e ) {
@@ -1218,7 +1266,7 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final String associationId = Identifier.rtbassoc.normalize( request.getAssociationId() );
     try {
-      subnets.updateByExample(
+      final Subnet subnet = subnets.updateByExample(
           Subnet.exampleWithRouteTableAssociation( accountFullName, associationId ),
           accountFullName,
           request.getAssociationId( ),
@@ -1234,6 +1282,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( subnet.getDisplayName( ) );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidAssociationID.NotFound", "Route table association ("+request.getAssociationId( )+") not found " );
     } catch ( Exception e ) {
@@ -1251,9 +1300,11 @@ public class VpcManager {
     final ModifyNetworkInterfaceAttributeResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final String eniId = Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     try {
+      final AtomicBoolean invalidate = new AtomicBoolean( false );
       networkInterfaces.updateByExample(
-          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          NetworkInterface.exampleWithName( accountFullName, eniId ),
           accountFullName,
           request.getNetworkInterfaceId(),
           new Callback<NetworkInterface>() {
@@ -1272,6 +1323,10 @@ public class VpcManager {
                     networkInterface.setNetworkGroups( Sets.newHashSet( Iterables.transform(
                         request.getGroupSet( ).groupIds( ),
                         RestrictedTypes.resolver( NetworkGroup.class ) ) ) );
+                    if ( networkInterface.getNetworkGroups( ).size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+                      throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" ) );
+                    }
+                    invalidate.set( true );
                   } catch ( RuntimeException e ) {
                     final NoSuchMetadataException nsme = Exceptions.findCause(  e, NoSuchMetadataException.class );
                     if ( nsme != null ) {
@@ -1281,12 +1336,14 @@ public class VpcManager {
                   }
                 } else if ( request.getSourceDestCheck( ) != null ) {
                   networkInterface.setSourceDestCheck( request.getSourceDestCheck( ).getValue( ) );
+                  invalidate.set( true );
                 } else {
                   throw Exceptions.toUndeclared( new ClientComputeException( "MissingParameter", "Missing attribute value" ) );
                 }
               }
             }
           } );
+      if ( invalidate.get( ) ) invalidate( eniId );
     } catch ( final Exception e ) {
       throw handleException( e );
     }
@@ -1379,6 +1436,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( networkAclId );
       reply.setNewAssociationId( subnet.getNetworkAclAssociationId( ) );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidAssociationID.NotFound", "Network ACL association ("+request.getAssociationId( )+") not found " );
@@ -1461,12 +1519,14 @@ public class VpcManager {
                 entries.set(
                     entries.indexOf( oldEntry.get() ),
                     entry );
+                networkAcl.updateTimeStamps( ); // ensure version of table increments also
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
               }
             }
           }
       );
+      invalidate( networkAclId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1511,12 +1571,14 @@ public class VpcManager {
                 routes.set(
                     routes.indexOf( oldRoute.get() ),
                     Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway ) );
+                routeTable.updateTimeStamps( ); // ensure version of table increments also
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
               }
             }
           }
       );
+      invalidate( routeTableId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1552,6 +1614,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( routeTableId );
       reply.setNewAssociationId( subnet.getRouteTableAssociationId( ) );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidAssociationID.NotFound", "Route table association ("+request.getAssociationId( )+") not found " );
@@ -1565,9 +1628,10 @@ public class VpcManager {
     final ResetNetworkInterfaceAttributeResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final String eniId = Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     try {
       networkInterfaces.updateByExample(
-          NetworkInterface.exampleWithName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ) ),
+          NetworkInterface.exampleWithName( accountFullName, eniId ),
           accountFullName,
           request.getNetworkInterfaceId(),
           new Callback<NetworkInterface>() {
@@ -1587,6 +1651,7 @@ public class VpcManager {
               }
             }
           } );
+      invalidate( eniId );
     } catch ( final Exception e ) {
       throw handleException( e );
     }
@@ -1757,13 +1822,19 @@ public class VpcManager {
   private static Predicate<NetworkAclEntry> entryPredicate( final Boolean egress,
                                                             final Integer ruleNumber ) {
     return Predicates.and(
-        CollectionUtils.propertyPredicate(
-            ruleNumber,
-            NetworkAcls.NetworkAclEntryFilterIntegerFunctions.RULE_NUMBER ),
+        ruleNumber == null ?
+            Predicates.<NetworkAclEntry>alwaysTrue( ) :
+            CollectionUtils.propertyPredicate(
+              ruleNumber,
+              NetworkAcls.NetworkAclEntryFilterIntegerFunctions.RULE_NUMBER ),
         CollectionUtils.propertyPredicate(
             egress,
             NetworkAcls.NetworkAclEntryFilterBooleanFunctions.EGRESS )
     );
+  }
+
+  private void invalidate( final String resourceIdentifier ) {
+    vpcInvalidator.invalidate( resourceIdentifier );
   }
 
   private static ComputeException handleException( final Exception e ) throws ComputeException {
@@ -1782,7 +1853,16 @@ public class VpcManager {
 
     final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
     if ( quotaCause != null ) {
-      throw new ClientComputeException( "ResourceLimitExceeded", "Request would exceed quota for type: " + quotaCause.getType() );
+      String code = "ResourceLimitExceeded";
+      switch( quotaCause.getType( ) ) {
+        case "vpc":
+          code = "VpcLimitExceeded";
+          break;
+        case "internet-gateway":
+          code = "InternetGatewayLimitExceeded";
+          break;
+      }
+      throw new ClientComputeException( code, "Request would exceed quota for type: " + quotaCause.getType() );
     }
 
     logger.error( e, e );

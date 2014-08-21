@@ -36,7 +36,10 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -53,6 +56,8 @@ public class CloseStatusFilter implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>COMPLETED, FAILED, CANCELED, TERMINATED, CONTINUED_AS_NEW, TIMED_OUT
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.CLOSE_STATUS )
     private String status;
 
     /**

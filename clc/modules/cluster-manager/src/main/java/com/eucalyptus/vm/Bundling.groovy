@@ -103,6 +103,7 @@ public class BundleInstanceType extends VmBundleMessage {
   String uploadPolicySignature;
   String url;
   String userKey;
+  String architecture;
 }
 public class BundleInstanceResponseType extends VmBundleMessage {
   BundleTask task;

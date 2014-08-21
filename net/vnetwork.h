@@ -109,6 +109,7 @@
 #define NETMODE_SYSTEM                           "SYSTEM"
 #define NETMODE_MANAGED                          "MANAGED"
 #define NETMODE_MANAGED_NOVLAN                   "MANAGED-NOVLAN"
+#define NETMODE_VPCMIDO                          "VPCMIDO"
 
 //! @}
 

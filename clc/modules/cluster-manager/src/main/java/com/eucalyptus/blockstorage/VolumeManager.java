@@ -75,6 +75,7 @@ import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
 import com.google.common.base.Predicates;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -102,6 +103,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -117,6 +119,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.MigrationState;
+import com.eucalyptus.vm.VmEphemeralAttachment;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
@@ -331,7 +334,7 @@ public class VolumeManager {
           } else {
             AttachedVolume attachedVolume = null;
             try {
-                VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
+              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
               attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
@@ -418,12 +421,23 @@ public class VolumeManager {
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
+    // check volumes
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new ClientComputeException( "InvalidParameterValue", "Already have a device attached to: " + request.getDevice( ) );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
+    // check ephemeral devices
+    if ( Iterables.any(VmInstances.lookupEphemeralDevices(instanceId),
+          new Predicate<VmEphemeralAttachment>() {
+            @Override
+            public boolean apply(VmEphemeralAttachment device) {
+             return deviceName.endsWith(device.getShortDeviceName());
+           }
+      }) )
+        throw new ClientComputeException( "InvalidParameterValue", "Already have an ephemeral device attached to: " + request.getDevice( ) );
+
     try {
       VmInstances.lookupVolumeAttachment( volumeId );
       throw new ClientComputeException( "VolumeInUse", "Volume already attached: " + volumeId );

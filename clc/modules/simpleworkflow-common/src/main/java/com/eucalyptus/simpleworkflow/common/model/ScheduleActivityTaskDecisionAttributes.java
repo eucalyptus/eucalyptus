@@ -36,7 +36,10 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -84,6 +87,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
     /**
      * The type of the activity task to schedule. This field is required.
      */
+    @Nonnull
     private ActivityType activityType;
 
     /**
@@ -97,6 +101,8 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String activityId;
 
     /**
@@ -106,6 +112,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String control;
 
     /**
@@ -114,6 +121,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**
@@ -129,6 +137,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String scheduleToCloseTimeout;
 
     /**
@@ -162,6 +171,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String scheduleToStartTimeout;
 
     /**
@@ -180,6 +190,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String startToCloseTimeout;
 
     /**
@@ -198,6 +209,7 @@ public class ScheduleActivityTaskDecisionAttributes implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String heartbeatTimeout;
 
     /**

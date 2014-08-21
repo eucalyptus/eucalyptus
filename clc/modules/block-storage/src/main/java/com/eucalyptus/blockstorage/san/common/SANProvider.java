@@ -80,6 +80,11 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 public interface SANProvider {
 
 	/**
+	 * Initialize database entities that might be used by/required for configuring the storage provider
+	 */
+	public void initialize();
+	
+	/**
 	 * Configure the provider. This is typically called during initialization of the system but may be called repeatedly, so it should be idempotent.
 	 * @throws EucalyptusCloudException
 	 */
@@ -245,8 +250,6 @@ public interface SANProvider {
 	 */
 	public String getOptionalChapUser();
 	
-	public void checkVolume(String volumeId) throws EucalyptusCloudException;
-
 	/**
 	 * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from ObjectStorage) and written to the newly created
 	 * volume there by making it available to the SAN
@@ -278,10 +281,11 @@ public interface SANProvider {
 	
 	/**
 	 * Delete the created snapshot point, not the entire snapshot lun
-	 * @param snapshotId
+	 * @param parentVolumeId
+	 * @param snapshotPointId
 	 * @throws EucalyptusCloudException
 	 */
-	public void deleteSnapshotPoint(String snapshotPointId) throws EucalyptusCloudException;
+	public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
 
 	public boolean checkSANCredentialsExist();
 

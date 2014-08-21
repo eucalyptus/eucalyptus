@@ -34,6 +34,7 @@ import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.compute.ClientComputeException
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -50,6 +51,7 @@ import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
 import com.eucalyptus.compute.vpc.NetworkInterfaces
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.Subnet
+import com.eucalyptus.compute.vpc.VpcConfiguration
 import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
@@ -65,6 +67,7 @@ import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
+import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.LockResource
 import com.eucalyptus.util.Ordered
 import com.eucalyptus.util.RestrictedTypes
@@ -499,7 +502,7 @@ class VmInstanceLifecycleHelpers {
         final Allocation allocation
     ) {
       vmInfo?.netParams?.with {
-        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) != null && !VmNetworkConfig.DEFAULT_IP == ignoredPublicIp ) {
+        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) && !VmNetworkConfig.DEFAULT_IP.equals( ignoredPublicIp ) ) {
           allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
             resourceToken.instanceUuid == vmInfo.uuid
           }?.getAttribute(NetworkResourcesKey)?.add( new PublicIPResource( ownerId: vmInfo.instanceId, value: ignoredPublicIp ) )
@@ -555,7 +558,7 @@ class VmInstanceLifecycleHelpers {
 
           db.commit( )
         } catch ( final Exception e ) {
-          logger.error( "Failed to restore address state " + input.getNetParams( )
+          Logger.getLogger( PublicIPVmInstanceLifecycleHelper ).error( "Failed to restore address state " + input.getNetParams( )
               + " for instance "
               + input.getInstanceId( )
               + " because of: "
@@ -724,6 +727,9 @@ class VmInstanceLifecycleHelpers {
           if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
             groups.add( RestrictedTypes.resolver( NetworkGroup ).apply( groupId ) )
           }
+        }
+        if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+          throw Exceptions.toUndeclared( new MetadataException( "Security group limit exceeded" ) );
         }
 
         allocation.subnet = subnet

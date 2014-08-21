@@ -359,7 +359,7 @@ public class CloudWatchBackendService {
           false);
       final List<AlarmEntity> results = AlarmManager.describeAlarms(accountId,
           actionPrefix, alarmNamePrefix, alarmNames, maxRecords, stateValue,
-          nextToken, RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged());
+          nextToken, RestrictedTypes.filteringFor( CloudWatchMetadata.AlarmMetadata.class ).byPrivileges( ).buildPredicate( ) );
       if (maxRecords != null && results.size() == maxRecords) {
         reply.getDescribeAlarmsResult().setNextToken(
             results.get(results.size() - 1).getNaturalId());
@@ -395,7 +395,7 @@ public class CloudWatchBackendService {
       final Units unit = validateUnits(request.getUnit(), true);
       final Collection<AlarmEntity> results = AlarmManager.describeAlarmsForMetric(
           accountId, dimensionMap, metricName, namespace, period, statistic,
-          unit, RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged() );
+          unit, RestrictedTypes.filteringFor( CloudWatchMetadata.AlarmMetadata.class ).byPrivileges( ).buildPredicate( ) );
       final MetricAlarms metricAlarms = new MetricAlarms();
       metricAlarms.setMember(Lists.newArrayList(Collections2
           .<AlarmEntity, MetricAlarm> transform(results,
@@ -428,7 +428,7 @@ public class CloudWatchBackendService {
       final List<AlarmHistory> results = AlarmManager.describeAlarmHistory(
           accountId, alarmName, endDate, historyItemType,
           maxRecords, startDate, nextToken, Predicates.compose(
-            RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged(),
+            RestrictedTypes.filteringFor( CloudWatchMetadata.AlarmMetadata.class ).byPrivileges( ).buildPredicate( ),
             TransformationFunctions.AlarmHistoryToAlarmMetadata.INSTANCE ) );
       if (maxRecords != null && results.size() == maxRecords) {
         reply.getDescribeAlarmHistoryResult().setNextToken(

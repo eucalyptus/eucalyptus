@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -83,6 +85,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#describeWorkflowType(DescribeWorkflowTypeRequest)
  */
+@PolicyAction( vendor = "swf", action = "describeworkflowtype" )
 public class DescribeWorkflowTypeRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -91,11 +94,14 @@ public class DescribeWorkflowTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
      * The workflow type to describe.
      */
+    @Nonnull
     private WorkflowType workflowType;
 
     /**

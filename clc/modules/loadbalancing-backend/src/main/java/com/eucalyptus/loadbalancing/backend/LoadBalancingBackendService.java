@@ -20,7 +20,6 @@
 
 package com.eucalyptus.loadbalancing.backend;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -29,7 +28,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.persistence.EntityNotFoundException;
 import javax.persistence.EntityTransaction;
+import javax.persistence.OptimisticLockException;
 
 import org.apache.log4j.Logger;
 
@@ -645,17 +646,22 @@ public class LoadBalancingBackendService {
     final Function<Set<String>, Set<LoadBalancer>> lookupAccountLBs = new Function<Set<String>, Set<LoadBalancer>>( ) {
           @Override
           public Set<LoadBalancer> apply( final Set<String> identifiers ) {
-            final Predicate<? super LoadBalancer> requestedAndAccessible =
-                LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
-                    .byId( identifiers )
-                    .byPrivileges( )
-                    .buildPredicate( );
+            try {
+              final Predicate<? super LoadBalancer> requestedAndAccessible =
+                  LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
+                      .byId( identifiers )
+                      .byPrivileges( )
+                      .buildPredicate( );
 
-            final LoadBalancer example = showAll ?
-                LoadBalancer.named( null, null ) :
-                LoadBalancer.namedByAccountId( accountNumber , null );
-            final List<LoadBalancer> lbs = Entities.query( example, true);
-            return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
+              final LoadBalancer example = showAll ?
+                  LoadBalancer.named( null, null ) :
+                  LoadBalancer.namedByAccountId( accountNumber, null );
+              final List<LoadBalancer> lbs = Entities.query( example, true );
+              return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
+            } catch ( EntityNotFoundException e ) {
+              Entities.evictCache( LoadBalancer.class );
+              throw new OptimisticLockException( "Error loading load balancers", e );
+            }
           }
     };
 
