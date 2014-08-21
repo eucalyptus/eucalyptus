@@ -63,6 +63,7 @@
 package com.eucalyptus.network;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +151,6 @@ public class NetworkGroupManager {
     final CreateSecurityGroupResponseType reply = request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
-        
         @Override
         public NetworkGroup get( ) {
           final String vpcId = ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) );
@@ -162,6 +162,11 @@ public class NetworkGroupManager {
                 null :
                 Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), vpcId ) );
             final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, groupDescription );
+            if ( vpc != null ) {
+              group.getNetworkRules().addAll( Lists.newArrayList(
+                  NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+              ) );
+            }
             tx.commit();
             return group;
           } catch ( NoSuchElementException e ) {
@@ -217,7 +222,6 @@ public class NetworkGroupManager {
       final boolean showAll =
           request.getSecurityGroupSet( ).remove( "verbose" ) ||
           request.getSecurityGroupIdSet( ).remove( "verbose" );
-      //TODO:STEVE: Skip creation of default group when using VPC
       NetworkGroups.createDefault( ctx.getUserFullName( ) ); //ensure the default group exists to cover some old broken installs
 
       final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
@@ -364,7 +368,9 @@ public class NetworkGroupManager {
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
-      //TODO:STEVE: fail for non-vpc group ...
+      if ( ruleGroup.getVpcId( ) == null ) {
+        throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
+      }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       try {
@@ -417,7 +423,9 @@ public class NetworkGroupManager {
       final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null ); //TODO:STEVE: Group lookup by name for default VPC
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
-        //TODO:STEVE: fail for non-vpc group ...
+        if ( ruleGroup.getVpcId( ) == null ) {
+          throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
+        }
         try {
           final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null );
           for ( final NetworkRule rule : rules ) rule.setEgress( true );
