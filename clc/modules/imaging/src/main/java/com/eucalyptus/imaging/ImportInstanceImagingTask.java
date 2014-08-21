@@ -221,6 +221,9 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   
   @Override
   public void cleanUp(){
+    if (getCleanUpDone())
+      return;
+    boolean cleanedAllVolumes = true;
     final ImportInstanceTaskDetails instanceDetails = 
         this.getTask().getImportInstance();
     if(instanceDetails.getVolumes()==null)
@@ -232,9 +235,12 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
         }catch(final Exception ex){
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
               volumeDetail.getVolume().getId(), this.getDisplayName()));
+          cleanedAllVolumes = false;
         }
       }
     }
+    if (cleanedAllVolumes)
+      setCleanUpDone(true);
   }
   
   @TypeMapper

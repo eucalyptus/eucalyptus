@@ -168,12 +168,15 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
   
   @Override
   public void cleanUp(){
+    if (getCleanUpDone())
+      return;
     final ImportVolumeTaskDetails volumeDetails = 
         this.getTask().getImportVolume();
     if(volumeDetails.getVolume()!=null &&
         volumeDetails.getVolume().getId()!=null){
       try{
         EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+        setCleanUpDone(true);
       }catch(final Exception ex){
         LOG.warn(String.format("Failed to delete the volume %s for import task %s", volumeDetails.getVolume().getId(), this.getDisplayName()));
       }
