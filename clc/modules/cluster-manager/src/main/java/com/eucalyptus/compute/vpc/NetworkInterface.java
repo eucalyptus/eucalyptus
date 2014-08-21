@@ -96,6 +96,7 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
                                          final String displayName,
                                          final String macAddress,
                                          final String privateIp,
+                                         final String privateDnsName,
                                          final String description ) {
     final NetworkInterface networkInterface = new NetworkInterface( owner, displayName );
     networkInterface.setVpc( vpc );
@@ -108,6 +109,7 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     networkInterface.setRequesterManaged( false );
     networkInterface.setMacAddress( macAddress );
     networkInterface.setPrivateIpAddress( privateIp );
+    networkInterface.setPrivateDnsName( privateDnsName );
     return networkInterface;
   }
 

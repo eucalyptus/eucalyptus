@@ -148,6 +148,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.Subnet;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -181,6 +182,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
@@ -1101,13 +1103,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public void updatePublicAddress( final String publicAddr ) {
-    this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.ipOrDefault( publicAddr ) );
-    this.getNetworkConfig( ).updateDns( );
+    final String ip = VmNetworkConfig.ipOrDefault( publicAddr );
+    this.getNetworkConfig( ).setPublicAddress( ip );
+    this.getNetworkConfig( ).setPublicDnsName( dnsHostnamesEnabled( ) ?
+      VmNetworkConfig.generateDnsName( ip, DomainNames.externalSubdomain( ) ) :
+      "" );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
-    this.getNetworkConfig( ).setPrivateAddress( VmNetworkConfig.ipOrDefault( privateAddr ) );
-    this.getNetworkConfig( ).updateDns( );
+    final String ip = VmNetworkConfig.ipOrDefault( privateAddr );
+    this.getNetworkConfig( ).setPrivateAddress( ip );
+    this.getNetworkConfig( ).setPrivateDnsName( dnsHostnamesEnabled( ) ?
+        VmNetworkConfig.generateDnsName( ip, DomainNames.internalSubdomain( ) ) :
+        ""  );
   }
 
   public void updateMacAddress( final String macAddress ) {
@@ -1126,7 +1134,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void setRuntimeState( final VmState state ) {
     this.setState( state, Reason.NORMAL );
   }
-  
+
+  private boolean dnsHostnamesEnabled( ) {
+    final Vpc vpc = getBootRecord( ).getVpc( );
+    return vpc == null || Objects.firstNonNull( vpc.getDnsHostnames(), Boolean.FALSE );
+  }
+
   void store( ) {
     this.updateTimeStamps( );
     this.firePersist( );
@@ -2157,7 +2170,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               String.valueOf( networkInterface.getState( ) ),
               networkInterface.getMacAddress( ),
               networkInterface.getPrivateIpAddress( ),
-              null,
+              networkInterface.getPrivateDnsName( ),
               networkInterface.getSourceDestCheck( ),
               new GroupSetType( Collections2.transform(
                   networkInterface.getNetworkGroups( ),
@@ -2177,7 +2190,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               new InstancePrivateIpAddressesSetType( Lists.newArrayList(
                 new InstancePrivateIpAddressesSetItemType(
                     networkInterface.getPrivateIpAddress( ),
-                    null,
+                    networkInterface.getPrivateDnsName( ),
                     true,
                     networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
                         networkInterface.getAssociation( ).getPublicIp( ),

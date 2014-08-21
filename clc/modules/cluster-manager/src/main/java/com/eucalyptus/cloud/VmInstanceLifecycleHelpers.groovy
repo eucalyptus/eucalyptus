@@ -34,7 +34,6 @@ import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.compute.ClientComputeException
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -63,7 +62,6 @@ import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
-import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
@@ -75,6 +73,7 @@ import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.StatefulMessageSet
+import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
@@ -93,7 +92,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo
 import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType
 import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetRequestType
 import edu.ucsb.eucalyptus.msgs.PrivateIpAddressesSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -825,6 +823,9 @@ class VmInstanceLifecycleHelpers {
                   resource.value,
                   resource.mac,
                   resource.privateIp,
+                  instance.bootRecord.vpc.dnsHostnames ?
+                      VmInstances.dnsName( resource.privateIp, DomainNames.internalSubdomain( ) ) :
+                      null as String,
                   firstNonNull( resource.description, "" )
               ) )
           instance.updateMacAddress( networkInterface.macAddress )
@@ -843,15 +844,19 @@ class VmInstanceLifecycleHelpers {
           ) )
           Address address = getAddress( resourceToken )
           if ( address != null ) {
-            address.assign( networkInterface, instance )
+            address.assign( networkInterface ).start( instance )
             networkInterface.associate( NetworkInterfaceAssociation.create(
-                address.getAssociationId( ),
-                address.getAllocationId( ),
-                address.getOwnerAccountNumber( ),
-                address.getDisplayName( ),
-                null as String // TODO:STEVE: DNS name for ENI public ip
+                address.associationId,
+                address.allocationId,
+                address.ownerAccountNumber,
+                address.displayName,
+                networkInterface.vpc.dnsHostnames ?
+                    VmInstances.dnsName( address.displayName, DomainNames.externalSubdomain( ) ) :
+                    null as String
             ) )
-            instance.updatePublicAddress( address.getDisplayName( ) );
+            instance.updatePublicAddress( address.displayName );
+          } else {
+            NetworkInterfaceHelper.start( networkInterface, instance )
           }
           // Add so eni information is available from instance, not for
           // persistence
@@ -861,14 +866,25 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
+    void startVmInstance( final ResourceToken resourceToken, final VmInstance instance ) {
+      for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        NetworkInterfaceHelper.start( networkInterface, instance )
+      }
+    }
+
+    @Override
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
-      if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
-        for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+      for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
           if ( networkInterface?.attachment?.deleteOnTerminate ) {
             NetworkInterfaceHelper.release( networkInterface )
             Entities.delete( networkInterface )
+          } else if ( networkInterface.associated ) {
+            NetworkInterfaceHelper.stop( networkInterface )
           }
           networkInterface.detach( )
+        } else if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) && Entities.isPersistent( instance ) ) {
+          NetworkInterfaceHelper.stop( networkInterface )
         }
       }
     }

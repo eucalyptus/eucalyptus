@@ -64,6 +64,8 @@ import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -488,7 +490,18 @@ public class VpcManager {
           }
           final String mac = NetworkInterfaceHelper.mac( identifier );
           final String ip = NetworkInterfaceHelper.allocate( vpc.getDisplayName( ), subnet.getDisplayName( ), identifier, mac, privateIp );
-          return networkInterfaces.save( NetworkInterface.create( ctx.getUserFullName(), vpc, subnet, groups, identifier, mac, ip, firstNonNull( request.getDescription( ), "" ) ) );
+          return networkInterfaces.save( NetworkInterface.create(
+              ctx.getUserFullName(),
+              vpc,
+              subnet,
+              groups,
+              identifier,
+              mac,
+              ip,
+              vpc.getDnsHostnames( ) ?
+                  VmInstances.dnsName( ip, DomainNames.internalSubdomain( ) ) :
+                  null,
+              firstNonNull( request.getDescription( ), "" ) ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet not found '" + request.getSubnetId() + "'" ) );
         } catch ( ResourceAllocationException ex ) {

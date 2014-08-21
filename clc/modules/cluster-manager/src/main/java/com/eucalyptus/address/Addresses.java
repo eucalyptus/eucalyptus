@@ -275,6 +275,13 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
           final String vmIp = Objects.firstNonNull( vm.getPublicAddress( ), UNASSIGNED_INSTANCEADDR );
+          try {
+            if ( addr.isStarted( ) ) {
+              addr.stop( );
+            }
+          } catch ( final Exception e ) {
+            LOG.debug( e, e );
+          }
           if ( VmStateSet.RUN.apply( vm ) ) {
             AddressingDispatcher.dispatch(
               AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( 

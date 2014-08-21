@@ -30,6 +30,7 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Strings
 import com.google.common.collect.Lists
@@ -110,6 +111,35 @@ class NetworkInterfaceHelper {
     }
   }
 
+  static void start( final VpcNetworkInterface networkInterface, final VmInstance instance ) {
+    if ( networkInterface.associated ) try {
+      Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+      try {
+        address.start( instance )
+      } catch ( final Exception e ) {
+        logger.error( "Error starting address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}, instance ${instance.displayName}'.", e )
+      }
+    } catch ( NoSuchElementException e ) {
+      logger.warn( "Address '${networkInterface.association.publicIp}' not found when stopping '${networkInterface.displayName}, instance ${instance.displayName}'" )
+    }
+  }
+
+
+  static void stop( final VpcNetworkInterface networkInterface ) {
+    if ( networkInterface.associated ) try {
+      Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+      try {
+        if ( address.started ) {
+          address.stop( );
+        }
+      } catch ( final Exception e ) {
+        logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e )
+      }
+    } catch ( NoSuchElementException e ) {
+      logger.warn( "Address '${networkInterface.association.publicIp}' not found when stopping '${networkInterface.displayName}'" )
+    }
+  }
+
   static void release( final VpcNetworkInterface networkInterface ) {
     try {
       List<NetworkResource> resources = Lists.newArrayList( );
@@ -123,8 +153,15 @@ class NetworkInterfaceHelper {
         )
       }
 
-      if ( networkInterface.isAssociated( ) ) try {
+      if ( networkInterface.associated ) try {
         Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+        try {
+          if ( address.started ) {
+            address.stop( );
+          }
+        } catch ( final Exception e ) {
+          logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e )
+        }
         try {
           address.unassign( networkInterface )
         } catch ( final Exception e ) {
