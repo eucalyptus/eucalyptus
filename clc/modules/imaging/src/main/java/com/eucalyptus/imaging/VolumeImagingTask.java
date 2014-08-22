@@ -68,6 +68,9 @@ public class VolumeImagingTask extends ImagingTask {
   @Column( name = "metadata_bytes_processed" )
   private final Long     bytesProcessed;
   
+  @Column( name = "metadata_cleaned_up" )
+  private Boolean  cleanUpDone;
+
   @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "metadata_import_instance_download_manifest_url" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
@@ -85,6 +88,7 @@ public class VolumeImagingTask extends ImagingTask {
   VolumeImagingTask( OwnerFullName owner, String displayName ) {
     super( owner, displayName );
     this.bytesProcessed = null;
+    this.cleanUpDone = false;
   }
 
   protected VolumeImagingTask( OwnerFullName ownerFullName, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
@@ -92,6 +96,7 @@ public class VolumeImagingTask extends ImagingTask {
     this.task = task;
     this.setState( state );
     this.bytesProcessed = bytesProcessed;
+    this.cleanUpDone = false;
   }
   
   static VolumeImagingTask named(final OwnerFullName owner, final String taskId){
@@ -135,6 +140,14 @@ public class VolumeImagingTask extends ImagingTask {
     return bytesProcessed;
   }
   
+  protected Boolean getCleanUpDone() {
+    return cleanUpDone;
+  }
+
+  protected void setCleanUpDone(Boolean cleanUpDone) {
+    this.cleanUpDone = cleanUpDone;
+  }
+
   @Override
   protected void createTaskFromJSON( ) {
     // recreate task from JSON string
@@ -163,7 +176,7 @@ public class VolumeImagingTask extends ImagingTask {
   public String getTaskState() {
     return this.task.getState();
   }
-  
+
   @Override
   public void setTaskStatusMessage(String msg){
     this.task.setStatusMessage(msg);  

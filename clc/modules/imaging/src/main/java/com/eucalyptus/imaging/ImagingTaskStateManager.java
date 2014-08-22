@@ -319,6 +319,11 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         }
         final Date cancellingExpired = cancellingTimer.get(task.getDisplayName());
         if(cancellingExpired.before(new Date())){
+          try{
+            task.cleanUp();
+          }catch(final Exception ex){
+            LOG.warn("Failed to cleanup resources for "+task.getDisplayName());
+          }
           ImagingTasks.transitState(task, ImportTaskState.CANCELLING, ImportTaskState.CANCELLED, null);
         }
       }catch(final Exception ex){
@@ -345,11 +350,6 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       if(shouldPurge(task)){
         try{
           LOG.debug("forgetting about conversion task(cancelled) "+task.getDisplayName());
-          try{
-            task.cleanUp();
-          }catch(final Exception ex){
-            LOG.warn("Failed to cleanup resources for "+task.getDisplayName());
-          }
           ImagingTasks.deleteTask(task);
         }catch(final Exception ex){
           LOG.error("Failed to delete the conversion task", ex);
@@ -360,14 +360,14 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private void processFailedTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
+      try{
+        task.cleanUp();
+      }catch(final Exception ex){
+        LOG.warn("Failed to cleanup resources for "+task.getDisplayName());
+      }
       if(shouldPurge(task)){
         try{
           LOG.debug("forgetting about conversion task(failed) "+task.getDisplayName());
-          try{
-            task.cleanUp();
-          }catch(final Exception ex){
-            LOG.warn("Failed to cleanup resources for "+task.getDisplayName());
-          }
           ImagingTasks.deleteTask(task);
         }catch(final Exception ex){
           LOG.error("Failed to delete the conversion task", ex);
