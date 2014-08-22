@@ -257,6 +257,8 @@ public class X509Download extends HttpServlet {
           "Please register an OSG and/or set a valid s3 endpoint and download credentials again. " +
           "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
           remotePublicify( ObjectStorage.class ) ) );
+      sb.append( entryFor( "AWS_IAM_URL", "IAM service URL is not configured.",
+          remotePublicify( Euare.class ) ) );
       sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
           remotePublicify( Euare.class ) ) );
       sb.append( entryFor( "TOKEN_URL", "TOKEN URL is not configured.",
