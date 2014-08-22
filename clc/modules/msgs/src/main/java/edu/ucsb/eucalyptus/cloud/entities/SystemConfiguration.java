@@ -85,6 +85,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.net.InternetDomainName;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -124,6 +125,15 @@ public class SystemConfiguration extends AbstractPersistent {
         }
     }
 
+  public static final class DomainNamePropertyChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      if ( newValue == null || !InternetDomainName.isValid( String.valueOf( newValue ) ) ) {
+        throw new ConfigurablePropertyException( "Invalid name ("+newValue+")" );
+      }
+    }
+  }
+
   private static final Supplier<SystemConfiguration> systemConfigurationSupplier = Suppliers.memoizeWithExpiration(
       SystemConfigurationSupplier.INSTANCE,
       5,
@@ -134,7 +144,7 @@ public class SystemConfiguration extends AbstractPersistent {
   @Column( name = "system_registration_id" )
   private String  registrationId;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
-  @ConfigurableField( description = "Domain name to use for DNS." )
+  @ConfigurableField( description = "Domain name to use for DNS.", changeListener = DomainNamePropertyChangeListener.class )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
