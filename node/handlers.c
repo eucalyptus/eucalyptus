@@ -1975,6 +1975,7 @@ static int init(void)
     static int initialized = 0;
     int do_warn = 0, i;
     char logFile[EUCA_MAX_PATH] = "";
+    char logFileReqTrack[EUCA_MAX_PATH] = "";
     char *bridge = NULL;
     char *s = NULL;
     char *tmp = NULL;
@@ -2031,7 +2032,8 @@ static int init(void)
 
     // set the minimum log for now
     snprintf(logFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
-    log_file_set(logFile);
+    snprintf(logFileReqTrack, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/nc-tracking.log", nc_state.home);
+    log_file_set(logFile, logFileReqTrack);
     LOGINFO("spawning Eucalyptus node controller v%s %s\n", nc_state.version, compile_timestamp_str);
     if (do_warn)
         LOGWARN("env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);

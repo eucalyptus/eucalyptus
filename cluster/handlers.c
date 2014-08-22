@@ -6095,12 +6095,13 @@ int init_pthreads(void)
 //!
 int init_log(void)
 {
-    char logFile[EUCA_MAX_PATH], configFiles[2][EUCA_MAX_PATH], home[EUCA_MAX_PATH];
+    char logFile[EUCA_MAX_PATH], logFileReqTrack[EUCA_MAX_PATH], configFiles[2][EUCA_MAX_PATH], home[EUCA_MAX_PATH];
 
     if (local_init == 0) {             // called by this process for the first time
 
         //! @TODO code below is replicated in init_config(), it would be good to join them
         bzero(logFile, EUCA_MAX_PATH);
+        bzero(logFileReqTrack, EUCA_MAX_PATH);
         bzero(home, EUCA_MAX_PATH);
         bzero(configFiles[0], EUCA_MAX_PATH);
         bzero(configFiles[1], EUCA_MAX_PATH);
@@ -6115,6 +6116,7 @@ int init_log(void)
         snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
         snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
         snprintf(logFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
+        snprintf(logFileReqTrack, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/cc-tracking.log", home);
 
         configInitValues(configKeysRestartCC, configKeysNoRestartCC);   // initialize config subsystem
         readConfigFile(configFiles, 2);
@@ -6134,7 +6136,7 @@ int init_log(void)
             EUCA_FREE(log_facility);
         }
         // set the log file path (levels and size limits are set below)
-        log_file_set(logFile);
+        log_file_set(logFile, logFileReqTrack);
 
         local_init = 1;
     }

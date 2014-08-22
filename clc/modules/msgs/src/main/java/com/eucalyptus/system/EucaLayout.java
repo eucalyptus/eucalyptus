@@ -114,16 +114,6 @@ public class EucaLayout extends EucaPatternLayout {
 			if(renderedMessage != null) {
 				String[] messages = renderedMessage.split( "\n" );
 				StringBuffer sb = new StringBuffer( );
-				
-				String corrId = null;
-				try {
-				  corrId = Contexts.lookup().getCorrelationId();
-				}catch(final Exception ex){
-				  corrId = Threads.getCorrelationId();
-				}
-				if(corrId!=null && corrId.length()>=36)
-				    sb.append(String.format("[%s] ", corrId.substring(0,8)));
-			
 				boolean con = false;
 				for( int i = 0; i < messages.length; i++ ) {
 					String substring= messages[i];

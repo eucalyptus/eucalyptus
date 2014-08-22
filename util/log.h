@@ -154,7 +154,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
 int log_level_get(void);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_fp_set(FILE * fp);
-int log_file_set(const char *file);
+int log_file_set(const char *file, const char *req_track_file);
 int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);

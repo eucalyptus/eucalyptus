@@ -84,6 +84,13 @@
     <param name="MaxBackupIndex" value="10" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
+  <appender name="tracking-log-file" class="org.apache.log4j.RollingFileAppender">
+    <param name="Threshold" value="${euca.log.level}" />
+    <param name="File" value="${euca.log.dir}/cloud-tracking.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="com.eucalyptus.system.RequestTrackingLayout" /> 
+  </appender>
   <appender name="cloud-debug-file" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
     <param name="MaxFileSize" value="10MB" />
@@ -164,10 +171,12 @@
   <category name="com.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
+    <appender-ref ref="tracking-log-file" />
   </category>
   <category name="edu.ucsb.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
+    <appender-ref ref="tracking-log-file" />
   </category>
   <!--
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
@@ -193,14 +202,17 @@
   <category name="com.eucalyptus.cluster" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
+    <appender-ref ref="tracking-log-file" />
   </category>
   <category name="com.eucalyptus.cluster.callback" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
+    <appender-ref ref="tracking-log-file" />
   </category>
   <category name="edu.ucsb.eucalyptus.cloud.cluster" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
+    <appender-ref ref="tracking-log-file" />
   </category>
   <category name="com.eucalyptus.context.Context" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />

@@ -1418,7 +1418,7 @@ int read_config_bootstrap(void)
 
     if (!config->debug) {
         snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile);
+        log_file_set(logfile, NULL);
         log_params_set(EUCA_LOG_INFO, 0, 100000);
 
         pwent = getpwnam(config->eucauser);
@@ -1683,7 +1683,7 @@ int logInit(void)
 
     if (!config->debug) {
         snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile);
+        log_file_set(logfile, NULL);
 
         configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
 

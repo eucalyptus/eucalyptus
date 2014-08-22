@@ -45,6 +45,10 @@ public class EucaPatternParser extends PatternParser {
 			pc = new FileAndLineNumberPatternConverter(formattingInfo);
 			currentLiteral.setLength(0);
 			break;
+		case 'o':
+		  pc = new CorrelationIdPatternConverter(formattingInfo);
+		  currentLiteral.setLength(0);
+		  break;
 		default:
 			super.finalizeConverter(c);
 			return;
@@ -77,5 +81,22 @@ public class EucaPatternParser extends PatternParser {
 				return "unknown";
 			}
 		}
+	}
+	private static class CorrelationIdPatternConverter extends PatternConverter {
+	  CorrelationIdPatternConverter(FormattingInfo formattingInfo) {
+	    super(formattingInfo);
+	  }
+	  
+	  @Override
+	  public String convert(LoggingEvent event) {
+	    if(event.getProperties().containsKey("correlation-id")){
+	      final String correlationId = event.getProperty("correlation-id");
+	      if(correlationId!=null && correlationId.length()>=36)
+	        return correlationId.substring(0, 8);
+	      else
+	        return "unknown";
+	    }else
+	      return "unknown";
+	  }
 	}
 }
