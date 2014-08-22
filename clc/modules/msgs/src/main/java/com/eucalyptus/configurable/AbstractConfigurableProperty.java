@@ -74,7 +74,9 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
   
@@ -208,33 +210,27 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   public String setValue( String s ) throws ConfigurablePropertyException {
-    try {
-  	  EntityTransaction trans = Entities.get(this.getDefiningClass());
-      try {
-    	//This should return all matching objects
-        List<Object> resultList = Entities.query( this.getQueryObject( ) );
-        Object prop = this.getTypeParser( ).apply( s );
-      
-        if(resultList == null || resultList.size() == 0) {
-        	throw new NoSuchElementException("no entities found for property");
-        }
-      
-        this.fireChange( prop ); //Fire change only once
-        LOG.debug("Running setters.");
-      
-        for(Object obj : resultList) {      	
-      	  this.setter.invoke( obj, prop );
-        }
-        trans.commit( );
-        return s;
-      } catch ( Exception e ) {
-        Logs.exhaust( ).error( e, e );
-        trans.rollback( );
-        return "Error: " + e.getMessage( );
+    try ( final TransactionResource trans = Entities.transactionFor( this.getDefiningClass( ) ) ) {
+      //This should return all matching objects
+      List<Object> resultList = Entities.query( this.getQueryObject( ) );
+      Object prop = this.getTypeParser( ).apply( s );
+
+      if(resultList == null || resultList.size() == 0) {
+        throw new NoSuchElementException("no entities found for property");
       }
-    } catch (Exception e) {
+
+      this.fireChange( prop ); //Fire change only once
+      LOG.debug("Running setters.");
+
+      for(Object obj : resultList) {
+        this.setter.invoke( obj, prop );
+      }
+      trans.commit( );
+      return s;
+    } catch ( Exception e ) {
       Logs.exhaust( ).error( e, e );
-      return "Error: " + e.getMessage( );
+      Exceptions.findAndRethrow( e, ConfigurablePropertyException.class );
+      throw new ConfigurablePropertyException( e.getMessage( ), e );
     }
   }
   
