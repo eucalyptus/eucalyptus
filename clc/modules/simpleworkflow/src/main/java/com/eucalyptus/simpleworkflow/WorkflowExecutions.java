@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.entities.AbstractPersistentSupport;
+import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
 import com.eucalyptus.simpleworkflow.common.model.*;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowType;
 import com.eucalyptus.util.OwnerFullName;
@@ -78,6 +80,8 @@ public interface WorkflowExecutions {
   List<WorkflowExecution> deleteByExample( WorkflowExecution example ) throws SwfMetadataException;
 
   long countOpenByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
+  AbstractPersistentSupport<SimpleWorkflowMetadata.WorkflowExecutionMetadata,WorkflowExecution,SwfMetadataException> withRetries( );
 
   public static class Utils {
     private static final Logger logger = Logger.getLogger( WorkflowExecutions.class );
