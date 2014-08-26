@@ -19,11 +19,15 @@ import org.apache.log4j.Logger;
 public class CloudFormationBootstrapper extends Bootstrapper.Simple {
 
   // TODO: centralize these items (change property names and move elsewhere)
+  private static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));
   private static boolean USE_SWF = !"false".equalsIgnoreCase(System.getProperty("cloudformation.use_swf"));
 
   private static final WorkflowProvider workflowProvider = loadWorkflowProvider();
 
   private static WorkflowProvider loadWorkflowProvider() {
+    if (USE_AWS_SWF) {
+      return new AWSSWFWorkflowProvider();
+    }
     if (USE_SWF) {
       return new SWFWorkflowProvider();
     } else {

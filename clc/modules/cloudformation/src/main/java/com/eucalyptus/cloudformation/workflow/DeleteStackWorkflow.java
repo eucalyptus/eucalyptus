@@ -26,6 +26,6 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 @Workflow
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 3600)
 public interface DeleteStackWorkflow {
-  @Execute(version = "4.0")
+  @Execute(version = "20.0")
   public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId);
 }

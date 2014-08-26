@@ -27,6 +27,6 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 @Workflow
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 3600)
 public interface CreateStackWorkflow {
-  @Execute(version = "4.0")
+  @Execute(version = "20.0")
   public void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure);
 }

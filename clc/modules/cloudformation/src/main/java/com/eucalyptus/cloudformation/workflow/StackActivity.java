@@ -28,7 +28,7 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrati
   defaultTaskStartToCloseTimeoutSeconds = 600,
   defaultTaskScheduleToCloseTimeoutSeconds = 1800
 )
-@Activities(version="4.0")
+@Activities(version="20.0")
 public interface StackActivity {
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
   public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
