@@ -193,6 +193,10 @@ class DescribeAccountAttributesType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeAccountAttributesType() {  }
+
+  Iterable<String> attributeNames( ) {
+    accountAttributeNameSet?.item?.collect{ AccountAttributeNameSetItemType item -> item.attributeName } ?: [ ]
+  }
 }
 class RouteTableIdSetType extends EucalyptusData {
   RouteTableIdSetType() {  }

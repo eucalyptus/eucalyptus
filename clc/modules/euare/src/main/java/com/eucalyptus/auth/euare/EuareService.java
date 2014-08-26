@@ -86,6 +86,8 @@ import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.ServerCertificates;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.euare.events.AccountCreatedEvent;
+import com.eucalyptus.auth.euare.events.AccountEventUtils;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -104,6 +106,9 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -126,6 +131,7 @@ public class EuareService {
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
+      AccountEventUtils.fireCreated( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -151,6 +157,7 @@ public class EuareService {
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
       Privileged.deleteAccount( requestUser, accountFound, recursive );
+      AccountEventUtils.fireDeleted( accountFound.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {

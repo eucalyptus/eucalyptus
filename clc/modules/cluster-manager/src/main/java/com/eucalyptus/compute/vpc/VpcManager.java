@@ -77,6 +77,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
@@ -1091,19 +1092,27 @@ public class VpcManager {
   public DescribeAccountAttributesResponseType describeAccountAttributes(final DescribeAccountAttributesType request) throws EucalyptusCloudException {
     final DescribeAccountAttributesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final List<String> platforms = Lists.newArrayList( "VPC" );
     String vpcId = "none";
     try {
-      vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName() );
+      vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName( ) );
     } catch ( VpcMetadataNotFoundException e) {
-      // no default vpc
+      platforms.add( "EC2" );
     } catch ( Exception e ) {
       throw handleException( e );
     }
-    reply.getAccountAttributeSet( ).getItem( ).add(
-        new AccountAttributeSetItemType( "supported-platforms", Lists.newArrayList( "EC2", "VPC" ) ) ); //TODO:STEVE: Show only available platform
-    reply.getAccountAttributeSet( ).getItem( ).add(
-        new AccountAttributeSetItemType( "default-vpc", Lists.newArrayList( vpcId ) ) );
+    final Map<String,List<String>> attributes = ImmutableMap.of(
+        "supported-platforms", platforms,
+        "default-vpc", Lists.newArrayList( vpcId )
+    );
+    final Set<String> requestedAttributes = Sets.newHashSet( request.attributeNames( ) );
+    for ( final Map.Entry<String,List<String>> attributeEntry : attributes.entrySet( ) ) {
+      if ( requestedAttributes.isEmpty( ) || requestedAttributes.contains( attributeEntry.getKey( ) ) ) {
+        reply.getAccountAttributeSet().getItem().add(
+            new AccountAttributeSetItemType( attributeEntry.getKey( ), attributeEntry.getValue( ) ) );
+      }
+    }
     return reply;
   }
 
