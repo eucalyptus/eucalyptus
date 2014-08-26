@@ -1526,7 +1526,7 @@ class NullableAttributeValueType extends EucalyptusData {
   NullableAttributeValueType() {  }
 }
 class CreateVpcType extends VpcMessage {
-  @FieldRegex( FieldRegexValue.CIDR )
+  @FieldRegex( FieldRegexValue.EC2_ACCOUNT_OR_CIDR )
   String cidrBlock;
   @FieldRegex( FieldRegexValue.STRING_255 )
   String instanceTenancy;

@@ -30,7 +30,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -682,46 +684,124 @@ public class VpcManager {
   }
 
   public CreateVpcResponseType createVpc( final CreateVpcType request ) throws EucalyptusCloudException {
-    final CreateVpcResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
+    final CreateVpcResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
-    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
     if ( !Cidr.parse().apply( request.getCidrBlock( ) ).transform( Cidr.prefix( ) )
-        .transform( Functions.forPredicate( Range.closed( 16, 28 ) ) ).or( false ) ) {
+        .transform( Functions.forPredicate( Range.closed( 16, 28 ) ) ).or( createDefault ) ) {
       throw new ClientComputeException( "InvalidVpcRange", "Cidr range invalid: " + request.getCidrBlock( ) );
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
       public Vpc get( ) {
         try {
-          DhcpOptionSet options;
-          try {
-            options = dhcpOptionSets.lookupByExample(
-                DhcpOptionSet.exampleDefault( accountFullName ),
-                accountFullName,
-                "default",
-                Predicates.alwaysTrue( ),
-                Functions.<DhcpOptionSet>identity( ) );
-          } catch ( VpcMetadataNotFoundException e ) {
-            options = dhcpOptionSets.save( DhcpOptionSet.createDefault( userFullName, Identifier.dopt.generate( ) ) );
+          final String vpcCidr;
+          final AccountFullName vpcAccountFullName;
+          final UserFullName vpcOwnerFullName;
+          Vpc vpc = null;
+          RouteTable routeTable = null;
+          NetworkAcl networkAcl = null;
+          if ( createDefault ) {
+            final Account account = Accounts.lookupAccountById( request.getCidrBlock( ) );
+            vpcCidr = Vpcs.DEFAULT_VPC_CIDR;
+            vpcAccountFullName = AccountFullName.getInstance( account );
+            vpcOwnerFullName =
+                UserFullName.getInstance( account.lookupAdmin( ) );
+
+            // check for existing vpc
+            try {
+              vpc = vpcs.lookupDefault( vpcAccountFullName, Functions.<Vpc>identity() );
+              routeTable = routeTables.lookupMain( vpc.getDisplayName( ), Functions.<RouteTable>identity( ) );
+              networkAcl = networkAcls.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkAcl>identity( ) );
+            } catch ( final VpcMetadataNotFoundException e ) {
+              // so create it
+            }
+          } else {
+            vpcCidr = request.getCidrBlock( );
+            vpcAccountFullName = userFullName.asAccountFullName( );
+            vpcOwnerFullName = userFullName;
           }
-          final Vpc vpc =
-              vpcs.save( Vpc.create( userFullName, Identifier.vpc.generate( ), options, request.getCidrBlock( ), false ) );
-          routeTables.save( RouteTable.create( userFullName, vpc, Identifier.rtb.generate( ), vpc.getCidr( ), true ) );
-          networkAcls.save( NetworkAcl.create( userFullName, vpc, Identifier.acl.generate( ), true ) );
-          final NetworkGroup group = NetworkGroup.create(
-              userFullName,
-              vpc,
-              ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
-              NetworkGroups.defaultNetworkName(),
-              "default VPC security group" );
-          final Collection<NetworkPeer> peers = Lists.newArrayList(
-              NetworkPeer.create( group.getOwnerAccountNumber( ), group.getName( ), group.getGroupId( ) ) );
-          group.getNetworkRules( ).addAll( Lists.newArrayList(
-              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
-              NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
-          ) );
-          securityGroups.save( group );
+          if ( vpc == null ) {
+            DhcpOptionSet options;
+            try {
+              options = dhcpOptionSets.lookupByExample(
+                  DhcpOptionSet.exampleDefault( vpcAccountFullName ),
+                  vpcAccountFullName,
+                  "default",
+                  Predicates.alwaysTrue(),
+                  Functions.<DhcpOptionSet>identity() );
+            } catch ( VpcMetadataNotFoundException e ) {
+              options = dhcpOptionSets.save( DhcpOptionSet.createDefault( vpcOwnerFullName, Identifier.dopt.generate() ) );
+            }
+            vpc =
+                vpcs.save( Vpc.create( vpcOwnerFullName, Identifier.vpc.generate(), options, vpcCidr, createDefault ) );
+            routeTable =
+                routeTables.save( RouteTable.create( vpcOwnerFullName, vpc, Identifier.rtb.generate(), vpc.getCidr(), true ) );
+            networkAcl =
+                networkAcls.save( NetworkAcl.create( vpcOwnerFullName, vpc, Identifier.acl.generate(), true ) );
+            final NetworkGroup group = NetworkGroup.create(
+                vpcOwnerFullName,
+                vpc,
+                ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
+                NetworkGroups.defaultNetworkName(),
+                "default VPC security group" );
+            final Collection<NetworkPeer> peers = Lists.newArrayList(
+                NetworkPeer.create( group.getOwnerAccountNumber(), group.getName(), group.getGroupId() ) );
+            group.getNetworkRules().addAll( Lists.newArrayList(
+                NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
+                NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+            ) );
+            securityGroups.save( group );
+          }
+          if ( createDefault && routeTable != null && networkAcl != null ) {
+            // ensure there is an internet gateway for the vpc and a route in place
+            InternetGateway internetGateway;
+            try {
+              internetGateway =
+                  internetGateways.lookupByVpc( vpcAccountFullName, vpc.getDisplayName(), Functions.<InternetGateway>identity( ) );
+            } catch ( final VpcMetadataNotFoundException e ) {
+              internetGateway = internetGateways.save( InternetGateway.create( vpcOwnerFullName, Identifier.igw.generate( ) ) );
+              internetGateway.setVpc( vpc );
+            }
+
+            final Optional<Route> defaultRoute =
+                Iterables.tryFind( routeTable.getRoutes( ), CollectionUtils.propertyPredicate(
+                    "0.0.0.0/0",
+                    RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+
+            if ( !defaultRoute.isPresent( ) ) {
+              routeTable.getRoutes( ).add( Route.create( routeTable, Route.RouteOrigin.CreateRouteTable, "0.0.0.0/0", internetGateway ) );
+              routeTable.updateTimeStamps( ); // ensure version of table increments also
+            }
+
+            // ensure there is a default subnet in each availability zone
+            final Set<String> cidrsInUse = Sets.newHashSet( );
+            final Set<String> zonesWithoutSubnets = Sets.newTreeSet( );
+            for ( final String zone : Iterables.transform( Clusters.getInstance( ).listValues( ), CloudMetadatas.toDisplayName( ) ) ) {
+              try {
+                cidrsInUse.add( subnets.lookupDefault( vpcAccountFullName, zone, Subnets.FilterStringFunctions.CIDR ) );
+              } catch ( final VpcMetadataNotFoundException e ) {
+                zonesWithoutSubnets.add( zone );
+              }
+            }
+            final List<String> subnetCidrs = Lists.newArrayList( Iterables.transform(
+                Cidr.parseUnsafe( ).apply( Vpcs.DEFAULT_VPC_CIDR ).split( 16 ),
+                Functions.toStringFunction( ) ) );
+            subnetCidrs.removeAll( cidrsInUse );
+            for ( final String zone : zonesWithoutSubnets ) {
+              final Subnet subnet = subnets.save( Subnet.create(
+                  vpcOwnerFullName,
+                  vpc,
+                  networkAcl,
+                  routeTable,
+                  Identifier.subnet.generate( ),
+                  subnetCidrs.remove( 0 ),
+                  zone ) );
+              subnet.setDefaultForAz( true );
+              subnet.setMapPublicIpOnLaunch( true );
+            }
+          }
           return vpc;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );

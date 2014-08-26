@@ -79,6 +79,7 @@ public class VpcMessageValidation {
     // EC2
     EC2_PROTOCOL( "icmp|tcp|udp|-1|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]" ),
     EC2_ACL_ACTION("allow|deny"),
+    EC2_ACCOUNT_OR_CIDR( "[0-9]{12}|(?:(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(?:[0-9]|[12][0-9]|3[0-2])" ),
     ;
 
     private final Pattern pattern;

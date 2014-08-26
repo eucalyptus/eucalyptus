@@ -23,9 +23,11 @@ package com.eucalyptus.util
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
+import com.google.common.collect.Lists
 import com.google.common.net.InetAddresses
 import com.google.common.primitives.Ints
 import com.google.common.primitives.Longs
+import com.google.common.primitives.UnsignedInteger
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 
@@ -123,6 +125,17 @@ class Cidr implements Predicate<InetAddress> {
 
   Predicate<Cidr> containedBy( ) {
     { Cidr cidr -> cidr.contains( this ) } as Predicate<Cidr>
+  }
+
+  Iterable<Cidr> split( final int parts ) {
+    final List<Cidr> cidrs = Lists.newArrayList( )
+    final int bits = parts==1 ? 0 : Numbers.log2( parts - 1 ) + 1
+    final int maxParts = (int) Math.pow( 2, bits )
+    final UnsignedInteger size = UnsignedInteger.fromIntBits( (int) Math.pow( 2, ( 32 - prefix ) ) ).dividedBy( UnsignedInteger.fromIntBits( maxParts ) )
+    for ( int i=0; i < parts; i++ ) {
+      cidrs.add( of( UnsignedInteger.fromIntBits( getIp( ) ).plus( size.times( UnsignedInteger.fromIntBits( i ) ) ).intValue( ), prefix + bits ) )
+    }
+    cidrs
   }
 
   static int prefixMask( int prefix ) {

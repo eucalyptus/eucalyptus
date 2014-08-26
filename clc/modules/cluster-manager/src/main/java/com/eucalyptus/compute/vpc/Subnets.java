@@ -26,12 +26,10 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
@@ -61,6 +59,11 @@ public interface Subnets extends Lister<Subnet> {
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
                       Function<? super Subnet,T> transform ) throws VpcMetadataException;
+
+  <T> T lookupDefault( OwnerFullName ownerFullName,
+                       String availabilityZone,
+                       Function<? super Subnet, T> transform ) throws VpcMetadataException;
+
 
   boolean delete( final SubnetMetadata metadata ) throws VpcMetadataException;
 

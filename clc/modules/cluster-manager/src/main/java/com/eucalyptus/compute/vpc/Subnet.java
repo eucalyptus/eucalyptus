@@ -97,6 +97,14 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     return new Subnet( owner, name );
   }
 
+  public static Subnet exampleDefault( final OwnerFullName owner,
+                                       final String availabilityZone ) {
+    final Subnet subnet = exampleWithOwner( owner );
+    subnet.setAvailabilityZone( availabilityZone );
+    subnet.setDefaultForAz( true );
+    return subnet;
+  }
+
   public static Subnet exampleWithRouteTableAssociation( final OwnerFullName owner, final String associationId ) {
     final Subnet subnet = new Subnet( owner, null );
     subnet.setRouteTableAssociationId( associationId );
