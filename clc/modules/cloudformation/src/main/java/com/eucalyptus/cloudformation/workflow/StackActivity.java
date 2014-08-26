@@ -35,7 +35,6 @@ public interface StackActivity {
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String stackId, String accountId);
-  public String logException(Throwable t);
   public String logInfo(String message);
   public String deleteAllStackRecords(String stackId, String accountId);
 }

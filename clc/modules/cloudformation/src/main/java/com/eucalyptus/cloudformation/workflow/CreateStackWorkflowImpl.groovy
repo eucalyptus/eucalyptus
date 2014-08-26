@@ -37,9 +37,11 @@ import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+import org.apache.log4j.Logger
 
 @CompileStatic(TypeCheckingMode.SKIP)
 public class CreateStackWorkflowImpl implements CreateStackWorkflow {
+  private static final Logger LOG = Logger.getLogger(CreateStackWorkflowImpl.class);
   @Delegate
   WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity);
 
@@ -117,7 +119,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             List<Promise<String>> allResources = Lists.newArrayList();
             allResources.addAll(createdResourcePromiseMap.values());
             AndPromise allResourcePromises = new AndPromise(allResources);
-            waitFor(allResourcePromises) {
+            AndPromise allResourcesAndPromise = new AndPromise(allResourcePromises);
+            waitFor(allResourcesAndPromise) {
               waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId))) {
                 promiseFor(activities.createGlobalStackEvent(stackId, accountId,
                   StackResourceEntity.Status.CREATE_COMPLETE.toString(),
@@ -125,7 +128,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
               }
             }
           }.withCatch { Throwable t->
-            activities.logException(t);
+            CreateStackWorkflowImpl.LOG.error(t);
+            CreateStackWorkflowImpl.LOG.debug(t, t);
             Collection<String> failedResources = Lists.newArrayList();
             for (String resourceName: resourceStatusMap.keySet()) {
               if (resourceStatusMap.get(resourceName) == ResourceStatus.IN_PROCESS) {
@@ -257,10 +261,13 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           }.getResult();
         }
       } withCatch { Throwable t->
-        promiseFor(activities.logException(t));
+        CreateStackWorkflowImpl.LOG.error(t);
+        CreateStackWorkflowImpl.LOG.debug(t, t);
+        Promise.Void();
       }
     } catch (Exception ex) {
-      activities.logException(ex);
+      CreateStackWorkflowImpl.LOG.error(ex);
+      CreateStackWorkflowImpl.LOG.debug(ex, ex);
     }
   }
 }
