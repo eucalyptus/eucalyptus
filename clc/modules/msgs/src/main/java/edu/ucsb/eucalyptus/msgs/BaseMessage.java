@@ -245,11 +245,30 @@ public class BaseMessage {
   public <TYPE extends BaseMessage> TYPE regardingRequestId(final String msgId){
     if(msgId!=null){
       String requestId = null;
-      if (! msgId.contains("::"))
+      String postfix = null;
+      if (! msgId.contains("::")){
         requestId = msgId;
-      else
+        postfix = requestId;
+      }
+      else {
         requestId = msgId.substring(0, msgId.indexOf("::"));
-      this.correlationId = String.format("%s::%s", requestId, UUID.randomUUID( ).toString( ));
+        postfix = msgId.substring(msgId.indexOf("::")+2);
+      }
+      String uuid = null;
+      try{
+        String baseHex = postfix.substring(9,13);
+        Integer baseHexInt = Integer.parseInt(baseHex, 16);
+        Integer newHexInt = (baseHexInt+1) % 65536;
+        String newHex = Integer.toHexString(newHexInt);
+        while(newHex.length()<4) {
+          newHex = "0"+newHex;
+        }
+        uuid = UUID.randomUUID( ).toString( );
+        uuid = uuid.substring(0, 9) + newHex + uuid.substring(13);
+      }catch(final Exception ex){
+        uuid = UUID.randomUUID( ).toString( );  
+      }
+      this.correlationId = String.format("%s::%s", requestId, uuid);
     }
     return ( TYPE ) this;
   }
