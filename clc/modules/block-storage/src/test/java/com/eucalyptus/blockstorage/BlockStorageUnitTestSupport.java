@@ -26,6 +26,8 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.*;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
+import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
+import com.eucalyptus.blockstorage.san.common.entities.SANVolumeInfo;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.TransactionException;
@@ -72,7 +74,9 @@ public class BlockStorageUnitTestSupport {
                         .addAnnotatedClass(StorageInfo.class)
                         .addAnnotatedClass(VolumeExportRecord.class)
                         .addAnnotatedClass(VolumeInfo.class)
-                        .addAnnotatedClass(VolumeToken.class);
+                        .addAnnotatedClass(VolumeToken.class)
+                        .addAnnotatedClass(SANVolumeInfo.class)
+                        .addAnnotatedClass(SANInfo.class);
 
         PersistenceContexts.registerPersistenceContext("eucalyptus_storage", config);
     }
@@ -194,11 +198,33 @@ public class BlockStorageUnitTestSupport {
         }
     }
 
+    public static void flushSANVolumeInfos() {
+        try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
+            Entities.deleteAll(SANVolumeInfo.class);
+            tran.commit();
+        }
+        catch(Throwable t) {
+            throw new RuntimeException("error deleting remaining SAN volume infos - " + t.getMessage(), t);
+        }
+    }
+
+    public static void flushSANInfos() {
+        try (TransactionResource tran = Entities.transactionFor(SANInfo.class)) {
+            Entities.deleteAll(SANInfo.class);
+            tran.commit();
+        }
+        catch(Throwable t) {
+            throw new RuntimeException("error deleting remaining SANInfos - " + t.getMessage(), t);
+        }
+    }
+
     public static void flushBlockStorageEntities() {
         flushSnapshotInfos();
         flushVolumeInfos();
         flushCHAPUserInfos();
         flushISCSIMetaInfos();
+        flushSANVolumeInfos();
+        flushSANInfos();
     }
 
     public static S3SnapshotTransfer createMockS3SnapshotTransfer( ) {
