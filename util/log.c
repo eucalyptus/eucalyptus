@@ -868,8 +868,9 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     }
 
     threadCorrelationId *corr_id = get_corrid();
-    if (corr_id != NULL && corr_id->correlation_id!=NULL)
+    if (corr_id != NULL && corr_id->correlation_id!=NULL && strlen(corr_id->correlation_id) >= 74) {
         is_corrid=TRUE;
+    }
 
     if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
         prefix_spec = log_level_prefix[log_level];
@@ -989,6 +990,10 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         for(int i=0; i<8; i++) {
             buf[offset++] = corr_id->correlation_id[i];
         }
+        buf[offset++] = '-';
+        for(int i=0; i<4; i++) {
+            buf[offset++] = corr_id->correlation_id[i+47];
+        }
         buf[offset++] = ']';
     }
 
@@ -1024,19 +1029,18 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
 
     if ( is_corrid && log_file_path_req_track != NULL ) {
         log_line(log_file_path_req_track, buf);
-        sprintf(buf_corrid, "[%.8s] ", corr_id->correlation_id);
+        sprintf(buf_corrid, "[%.8s-%.4s] ", corr_id->correlation_id, corr_id->correlation_id+47);
         if ((s=strstr(buf, buf_corrid))!=NULL) {  
-            offset = 11;         
+            offset = 16;         
             while (TRUE) {
-                s[offset-11] = s[offset];
+                s[offset-16] = s[offset];
                 c=s[offset++];
                 if(c == '\n' || c == '\0' || offset>=LOGLINEBUF)
                     break;
             }
-            s[offset-11] = '\0';
+            s[offset-16] = '\0';
         }
     }
-
     if ( (rc=log_line(log_file_path, buf)) != EUCA_OK ) 
         return (rc);
 

@@ -99,7 +99,7 @@ public class RequestTrackingLayout extends EucaPatternLayout {
         return sb.toString( );
       }
     } catch ( Exception ex ) {
-      ex.printStackTrace( );
+      ;
     }
     return null;
   }

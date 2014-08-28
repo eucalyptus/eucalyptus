@@ -903,7 +903,7 @@ public class SimpleWorkflowService {
       final TaskToken token =
           taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
 
-      activityTasks.updateByExample(
+      activityTasks.withRetries( ).updateByExample(
           ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId(), token.getScheduledEventId() ),
           accountFullName,
           token.getRunId( ) + "/" + token.getScheduledEventId( ),
@@ -942,7 +942,7 @@ public class SimpleWorkflowService {
       final TaskToken token =
           taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
 
-      final Pair<String,String> domainTaskListPair = activityTasks.updateByExample(
+      final Pair<String,String> domainTaskListPair = activityTasks.withRetries( ).updateByExample(
           ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId( ), token.getScheduledEventId( ) ),
           accountFullName,
           token.getRunId( ) + "/" + token.getScheduledEventId( ),
@@ -1008,7 +1008,7 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      final WorkflowExecution workflowExecution = workflowExecutions.updateByExample(
+      final WorkflowExecution workflowExecution = workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1072,7 +1072,7 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      final WorkflowExecution workflowExecution = workflowExecutions.updateByExample(
+      final WorkflowExecution workflowExecution = workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1230,7 +1230,7 @@ public class SimpleWorkflowService {
           Functions.<Domain>identity( ) );
 
       final Set<Pair<String,String>> notificationTypeListPairs = Sets.newHashSet( );
-      workflowExecutions.updateByExample(
+      workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1621,7 +1621,7 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      final Pair<String,String> domainTaskListPair = workflowExecutions.updateByExample(
+      final Pair<String,String> domainTaskListPair = workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
           accountFullName,
           request.getWorkflowId( ),
@@ -1677,7 +1677,7 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      final Pair<String,String> domainTaskListPair = workflowExecutions.updateByExample(
+      final Pair<String,String> domainTaskListPair = workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
           accountFullName,
           request.getWorkflowId( ),
@@ -1732,7 +1732,7 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      workflowExecutions.updateByExample(
+      workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
           accountFullName,
           request.getWorkflowId( ),

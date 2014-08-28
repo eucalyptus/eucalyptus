@@ -1251,13 +1251,11 @@ public class Entities {
     public R apply( final D input ) {
       RuntimeException rootCause = null;
       for ( int i = 0; i < retries; i++ ) {
-        EntityTransaction db = Entities.get( this.entityType );
-        try {
+        try ( final TransactionResource tx = Entities.transactionFor( this.entityType ) ) {
           R ret = this.function.apply( input );
-          db.commit( );
+          tx.commit( );
           return ret;
         } catch ( RuntimeException ex ) {
-          db.rollback( );
           if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
           } else if ( Exceptions.isCausedBy( ex, LockAcquisitionException.class ) ) {

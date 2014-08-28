@@ -2453,15 +2453,30 @@ char *get_username(void)
 //! Make a correlation ID that is prefixed with the ID received from other components
 char* create_corrid(const char* id) {
     char*new_corr_id = NULL;
+    char hex_id[8];
+    long int hex_val=-1;
     if(id==NULL)
         return NULL;
     // correlation_id = [prefix(36)::new_id(36)]
     if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
         char *newid = system_output("uuidgen");
+        memset(hex_id, '\0', 8);
+        strncpy(hex_id, strstr(id, "::")+11, 4);
+        hex_val = strtol(hex_id, NULL, 16);
+        hex_val = (hex_val+1) % 65536;
+        sprintf(hex_id, "%x", (unsigned int) hex_val);
+        while( strlen(hex_id) < 4 ) {
+            for(int i = strlen(hex_id)+1; i > 0 ; i--) {
+                hex_id[i] = hex_id[i-1]; 
+            }
+            hex_id[0] = '0';
+        }
         if (newid != NULL) {
             new_corr_id = calloc(75, sizeof(char));
-            strncpy(new_corr_id, id, 38);
-            strncpy(new_corr_id + 38, newid, 36);
+            strncpy(new_corr_id, id, 38); // copy request id part
+            strncpy(new_corr_id + 38, newid, 9); // copy the first part of the uuid
+            strncpy(new_corr_id + 47, hex_id, 4); // copy the incremented hex string from base id
+            strcpy(new_corr_id + 51, newid + 13); // copy the remaining part of the uuid
             EUCA_FREE(newid);
         }
     }
@@ -2493,8 +2508,7 @@ threadCorrelationId* set_corrid_impl(const char* corr_id, pid_t* pid, pthread_t*
         newId->tid = *tid;
         newId->pid = -1;
     }
-    euca_strncpy(newId->correlation_id , corr_id, strlen(corr_id));
-
+    euca_strncpy(newId->correlation_id , corr_id, strlen(corr_id)+1);
     sem_p(corr_sem);
     newId->next = corr_ids;
     corr_ids = newId;            
@@ -2693,6 +2707,16 @@ int main(int argc, char **argv)
         if (i % 79 == 0)
             buf[i] = '\n';
     }
+
+    printf("Testing correlation id creation\n");
+    char *new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0005-4cec-a11a-5c2c6a42134c");
+    printf("Created correlation ID: %s\n", new_corr_id);
+    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0051-4cec-a11a-5c2c6a42134c");
+    printf("Created correlation ID: %s\n", new_corr_id);
+    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0501-4cec-a11a-5c2c6a42134c");
+    printf("Created correlation ID: %s\n", new_corr_id);
+    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-ffff-4cec-a11a-5c2c6a42134c");
+    printf("Created correlation ID: %s\n", new_corr_id);
 
     // We're testing the euca_execlp() API.
     printf("Testing euca_execlp() in misc.c\n");
