@@ -339,6 +339,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     if ( workflowHistory.size( ) > SimpleWorkflowConfiguration.getWorkflowExecutionHistorySize( ) ) {
       throw new WorkflowHistorySizeLimitException( this );
     }
+    updateTimeStamps( ); // ensure workflow version incremented
     return event.getEventId();
   }
 
