@@ -202,7 +202,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 					})) {
 						//Nothing matched.
 						throw new ConfigurablePropertyException("Cannot modify " + t.getQualifiedName() + "." + t.getFieldName() + " new value is not a valid value.  " +				
-								"Legal values are: " + Joiner.on( "," ).join( validEntries) );
+								"Legal values are: " + Joiner.on( "," ).join( Sets.filter(validEntries, StorageManagers.SUPPORTED_PROVIDER_PREDICATE)) );
 					}
 				} finally {
 					tx.rollback();
