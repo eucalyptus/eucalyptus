@@ -94,6 +94,7 @@ import org.hibernate.UnresolvableObjectException;
 import org.hibernate.WrongClassException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.JDBCConnectionException;
+import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
@@ -193,6 +194,10 @@ public class PersistenceExceptions {
 
   public static boolean isStaleUpdate( final Throwable throwable ) {
     return Exceptions.isCausedBy( throwable, OptimisticLockException.class );
+  }
+
+  public static boolean isLockError( final Throwable throwable ) {
+    return Exceptions.isCausedBy( throwable, LockAcquisitionException.class );
   }
 
   public static ErrorCategory classify( final Throwable e ) {
