@@ -50,10 +50,20 @@ typedef struct gni_name_t {
     char name[1024];
 } gni_name;
 
+typedef struct gni_rule_t {
+  int protocol;
+  int fromPort, toPort, icmpType, icmpCode, slashnet;
+  char cidr[16];
+  char groupId[16];
+  char groupOwnerId[16];
+} gni_rule;
+
 typedef struct gni_secgroup_t {
     char accountId[128], name[128], chainname[32];
     gni_name *grouprules;
     int max_grouprules;
+    gni_rule *ingress_rules, *egress_rules;
+    int max_ingress_rules, max_egress_rules;
     gni_name *instance_names;
     int max_instance_names;
 } gni_secgroup;

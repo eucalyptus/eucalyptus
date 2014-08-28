@@ -100,6 +100,7 @@
 #include "eucanetd.h"
 #include "config-eucanetd.h"
 #include "globalnetwork.h"
+#include "euca-to-mido.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -142,6 +143,7 @@
 //vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
+mido_config *mido = NULL;
 
 configEntry configKeysRestartEUCANETD[] = {
     {"EUCALYPTUS", "/"}
@@ -177,6 +179,12 @@ configEntry configKeysRestartEUCANETD[] = {
     {"VNET_MACPREFIX", "d0:0d"}
     ,
     {"EUCA_USER", "eucalyptus"}
+    ,
+    {"MIDOGWHOST", NULL}
+    ,
+    {"MIDOGWIP", NULL}
+    ,
+    {"MIDOGWIFACE", NULL}
     ,
     {NULL, NULL}
     ,
@@ -301,14 +309,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    if (config->flushmode) {
-        if (flush_all()) {
-            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
-            exit(1);
-        }
-        exit(0);
-    }
-
     /* for testing XML validation
        {
        globalNetworkInfo *mygni;
@@ -320,6 +320,9 @@ int main(int argc, char **argv)
 
     LOGINFO("eucanetd started\n");
 
+    // temporary
+    system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
+
     // spin here until we get the latest config from active CC
     rc = 1;
     while (rc) {
@@ -330,9 +333,21 @@ int main(int argc, char **argv)
         }
     }
 
+    if (config->flushmode) {
+        if (flush_all()) {
+            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
+            exit(1);
+        }
+        exit(0);
+    }
+
+
     // got all config, enter main loop
-    //    while(counter<25) {
+    //    while(counter<3) {
     while (1) {
+        // temporary
+        system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
+        
         update_globalnet = 0;
 
         counter++;
@@ -362,51 +377,73 @@ int main(int argc, char **argv)
             update_globalnet = 0;
         }
         // now, perform any updates that are required
-
-        // if information on sec. group rules/membership has changed, apply
-        if (update_globalnet) {
-            LOGINFO("new networking state (VM security groups): updating system\n");
-            // install iptables FW rules, using IPsets for sec. group
-            rc = update_sec_groups();
-            if (rc) {
-                LOGERROR("could not complete update of security groups: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM security groups): updated successfully\n");
-            }
-        }
-        // if information about local VM network config has changed, apply
-        if (update_globalnet) {
-            LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
-            // update list of private IPs, handle DHCP daemon re-configure and restart
-            rc = update_private_ips();
-            if (rc) {
-                LOGERROR("could not complete update of private IPs: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM private network addresses): updated successfully\n");
-            }
-
-            // update public IP assignment and NAT table entries
-            rc = update_public_ips();
-            if (rc) {
-                LOGERROR("could not complete update of public IPs: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM public network addresses): updated successfully\n");
-            }
-
-            // install ebtables rules for isolation
-            rc = update_isolation_rules();
-            if (rc) {
-                if (epoch_failed_updates >= 60) {
-                    LOGERROR("could not complete update of VM network isolation rules after 60 retries: check above log errors for details\n");
-                } else {
-                    LOGWARN("retry (%d): could not complete update of VM network isolation rules: retrying\n", epoch_failed_updates);
+        if (!strcmp(config->vnetMode, "VPCMIDO")) {
+            LOGTRACE("IN VPCMIDO MODE\n");
+            if (update_globalnet) {
+                if (mido) {
+                    free_mido_config(mido);
+                    bzero(mido, sizeof(mido_config));
                 }
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM network isolation): updated successfully\n");
+                rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, "192.168.254.0", "24");
+                if (rc) {
+                    LOGERROR("could not initialize mido config\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    rc = do_midonet_update(globalnetworkinfo, mido);
+                    if (rc) {
+                        LOGERROR("could not update midonet: check log for details\n");
+                        update_globalnet_failed = 1;
+                    } else {
+                        LOGINFO("new Eucalyptus/Midonet networking state sync: updated successfully\n");
+                    }
+                }
+            }
+        } else if (!strcmp(config->vnetMode, "EDGE")) {
+            // if information on sec. group rules/membership has changed, apply
+            if (update_globalnet) {
+                LOGINFO("new networking state (VM security groups): updating system\n");
+                // install iptables FW rules, using IPsets for sec. group
+                rc = update_sec_groups();
+                if (rc) {
+                    LOGERROR("could not complete update of security groups: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM security groups): updated successfully\n");
+                }
+            }
+            // if information about local VM network config has changed, apply
+            if (update_globalnet) {
+                LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
+                // update list of private IPs, handle DHCP daemon re-configure and restart
+                rc = update_private_ips();
+                if (rc) {
+                    LOGERROR("could not complete update of private IPs: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM private network addresses): updated successfully\n");
+                }
+                
+                // update public IP assignment and NAT table entries
+                rc = update_public_ips();
+                if (rc) {
+                    LOGERROR("could not complete update of public IPs: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM public network addresses): updated successfully\n");
+                }
+                
+                // install ebtables rules for isolation
+                rc = update_isolation_rules();
+                if (rc) {
+                    if (epoch_failed_updates >= 60) {
+                        LOGERROR("could not complete update of VM network isolation rules after 60 retries: check above log errors for details\n");
+                    } else {
+                        LOGWARN("retry (%d): could not complete update of VM network isolation rules: retrying\n", epoch_failed_updates);
+                    }
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM network isolation): updated successfully\n");
+                }
             }
         }
 
@@ -776,6 +813,10 @@ int eucanetdInit(void)
             LOGFATAL("out of memory\n");
             exit(1);
         }
+    }
+
+    if (!mido) {
+        mido = calloc(1, sizeof(mido_config));
     }
 
     return (0);
@@ -1494,6 +1535,10 @@ int read_config(void)
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
+    cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
+    cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
+    cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
+    
 
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
@@ -1518,15 +1563,6 @@ int read_config(void)
         return (1);
     }
     rc = gni_print(globalnetworkinfo);
-
-    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-    if (rc) {
-        LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
-        for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
-            EUCA_FREE(cvals[i]);
-        }
-        return (1);
-    }
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
@@ -1590,6 +1626,10 @@ int read_config(void)
     snprintf(config->privInterface, 32, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+    snprintf(config->vnetMode, sizeof(config->vnetMode), "%s", cvals[EUCANETD_CVAL_MODE]);
+    if (cvals[EUCANETD_CVAL_MIDOGWHOST]) snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIP]) snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIFACE]) snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
 
     LOGDEBUG
         ("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n",
@@ -1601,40 +1641,57 @@ int read_config(void)
         LOGERROR("unable to initialize logging subsystem: check permissions and log config options\n");
         ret = 1;
     }
-
-    config->ipt = malloc(sizeof(ipt_handler));
-    if (!config->ipt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
+    
+    if (!strcmp(config->vnetMode, "EDGE")) {
+        // EDGE only
+        rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+        if (rc) {
+            LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
+            ret = 1;
+        }
+        
+        config->ipt = malloc(sizeof(ipt_handler));
+        if (!config->ipt) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ipt_handler_init(config->ipt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+            ret = 1;
+        }
+        
+        config->ips = malloc(sizeof(ips_handler));
+        if (!config->ips) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ips_handler_init(config->ips, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+            ret = 1;
+        }
+        
+        config->ebt = malloc(sizeof(ebt_handler));
+        if (!config->ebt) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ebt_handler_init(config->ebt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+            ret = 1;
+        }
+    } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
+        // VPCMIDO mode init
+        //        rc = initialize_mido(mido, "a-15.qa1.eucalyptus-systems.com", "10.111.5.57", "192.168.254.0", "24");
+        rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, "192.168.254.0", "24");
+        if (rc) {
+            LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
+            ret = 1;
+        }
     }
-    rc = ipt_handler_init(config->ipt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-        ret = 1;
-    }
-
-    config->ips = malloc(sizeof(ips_handler));
-    if (!config->ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-        ret = 1;
-    }
-
-    config->ebt = malloc(sizeof(ebt_handler));
-    if (!config->ebt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    rc = ebt_handler_init(config->ebt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-        ret = 1;
-    }
-
+    
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
         EUCA_FREE(cvals[i]);
     }
@@ -1976,46 +2033,56 @@ int flush_all(void)
     ebt_handler *ebt = NULL;
     ips_handler *ips = NULL;
 
-    ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
-    ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
-    ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
-
-    if (!ipt || !ebt || !ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
+    if (!strcmp(config->vnetMode, "EDGE")) {
+        ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
+        ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
+        ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
+        
+        if (!ipt || !ebt || !ips) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        // iptables
+        rc = ipt_handler_init(ipt, config->cmdprefix);
+        rc = ipt_handler_repopulate(ipt);
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_FILTER_FWD");
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_IN");
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_OUT");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_PRE");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_POST");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_OUT");
+        rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
+        rc = ipt_handler_print(ipt);
+        rc = ipt_handler_deploy(ipt);
+        
+        // ipsets
+        rc = ips_handler_init(ips, config->cmdprefix);
+        rc = ips_handler_repopulate(ips);
+        rc = ips_handler_deletesetmatch(ips, "EU_");
+        rc = ips_handler_deletesetmatch(ips, "EUCA_");
+        rc = ips_handler_print(ips);
+        rc = ips_handler_deploy(ips, 1);
+        
+        // ebtables
+        rc = ebt_handler_init(ebt, config->cmdprefix);
+        rc = ebt_handler_repopulate(ebt);
+        rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
+        rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
+        rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
+        rc = ebt_handler_deploy(ebt);
+        
+        EUCA_FREE(ipt);
+        EUCA_FREE(ebt);
+        EUCA_FREE(ips);
+    } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
+        if (mido) {
+            rc = do_midonet_teardown(mido);
+            if (rc) {
+                ret = 1;
+            }
+        }
     }
-    // iptables
-    rc = ipt_handler_init(ipt, config->cmdprefix);
-    rc = ipt_handler_repopulate(ipt);
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_FILTER_FWD");
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_IN");
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_OUT");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_PRE");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_POST");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_OUT");
-    rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
-    rc = ipt_handler_print(ipt);
-    rc = ipt_handler_deploy(ipt);
-
-    // ipsets
-    rc = ips_handler_init(ips, config->cmdprefix);
-    rc = ips_handler_repopulate(ips);
-    rc = ips_handler_deletesetmatch(ips, "EU_");
-    rc = ips_handler_deletesetmatch(ips, "EUCA_");
-    rc = ips_handler_print(ips);
-    rc = ips_handler_deploy(ips, 1);
-
-    // ebtables
-    rc = ebt_handler_init(ebt, config->cmdprefix);
-    rc = ebt_handler_repopulate(ebt);
-    rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
-    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
-    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
-    rc = ebt_handler_deploy(ebt);
-
-    EUCA_FREE(ipt);
-    EUCA_FREE(ebt);
-    EUCA_FREE(ips);
 
     return (ret);
 }
+

@@ -12,6 +12,8 @@ typedef struct midoname_t {
   int init;
 } midoname;
 
+//int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min, char *src_port_max,  char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule);
+
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *jsonbuf, midoname *outname);
 void mido_free_midoname(midoname *name);
 void mido_free_midoname_list(midoname *name, int max_name);
@@ -76,8 +78,8 @@ int mido_print_chain(midoname *name);
 int mido_delete_chain(midoname *name);
 int mido_get_chains(char *tenant, midoname **outnames, int *outnames_max);
 
-//int mido_create_rule(midoname *chain, char *type, char *src, char *src_slashnet, char *src_ports, char *dst, char *dst_slashnet, char *dst_ports, char *action, char *nat_target, char *nat_port_min, char *nat_port_max, midoname *outname);
-int mido_create_rule(midoname *chain, char *type, char *srcIAGuuid, char *src_ports, char *dstIAGuuid, char *dst_ports, char *action, char *nat_target, char *nat_port_min, char *nat_port_max, midoname *outname);
+int mido_create_rule(midoname *chain, midoname *outname, ...);
+//int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 int mido_read_rule(midoname *name);
 int mido_update_rule(midoname *name, ...);
 int mido_print_rule(midoname *name);
@@ -95,6 +97,7 @@ int mido_create_ipaddrgroup_ip(midoname *ipaddrgroup, char *ip, midoname *outnam
 int mido_delete_ipaddrgroup_ip(midoname *ipaddrgroup, midoname *ipaddrgroup_ip);
 int mido_get_ipaddrgroup_ips(midoname *ipaddrgroup, midoname **outnames, int *outnames_max);
 
+int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname, midoname *outname, va_list *al);
 int mido_create_resource(midoname *parents, int max_parents, midoname *newname, midoname *outname, ...);
 int mido_read_resource(char *resource_type, midoname *name);
 int mido_update_resource(char *resource_type, char *content_type, midoname *name, va_list *al);
@@ -103,6 +106,9 @@ int mido_delete_resource(midoname *parentname, midoname *name);
 int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *resource_type, midoname **outnames, int *outnames_max);
 
 int mido_cmp_midoname_to_input(midoname *name, ...);
+int mido_cmp_midoname_to_input_json(midoname *name, ...);
+int mido_cmp_midoname_to_input_json_v(midoname *name, va_list *al);
+char *mido_jsonize(char *tenant, va_list *al);
 
 int midonet_http_get(char *url, char **out_payload);
 int midonet_http_put(char *url, char *resource_type, char *payload);
