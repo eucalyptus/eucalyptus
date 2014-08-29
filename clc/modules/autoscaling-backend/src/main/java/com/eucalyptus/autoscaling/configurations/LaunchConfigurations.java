@@ -40,6 +40,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
@@ -123,7 +124,8 @@ public abstract class LaunchConfigurations {
       type.setCreatedTime( launchConfiguration.getCreationTimestamp() );
       type.setIamInstanceProfile( launchConfiguration.getIamInstanceProfile() );
       type.setImageId( launchConfiguration.getImageId() );
-      if (launchConfiguration.getInstanceMonitoring() != null) 
+      type.setAssociatePublicIpAddress( launchConfiguration.getAssociatePublicIpAddress() );
+      if (launchConfiguration.getInstanceMonitoring() != null)
         type.setInstanceMonitoring( new InstanceMonitoring( launchConfiguration.getInstanceMonitoring() ) );
       type.setInstanceType( launchConfiguration.getInstanceType() );
       type.setKernelId( launchConfiguration.getKernelId() );
@@ -188,10 +190,17 @@ public abstract class LaunchConfigurations {
       runInstances.setKeyName( launchConfiguration.getKeyName() );
       final ArrayList<String> securityGroups =
           Lists.newArrayList( launchConfiguration.getSecurityGroups() );
-      if ( containsSecurityGroupIdentifiers( securityGroups ) ) {
-        runInstances.setGroupIdSet( securityGroups );
+      if ( launchConfiguration.getAssociatePublicIpAddress( ) != null ) {
+        final InstanceNetworkInterfaceSetItemRequestType networkInterface =
+            runInstances.primaryNetworkInterface( true );
+        networkInterface.setAssociatePublicIpAddress( launchConfiguration.getAssociatePublicIpAddress( ) );
+        networkInterface.securityGroups( securityGroups );
       } else {
-        runInstances.setGroupSet( securityGroups );
+        if ( containsSecurityGroupIdentifiers( securityGroups ) ) {
+          runInstances.setGroupIdSet( securityGroups );
+        } else {
+          runInstances.setGroupSet( securityGroups );
+        }
       }
       runInstances.setMonitoring( launchConfiguration.getInstanceMonitoring() );
       if ( launchConfiguration.getIamInstanceProfile() != null ) {

@@ -20,11 +20,30 @@
 package com.eucalyptus.util;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
  */
 public class Consumers {
+
+  private static final Consumer<Object> DROPPING = new Consumer<Object>( ) {
+    @Override
+    public void accept( final Object o ) { }
+  };
+
+  public static Consumer<Object> drop( ) {
+    return DROPPING;
+  }
+
+  public static <T> Consumer<T> atomic( final AtomicReference<T> reference ) {
+    return new Consumer<T>( ) {
+      @Override
+      public void accept( final T t ) {
+        reference.set( t );
+      }
+    };
+  }
 
   public static <T> Consumer<T> once( final Consumer<T> consumer ) {
     return new Consumer<T>( ) {

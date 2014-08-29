@@ -55,6 +55,10 @@ public class LaunchConfigurationMinimumView implements LaunchConfigurationMetada
     return launchConfiguration.getImageId();
   }
 
+  public Boolean getAssociatePublicIpAddress() {
+    return launchConfiguration.getAssociatePublicIpAddress();
+  }
+
   public Boolean getInstanceMonitoring() {
     return launchConfiguration.getInstanceMonitoring();
   }

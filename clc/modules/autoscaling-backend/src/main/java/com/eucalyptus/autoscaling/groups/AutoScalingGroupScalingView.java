@@ -20,9 +20,11 @@
 package com.eucalyptus.autoscaling.groups;
 
 import java.util.List;
+import java.util.Map;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationCoreView;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 /**
  *
@@ -31,11 +33,13 @@ public class AutoScalingGroupScalingView extends AutoScalingGroupCoreView {
 
   private final ImmutableList<TerminationPolicyType> terminationPolicies;
   private final LaunchConfigurationCoreView launchConfiguration;
+  private final Map<String,String> subnetIdByZone;
 
   public AutoScalingGroupScalingView( final AutoScalingGroup group ) {
     super( group );
     terminationPolicies = ImmutableList.copyOf( group.getTerminationPolicies() );
     launchConfiguration = TypeMappers.transform( group.getLaunchConfiguration(), LaunchConfigurationCoreView.class );
+    subnetIdByZone = ImmutableMap.copyOf( group.getSubnetIdByZone() );
   }
 
   public List<TerminationPolicyType> getTerminationPolicies() {
@@ -44,5 +48,9 @@ public class AutoScalingGroupScalingView extends AutoScalingGroupCoreView {
 
   public LaunchConfigurationCoreView getLaunchConfiguration() {
     return launchConfiguration;
+  }
+
+  public Map<String,String> getSubnetIdByZone() {
+    return subnetIdByZone;
   }
 }
