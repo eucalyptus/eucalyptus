@@ -111,6 +111,12 @@ public class EC2EBSBlockDevice {
   @Property
   String volumeType;
 }
+public class EC2ICMP {
+  @Property
+  Integer code;
+  @Property
+  Integer type;
+}
 @ToString(includeNames=true)
 public class EC2MountPoint {
   @Required
@@ -153,6 +159,14 @@ public class EC2NetworkInterfacePrivateIPSpecification {
   @Property
   Boolean primary;
 }
+
+public class EC2PortRange {
+  @Property
+  Integer from;
+  @Property
+  Integer to;
+}
+
 @ToString(includeNames=true)
 public class EC2SecurityGroupRule {
   @Property
@@ -173,6 +187,7 @@ public class EC2SecurityGroupRule {
   @Property
   Integer toPort;
 }
+
 @ToString(includeNames=true)
 public class EC2Tag {
   @Property

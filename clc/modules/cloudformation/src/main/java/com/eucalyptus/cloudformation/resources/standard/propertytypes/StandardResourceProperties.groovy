@@ -206,6 +206,18 @@ public class AWSEC2CustomerGatewayProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2DHCPOptionsProperties implements ResourceProperties {
+  @Property
+  String domainName;
+  @Property
+  List<String> domainNameServers = Lists.newArrayList();
+  @Property
+  List<String> netbiosNameServers = Lists.newArrayList();
+  @Property
+  Integer netbiosNodeType;
+  @Property
+  List<String> ntpServers = Lists.newArrayList();
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -296,6 +308,28 @@ public class AWSEC2NetworkAclProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
+  @Required
+  @Property
+  String cidrBlock;
+  @Required
+  @Property
+  Boolean egress;
+  @Property
+  EC2ICMP icmp;
+  @Required
+  @Property
+  String networkAclId;
+  @Property
+  EC2PortRange portRange;
+  @Required
+  @Property
+  Integer protocol;
+  @Required
+  @Property
+  String ruleAction;
+  @Required
+  @Property
+  Integer ruleNumber;
 }
 
 @ToString(includeNames=true)

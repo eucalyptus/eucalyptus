@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -133,7 +134,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue()));
-          createTagsType.setTagSet(createTagSet(properties.getTags()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
           AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         }
         break;
@@ -227,16 +228,6 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     return ipPermissionType;
   }
 
-  private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
-    ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
-    for (EC2Tag tag: tags) {
-      ResourceTag resourceTag = new ResourceTag();
-      resourceTag.setKey(tag.getKey());
-      resourceTag.setValue(tag.getValue());
-      resourceTags.add(resourceTag);
-    }
-    return resourceTags;
-  }
   @Override
   public void update(int stepNum) throws Exception {
     throw new UnsupportedOperationException();

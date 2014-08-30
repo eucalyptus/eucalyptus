@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -83,7 +84,7 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
   public void create(int stepNum) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     switch (stepNum) {
-      case 0: // create route table
+      case 0: // create network acl
         CreateNetworkAclType createNetworkAclType = new CreateNetworkAclType();
         createNetworkAclType.setEffectiveUserId(info.getEffectiveUserId());
         createNetworkAclType.setVpcId(properties.getVpcId());
@@ -91,29 +92,18 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
         info.setPhysicalResourceId(createNetworkAclResponseType.getNetworkAcl().getNetworkAclId());
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
-      case 1: // tag route table
+      case 1: // tag network acl
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-          createTagsType.setTagSet(createTagSet(properties.getTags()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
           AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         }
         break;
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }
-  }
-
-  private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
-    ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
-    for (EC2Tag tag: tags) {
-      ResourceTag resourceTag = new ResourceTag();
-      resourceTag.setKey(tag.getKey());
-      resourceTag.setValue(tag.getValue());
-      resourceTags.add(resourceTag);
-    }
-    return resourceTags;
   }
 
   @Override
@@ -129,7 +119,7 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // See if route table is there
+    // See if network acl is there
     DescribeNetworkAclsType describeNetworkAclsType = new DescribeNetworkAclsType();
     describeNetworkAclsType.setEffectiveUserId(info.getEffectiveUserId());
     NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
@@ -140,7 +130,7 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
     DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
-      return; // no route table
+      return; // no network acl
     }
     DeleteNetworkAclType DeleteNetworkAclType = new DeleteNetworkAclType();
     DeleteNetworkAclType.setEffectiveUserId(info.getEffectiveUserId());

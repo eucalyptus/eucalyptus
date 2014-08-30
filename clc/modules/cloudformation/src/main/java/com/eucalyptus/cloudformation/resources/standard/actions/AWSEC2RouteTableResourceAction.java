@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -96,24 +97,13 @@ public class AWSEC2RouteTableResourceAction extends ResourceAction {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-          createTagsType.setTagSet(createTagSet(properties.getTags()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
           AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         }
         break;
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }
-  }
-
-  private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
-    ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
-    for (EC2Tag tag: tags) {
-      ResourceTag resourceTag = new ResourceTag();
-      resourceTag.setKey(tag.getKey());
-      resourceTag.setValue(tag.getValue());
-      resourceTags.add(resourceTag);
-    }
-    return resourceTags;
   }
 
   @Override
