@@ -287,6 +287,11 @@ public class AWSEC2InternetGatewayProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -303,10 +308,29 @@ public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourcePrope
 
 @ToString(includeNames=true)
 public class AWSEC2RouteProperties implements ResourceProperties {
+  @Required
+  @Property
+  String destinationCidrBlock;
+  @Property
+  String gatewayId;
+  @Property
+  String instanceId;
+  @Property
+  String networkInterfaceId;
+  @Required
+  @Property
+  String routeTableId;
+  @Property
+  String vpcPeeringConnectionId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2RouteTableProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -341,16 +365,28 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
   String sourceSecurityGroupId;
   @Property
   String sourceSecurityGroupOwnerId;
-  @Required
   @Property
-  String fromPort;
-  @Required // not required for ip protocol other than ICMP, TCP, UDP but we don't support VPC currently
+  Integer fromPort;
   @Property
-  String toPort;
+  Integer toPort;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
+  @Property
+  String cidrIp;
+  @Property
+  String destinationSecurityGroupId;
+  @Property
+  Integer fromPort;
+  @Required
+  @Property
+  String groupId;
+  @Required
+  @Property
+  String ipProtocol;
+  @Property
+  Integer toPort;
 }
 
 @ToString(includeNames=true)

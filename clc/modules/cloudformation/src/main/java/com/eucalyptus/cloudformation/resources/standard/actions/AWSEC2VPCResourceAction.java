@@ -121,20 +121,17 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
         AsyncRequests.<ModifyVpcAttributeType,ModifyVpcAttributeResponseType> sendSync(configuration, modifyVpcAttributeType);
         break;
       case 2: // tags
-        if (properties.getTags() != null) {
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
           createTagsType.setTagSet(createTagSet(properties.getTags()));
           AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-
         }
         break;
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }
-
-
   }
 
   private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {

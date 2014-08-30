@@ -104,7 +104,7 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
       case 1: // tags
-        if (properties.getTags() != null) {
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));

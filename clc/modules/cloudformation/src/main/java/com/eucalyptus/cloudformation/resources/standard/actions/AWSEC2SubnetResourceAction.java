@@ -102,7 +102,7 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
         info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(createSubnetResponseType.getSubnet().getAvailabilityZone())));
         break;
       case 1: // tags
-        if (properties.getTags() != null) {
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
           CreateTagsType createTagsType = new CreateTagsType();
           createTagsType.setEffectiveUserId(info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));

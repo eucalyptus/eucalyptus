@@ -41,6 +41,7 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
@@ -78,80 +79,74 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
 
   @Override
   public void create(int stepNum) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
     switch (stepNum) {
       case 0:
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
-        // Is there a better way?
-        DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-        describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-          AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-        ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-        Map<String, String> nameToIdMap = Maps.newHashMap();
-        if (securityGroupItemTypeArrayList != null) {
-          for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
-            nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+        // property validation
+        validateProperties();
+        // Make sure security group exists.
+        if (!Strings.isNullOrEmpty(properties.getGroupId())) {
+          DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+          describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+          describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(properties.getGroupId()));
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+          if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+            throw new ValidationErrorException("No such group with id '" + properties.getGroupId()+"'");
           }
         }
-        AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
-        authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-
-        String groupName = null;
-        if (properties.getGroupName() != null && !properties.getGroupName().isEmpty()) {
-          groupName = properties.getGroupName();
-        }
-        String groupId = null;
-        if (properties.getGroupId() != null && !properties.getGroupId().isEmpty()) {
-          groupId = properties.getGroupId();
-        }
-        if (groupName != null && !nameToIdMap.containsKey(groupName)) {
-          throw new ValidationErrorException("No such group with name " + groupName);
-        }
-        if (groupId != null && !nameToIdMap.containsValue(groupId)) {
-          throw new ValidationErrorException("No such group with id " + groupId);
-        }
-        if (groupId == null && groupName == null) {
-          throw new ValidationErrorException("GroupId or GroupName is required for AWS::EC2::SecurityGroupIngress");
-        }
-        if (groupName == null) {
-          for (String key: nameToIdMap.keySet()) {
-            if (nameToIdMap.get(key).equals(groupId)) {
-              groupName = key;
+        if (!Strings.isNullOrEmpty(properties.getGroupName())) {
+          DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+          describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+          describeSecurityGroupsType.setSecurityGroupSet(Lists.newArrayList(properties.getGroupName()));
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+          if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+            throw new ValidationErrorException("No such group with name '" + properties.getGroupName() + "'");
+          }
+          // may be multiple return values, make sure at least one with non-vpc
+          boolean foundNonVpc = false;
+          for (SecurityGroupItemType securityGroupItemType : securityGroupItemTypeArrayList) {
+            if (Strings.isNullOrEmpty(securityGroupItemType.getVpcId())) {
+              foundNonVpc = true;
               break;
             }
           }
+          if (!foundNonVpc) {
+            throw new ValidationErrorException("Invalid value '" + properties.getGroupName() + "' for groupName. " +
+              "You may not reference VPC security groups by name. Please use the corresponding id for this operation.");
+          }
         }
-        if (groupId == null) {
-          groupId = nameToIdMap.get(groupName);
+
+        AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
+        authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
+        if (!Strings.isNullOrEmpty(properties.getGroupId())) {
+          authorizeSecurityGroupIngressType.setGroupId(properties.getGroupId());
         }
-        if (!nameToIdMap.get(groupName).equals(groupId)) {
-          throw new ValidationErrorException("GroupId ("+groupId+") and " +
-            "GroupName ("+groupName+") do not match the same group in AWS::EC2::SecurityGroupIngress");
+        if (!Strings.isNullOrEmpty(properties.getGroupName())) {
+          authorizeSecurityGroupIngressType.setGroupName(properties.getGroupName());
         }
-        authorizeSecurityGroupIngressType.setGroupName(groupName);
-        authorizeSecurityGroupIngressType.setGroupId(groupId);
-        int fromPort = -1;
-        String ipProtocol = properties.getIpProtocol();
-        try {
-          fromPort = Integer.parseInt(properties.getFromPort());
-        } catch (Exception ignore) {}
-        int toPort = -1;
-        try {
-          toPort = Integer.parseInt(properties.getToPort());
-        } catch (Exception ignore) {}
-        String sourceSecurityGroupName = properties.getSourceSecurityGroupName();
-        String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
-        if (sourceSecurityGroupOwnerId == null && sourceSecurityGroupName != null) {
-          sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+        IpPermissionType ipPermissionType = new IpPermissionType(
+          properties.getIpProtocol(),
+          properties.getFromPort(),
+          properties.getToPort()
+        );
+        if (!Strings.isNullOrEmpty(properties.getCidrIp())) {
+          ipPermissionType.setCidrIpRanges(Lists.newArrayList(properties.getCidrIp()));
         }
-        String cidrIp = properties.getCidrIp();
-        IpPermissionType ipPermissionType = new IpPermissionType(ipProtocol, fromPort, toPort);
-        if (sourceSecurityGroupName != null) {
-          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        if (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupId())) {
+          // Generally no need for SourceSecurityGroupOwnerId if SourceSecurityGroupId is set, but pass it along if set
+          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(properties.getSourceSecurityGroupOwnerId(), null, properties.getSourceSecurityGroupId())));
         }
-        if (cidrIp != null) {
-          ipPermissionType.setCidrIpRanges(Lists.newArrayList(cidrIp));
+        if (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupName())) {
+          // I think SourceSecurityGroupOwnerId is needed here.  If not provided, use the local account id
+          String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
+          if (Strings.isNullOrEmpty(sourceSecurityGroupOwnerId)) {
+            sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+          }
+          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, properties.getSourceSecurityGroupName(), null)));
         }
         authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
         AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
@@ -160,6 +155,28 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         break;
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
+    }
+  }
+
+  private void validateProperties() throws ValidationErrorException {
+    // group id or group name must be set
+    if (Strings.isNullOrEmpty(properties.getGroupId()) && Strings.isNullOrEmpty(properties.getGroupName())) {
+      throw new ValidationErrorException("Exactly one of GroupName and GroupId must be specified");
+    }
+    // but not both
+    if (!Strings.isNullOrEmpty(properties.getGroupId()) && !Strings.isNullOrEmpty(properties.getGroupName())) {
+      throw new ValidationErrorException("Exactly one of GroupName and GroupId must be specified");
+    }
+    // Can't specify cidr and source security group
+    if (!Strings.isNullOrEmpty(properties.getCidrIp()) &&
+      (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupId())
+        || !Strings.isNullOrEmpty(properties.getSourceSecurityGroupName())
+        || !Strings.isNullOrEmpty(properties.getSourceSecurityGroupOwnerId()))) {
+      throw new ValidationErrorException("Both CidrIp and SourceSecurityGroup cannot be specified");
+    }
+    // Can't specify both source security group name and id
+    if (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupId()) && !Strings.isNullOrEmpty(properties.getSourceSecurityGroupName())) {
+      throw new ValidationErrorException("Both SourceSecurityGroupName and SourceSecurityGroupId cannot be specified");
     }
   }
 
@@ -178,78 +195,70 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
     if (info.getPhysicalResourceId() == null) return;
 
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // May need to pass in both groupId and groupName (VPC may be different) so trying to get both...
-    // Is there a better way?
-    DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-    describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-      AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-    ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-    Map<String, String> nameToIdMap = Maps.newHashMap();
-    if (securityGroupItemTypeArrayList != null) {
-      for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
-        nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+    // property validation
+    validateProperties();
+    // Make sure security group exists.
+    if (!Strings.isNullOrEmpty(properties.getGroupId())) {
+      DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+      describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(properties.getGroupId()));
+      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+        AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+      ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+      if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+        return; // no group
       }
     }
-    RevokeSecurityGroupIngressType revokeSecurityGroupIngressType = new RevokeSecurityGroupIngressType();
-    revokeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-
-    String groupName = null;
-    if (properties.getGroupName() != null && !properties.getGroupName().isEmpty()) {
-      groupName = properties.getGroupName();
-    }
-    String groupId = null;
-    if (properties.getGroupId() != null && !properties.getGroupId().isEmpty()) {
-      groupId = properties.getGroupId();
-    }
-    if (groupName != null && !nameToIdMap.containsKey(groupName)) {
-      return; // no such group
-    }
-    if (groupId != null && !nameToIdMap.containsValue(groupId)) {
-      return; // no such group
-    }
-    if (groupId == null && groupName == null) {
-      return; // no such group
-    }
-    if (groupName == null) {
-      for (String key: nameToIdMap.keySet()) {
-        if (nameToIdMap.get(key).equals(groupId)) {
-          groupName = key;
+    if (!Strings.isNullOrEmpty(properties.getGroupName())) {
+      DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+      describeSecurityGroupsType.setSecurityGroupSet(Lists.newArrayList(properties.getGroupName()));
+      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+        AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+      ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+      if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+        return; // no group
+      }
+      // may be multiple return values, make sure at least one with non-vpc
+      boolean foundNonVpc = false;
+      for (SecurityGroupItemType securityGroupItemType : securityGroupItemTypeArrayList) {
+        if (Strings.isNullOrEmpty(securityGroupItemType.getVpcId())) {
+          foundNonVpc = true;
           break;
         }
       }
+      if (!foundNonVpc) {
+        return; // no (non-vpc) group
+      }
     }
-    if (groupId == null) {
-      groupId = nameToIdMap.get(groupName);
+
+    RevokeSecurityGroupIngressType revokeSecurityGroupIngressType = new RevokeSecurityGroupIngressType();
+    revokeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
+    if (!Strings.isNullOrEmpty(properties.getGroupId())) {
+      revokeSecurityGroupIngressType.setGroupId(properties.getGroupId());
     }
-    if (!nameToIdMap.get(groupName).equals(groupId)) {
-      return; // no such group
+    if (!Strings.isNullOrEmpty(properties.getGroupName())) {
+      revokeSecurityGroupIngressType.setGroupName(properties.getGroupName());
     }
-    revokeSecurityGroupIngressType.setGroupName(groupName);
-    revokeSecurityGroupIngressType.setGroupId(groupId);
-    revokeSecurityGroupIngressType.setGroupName(groupName);
-    revokeSecurityGroupIngressType.setGroupId(groupId);
-    int fromPort = -1;
-    String ipProtocol = properties.getIpProtocol();
-    try {
-      fromPort = Integer.parseInt(properties.getFromPort());
-    } catch (Exception ignore) {}
-    int toPort = -1;
-    try {
-      toPort = Integer.parseInt(properties.getToPort());
-    } catch (Exception ignore) {}
-    String sourceSecurityGroupName = properties.getSourceSecurityGroupName();
-    String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
-    if (sourceSecurityGroupOwnerId == null && sourceSecurityGroupName != null) {
-      sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+    IpPermissionType ipPermissionType = new IpPermissionType(
+      properties.getIpProtocol(),
+      properties.getFromPort(),
+      properties.getToPort()
+    );
+    if (!Strings.isNullOrEmpty(properties.getCidrIp())) {
+      ipPermissionType.setCidrIpRanges(Lists.newArrayList(properties.getCidrIp()));
     }
-    String cidrIp = properties.getCidrIp();
-    IpPermissionType ipPermissionType = new IpPermissionType(ipProtocol, fromPort, toPort);
-    if (sourceSecurityGroupName != null) {
-      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+    if (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupId())) {
+      // Generally no need for SourceSecurityGroupOwnerId if SourceSecurityGroupId is set, but pass it along if set
+      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(properties.getSourceSecurityGroupOwnerId(), null, properties.getSourceSecurityGroupId())));
     }
-    if (cidrIp != null) {
-      ipPermissionType.setCidrIpRanges(Lists.newArrayList(cidrIp));
+    if (!Strings.isNullOrEmpty(properties.getSourceSecurityGroupName())) {
+      // I think SourceSecurityGroupOwnerId is needed here.  If not provided, use the local account id
+      String sourceSecurityGroupOwnerId = properties.getSourceSecurityGroupOwnerId();
+      if (Strings.isNullOrEmpty(sourceSecurityGroupOwnerId)) {
+        sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+      }
+      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, properties.getSourceSecurityGroupName(), null)));
     }
     revokeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
     RevokeSecurityGroupIngressResponseType revokeSecurityGroupIngressResponseType = AsyncRequests.<RevokeSecurityGroupIngressType, RevokeSecurityGroupIngressResponseType> sendSync(configuration, revokeSecurityGroupIngressType);

@@ -159,9 +159,8 @@ public class EC2SecurityGroupRule {
   String cidrIp;
   @Property
   String destinationSecurityGroupId;
-  @Required
   @Property
-  String fromPort;
+  Integer fromPort;
   @Required
   @Property
   String ipProtocol;
@@ -171,9 +170,8 @@ public class EC2SecurityGroupRule {
   String sourceSecurityGroupName;
   @Property
   String sourceSecurityGroupOwnerId;
-  @Required
   @Property
-  String toPort;
+  Integer toPort;
 }
 @ToString(includeNames=true)
 public class EC2Tag {
