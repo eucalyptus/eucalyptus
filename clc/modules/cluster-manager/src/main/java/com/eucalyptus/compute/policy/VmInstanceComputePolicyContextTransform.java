@@ -56,7 +56,7 @@ public class VmInstanceComputePolicyContextTransform implements Function<VmInsta
       @Nullable
       @Override
       public String getInstanceType() {
-        return input.getVmType( ).getName( );
+        return input.getInstanceType( );
       }
 
       @Nullable

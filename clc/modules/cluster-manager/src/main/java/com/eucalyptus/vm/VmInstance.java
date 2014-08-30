@@ -2278,6 +2278,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return false;
   }
 
+  public String getInstanceType( ) {
+    return getVmType( ).getName();
+  }
+
   @Override
   public void setNaturalId( final String naturalId ) {
     super.setNaturalId( naturalId );
@@ -2423,7 +2427,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
     return vmExample;
   }
-  
+
+  public static VmInstance exampleResource( final OwnerFullName owner,
+                                            final String availabilityZone,
+                                            final String instanceProfileArn,
+                                            final String instanceType,
+                                            final boolean isBlockStorage ) {
+    return new VmInstance( owner, "" ) {
+      @Override public String getIamInstanceProfileArn( ) { return instanceProfileArn; }
+      @Override public String getInstanceType( ) { return instanceType; }
+      @Override public String getPartition( ) { return availabilityZone; }
+      @Override public boolean isBlockStorage( ) { return isBlockStorage; }
+    };
+  }
+
   private void setBootRecord( VmBootRecord bootRecord ) {
     this.bootRecord = bootRecord;
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,29 +19,32 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
-import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
-import javax.annotation.Nullable;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.auth.policy.condition.StringConditionOp;
+import com.eucalyptus.auth.policy.key.PolicyKey;
+import net.sf.json.JSONException;
 
 /**
  *
  */
-@TypeMapper
-public class NetworkGroupComputePolicyContextTransform implements Function<NetworkGroup,ComputePolicyContextResource> {
+@PolicyKey( ImageTypeKey.KEY_NAME )
+public class ImageTypeKey extends ImageComputeKey {
+  static final String KEY_NAME = "ec2:imagetype";
 
   @Override
-  public ComputePolicyContextResource apply( final NetworkGroup input ) {
-    return new ComputePolicyContextResourceSupport( ) {
-      @Nullable
-      @Override
-      public String getVpcArn() {
-        return input.getVpcId( ) == null ?
-            null :
-            "arn:aws:ec2::" + input.getOwnerAccountNumber( ) + ":vpc/" + input.getVpcId();
-      }
-    };
+  public String value( ) throws AuthException {
+    return ComputePolicyContext.getImageType( );
+  }
+
+  @Override
+  public void validateConditionType( final Class<? extends ConditionOp> conditionClass ) throws JSONException {
+    if ( !StringConditionOp.class.isAssignableFrom( conditionClass ) ) {
+      throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". String conditions are required." );
+    }
+  }
+
+  @Override
+  public void validateValueType( final String value ) throws JSONException {
   }
 }

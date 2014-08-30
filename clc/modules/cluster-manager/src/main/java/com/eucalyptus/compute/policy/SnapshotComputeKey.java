@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,29 +17,25 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.policy.ern
+package com.eucalyptus.compute.policy;
 
-import static org.junit.Assert.*
-import org.junit.Test
-import static com.eucalyptus.auth.policy.PolicySpec.*
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_RUNINSTANCES;
+import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import java.util.Set;
+import com.google.common.collect.ImmutableSet;
 
 /**
- * 
+ *
  */
-class ErnTest {
+public abstract class SnapshotComputeKey implements ComputeKey {
+  private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES) )
+      .build( );
 
-  @Test
-  void testRoleArn(  ) {
-    final Ern ern = Ern.parse( "arn:aws:iam::013765657871:role/Role1" )
-    assertEquals( "Namespace", "013765657871", ern.getNamespace() );
-    assertEquals( "Resource type", qualifiedName( VENDOR_IAM, IAM_RESOURCE_ROLE ), ern.getResourceType() );
-    assertEquals( "Resource name", "/Role1", ern.getResourceName() );
-  }
-
-  @Test
-  void testSubnetArn( ) {
-    final Ern ern = Ern.parse( "arn:aws:ec2::332895979617:subnet/subnet-75d75dc3" )
-    assertEquals( "Resource type", qualifiedName( VENDOR_EC2, EC2_RESOURCE_SUBNET ), ern.getResourceType() );
-    assertEquals( "Resource name", "subnet-75d75dc3", ern.getResourceName() );
+  @Override
+  public boolean canApply( final String action,
+                           final String resourceType ) {
+    return actions.contains( action );
   }
 }

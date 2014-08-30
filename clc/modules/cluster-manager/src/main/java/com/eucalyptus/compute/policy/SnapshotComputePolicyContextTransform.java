@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,9 @@ package com.eucalyptus.compute.policy;
 
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
+import java.util.Date;
 import javax.annotation.Nullable;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -30,17 +31,35 @@ import com.google.common.base.Function;
  *
  */
 @TypeMapper
-public class NetworkGroupComputePolicyContextTransform implements Function<NetworkGroup,ComputePolicyContextResource> {
+public class SnapshotComputePolicyContextTransform implements Function<Snapshot,ComputePolicyContextResource> {
 
   @Override
-  public ComputePolicyContextResource apply( final NetworkGroup input ) {
+  public ComputePolicyContextResource apply( final Snapshot snapshot ) {
     return new ComputePolicyContextResourceSupport( ) {
       @Nullable
       @Override
-      public String getVpcArn() {
-        return input.getVpcId( ) == null ?
+      public String getOwner() {
+        return snapshot.getOwnerAccountNumber( );
+      }
+
+      @Nullable
+      @Override
+      public String getParentVolumeArn() {
+        return snapshot.getParentVolume( ) == null ?
             null :
-            "arn:aws:ec2::" + input.getOwnerAccountNumber( ) + ":vpc/" + input.getVpcId();
+            "arn:aws:ec2::" + getOwner( ) + ":volume/" + snapshot.getParentVolume( );
+      }
+
+      @Nullable
+      @Override
+      public Date getSnapshotTime() {
+        return snapshot.getCreationTimestamp( );
+      }
+
+      @Nullable
+      @Override
+      public Integer getVolumeSize() {
+        return snapshot.getVolumeSize( );
       }
     };
   }

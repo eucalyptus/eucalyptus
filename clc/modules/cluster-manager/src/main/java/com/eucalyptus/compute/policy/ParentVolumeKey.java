@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,31 +19,33 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import java.text.ParseException;
-import java.util.regex.Pattern;
-import com.eucalyptus.auth.policy.key.Iso8601DateParser;
-import com.eucalyptus.auth.policy.key.Key;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.condition.ArnConditionOp;
+import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.auth.policy.key.PolicyKey;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-public interface ComputeKey extends Key {
-  static class Validation {
-    private static final Pattern arnPattern = Pattern.compile( "[arn*?]{1,64}:[aws*?]{1,64}:[a-zA-Z0-9*?-]{1,64}(:[a-zA-Z0-9*?-]{0,64}(:(|amazon|[0-9*?]{1,12})(:.{1,2048})?)?)?" );
+@PolicyKey( ParentVolumeKey.KEY_NAME )
+public class ParentVolumeKey extends SnapshotComputeKey {
+  static final String KEY_NAME = "ec2:parentvolume";
 
-    static void assertArnValue( final String value ) throws JSONException {
-      if ( !arnPattern.matcher( value ).matches( ) ) {
-        throw new JSONException( "Invalid ARN: " + value );
-      }
-    }
+  @Override
+  public String value( ) throws AuthException {
+    return ComputePolicyContext.getParentVolumeArn( );
+  }
 
-    static void assertDateValue( final String value ) throws JSONException {
-      try {
-        Iso8601DateParser.parse( value );
-      } catch ( ParseException e ) {
-        throw new JSONException( "Invalid date: " + value );
-      }
+  @Override
+  public void validateConditionType( final Class<? extends ConditionOp> conditionClass ) throws JSONException {
+    if ( !ArnConditionOp.class.isAssignableFrom( conditionClass ) ) {
+      throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". ARN conditions are required." );
     }
+  }
+
+  @Override
+  public void validateValueType( final String value ) throws JSONException {
+    Validation.assertArnValue( value );
   }
 }

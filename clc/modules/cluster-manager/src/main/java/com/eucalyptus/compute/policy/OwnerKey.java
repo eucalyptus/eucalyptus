@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,11 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_RUNINSTANCES;
+import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.condition.ArnConditionOp;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.auth.policy.condition.StringConditionOp;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.google.common.collect.ImmutableSet;
 import net.sf.json.JSONException;
@@ -31,37 +33,27 @@ import net.sf.json.JSONException;
 /**
  *
  */
-@PolicyKey( VpcKey.KEY_NAME )
-public class VpcKey implements ComputeKey {
-  static final String KEY_NAME = "ec2:vpc";
+@PolicyKey( OwnerKey.KEY_NAME )
+public class OwnerKey implements ComputeKey {
+  static final String KEY_NAME = "ec2:owner";
   private static final Set<String> actions = ImmutableSet.<String>builder()
-      .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPEGRESS ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPINGRESS ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACLENTRY ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTE ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTETABLE ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETESECURITYGROUP ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPEGRESS ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPINGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 
   @Override
   public String value( ) throws AuthException {
-    return ComputePolicyContext.getVpcArn( );
+    return ComputePolicyContext.getOwner();
   }
 
   @Override
   public void validateConditionType( final Class<? extends ConditionOp> conditionClass ) throws JSONException {
-    if ( !ArnConditionOp.class.isAssignableFrom( conditionClass ) ) {
-      throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". ARN conditions are required." );
+    if ( !StringConditionOp.class.isAssignableFrom( conditionClass ) ) {
+      throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". String conditions are required." );
     }
   }
 
   @Override
   public void validateValueType( final String value ) throws JSONException {
-    Validation.assertArnValue( value );
   }
 
   @Override

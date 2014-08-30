@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ package com.eucalyptus.compute.policy;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
 import javax.annotation.Nullable;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -30,17 +30,21 @@ import com.google.common.base.Function;
  *
  */
 @TypeMapper
-public class NetworkGroupComputePolicyContextTransform implements Function<NetworkGroup,ComputePolicyContextResource> {
+public class SubnetComputePolicyContextTransform implements Function<Subnet,ComputePolicyContextResource> {
 
   @Override
-  public ComputePolicyContextResource apply( final NetworkGroup input ) {
+  public ComputePolicyContextResource apply( final Subnet subnet ) {
     return new ComputePolicyContextResourceSupport( ) {
       @Nullable
       @Override
-      public String getVpcArn() {
-        return input.getVpcId( ) == null ?
-            null :
-            "arn:aws:ec2::" + input.getOwnerAccountNumber( ) + ":vpc/" + input.getVpcId();
+      public String getAvailabilityZone( ) {
+        return subnet.getAvailabilityZone( );
+      }
+
+      @Nullable
+      @Override
+      public String getVpcArn( ) {
+        return "arn:aws:ec2::" + subnet.getOwnerAccountNumber( ) + ":vpc/" + subnet.getVpc( ).getDisplayName( );
       }
     };
   }

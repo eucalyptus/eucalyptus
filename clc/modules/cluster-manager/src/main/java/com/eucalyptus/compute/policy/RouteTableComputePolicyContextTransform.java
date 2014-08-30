@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,29 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.policy.ern
+package com.eucalyptus.compute.policy;
 
-import static org.junit.Assert.*
-import org.junit.Test
-import static com.eucalyptus.auth.policy.PolicySpec.*
+import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
+import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
+import javax.annotation.Nullable;
+import com.eucalyptus.compute.vpc.RouteTable;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 
 /**
- * 
+ *
  */
-class ErnTest {
+@TypeMapper
+public class RouteTableComputePolicyContextTransform implements Function<RouteTable,ComputePolicyContextResource> {
 
-  @Test
-  void testRoleArn(  ) {
-    final Ern ern = Ern.parse( "arn:aws:iam::013765657871:role/Role1" )
-    assertEquals( "Namespace", "013765657871", ern.getNamespace() );
-    assertEquals( "Resource type", qualifiedName( VENDOR_IAM, IAM_RESOURCE_ROLE ), ern.getResourceType() );
-    assertEquals( "Resource name", "/Role1", ern.getResourceName() );
-  }
-
-  @Test
-  void testSubnetArn( ) {
-    final Ern ern = Ern.parse( "arn:aws:ec2::332895979617:subnet/subnet-75d75dc3" )
-    assertEquals( "Resource type", qualifiedName( VENDOR_EC2, EC2_RESOURCE_SUBNET ), ern.getResourceType() );
-    assertEquals( "Resource name", "subnet-75d75dc3", ern.getResourceName() );
+  @Override
+  public ComputePolicyContextResource apply( final RouteTable routeTable ) {
+    return new ComputePolicyContextResourceSupport( ) {
+      @Nullable
+      @Override
+      public String getVpcArn() {
+        return "arn:aws:ec2::" + routeTable.getOwnerAccountNumber( ) + ":vpc/" + routeTable.getVpc( ).getDisplayName( );
+      }
+    };
   }
 }

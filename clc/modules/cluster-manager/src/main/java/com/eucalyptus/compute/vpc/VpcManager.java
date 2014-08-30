@@ -40,6 +40,7 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -161,6 +162,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidDhcpOptionsID.NotFound", "DHCP options not found '" + request.getDhcpOptionsId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to associate DHCP options" ) );
               }
             }
           } );
@@ -195,6 +198,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidRouteTableID.NotFound", "Route table not found '" + request.getRouteTableId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to associate route table" ) );
               }
             }
           } );
@@ -233,6 +238,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to attach internet gateway" ) );
               }
             }
           } );
@@ -437,6 +444,8 @@ public class VpcManager {
                     networkAcl.updateTimeStamps( ); // ensure version of table increments also
                   } catch ( Exception e ) {
                     throw Exceptions.toUndeclared( e );
+                  } else {
+                    throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to create network ACL entry" ) );
                   }
                 }
               }
@@ -569,6 +578,8 @@ public class VpcManager {
                           Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway )
                       );
                       routeTable.updateTimeStamps( ); // ensure version of table increments also
+                    } else {
+                      throw new ClientUnauthorizedComputeException( "Not authorized to create route" );
                     }
                   } catch ( Exception e ) {
                     throw Exceptions.toUndeclared( e );
@@ -849,7 +860,9 @@ public class VpcManager {
               dhcpOptionSets.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<DhcpOptionSet>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( dhcpOptionSet ) ) {
             dhcpOptionSets.delete( dhcpOptionSet );
-          } // else treat this as though the dhcp options do not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete DHCP options" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -869,7 +882,9 @@ public class VpcManager {
               internetGateways.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<InternetGateway>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( internetGateway ) ) {
             internetGateways.delete( internetGateway );
-          } // else treat this as though the gateway does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete internet gateway" ) );
+          }
         } catch ( VpcMetadataNotFoundException e ) {
           // so nothing to delete, move along
         } catch ( Exception ex ) {
@@ -891,7 +906,9 @@ public class VpcManager {
               networkAcls.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<NetworkAcl>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
             networkAcls.delete( networkAcl );
-          } // else treat this as though the network acl does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete network ACL" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -927,6 +944,8 @@ public class VpcManager {
                         "InvalidNetworkAclEntry.NotFound",
                         "Entry not found for number: " + request.getRuleNumber( ) );
                   }
+                } else {
+                  throw new ClientUnauthorizedComputeException( "Not authorized to delete network ACL entry" );
                 }
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
@@ -956,7 +975,9 @@ public class VpcManager {
             }
             NetworkInterfaceHelper.release( networkInterface );
             networkInterfaces.delete( networkInterface );
-          } // else treat this as though the network interface does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete network interface" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -994,6 +1015,8 @@ public class VpcManager {
                         "InvalidRoute.NotFound",
                         "Route not found for cidr: " + request.getDestinationCidrBlock( ) );
                   }
+                } else {
+                  throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete route" ) );
                 }
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
@@ -1016,7 +1039,9 @@ public class VpcManager {
           final RouteTable routeTable = routeTables.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<RouteTable>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
             routeTables.delete( routeTable );
-          } // else treat this as though the route table does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete route table" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -1035,7 +1060,9 @@ public class VpcManager {
           final Subnet subnet = subnets.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<Subnet>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) {
             subnets.delete( subnet );
-          } // else treat this as though the subnet does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete subnet" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -1059,7 +1086,9 @@ public class VpcManager {
               securityGroups.delete( securityGroups.lookupDefault( vpc.getDisplayName(), Functions.<NetworkGroup>identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             vpcs.delete( vpc );
-          } // else treat this as though the vpc does not exist
+          } else {
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete vpc" ) );
+          }
           return null;
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -1329,6 +1358,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to detach internet gateway" ) );
               }
             }
           } );
@@ -1442,6 +1473,8 @@ public class VpcManager {
                 } else {
                   throw Exceptions.toUndeclared( new ClientComputeException( "MissingParameter", "Missing attribute value" ) );
                 }
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to modify network interface attribute" ) );
               }
             }
           } );
@@ -1469,6 +1502,8 @@ public class VpcManager {
                 if ( value != null && value.getValue( ) != null ) {
                   subnet.setMapPublicIpOnLaunch( value.getValue( ) );
                 }
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to modify subnet attribute" ) );
               }
             }
           } );
@@ -1499,6 +1534,8 @@ public class VpcManager {
                 if ( dnsSupport != null && dnsSupport.getValue( ) != null ) {
                   vpc.setDnsEnabled( dnsSupport.getValue( ) );
                 }
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to modify VPC attribute" ) );
               }
             }
           } );
@@ -1535,6 +1572,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidNetworkAclID.NotFound", "Network ACL not found '" + request.getAssociationId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to replace network ACL association" ) );
               }
             }
           } );
@@ -1624,6 +1663,8 @@ public class VpcManager {
                 networkAcl.updateTimeStamps( ); // ensure version of table increments also
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to replace network ACL entry" ) );
               }
             }
           }
@@ -1676,6 +1717,8 @@ public class VpcManager {
                 routeTable.updateTimeStamps( ); // ensure version of table increments also
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to replace route" ) );
               }
             }
           }
@@ -1713,6 +1756,8 @@ public class VpcManager {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidRouteTableID.NotFound", "Route table not found '" + request.getRouteTableId() + "'" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to replace route table association" ) );
               }
             }
           } );
@@ -1750,6 +1795,8 @@ public class VpcManager {
                         "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"
                     ) );
                 }
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to reset network interface attribute" ) );
               }
             }
           } );

@@ -80,7 +80,7 @@ public abstract class Ern {
       Pattern.compile( "\\*" + 
                        "|(?:arn:aws:(?:" +
                            "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile|server-certificate)((?:/[^/\\s]+)+)|\\*))" +
-                           "|(?:(" + PolicySpec.VENDOR_EC2 + "):::([a-z0-9_]+)/(\\S+))" +
+                           "|(?:(" + PolicySpec.VENDOR_EC2 + ")::([0-9]{12}|eucalyptus)?:([a-z0-9_-]+)/(\\S+))" +
                            "|(?:(" + PolicySpec.VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
                            ")" +
                        ")" );
@@ -91,8 +91,8 @@ public abstract class Ern {
   public static final int ARN_PATTERNGROUP_IAM_USERGROUP = 3;
   public static final int ARN_PATTERNGROUP_IAM_ID = 4;
   public static final int ARN_PATTERNGROUP_EC2 = 5;
-  public static final int ARN_PATTERNGROUP_EC2_TYPE = 6;
-  public static final int ARN_PATTERNGROUP_EC2_ID = 7;
+  public static final int ARN_PATTERNGROUP_EC2_TYPE = 7;
+  public static final int ARN_PATTERNGROUP_EC2_ID = 8;
   public static final int ARN_PATTERNGROUP_S3 = 8;
   public static final int ARN_PATTERNGROUP_S3_BUCKET = 9;
   public static final int ARN_PATTERNGROUP_S3_OBJECT = 10;
@@ -129,6 +129,12 @@ public abstract class Ern {
       String id = matcher.group( ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
       if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( type ) ) {
         AddressUtil.validateAddressRange( id );
+      }
+      // allow for pre-v4.1 type names
+      if ( "keypair".equals( type ) ) {
+        type = PolicySpec.EC2_RESOURCE_KEYPAIR;
+      } else if ( "securitygroup".equals( type ) ) {
+        type = PolicySpec.EC2_RESOURCE_SECURITYGROUP;
       }
       return new Ec2ResourceName( type, id );
     } else if ( matcher.group( ARN_PATTERNGROUP_S3 ) != null ) {

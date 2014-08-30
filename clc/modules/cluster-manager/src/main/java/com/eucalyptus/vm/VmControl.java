@@ -78,8 +78,10 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
@@ -262,6 +264,8 @@ public class VmControl {
       if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
       final NoSuchSubnetMetadataException e6 = Exceptions.findCause( ex, NoSuchSubnetMetadataException.class );
       if ( e6 != null ) throw new ClientComputeException( "InvalidSubnetID.NotFound", e6.getMessage( ) );
+      final IllegalMetadataAccessException e7 = Exceptions.findCause( ex, IllegalMetadataAccessException.class );
+      if ( e7 != null ) throw new ClientUnauthorizedComputeException( e7.getMessage( ) );
       LOG.error( ex, ex );
       throw ex;
     } finally {

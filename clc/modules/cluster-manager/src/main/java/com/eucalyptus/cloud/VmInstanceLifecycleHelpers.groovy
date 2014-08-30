@@ -86,7 +86,6 @@ import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Function
-import com.google.common.base.Functions
 import com.google.common.base.Optional
 import com.google.common.base.Predicates
 import com.google.common.base.Strings
@@ -112,6 +111,7 @@ import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
 
 import java.lang.reflect.InvocationHandler
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy as JavaProxy
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicReference
@@ -124,6 +124,7 @@ import static com.google.common.base.Objects.firstNonNull
 /**
  *
  */
+@SuppressWarnings("UnnecessaryQualifiedReference")
 @CompileStatic
 class VmInstanceLifecycleHelpers {
   private static final DispatchingVmInstanceLifecycleHelper dispatchingHelper =
@@ -138,7 +139,13 @@ class VmInstanceLifecycleHelpers {
         VmInstanceLifecycleHelper.getClassLoader( ),
         [ VmInstanceLifecycleHelper ] as Class<?>[],
         { Object proxy, Method method, Object[] args ->
-          LockResource.withLock( helpersLock.readLock( ) ){ helpers.get( ) }.each { method.invoke( it, args ) }
+          LockResource.withLock( helpersLock.readLock( ) ){ helpers.get( ) }.each {
+            try {
+              method.invoke( it, args )
+            } catch ( InvocationTargetException e ) {
+              throw e.targetException
+            }
+          }
         } as InvocationHandler
     ) )
   }
@@ -735,7 +742,8 @@ class VmInstanceLifecycleHelpers {
 
           Entities.transaction( VpcNetworkInterface ){
             final VpcNetworkInterface networkInterface =
-                RestrictedTypes.resolver( VpcNetworkInterface ).apply( instanceNetworkInterface?.networkInterfaceId );
+                lookup( "network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface ) as
+                    VpcNetworkInterface
             networkInterfaceSubnetId = networkInterface.subnet.displayName
             networkInterfaceAvailabilityZone = networkInterface.availabilityZone
           }
@@ -744,7 +752,7 @@ class VmInstanceLifecycleHelpers {
         final String resolveSubnetId = subnetId?:networkInterfaceSubnetId
         if ( !resolveSubnetId ) throw new MetadataException( "SubnetId required" )
 
-        final Subnet subnet = RestrictedTypes.resolver( Subnet ).apply( resolveSubnetId );
+        final Subnet subnet = lookup( "subnet", resolveSubnetId, Subnet ) as Subnet;
         if ( privateIp && !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
           throw new MetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
         }
@@ -756,7 +764,7 @@ class VmInstanceLifecycleHelpers {
         final Set<NetworkGroup> groups = Sets.newHashSet( )
         for ( String groupId : networkIds ) {
           if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
-            groups.add( RestrictedTypes.resolver( NetworkGroup ).apply( groupId ) )
+            groups.add( lookup( "security group", groupId, NetworkGroup  ) as NetworkGroup )
           }
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
@@ -929,6 +937,17 @@ class VmInstanceLifecycleHelpers {
         }
       }
     }
+
+    // Generic parameter (type) hits https://jira.codehaus.org/browse/GROOVY-6556 so use ?
+    private static <T> T lookup( final String typeDesc, final String id, final Class<?> type ) {
+      final T resource = RestrictedTypes.<T>resolver( (Class<T>)type ).apply( id )
+      if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ) {
+        throw new IllegalMetadataAccessException( "Not authorized to use ${typeDesc} ${id}" )
+      }
+      resource
+    }
+
+
   }
 
 }
