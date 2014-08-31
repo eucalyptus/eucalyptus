@@ -95,11 +95,13 @@ import com.eucalyptus.context.Context
 import com.eucalyptus.context.Contexts
 import com.eucalyptus.crypto.util.Timestamps
 import com.eucalyptus.util.Callback
+import com.eucalyptus.util.Consumer
 import com.eucalyptus.util.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
 import com.google.common.base.Predicate
 import com.google.common.base.Predicates
+import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import static org.junit.Assert.*
@@ -925,8 +927,13 @@ class AutoScalingServiceTest {
 
       @Override
       List<String> validateReferences( OwnerFullName owner,
-                                       Collection<String> availabilityZones,
-                                       Collection<String> loadBalancerNames) {
+                                       Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer,
+                                       Iterable<String> availabilityZones,
+                                       Iterable<String> loadBalancerNames,
+                                       Iterable<String> subnetIds ) {
+        if ( subnetIds?.iterator( )?.hasNext( ) ) {
+          availabilityZoneToSubnetMapConsumer.accept( ImmutableMap.of( subnetIds.iterator().next(), 'zone-1' ) )
+        }
         []
       }
 

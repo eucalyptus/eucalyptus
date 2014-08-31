@@ -75,7 +75,7 @@ class AutoScalingMessageValidationTest {
     Map<String,String> result = createGroup.validate()
     assertEquals( "Name error", "'Nam:e' for parameter AutoScalingGroupName is invalid", result["AutoScalingGroupName"] )
     assertEquals( "MinSize error", "-1 for parameter MinSize is invalid", result["MinSize"] )
-    assertEquals( "Zone error", "AvailabilityZones.member.1 is required", result["AvailabilityZones.member.1"] )
+    assertEquals( "Zone error", "One of AvailabilityZones or VPCZoneIdentifier is required", result["AvailabilityZones.member.1"] )
     assertEquals( "Termination policy error", "'Default!!' for parameter TerminationPolicies.member.1 is invalid", result["TerminationPolicies.member.1"] )
     assertEquals( "Error count", 4, result.size() )
   }
