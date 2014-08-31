@@ -24,6 +24,7 @@ import static com.eucalyptus.autoscaling.activities.ZoneUnavailabilityMarkers.Zo
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.availabilityZone;
 import static com.eucalyptus.autoscaling.instances.AutoScalingInstances.instanceId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,6 +115,8 @@ import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalance
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Consumer;
+import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -158,16 +161,22 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
+import edu.ucsb.eucalyptus.msgs.SubnetIdSetItemType;
+import edu.ucsb.eucalyptus.msgs.SubnetIdSetType;
+import edu.ucsb.eucalyptus.msgs.SubnetType;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
@@ -302,12 +311,16 @@ public class ActivityManager {
   }
 
   public List<String> validateReferences( final OwnerFullName owner,
-                                          final Collection<String> availabilityZones,
-                                          final Collection<String> loadBalancerNames ) {
+                                          final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer,
+                                          final Iterable<String> availabilityZones,
+                                          final Iterable<String> loadBalancerNames,
+                                          final Iterable<String> subnetIds ) {
     return validateReferences(
         owner,
+        availabilityZoneToSubnetMapConsumer,
         Objects.firstNonNull( availabilityZones, Collections.<String>emptyList() ),
         Objects.firstNonNull( loadBalancerNames, Collections.<String>emptyList() ),
+        Objects.firstNonNull( subnetIds, Collections.<String>emptyList() ),
         Collections.<String>emptyList(),
         null,
         null,
@@ -324,6 +337,8 @@ public class ActivityManager {
                                           final String iamInstanceProfile ) {
     return validateReferences(
         owner,
+        Consumers.drop( ),
+        Collections.<String>emptyList(),
         Collections.<String>emptyList(),
         Collections.<String>emptyList(),
         Objects.firstNonNull( imageIds, Collections.<String>emptyList() ),
@@ -343,9 +358,7 @@ public class ActivityManager {
       if ( success ) {
         policyArnToAlarmArnMap.putAll( task.getPolicyArnToAlarmArns() );
       }
-    } catch ( ExecutionException e ) {
-      logger.error( e, e );
-    } catch ( InterruptedException e ) {
+    } catch ( ExecutionException | InterruptedException e ) {
       logger.error( e, e );
     }
     return policyArnToAlarmArnMap;
@@ -506,8 +519,10 @@ public class ActivityManager {
   }
 
   private List<String> validateReferences( final OwnerFullName owner,
+                                           final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer,
                                            final Iterable<String> availabilityZones,
                                            final Iterable<String> loadBalancerNames,
+                                           final Iterable<String> subnetIds,
                                            final Iterable<String> imageIds,
                                            @Nullable final String instanceType,
                                            @Nullable final String keyName,
@@ -517,8 +532,10 @@ public class ActivityManager {
 
     final ValidationScalingProcessTask task = new ValidationScalingProcessTask(
         owner,
+        availabilityZoneToSubnetMapConsumer,
         Lists.newArrayList( Sets.newLinkedHashSet( availabilityZones ) ),
         Lists.newArrayList( Sets.newLinkedHashSet( loadBalancerNames ) ),
+        Lists.newArrayList( Sets.newLinkedHashSet( subnetIds ) ),
         Lists.newArrayList( Sets.newLinkedHashSet( imageIds ) ),
         instanceType,
         keyName,
@@ -867,7 +884,17 @@ public class ActivityManager {
                                          final int attemptToLaunch ) {
     final LaunchConfigurationCoreView launchConfiguration = group.getLaunchConfiguration();
     final RunInstancesType runInstances = TypeMappers.transform( launchConfiguration, RunInstancesType.class );
-    runInstances.setAvailabilityZone( availabilityZone );
+    final String subnetId = group.getSubnetIdByZone( ).get( availabilityZone );
+    if ( subnetId != null ) {
+      final InstanceNetworkInterfaceSetItemRequestType networkInterface = runInstances.primaryNetworkInterface( true );
+      networkInterface.setSubnetId( subnetId );
+      if ( runInstances.getGroupIdSet( ) != null && !runInstances.getGroupIdSet( ).isEmpty( ) ) {
+        networkInterface.securityGroups( runInstances.getGroupIdSet( ) );
+        runInstances.setGroupIdSet( Lists.<String>newArrayList( ) );
+      }
+    } else {
+      runInstances.setAvailabilityZone( availabilityZone );
+    }
     runInstances.setClientToken( clientToken );
     runInstances.setMaxCount( attemptToLaunch );
     return runInstances;
@@ -1080,7 +1107,7 @@ public class ActivityManager {
   private boolean shouldSuspendDueToLaunchFailure( final AutoScalingGroupMetadata group ) {
     while ( true ) {
       final TimestampedValue<Integer> count = launchFailureCounters.get( group.getArn() );
-      final TimestampedValue<Integer> newCount = new TimestampedValue<Integer>( Objects.firstNonNull( count, new TimestampedValue<Integer>(0) ).getValue() + 1 );
+      final TimestampedValue<Integer> newCount = new TimestampedValue<>( Objects.firstNonNull( count, new TimestampedValue<>(0) ).getValue() + 1 );
       if ( ( count == null && launchFailureCounters.putIfAbsent( group.getArn(), newCount ) == null ) ||
            ( count != null && launchFailureCounters.replace( group.getArn(), count, newCount ) ) ) {
         return newCount.getValue() >= AutoScalingConfiguration.getSuspensionLaunchAttemptsThreshold();
@@ -1117,7 +1144,6 @@ public class ActivityManager {
   }
 
   private interface ActivityContext {
-    String getUserId();
     EucalyptusClient getEucalyptusClient();
     ElbClient getElbClient();
     CloudWatchClient getCloudWatchClient();
@@ -1271,7 +1297,7 @@ public class ActivityManager {
     private final GVT group;
     private final Supplier<String> userIdSupplier;
     private final AtomicReference<List<ScalingActivity>> activities =
-        new AtomicReference<List<ScalingActivity>>( Collections.<ScalingActivity>emptyList() );
+        new AtomicReference<>( Collections.<ScalingActivity>emptyList() );
     private volatile CheckedListenableFuture<Boolean> taskFuture;
 
     ScalingProcessTask( final String uniqueKey,
@@ -1299,7 +1325,6 @@ public class ActivityManager {
       return getGroup().getOwner();
     }
 
-    @Override
     public String getUserId() {
       return userIdSupplier.get();
     }
@@ -1426,7 +1451,7 @@ public class ActivityManager {
   private class LaunchInstanceScalingActivityTask extends ScalingActivityTask<AutoScalingGroupScalingView,RunInstancesResponseType> {
     private final String availabilityZone;
     private final String clientToken;
-    private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> instanceIds = new AtomicReference<>(
         Collections.<String>emptyList()
     );
 
@@ -2236,10 +2261,10 @@ public class ActivityManager {
 
   private class MonitoringScalingActivityTask extends ScalingActivityTask<AutoScalingGroupCoreView,DescribeInstanceStatusResponseType> {
     private final List<String> instanceIds;
-    private final AtomicReference<List<String>> healthyInstanceIds = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> healthyInstanceIds = new AtomicReference<>(
         Collections.<String>emptyList()
     );
-    private final AtomicReference<List<String>> knownInstanceIds = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> knownInstanceIds = new AtomicReference<>(
         Collections.<String>emptyList()
     );
 
@@ -2454,7 +2479,7 @@ public class ActivityManager {
 
   private class ElbMonitoringScalingActivityTask extends ScalingActivityTask<AutoScalingGroupCoreView,DescribeInstanceHealthResponseType> {
     private final String loadBalancerName;
-    private final AtomicReference<List<String>> unhealthyInstanceIds = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> unhealthyInstanceIds = new AtomicReference<>(
         Collections.<String>emptyList()
     );
 
@@ -2550,7 +2575,7 @@ public class ActivityManager {
 
   private abstract class ValidationScalingActivityTask<RES extends BaseMessage> extends ScalingActivityTask<AutoScalingGroupCoreView,RES> {
     private final String description;
-    private final AtomicReference<List<String>> validationErrors = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> validationErrors = new AtomicReference<>(
         Collections.<String>emptyList()
     );
 
@@ -2616,6 +2641,77 @@ public class ActivityManager {
         final Set<String> invalidZones = Sets.newTreeSet( availabilityZones );
         invalidZones.removeAll( zones );
         setValidationError( "Invalid availability zone(s): " + invalidZones );
+      }
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+  }
+
+  private class SubnetValidationScalingActivityTask extends ValidationScalingActivityTask<DescribeSubnetsResponseType> {
+    private final List<String> availabilityZones;
+    private final List<String> subnetIds;
+    private final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer;
+
+    private SubnetValidationScalingActivityTask( final AutoScalingGroupCoreView group,
+                                                 final ScalingActivity activity,
+                                                 final List<String> subnetIds,
+                                                 final List<String> availabilityZones,
+                                                 final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer ) {
+      super( group, activity, "subnetId(s)" );
+      this.subnetIds = subnetIds;
+      this.availabilityZones = availabilityZones;
+      this.availabilityZoneToSubnetMapConsumer = availabilityZoneToSubnetMapConsumer;
+    }
+
+    @Override
+    void dispatchInternal( final ActivityContext context,
+                           final Callback.Checked<DescribeSubnetsResponseType> callback ) {
+      final EucalyptusClient client = context.getEucalyptusClient();
+
+      final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( );
+      for ( final String subnetId : subnetIds ) {
+        final SubnetIdSetItemType subnetIdItem = new SubnetIdSetItemType( );
+        subnetIdItem.setSubnetId( subnetId );
+        subnetIdItems.add( subnetIdItem );
+      }
+      final SubnetIdSetType subnetIdSetType = new SubnetIdSetType( );
+      subnetIdSetType.setItem( subnetIdItems );
+      final DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType( );
+      describeSubnetsType.setSubnetSet( subnetIdSetType );
+
+      client.dispatch( describeSubnetsType, callback );
+    }
+
+    @Override
+    void dispatchSuccess( final ActivityContext context,
+                          final DescribeSubnetsResponseType response ) {
+      if ( response.getSubnetSet() == null || response.getSubnetSet().getItem( ) == null ) {
+        setValidationError( "Invalid subnet(s): " + subnetIds );
+      } else if ( response.getSubnetSet( ).getItem().size( ) != subnetIds.size( ) ) {
+        final Set<String> validSubnetIds = Sets.newHashSet( );
+        for ( final SubnetType subnetType : response.getSubnetSet().getItem() ) {
+          validSubnetIds.add( subnetType.getSubnetId() );
+        }
+        final Set<String> invalidSubnets = Sets.newTreeSet( subnetIds );
+        invalidSubnets.removeAll( validSubnetIds );
+        setValidationError( "Invalid subnet(s): " + invalidSubnets );
+      } else { // validate subnets are in different zones and match the specified zones (if any)
+        final Set<String> subnetZones = Sets.newHashSet( );
+        for ( final SubnetType subnetType : response.getSubnetSet().getItem() ) {
+          subnetZones.add( subnetType.getAvailabilityZone( ) );
+        }
+        if ( subnetZones.size( ) != subnetIds.size( ) ) {
+          setValidationError( "Found multiple subnets for availability zone(s) " );
+        }
+        if ( !availabilityZones.isEmpty( ) && !subnetZones.equals( Sets.newHashSet( availabilityZones ) ) ) {
+          setValidationError( "Specified subnet(s) not consistent with specified availability zone(s)" );
+        }
+
+        final Map<String,String> zonesToSubnetIds = Maps.newHashMap( );
+        for ( final SubnetType subnetType : response.getSubnetSet().getItem() ) {
+          zonesToSubnetIds.put( subnetType.getAvailabilityZone(), subnetType.getSubnetId() );
+        }
+        availabilityZoneToSubnetMapConsumer.accept( ImmutableMap.copyOf( zonesToSubnetIds ) );
       }
 
       setActivityFinalStatus( ActivityStatusCode.Successful );
@@ -2822,28 +2918,34 @@ public class ActivityManager {
   }
 
   private class ValidationScalingProcessTask extends ScalingProcessTask<AutoScalingGroupCoreView,ValidationScalingActivityTask<?>> {
+    private final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer;
     private final List<String> availabilityZones;
     private final List<String> loadBalancerNames;
+    private final List<String> subnetIds;
     private final List<String> imageIds;
     private final List<String> securityGroups;
     @Nullable
     private final String instanceType;
     @Nullable
     private final String keyName;
-    private final AtomicReference<List<String>> validationErrors = new AtomicReference<List<String>>(
+    private final AtomicReference<List<String>> validationErrors = new AtomicReference<>(
         Collections.<String>emptyList()
     );
 
     ValidationScalingProcessTask( final OwnerFullName owner,
+                                  final Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer,
                                   final List<String> availabilityZones,
                                   final List<String> loadBalancerNames,
+                                  final List<String> subnetIds,
                                   final List<String> imageIds,
                                   @Nullable final String instanceType,
                                   @Nullable final String keyName,
                                   final List<String> securityGroups ) {
       super( UUID.randomUUID().toString() + "-validation", TypeMappers.transform( AutoScalingGroup.withOwner(owner), AutoScalingGroupCoreView.class ), "Validate" );
+      this.availabilityZoneToSubnetMapConsumer = availabilityZoneToSubnetMapConsumer;
       this.availabilityZones = availabilityZones;
       this.loadBalancerNames = loadBalancerNames;
+      this.subnetIds = subnetIds;
       this.imageIds = imageIds;
       this.instanceType = instanceType;
       this.keyName = keyName;
@@ -2854,6 +2956,7 @@ public class ActivityManager {
     boolean shouldRun() {
       return
           !availabilityZones.isEmpty() ||
+          !subnetIds.isEmpty() ||
           !loadBalancerNames.isEmpty() ||
           !imageIds.isEmpty() ||
           instanceType != null ||
@@ -2869,6 +2972,9 @@ public class ActivityManager {
       }
       if ( !loadBalancerNames.isEmpty() ) {
         tasks.add( new LoadBalancerValidationScalingActivityTask( getGroup(), newActivity(), loadBalancerNames ) );
+      }
+      if ( !subnetIds.isEmpty() ) {
+        tasks.add( new SubnetValidationScalingActivityTask( getGroup(), newActivity(), subnetIds, availabilityZones, availabilityZoneToSubnetMapConsumer ) );
       }
       if ( !imageIds.isEmpty() ) {
         tasks.add( new ImageIdValidationScalingActivityTask( getGroup(), newActivity(), imageIds ) );
@@ -2950,7 +3056,7 @@ public class ActivityManager {
 
   private class AlarmLookupProcessTask extends ScalingProcessTask<AutoScalingGroupCoreView,AlarmLookupActivityTask> {
     private final List<String> policyArns;
-    private final AtomicReference<Map<String,Collection<String>>> policyArnToAlarmArns = new AtomicReference<Map<String,Collection<String>>>(
+    private final AtomicReference<Map<String,Collection<String>>> policyArnToAlarmArns = new AtomicReference<>(
         Collections.<String,Collection<String>>emptyMap( )
     );
 

@@ -89,6 +89,7 @@ public class AutoScalingMessageValidation {
     TAG_FILTER( "auto-scaling-group|key|value|propagate-at-launch" ),
     TAG_RESOURCE( "auto-scaling-group" ),
     TERMINATION_POLICY( "OldestInstance|NewestInstance|OldestLaunchConfiguration|ClosestToNextInstanceHour|Default" ),
+    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?: +, +subnet-[0-9a-fA-F]{8})*" ),
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
@@ -100,6 +101,7 @@ public class AutoScalingMessageValidation {
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),
     EC2_USERDATA( "(?s).{0,90000}" ), // Enough for 64KiB Base64 encoded with some formatting
     EC2_SPOT_PRICE( "[0-9]{1,4}\\.[0-9]{2,4}" ),
+    EC2_PLACEMENT_TENANCY( "default|dedicated" ),
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),

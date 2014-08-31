@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.groups;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
+import static com.google.common.base.Strings.emptyToNull;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -48,6 +49,7 @@ import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -126,6 +128,7 @@ public abstract class AutoScalingGroups {
       type.setAutoScalingGroupARN( group.getArn() );
       type.setAutoScalingGroupName( group.getAutoScalingGroupName() );
       type.setAvailabilityZones( new AvailabilityZones( group.getAvailabilityZones() ) );
+      type.setVpcZoneIdentifier( emptyToNull( Joiner.on( ',' ).join( group.getSubnetIdByZone().values( ) ) ) );
       type.setCreatedTime( group.getCreationTimestamp() );
       type.setDefaultCooldown( group.getDefaultCooldown() );
       type.setDesiredCapacity( group.getDesiredCapacity() );

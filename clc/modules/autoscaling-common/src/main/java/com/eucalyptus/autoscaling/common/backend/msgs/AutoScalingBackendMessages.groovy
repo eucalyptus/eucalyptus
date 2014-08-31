@@ -397,7 +397,6 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
   Integer desiredCapacity
   @AutoScalingMessageValidation.FieldRange
   Integer defaultCooldown
-  @Nonnull
   AvailabilityZones availabilityZones
   LoadBalancerNames loadBalancerNames
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK)
@@ -406,7 +405,7 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
   Integer healthCheckGracePeriod
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
-  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.VPC_ZONE_IDENTIFIER)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
   TerminationPolicies terminationPolicies
@@ -436,6 +435,9 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
     }
     if ( availabilityZones && availabilityZones.member.isEmpty() ) {
       errors.put( "AvailabilityZones.member.1", "AvailabilityZones.member.1 is required" )
+    }
+    if ( vpcZoneIdentifier == null && (!availabilityZones || availabilityZones.member.isEmpty( ) ) ) {
+      errors.put( "AvailabilityZones.member.1", "One of AvailabilityZones or VPCZoneIdentifier is required" )
     }
     errors
   }
@@ -742,6 +744,7 @@ public class LaunchConfigurationType extends EucalyptusData {
   String iamInstanceProfile
   Date createdTime
   Boolean ebsOptimized
+  Boolean associatePublicIpAddress
   public LaunchConfigurationType() {  }
 }
 public class Processes extends EucalyptusData {
@@ -1010,6 +1013,7 @@ public class DescribeAutoScalingGroupsType extends AutoScalingBackendMessage {
   }
 }
 public class CreateLaunchConfigurationType extends AutoScalingBackendMessage {
+  Boolean associatePublicIpAddress
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String launchConfigurationName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_MACHINE_IMAGE)
@@ -1027,6 +1031,8 @@ public class CreateLaunchConfigurationType extends AutoScalingBackendMessage {
   String ramdiskId
   BlockDeviceMappings blockDeviceMappings
   InstanceMonitoring instanceMonitoring
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_PLACEMENT_TENANCY)
+  String placementTenancy
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SPOT_PRICE)
   String spotPrice
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)

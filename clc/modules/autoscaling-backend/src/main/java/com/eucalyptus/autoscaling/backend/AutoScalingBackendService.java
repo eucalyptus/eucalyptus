@@ -23,6 +23,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import static com.google.common.base.Strings.nullToEmpty;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -167,6 +169,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
@@ -180,6 +183,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -189,6 +193,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
+@SuppressWarnings( "UnusedDeclaration" )
 @ComponentNamed
 public class AutoScalingBackendService {
   private static final Logger logger = Logger.getLogger( AutoScalingBackendService.class );
@@ -455,14 +460,16 @@ public class AutoScalingBackendService {
             throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
           }
 
+          final Iterable<String> subnetIds = Splitter.on( ',' ).trimResults().omitEmptyStrings().split( nullToEmpty( request.getVpcZoneIdentifier() ) );
+          final AtomicReference<Map<String,String>> subnetsByZone = new AtomicReference<>( );
           final List<String> referenceErrors = activityManager.validateReferences(
               ctx.getUserFullName(),
+              Consumers.atomic( subnetsByZone ),
               request.availabilityZones(),
-              request.loadBalancerNames()
+              request.loadBalancerNames(),
+              subnetIds
           );
-          verifyUnsupportedReferences( referenceErrors,
-              request.getPlacementGroup(),
-              request.getVpcZoneIdentifier() );
+          verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup( ) );
 
           if ( !referenceErrors.isEmpty() ) {
             throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
@@ -475,7 +482,11 @@ public class AutoScalingBackendService {
               verifyOwnership( accountFullName, launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ),
               minSize,
               maxSize )
-              .withAvailabilityZones( request.availabilityZones() )
+              .withAvailabilityZones( request.availabilityZones( ) != null && !request.availabilityZones( ).isEmpty( ) ?
+                  request.availabilityZones( ) :
+                  subnetsByZone.get( ) == null ? null : subnetsByZone.get( ).keySet( )
+              )
+              .withSubnetsByZone( subnetsByZone.get( ) )
               .withDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) )
               .withDesiredCapacity( desiredCapacity )
               .withHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) )
@@ -483,10 +494,10 @@ public class AutoScalingBackendService {
                   request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
               .withLoadBalancerNames( request.loadBalancerNames() )
               .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
-                  Collections2.filter( Collections2.transform( 
-                    request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class) ),
-                    Predicates.not( Predicates.isNull() ) ) )
-              .withTags( request.getTags()==null ?
+                  Collections2.filter( Collections2.transform(
+                          request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                      Predicates.not( Predicates.isNull() ) ) )
+              .withTags( request.getTags() == null ?
                   null :
                   Iterables.transform( request.getTags().getMember(), TypeMappers.lookup( TagType.class, AutoScalingGroupTag.class ) ) );
 
@@ -895,7 +906,7 @@ public class AutoScalingBackendService {
 
     for ( final TagType tagType : request.getTags().getMember() ) {
       final String key = tagType.getKey();
-      final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
+      final String value = nullToEmpty( tagType.getValue() ).trim();
 
       if ( com.google.common.base.Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
         throw new ValidationErrorException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
@@ -923,8 +934,8 @@ public class AutoScalingBackendService {
                 throw Exceptions.toUndeclared( new ValidationErrorException( "Resource not found " + tagType.getResourceId() ) );
               }
 
-              final String key = com.google.common.base.Strings.nullToEmpty( tagType.getKey() ).trim();
-              final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
+              final String key = nullToEmpty( tagType.getKey() ).trim();
+              final String value = nullToEmpty( tagType.getValue() ).trim();
               final Boolean propagateAtLaunch = Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE );
               tagSupport.createOrUpdate( resource, ownerFullName, key, value, propagateAtLaunch );
 
@@ -1045,7 +1056,8 @@ public class AutoScalingBackendService {
             .withUserData( request.getUserData() )
             .withInstanceMonitoring( request.getInstanceMonitoring() != null ? request.getInstanceMonitoring().getEnabled() : null )
             .withInstanceProfile( request.getIamInstanceProfile() )
-            .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null );          
+            .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null )
+            .withAssociatePublicIpAddress( request.getAssociatePublicIpAddress( ) );
             
           if ( request.getBlockDeviceMappings() != null ) {
             for ( final BlockDeviceMappingType blockDeviceMappingType : request.getBlockDeviceMappings().getMember() ) {
@@ -1169,8 +1181,6 @@ public class AutoScalingBackendService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
-            if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
-              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             if ( request.getDefaultCooldown() != null )
               autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown( ) ) );
             if ( request.getHealthCheckGracePeriod( ) != null )
@@ -1215,17 +1225,29 @@ public class AutoScalingBackendService {
               throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
             }
 
+            final Iterable<String> subnetIds = Splitter.on( ',' ).trimResults().omitEmptyStrings().split( nullToEmpty( request.getVpcZoneIdentifier() ) );
+            final AtomicReference<Map<String, String>> subnetsByZone = new AtomicReference<>();
             final List<String> referenceErrors = activityManager.validateReferences(
                 autoScalingGroup.getOwner(),
+                Consumers.atomic( subnetsByZone ),
                 autoScalingGroup.getAvailabilityZones(),
-                Collections.<String>emptyList() // load balancer names cannot be updated
+                Collections.<String>emptyList(), // load balancer names cannot be updated
+                subnetIds
             );
-            verifyUnsupportedReferences( referenceErrors,
-                request.getPlacementGroup(),
-                request.getVpcZoneIdentifier() );
+            verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup() );
 
             if ( !referenceErrors.isEmpty() ) {
               throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
+            }
+
+            if ( request.getVpcZoneIdentifier() != null ) {
+              autoScalingGroup.setSubnetIdByZone( subnetsByZone.get( ) );
+              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet(
+                  request.availabilityZones( ) != null && !request.availabilityZones( ).isEmpty( ) ?
+                      request.availabilityZones( ) :
+                      subnetsByZone.get( ).keySet( ) ) ) );
+            } else if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() ) {
+              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             }
           }
         }
@@ -1433,14 +1455,9 @@ public class AutoScalingBackendService {
   }
 
   private static void verifyUnsupportedReferences( final List<String> referenceErrors,
-                                                   final String placementGroup,
-                                                   final String vpcZoneIdentifier ) {
+                                                   final String placementGroup ) {
     if ( !com.google.common.base.Strings.isNullOrEmpty( placementGroup ) ) {
       referenceErrors.add( "Invalid placement group: " + placementGroup );
-    }
-
-    if ( !com.google.common.base.Strings.isNullOrEmpty( vpcZoneIdentifier ) ) {
-      referenceErrors.add( "Invalid VPC zone identifier: " + vpcZoneIdentifier );
     }
   }
 

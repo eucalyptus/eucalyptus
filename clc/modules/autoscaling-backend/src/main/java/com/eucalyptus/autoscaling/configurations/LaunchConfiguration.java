@@ -93,6 +93,9 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
 
+  @Column( name = "metadata_associate_public_ip" )
+  private Boolean associatePublicIpAddress;
+
   @Column( name = "metadata_instance_monitoring" )
   private Boolean instanceMonitoring;
 
@@ -178,6 +181,14 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     this.blockDeviceMappings = blockDeviceMappings;
   }
 
+  public Boolean getAssociatePublicIpAddress( ) {
+    return associatePublicIpAddress;
+  }
+
+  public void setAssociatePublicIpAddress( final Boolean associatePublicIpAddress ) {
+    this.associatePublicIpAddress = associatePublicIpAddress;
+  }
+
   public Boolean getInstanceMonitoring() {
     return instanceMonitoring;
   }
@@ -256,6 +267,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     private String ramdiskId;
     private String keyName;
     private String userData;
+    private Boolean associatePublicIpAddress;
     private Boolean instanceMonitoring;
     private String iamInstanceProfile;
     private Set<String> securityGroups = Sets.newLinkedHashSet();
@@ -293,6 +305,11 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       return builder();
     }
 
+    public T withAssociatePublicIpAddress( final Boolean associatePublicIpAddress ) {
+      this.associatePublicIpAddress  = associatePublicIpAddress;
+      return builder();
+    }
+
     public T withInstanceMonitoring( final Boolean instanceMonitoring ) {
       this.instanceMonitoring  = instanceMonitoring;
       return builder();
@@ -326,6 +343,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setRamdiskId( ramdiskId );
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
+      configuration.setAssociatePublicIpAddress( associatePublicIpAddress );
       configuration.setInstanceMonitoring( Objects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
       configuration.setIamInstanceProfile( iamInstanceProfile );
       configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );

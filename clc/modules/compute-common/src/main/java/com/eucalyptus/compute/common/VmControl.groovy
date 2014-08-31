@@ -271,6 +271,21 @@ public class RunInstancesType extends VmControlMessage {
         this.iamInstanceProfileName = nameOrArn;
     }
   }
+
+  InstanceNetworkInterfaceSetItemRequestType primaryNetworkInterface( boolean create ) {
+    if ( networkInterfaceSet == null ) {
+      networkInterfaceSet = new InstanceNetworkInterfaceSetRequestType( )
+    }
+    InstanceNetworkInterfaceSetItemRequestType primary = networkInterfaceSet.item.find{
+      InstanceNetworkInterfaceSetItemRequestType networkInterface ->
+        0 == networkInterface.deviceIndex
+    }
+    if ( primary == null && create ) {
+      primary = new InstanceNetworkInterfaceSetItemRequestType( deviceIndex: 0 )
+      networkInterfaceSet.item << primary
+    }
+    primary
+  }
 }
 /** *******************************************************************************/
 public class GetConsoleOutputResponseType extends VmControlMessage {
@@ -343,6 +358,12 @@ class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
   Integer secondaryPrivateIpAddressCount;
   Boolean associatePublicIpAddress;
   InstanceNetworkInterfaceSetItemRequestType() {  }
+
+  void securityGroups( Iterable<String> groupIds ) {
+    groupSet = new SecurityGroupIdSetType(
+        item: groupIds.collect{ String id -> new SecurityGroupIdSetItemType( groupId: id ) } as ArrayList<SecurityGroupIdSetItemType>
+    )
+  }
 }
 class GroupIdSetType extends EucalyptusData {
   GroupIdSetType() {  }
