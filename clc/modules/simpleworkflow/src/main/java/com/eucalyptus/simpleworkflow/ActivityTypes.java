@@ -29,6 +29,7 @@ import com.eucalyptus.simpleworkflow.common.model.ActivityTypeConfiguration;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeDetail;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfo;
 import com.eucalyptus.simpleworkflow.common.model.TaskList;
+import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfo;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -62,7 +63,7 @@ public interface ActivityTypes {
 
   ActivityType save( ActivityType activityType ) throws SwfMetadataException;
 
-
+  long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
 
   @TypeMapper
   public enum ActivityTypeToActivityTypeDetailTransform implements Function<ActivityType,ActivityTypeDetail> {
@@ -127,6 +128,18 @@ public interface ActivityTypes {
         return activityType == null ?
             null :
             Objects.toString( activityType.getState( ), null );
+      }
+    },
+  }
+
+  enum ActivityTypeInfoStringFunctions implements Function<ActivityTypeInfo,String> {
+    NAME {
+      @Nullable
+      @Override
+      public String apply( @Nullable final ActivityTypeInfo activityTypeInfo ) {
+        return activityTypeInfo == null || activityTypeInfo.getActivityType( ) == null ?
+            null :
+            activityTypeInfo.getActivityType( ).getName( );
       }
     },
   }

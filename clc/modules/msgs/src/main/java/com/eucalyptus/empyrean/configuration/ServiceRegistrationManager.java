@@ -67,9 +67,10 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
+import com.eucalyptus.component.Topology;
 import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 
@@ -182,7 +183,7 @@ public class ServiceRegistrationManager {
   public enum DeregisterService implements Function<DeregisterServiceType, DeregisterServiceResponseType> {
     INSTANCE;
     
-    public static Collection<Future<ServiceConfiguration>> deregister( ComponentId componentId, String name ) throws EucalyptusCloudException {
+    private static Collection<Future<ServiceConfiguration>> deregister( ComponentId componentId, String name ) throws EucalyptusCloudException {
       final List<Future<ServiceConfiguration>> deregistered = Lists.newArrayList( );
       try {
         final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( componentId );
@@ -190,13 +191,13 @@ public class ServiceRegistrationManager {
         if ( ServiceGroups.isGroup( config ) ) {
           final ServiceGroupConfiguration groupConfig = ( ServiceGroupConfiguration ) config;
           final ServiceGroupBuilder<ServiceGroupConfiguration> groupBuilder = ( ServiceGroupBuilder<ServiceGroupConfiguration> ) builder;
-          final Collection<ServiceConfiguration> configsToRegister = groupBuilder.onRegister( groupConfig );
+          final Collection<ServiceConfiguration> configsToDeregister = groupBuilder.onDeregister( groupConfig );
           //do registrations
           final Future<ServiceConfiguration> groupFuture = ServiceEvents.deregisterFunction().apply( groupConfig );
           deregistered.add( groupFuture );
           try {//require that the group op succeeds before doing the members
             groupFuture.get();
-            deregistered.addAll( Collections2.transform( configsToRegister, ServiceEvents.deregisterFunction( ) ) );
+            deregistered.addAll( Collections2.transform( configsToDeregister, ServiceEvents.deregisterFunction( ) ) );
           } catch ( Exception e ) {
             e.printStackTrace();
           }
@@ -222,8 +223,13 @@ public class ServiceRegistrationManager {
         checkParam( "Name must not be null: " + request, name, notNullValue( ) );
         ServiceConfiguration config = ServiceConfigurations.lookupByName( request.getName( ) );
         final ComponentId componentId = config.getComponentId( );
-        ServiceBuilders.lookup( componentId );//NOTE: this is an existence test which can fail w/ an exception.
-        Collection<Future<ServiceConfiguration>> configurations = deregister( componentId, name );
+        ServiceBuilders.lookup( componentId ); //NOTE: this is an existence test which can fail w/ an exception.
+        Collection<Future<ServiceConfiguration>> configurations = Topology.doTopologyWork( new Callable<Collection<Future<ServiceConfiguration>>>(){
+          @Override
+          public Collection<Future<ServiceConfiguration>> call( ) throws Exception {
+            return deregister( componentId, name );
+          }
+        } );
         final Function<ServiceConfiguration, ServiceId> typeMapper = TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class );
         for ( Future<ServiceConfiguration> regResult : configurations ) {
           try {

@@ -83,7 +83,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.DnsHostNamesFeature;
 import com.eucalyptus.compute.common.network.NetworkFeature;
 import com.eucalyptus.compute.common.network.NetworkResource;
@@ -471,8 +470,6 @@ public class AdmissionControl {
 
         final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
         request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
-        request.setVpc( allocInfo.getSubnet( ) == null ? null : CloudMetadatas.toDisplayName( ).apply( allocInfo.getSubnet( ).getVpc( ) ) );
-        request.setSubnet( CloudMetadatas.toDisplayName( ).apply( allocInfo.getSubnet( ) ) );
         request.setFeatures( Lists.<NetworkFeature>newArrayList( new DnsHostNamesFeature( ) ) );
         helper.prepareNetworkAllocation( allocInfo, request );
         final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;

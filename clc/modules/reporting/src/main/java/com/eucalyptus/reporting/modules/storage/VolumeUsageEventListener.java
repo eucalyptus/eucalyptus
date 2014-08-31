@@ -25,6 +25,7 @@ import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
 
 import javax.annotation.Nonnull;
 
+import com.eucalyptus.reporting.service.ReportingService;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -53,6 +54,11 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
   @Override
   public void fireEvent(@Nonnull final VolumeEvent event) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service data collection disabled....VolumeEvent discarded");
+      return;
+    }
     Preconditions.checkNotNull(event, "Event is required");
 
     final long timeInMs = getCurrentTimeMillis();

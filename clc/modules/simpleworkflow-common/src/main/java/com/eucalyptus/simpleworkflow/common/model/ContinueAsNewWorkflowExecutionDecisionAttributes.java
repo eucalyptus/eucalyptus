@@ -36,6 +36,9 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRange;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
 
 /**
@@ -87,6 +90,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_32768 )
     private String input;
 
     /**
@@ -105,6 +109,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String executionStartToCloseTimeout;
 
     /**
@@ -129,6 +134,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      */
+    @FieldRegex( FieldRegexValue.DURATION_8_NONE )
     private String taskStartToCloseTimeout;
 
     /**
@@ -153,6 +159,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
      */
+    @FieldRegex( FieldRegexValue.CHILD_POLICY )
     private String childPolicy;
 
     /**
@@ -164,8 +171,11 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 5<br/>
      */
+    @FieldRange( max = 5 )
+    @FieldRegex( FieldRegexValue.STRING_256 )
     private com.amazonaws.internal.ListWithAutoConstructFlag<String> tagList;
 
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String workflowTypeVersion;
 
     /**

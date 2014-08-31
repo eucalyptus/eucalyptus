@@ -69,6 +69,7 @@ import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExt
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -265,7 +266,14 @@ public class VerifyMetadata {
           break;
         }
       }
-      MachineImageInfo emi = LookupMachine.INSTANCE.apply(emiName);
+      // there is a chance that emi is de-registered
+      MachineImageInfo emi;
+      try {
+        emi = LookupMachine.INSTANCE.apply(emiName);
+      } catch (NoSuchElementException ex) {
+          throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
+                  + " Please contact your cloud administrator.");
+      }
       long spaceLeft = diskSizeBytes - emi.getImageSizeBytes() - img.getImageSizeBytes() - 100*2*MB;
       if (spaceLeft > 0)
         return true;

@@ -98,6 +98,22 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           }
           associateAddressType.setPublicIp(properties.getEip());
         }
+        if (properties.getAllocationId() != null) {
+          DescribeAddressesType describeAddressesType = new DescribeAddressesType();
+          describeAddressesType.setAllocationIds(Lists.newArrayList(properties.getAllocationId()));
+          describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
+          DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+          if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
+            throw new ValidationErrorException("No such allocation-id " + properties.getAllocationId());
+          }
+          associateAddressType.setPublicIp(properties.getEip());
+        }
+        if (properties.getNetworkInterfaceId() != null) {
+          associateAddressType.setNetworkInterfaceId(properties.getNetworkInterfaceId());
+        }
+        if (properties.getPrivateIpAddress() != null) {
+          associateAddressType.setNetworkInterfaceId(properties.getNetworkInterfaceId());
+        }
         AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
         info.setPhysicalResourceId(getDefaultPhysicalResourceId());
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
@@ -120,6 +136,18 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    if (properties.getAllocationId() != null) {
+      DescribeAddressesType describeAddressesType = new DescribeAddressesType();
+      describeAddressesType.setAllocationIds(Lists.newArrayList(properties.getAllocationId()));
+      describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
+      DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+      if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
+        DisassociateAddressType disassociateAddressType = new DisassociateAddressType();
+        disassociateAddressType.setPublicIp(properties.getEip());
+        disassociateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+        AsyncRequests.<DisassociateAddressType, DisassociateAddressResponseType> sendSync(configuration, disassociateAddressType);
+      }
+    }
     if (properties.getEip() != null) {
       DescribeAddressesType describeAddressesType = new DescribeAddressesType();
       describeAddressesType.setPublicIpsSet(Lists.newArrayList(properties.getEip()));

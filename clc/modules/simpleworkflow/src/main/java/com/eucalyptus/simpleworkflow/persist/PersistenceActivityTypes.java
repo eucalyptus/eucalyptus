@@ -20,9 +20,12 @@
 package com.eucalyptus.simpleworkflow.persist;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTypeMetadata;
+import java.util.Collections;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.ActivityType;
 import com.eucalyptus.simpleworkflow.ActivityTypes;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
@@ -33,6 +36,14 @@ public class PersistenceActivityTypes extends SwfPersistenceSupport<ActivityType
 
   public PersistenceActivityTypes( ) {
     super( "activity-type" );
+  }
+
+  public long countByDomain( final OwnerFullName ownerFullName,
+                             final String domain ) throws SwfMetadataException {
+    return countByExample(
+        ActivityType.exampleWithOwner( ownerFullName ),
+        Restrictions.eq( "domain.displayName", domain ),
+        Collections.singletonMap( "domain", "domain" ) );
   }
 
   @Override

@@ -62,6 +62,8 @@ public interface WorkflowTypes {
 
   WorkflowType save( WorkflowType workflowType ) throws SwfMetadataException;
 
+  long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
   @TypeMapper
   public enum WorkflowTypeToWorkflowTypeDetailTransform implements Function<WorkflowType,WorkflowTypeDetail> {
     INSTANCE;
@@ -124,6 +126,18 @@ public interface WorkflowTypes {
         return workflowType == null ?
             null :
             Objects.toString( workflowType.getState( ), null );
+      }
+    },
+  }
+
+  enum WorkflowTypeInfoStringFunctions implements Function<WorkflowTypeInfo,String> {
+    NAME {
+      @Nullable
+      @Override
+      public String apply( @Nullable final WorkflowTypeInfo workflowTypeInfo ) {
+        return workflowTypeInfo == null || workflowTypeInfo.getWorkflowType( ) == null ?
+            null :
+            workflowTypeInfo.getWorkflowType( ).getName( );
       }
     },
   }

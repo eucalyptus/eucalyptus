@@ -25,6 +25,32 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2SubnetResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2SubnetProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.CreateSubnetResponseType;
+import com.eucalyptus.compute.common.CreateSubnetType;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
+import com.eucalyptus.compute.common.DeleteSubnetResponseType;
+import com.eucalyptus.compute.common.DeleteSubnetType;
+import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeVpcsResponseType;
+import com.eucalyptus.compute.common.DescribeVpcsType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.SubnetIdSetItemType;
+import com.eucalyptus.compute.common.SubnetIdSetType;
+import com.eucalyptus.compute.common.VpcIdSetItemType;
+import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -54,8 +80,50 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
   }
 
   @Override
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
   public void create(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    switch (stepNum) {
+      case 0: // create subnet
+        CreateSubnetType createSubnetType = new CreateSubnetType();
+        createSubnetType.setEffectiveUserId(info.getEffectiveUserId());
+        createSubnetType.setVpcId(properties.getVpcId());
+        if (properties.getAvailabilityZone() != null) {
+          createSubnetType.setAvailabilityZone(properties.getAvailabilityZone());
+        }
+        createSubnetType.setCidrBlock(properties.getCidrBlock());
+        CreateSubnetResponseType createSubnetResponseType = AsyncRequests.<CreateSubnetType,CreateSubnetResponseType> sendSync(configuration, createSubnetType);
+        info.setPhysicalResourceId(createSubnetResponseType.getSubnet().getSubnetId());
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(createSubnetResponseType.getSubnet().getAvailabilityZone())));
+        break;
+      case 1: // tags
+        if (properties.getTags() != null) {
+          CreateTagsType createTagsType = new CreateTagsType();
+          createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+          createTagsType.setTagSet(createTagSet(properties.getTags()));
+          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
+    }
+  }
+
+  private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
+    ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
+    for (EC2Tag tag: tags) {
+      ResourceTag resourceTag = new ResourceTag();
+      resourceTag.setKey(tag.getKey());
+      resourceTag.setValue(tag.getValue());
+      resourceTags.add(resourceTag);
+    }
+    return resourceTags;
   }
 
   @Override
@@ -69,12 +137,59 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
 
   @Override
   public void delete() throws Exception {
-    // can't create so delete should be a NOOP
+    if (info.getPhysicalResourceId() == null) return;
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    // Check vpc (return if gone)
+    DescribeVpcsType describeVpcsType = new DescribeVpcsType();
+    describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
+    setVpcId(describeVpcsType, properties.getVpcId());
+    DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
+    if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+      return; // already deleted
+    }
+    // check subnet (return if gone)
+    DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType();
+    describeSubnetsType.setEffectiveUserId(info.getEffectiveUserId());
+    setSubnetId(describeSubnetsType, info.getPhysicalResourceId());
+    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType,DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+    if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null || describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
+      return; // already deleted
+    }
+    DeleteSubnetType deleteSubnetType = new DeleteSubnetType();
+    deleteSubnetType.setEffectiveUserId(info.getEffectiveUserId());
+    deleteSubnetType.setSubnetId(info.getPhysicalResourceId());
+    AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
+  }
+
+  private void setSubnetId(DescribeSubnetsType describeSubnetsType, String subnetId) {
+    SubnetIdSetType subnetSet = new SubnetIdSetType();
+    describeSubnetsType.setSubnetSet(subnetSet);
+
+    ArrayList<SubnetIdSetItemType> item = Lists.newArrayList();
+    subnetSet.setItem(item);
+
+    SubnetIdSetItemType subnetIdSetItem = new SubnetIdSetItemType();
+    item.add(subnetIdSetItem);
+
+    subnetIdSetItem.setSubnetId(subnetId);
+  }
+
+  private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
+    VpcIdSetType vpcSet = new VpcIdSetType();
+    describeVpcsType.setVpcSet(vpcSet);
+
+    ArrayList<VpcIdSetItemType> item = Lists.newArrayList();
+    vpcSet.setItem(item);
+
+    VpcIdSetItemType vpcIdSetItem = new VpcIdSetItemType();
+    item.add(vpcIdSetItem);
+
+    vpcIdSetItem.setVpcId(vpcId);
   }
 
   @Override
   public void rollbackCreate() throws Exception {
-    // can't create so rollbackCreate should be a NOOP
+    delete();
   }
 
 }

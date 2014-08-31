@@ -91,8 +91,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import org.xbill.DNS.Name;
 
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -179,7 +179,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.VmControlMessage;
 
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
@@ -472,8 +471,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
-	try ( TransactionResource db =
-	          Entities.transactionFor( VmInstance.class ) ) {
+    try ( TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ) )
@@ -489,11 +487,23 @@ public class VmInstances {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
   }
-  
+
+  public static boolean privateIpInUse( final String ip ) {
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+      VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
+      return Entities.count(
+          vmExample,
+          Restrictions.in( "state", new VmState[] { VmState.RUNNING, VmState.PENDING } ),
+          Collections.<String,String>emptyMap( ) ) > 0;
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      return false;
+    }
+  }
+
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
-    try ( TransactionResource db =
-	          Entities.transactionFor( VmInstance.class ) ) {
+    try ( TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       List<VmInstance> vms = Entities.query( VmInstance.create( ) );
       for ( VmInstance vm : vms ) {
         try {
@@ -1117,6 +1127,10 @@ public class VmInstances {
 
   public static Function<VmInstance,String> toInstanceUuid() {
     return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
+  }
+
+  public static String dnsName( final String ip, final Name domain ) {
+    return "euca-" + ip.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + domain;
   }
 
   @Resolver( VmInstanceMetadata.class )

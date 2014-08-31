@@ -25,6 +25,40 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InternetGatewayResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InternetGatewayProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.CreateInternetGatewayResponseType;
+import com.eucalyptus.compute.common.CreateInternetGatewayType;
+import com.eucalyptus.compute.common.CreateSubnetResponseType;
+import com.eucalyptus.compute.common.CreateSubnetType;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
+import com.eucalyptus.compute.common.DeleteInternetGatewayResponseType;
+import com.eucalyptus.compute.common.DeleteInternetGatewayType;
+import com.eucalyptus.compute.common.DeleteSubnetResponseType;
+import com.eucalyptus.compute.common.DeleteSubnetType;
+import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
+import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
+import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeVpcsResponseType;
+import com.eucalyptus.compute.common.DescribeVpcsType;
+import com.eucalyptus.compute.common.InternetGatewayIdSetItemType;
+import com.eucalyptus.compute.common.InternetGatewayIdSetType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.SubnetIdSetItemType;
+import com.eucalyptus.compute.common.SubnetIdSetType;
+import com.eucalyptus.compute.common.VpcIdSetItemType;
+import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -54,8 +88,44 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
   }
 
   @Override
+  public int getNumCreateSteps() {
+    return 2;
+  }
+
+  @Override
   public void create(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    switch (stepNum) {
+      case 0: // create gateway
+        CreateInternetGatewayType createInternetGatewayType = new CreateInternetGatewayType();
+        createInternetGatewayType.setEffectiveUserId(info.getEffectiveUserId());
+        CreateInternetGatewayResponseType createInternetGatewayResponseType = AsyncRequests.<CreateInternetGatewayType,CreateInternetGatewayResponseType> sendSync(configuration, createInternetGatewayType);
+        info.setPhysicalResourceId(createInternetGatewayResponseType.getInternetGateway().getInternetGatewayId());
+        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        break;
+      case 1: // tags
+        if (properties.getTags() != null) {
+          CreateTagsType createTagsType = new CreateTagsType();
+          createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+          createTagsType.setTagSet(createTagSet(properties.getTags()));
+          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+        }
+        break;
+      default:
+        throw new IllegalStateException("Invalid step " + stepNum);
+    }
+  }
+
+  private ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
+    ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
+    for (EC2Tag tag: tags) {
+      ResourceTag resourceTag = new ResourceTag();
+      resourceTag.setKey(tag.getKey());
+      resourceTag.setValue(tag.getValue());
+      resourceTags.add(resourceTag);
+    }
+    return resourceTags;
   }
 
   @Override
@@ -69,14 +139,41 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
 
   @Override
   public void delete() throws Exception {
-    // can't create so delete should be a NOOP
+    if (info.getPhysicalResourceId() == null) return;
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    // Check gateway (return if gone)
+    DescribeInternetGatewaysType describeInternetGatewaysType = new DescribeInternetGatewaysType();
+    describeInternetGatewaysType.setEffectiveUserId(info.getEffectiveUserId());
+    setInternetGatewayId(describeInternetGatewaysType, info.getPhysicalResourceId());
+    DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.<DescribeInternetGatewaysType,DescribeInternetGatewaysResponseType> sendSync(configuration, describeInternetGatewaysType);
+    if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
+      return; // already deleted
+    }
+    DeleteInternetGatewayType deleteInternetGatewayType = new DeleteInternetGatewayType();
+    deleteInternetGatewayType.setEffectiveUserId(info.getEffectiveUserId());
+    deleteInternetGatewayType.setInternetGatewayId(info.getPhysicalResourceId());
+    AsyncRequests.<DeleteInternetGatewayType,DeleteInternetGatewayResponseType> sendSync(configuration, deleteInternetGatewayType);
+  }
+
+  private void setInternetGatewayId(DescribeInternetGatewaysType describeInternetGatewaysType, String internetGatewayId) {
+    InternetGatewayIdSetType internetGatewaySet = new InternetGatewayIdSetType();
+    describeInternetGatewaysType.setInternetGatewayIdSet(internetGatewaySet);
+
+    ArrayList<InternetGatewayIdSetItemType> item = Lists.newArrayList();
+    internetGatewaySet.setItem(item);
+
+    InternetGatewayIdSetItemType internetgatewayIdSetItem = new InternetGatewayIdSetItemType();
+    item.add(internetgatewayIdSetItem);
+
+    internetgatewayIdSetItem.setInternetGatewayId(internetGatewayId);
   }
 
   @Override
   public void rollbackCreate() throws Exception {
-    // can't create so rollbackCreate should be a NOOP
+    delete();
   }
 
 }
+
 
 

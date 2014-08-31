@@ -86,10 +86,19 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
       case 0: // create address
         AllocateAddressType allocateAddressType = new AllocateAddressType();
         allocateAddressType.setEffectiveUserId(info.getEffectiveUserId());
+        if (properties.getDomain() != null && !"vpc".equals(properties.getDomain())) {
+          throw new ValidationErrorException("vpc is the only supported value for Domain");
+        }
+        if (properties.getDomain() != null) {
+          allocateAddressType.setDomain(properties.getDomain());
+        }
         AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
         String publicIp = allocateAddressResponseType.getPublicIp();
         info.setPhysicalResourceId(publicIp);
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
+        if (properties.getDomain() != null) {
+          info.setAllocationId(JsonHelper.getStringFromJsonNode(new TextNode(allocateAddressResponseType.getAllocationId())));
+        }
         break;
       case 1: // attach to instance
         if (properties.getInstanceId() != null) {
@@ -101,8 +110,12 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
             throw new ValidationErrorException("No such instance " + properties.getInstanceId());
           }
           AssociateAddressType associateAddressType = new AssociateAddressType();
+          if (properties.getDomain() != null) {
+            associateAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(info.getAllocationId()).textValue());
+          } else {
+            associateAddressType.setPublicIp(info.getPhysicalResourceId());
+          }
           associateAddressType.setInstanceId(properties.getInstanceId());
-          associateAddressType.setPublicIp(info.getPhysicalResourceId());
           associateAddressType.setEffectiveUserId(info.getEffectiveUserId());
           AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
         }
@@ -127,12 +140,20 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
     if (info.getPhysicalResourceId() == null) return;
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeAddressesType describeAddressesType = new DescribeAddressesType();
-    describeAddressesType.setPublicIpsSet(Lists.newArrayList(info.getPhysicalResourceId()));
+    if (properties.getDomain() != null) {
+      describeAddressesType.setAllocationIds(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getAllocationId()).textValue()));
+    } else {
+      describeAddressesType.setPublicIpsSet(Lists.newArrayList(info.getPhysicalResourceId()));
+    }
     describeAddressesType.setEffectiveUserId(info.getEffectiveUserId());
     DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
     if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
       ReleaseAddressType releaseAddressType = new ReleaseAddressType();
-      releaseAddressType.setPublicIp(info.getPhysicalResourceId());
+      if (properties.getDomain() != null) {
+        releaseAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(info.getAllocationId()).textValue());
+      } else {
+        releaseAddressType.setPublicIp(info.getPhysicalResourceId());
+      }
       releaseAddressType.setEffectiveUserId(info.getEffectiveUserId());
       AsyncRequests.<ReleaseAddressType, ReleaseAddressResponseType> sendSync(configuration, releaseAddressType);
     }
@@ -142,7 +163,6 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
   public void rollbackCreate() throws Exception {
     delete();
   }
-
 }
 
 

@@ -37,6 +37,8 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.policy.PolicyAction;
 
 
 /**
@@ -90,6 +92,7 @@ import java.io.Serializable;
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest)
  */
+@PolicyAction( vendor = "swf", action = "listopenworkflowexecutions" )
 public class ListOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage implements Serializable, WorkflowExecutionFilterParameters {
 
     /**
@@ -98,6 +101,8 @@ public class ListOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String domain;
 
     /**
@@ -105,6 +110,7 @@ public class ListOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage imp
      * whether their start times are within the range specified by this
      * filter.
      */
+    @Nonnull
     private ExecutionTimeFilter startTimeFilter;
 
     /**
@@ -132,6 +138,7 @@ public class ListOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      */
+    @FieldRegex( FieldRegexValue.OPT_STRING_2048 )
     private String nextPageToken;
 
     /**
@@ -145,6 +152,7 @@ public class ListOpenWorkflowExecutionsRequest extends SimpleWorkflowMessage imp
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      */
+    @FieldRange( max = 1000 )
     private Integer maximumPageSize;
 
     /**

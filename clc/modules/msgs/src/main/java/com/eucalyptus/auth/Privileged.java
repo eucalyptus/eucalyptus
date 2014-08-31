@@ -119,14 +119,6 @@ public class Privileged {
     Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
   }
 
-  public static boolean allowReadAccount( AuthContext requestUser, Account account ) throws AuthException {
-    return
-        Permissions.isAuthorized(
-            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTS ),
-            account.getAccountNumber( ),
-            Accounts.getAccountFullName( account ) );
-  }
-  
   public static boolean allowListOrReadAccountPolicy( AuthContext requestUser, Account account ) throws AuthException {
     return requestUser.isSystemUser() &&
         RestrictedTypes.filterPrivileged( ).apply( account ) &&
@@ -233,22 +225,14 @@ public class Privileged {
   }
   
   public static boolean allowReadUser( AuthContext requestUser, Account account, User user ) throws AuthException {
-    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-        Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSER, requestUser );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSER, requestUser );
   }
 
   public static boolean allowListUser( AuthContext requestUser, Account account, User user ) throws AuthException {
-    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-        Permissions.isAuthorized(
+    return Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERS ),
             account.getAccountNumber( ),
             Accounts.getUserFullName( user ) );
-  }
-
-  public static boolean allowListAndReadUser( AuthContext requestUser, Account account, User user ) throws AuthException {
-    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-        ( Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_GETUSER ), account.getAccountNumber( ), Accounts.getUserFullName( user ) ) &&
-          Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERS ), account.getAccountNumber( ), Accounts.getUserFullName( user ) ) );
   }
 
   public static void deleteUser( AuthContext requestUser, Account account, User user, boolean recursive ) throws AuthException {
@@ -619,12 +603,6 @@ public class Privileged {
             Accounts.getGroupFullName( group ) );
   }
 
-  public static boolean allowListAndReadGroupPolicy( AuthContext requestUser, Account account, Group group ) throws AuthException {
-    return !group.isUserGroup( ) && // we are not looking at a users policies and authorized
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_LISTGROUPPOLICIES ), account.getAccountNumber(), Accounts.getGroupFullName( group ) ) &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_GETGROUPPOLICY ), account.getAccountNumber(), Accounts.getGroupFullName( group ) );
-  }
-
   public static boolean allowReadRolePolicy( AuthContext requestUser, Account account, Role role ) throws AuthException {
     return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_GETROLEPOLICY, requestUser );
   }
@@ -637,12 +615,6 @@ public class Privileged {
   public static boolean allowReadUserPolicy( AuthContext requestUser, Account account, User user ) throws AuthException {
     return !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
         Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSERPOLICY, requestUser );
-  }
-
-  public static boolean allowListAndReadUserPolicy( AuthContext requestUser, Account account, User user ) throws AuthException {
-    return !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERPOLICIES ), account.getAccountNumber(), Accounts.getUserFullName( user ) ) &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_GETUSERPOLICY ), account.getAccountNumber(), Accounts.getUserFullName( user ) );
   }
 
   public static boolean allowListAccessKeys( AuthContext requestUser, Account account, User user ) {
@@ -818,12 +790,6 @@ public class Privileged {
     setUserPassword( user, newPass );
   }
 
-  public static boolean allowProcessUserSignup( AuthContext requestUser, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) ||
-           ( requestUser.getAccountNumber( ).equals( user.getAccount( ).getAccountNumber( ) ) &&
-             requestUser.isAccountAdmin( ) );
-  }
-
   private static void setUserPassword( User user, String newPass ) throws AuthException {
     if ( Strings.isNullOrEmpty( newPass ) || user.getName( ).equals( newPass ) ) {
       throw new AuthException( AuthException.INVALID_PASSWORD );
@@ -831,25 +797,6 @@ public class Privileged {
     String newEncrypted = Crypto.generateEncryptedPassword( newPass );
     user.setPassword( newEncrypted );
     user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
-  }
-  
-  // Special case for change password. We should allow a user to do all the stuff here for himself without explicit permission.
-  public static void changeUserPasswordAndEmail( AuthContext requestUser, Account account, User user, String newPass, String email ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !requestUser.getUserId( ).equals( user.getUserId( ) ) && 
-           ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATELOGINPROFILE, requestUser ) ||
-             ( email != null &&
-               !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEUSER, requestUser ) ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-    }
-    setUserPassword( user, newPass );
-    if ( email != null ) {
-      user.setInfo( User.EMAIL, email );
-    }
   }
   
   public static void createServerCertificate( final AuthContext requestUser,

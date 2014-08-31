@@ -36,7 +36,10 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.model;
 
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -52,6 +55,8 @@ public class ActivityType implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_256 )
     private String name;
 
     /**
@@ -61,6 +66,8 @@ public class ActivityType implements Serializable {
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      */
+    @Nonnull
+    @FieldRegex( FieldRegexValue.NAME_64 )
     private String version;
 
     /**

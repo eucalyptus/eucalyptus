@@ -47,6 +47,8 @@ import edu.ucsb.eucalyptus.msgs.VpcType;
  */
 public interface Vpcs extends Lister<Vpc> {
 
+  String DEFAULT_VPC_CIDR = "172.31.0.0/16";
+
   <T> List<T> list( OwnerFullName ownerFullName,
                     Criterion criterion,
                     Map<String,String> aliases,

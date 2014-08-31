@@ -63,13 +63,13 @@ public class WorkflowType extends UserMetadata<WorkflowType.Status> implements W
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Domain domain;
 
-  @Column( name = "workflow_version", nullable = false, updatable = false )
+  @Column( name = "workflow_version", length = 64, nullable = false, updatable = false )
   private String workflowVersion;
 
-  @Column( name = "description", updatable = false )
+  @Column( name = "description", length = 1024, updatable = false )
   private String description;
 
-  @Column( name = "default_task_list", updatable = false  )
+  @Column( name = "default_task_list", length = 256, updatable = false  )
   private String defaultTaskList;
 
   @Column( name = "default_task_start_to_close_timeout" )

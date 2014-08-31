@@ -214,6 +214,7 @@
 #define CONFIG_NC_SWAP_SIZE                     "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES                   "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS              "CONCURRENT_DISK_OPS"
+#define CONFIG_SC_REQUEST_TIMEOUT               "SC_REQUEST_TIMEOUT"
 #define CONFIG_CONCURRENT_CLEANUP_OPS           "CONCURRENT_CLEANUP_OPS"
 #define CONFIG_DISABLE_SNAPSHOTS                "DISABLE_CACHE_SNAPSHOTS"
 #define CONFIG_USE_VIRTIO_NET                   "USE_VIRTIO_NET"
@@ -510,7 +511,6 @@ extern const char *euca_error_names[];
 	(_x) = NULL;      \
 }
 #endif /* ! EUCA_FREE */
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

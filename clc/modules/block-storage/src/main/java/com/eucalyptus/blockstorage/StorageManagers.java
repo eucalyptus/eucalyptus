@@ -72,13 +72,15 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -107,6 +109,12 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   private static final Map<String, Class> managers  = Maps.newHashMap( );
   private static final Map<String, Class> providers = Maps.newHashMap( );
+  public static final Predicate<String> SUPPORTED_PROVIDER_PREDICATE = new Predicate<String>() {
+	  @Override
+	  public boolean apply(String arg0) {
+		  return !(arg0.startsWith("(") && arg0.endsWith(")"));
+	  }
+  };
   
   @Override
   public boolean processClass( Class candidate ) throws Exception {
@@ -150,7 +158,7 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static LogicalStorageManager getInstance( ) {
     if ( lastManager.get( ) == null || UNSET.equals(lastManager.get())) {
-      throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
+      throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
     } else {
       return managerInstances.getUnchecked( lastManager.get( ) );
     }
@@ -185,7 +193,7 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static Class<? extends LogicalStorageManager> lookupManager( String arg0 ) {
     if ( !managers.containsKey( arg0 ) ) {
-      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
+      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
     } else {
       return managers.get( arg0 );
     }
@@ -193,7 +201,7 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static Class lookupProvider( String arg0 ) {
     if ( !providers.containsKey( arg0 ) ) {
-      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( providers.keySet( ) ) );
+      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(providers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
     } else {
       return providers.get( arg0 );
     }

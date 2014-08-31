@@ -19,11 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc.persist;
 
+import java.util.NoSuchElementException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.compute.vpc.Subnets;
+import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -34,6 +40,22 @@ public class PersistenceSubnets extends VpcPersistenceSupport<CloudMetadata.Subn
   public PersistenceSubnets( ) {
     super( "subnet" );
   }
+
+  @Override
+  public <T> T lookupDefault( final OwnerFullName ownerFullName,
+                              final String availabilityZone,
+                              final Function<? super Subnet, T> transform ) throws VpcMetadataException {
+    try {
+      return Iterables.getOnlyElement( listByExample(
+          Subnet.exampleDefault( ownerFullName, availabilityZone ),
+          Predicates.alwaysTrue( ),
+          transform ) );
+    } catch ( NoSuchElementException e ) {
+      throw new VpcMetadataNotFoundException( qualifyOwner( "Default subnet not found for zone: " + availabilityZone, ownerFullName ) );
+    }
+  }
+
+
 
   @Override
   protected Subnet exampleWithOwner( final OwnerFullName ownerFullName ) {

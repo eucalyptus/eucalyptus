@@ -176,7 +176,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
   }
   
   static Name fromInetAddress( InstanceDomainNames instanceDomain, InetAddress ip ) {
-    final String instancePart = "euca-" + ip.getHostAddress( ).replaceAll( "\\.", "-" );
+    final String instancePart = "euca-" + ip.getHostAddress( ).replace( '.', '-' );
     return DomainNames.absolute( Name.fromConstantString( instancePart ), instanceDomain.get( ) );
   }
   
@@ -206,15 +206,11 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
    */
   public static boolean isInstance( InetAddress ip ) {
     try {
-      VmInstances.lookupByPrivateIp( ip.getHostAddress( ) );
-      return true;
-    } catch ( NoSuchElementException ex ) {
-      try {
-        VmInstances.lookupByPublicIp( ip.getHostAddress( ) );//this is an existence check and not an attempt to access the state
-        return true;
-      } catch ( NoSuchElementException ex1 ) {
-        return false;
-      }
+      return
+          VmInstances.privateIpInUse( ip.getHostAddress( ) ) ||
+          VmInstances.lookupByPublicIp( ip.getHostAddress( ) ) != null;//this is an existence check and not an attempt to access the state
+    } catch ( NoSuchElementException ex1 ) {
+      return false;
     }
   }
   

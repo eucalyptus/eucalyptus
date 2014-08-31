@@ -393,7 +393,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
     psPrivateMac = strdup(psMacAddr);
     psPrivateIP = strdup("10.0.0.202");
-    euca_srand(); // seed the random number generator
+    euca_srand();                      // seed the random number generator
     while (nbInstances--) {
         if ((psInstanceId == NULL) || (nbInstances > 1)) {
             snprintf(sTempBuffer, sizeof(sTempBuffer), "i-%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
@@ -569,7 +569,7 @@ static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
 static int ncClientBundleInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
 {
     int rc = EUCA_OK;
-    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
+    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig", "x86_64");
     printf("ncBundleInstanceStub = %d\n", rc);
     return (rc);
 }

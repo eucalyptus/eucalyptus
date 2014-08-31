@@ -52,6 +52,9 @@ public class VpcConfiguration {
   @ConfigurableField( initial = "5", description = "Maximum number of associated security groups for each network interface ." )
   public static volatile int securityGroupsPerNetworkInterface = 5;
 
+  @ConfigurableField( initial = "false", description = "Enable default VPC." )
+  public static volatile boolean defaultVpc = false;
+
   public static int getSubnetsPerVpc() {
     return subnetsPerVpc;
   }
@@ -83,4 +86,6 @@ public class VpcConfiguration {
   public static int getSecurityGroupsPerNetworkInterface() {
     return securityGroupsPerNetworkInterface;
   }
+
+  public static boolean getDefaultVpc() { return defaultVpc; }
 }

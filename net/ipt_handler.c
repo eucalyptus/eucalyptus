@@ -1311,6 +1311,7 @@ int ips_handler_deploy(ips_handler * ipsh, int dodelete)
                 EUCA_FREE(strptra);
             }
         } else if ((ipsh->sets[i].ref_count == 0) && dodelete) {
+            fprintf(FH, "create %s hash:net family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
             fprintf(FH, "flush %s\n", ipsh->sets[i].name);
             fprintf(FH, "destroy %s\n", ipsh->sets[i].name);
         }

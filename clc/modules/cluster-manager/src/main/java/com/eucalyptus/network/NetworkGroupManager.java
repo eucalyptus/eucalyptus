@@ -63,6 +63,7 @@
 package com.eucalyptus.network;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +102,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -131,41 +133,47 @@ public class NetworkGroupManager {
 
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
+    final UserFullName userFullName = ctx.getUserFullName();
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
     final String groupName = request.getGroupName( );
     final String groupDescription = request.getGroupDescription( );
     if ( Strings.startsWith( "sg-" ).apply( groupName ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
     }
-    if ( request.getVpcId( ) == null && !CharMatcher.ASCII.matchesAllOf(groupName) ) {
+    final String vpcId = Optional.fromNullable( ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) ) )
+        .or( Optional.fromNullable( getDefaultVpcId( accountFullName ) ) ).orNull( );
+    if ( vpcId == null && !CharMatcher.ASCII.matchesAllOf(groupName) ) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
-    } else if ( request.getVpcId( ) != null && !NetworkGroups.VPC_GROUP_NAME_PATTERN.matcher( groupName ).matches( ) ) {
+    } else if ( vpcId != null && !NetworkGroups.VPC_GROUP_NAME_PATTERN.matcher( groupName ).matches( ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Invalid security group name. Valid names are non-empty strings less than 256 characters from the following set:  a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*");
     }
-    if ( request.getVpcId( ) == null && !CharMatcher.ASCII.matchesAllOf( groupDescription ) ) {
+    if ( vpcId == null && !CharMatcher.ASCII.matchesAllOf( groupDescription ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupDescription+") for parameter GroupDescription is invalid. Character sets beyond ASCII are not supported.");
-    } else if ( request.getVpcId( ) != null && !NetworkGroups.VPC_GROUP_DESC_PATTERN.matcher( groupDescription ).matches( ) ) {
+    } else if ( vpcId != null && !NetworkGroups.VPC_GROUP_DESC_PATTERN.matcher( groupDescription ).matches( ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Invalid security group description. Valid descriptions are strings less than 256 characters from the following set:  a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*");
     }
-    final UserFullName userFullName = ctx.getUserFullName( );
     final CreateSecurityGroupResponseType reply = request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
-        
         @Override
         public NetworkGroup get( ) {
-          final String vpcId = ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) );
           try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
             if ( vpcId != null && Entities.count( NetworkGroup.namedForVpc( vpcId, null ) ) >= VpcConfiguration.getSecurityGroupsPerVpc( ) ) {
-              throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded for " + request.getVpcId( ) ) );
+              throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded for " + vpcId ) );
             }
-            final Vpc vpc = request.getVpcId() == null ?
+            final Vpc vpc = vpcId == null ?
                 null :
                 Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), vpcId ) );
             final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, groupDescription );
+            if ( vpc != null ) {
+              group.getNetworkRules().addAll( Lists.newArrayList(
+                  NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+              ) );
+            }
             tx.commit();
             return group;
           } catch ( NoSuchElementException e ) {
-            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "The vpc ('"+request.getVpcId( )+"') was not found" ) );
+            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "The vpc ('"+vpcId+"') was not found" ) );
           } catch ( TransactionException | MetadataException ex ) {
             throw Exceptions.toUndeclared( ex );
           }
@@ -188,7 +196,6 @@ public class NetworkGroupManager {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = request.getReply( );
 
-    //TODO:STEVE: Default VPC, lookup group by name in default VPC for deletion
     final NetworkGroup group = lookupGroup( request.getGroupId(), request.getGroupName() );
     if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
@@ -198,7 +205,8 @@ public class NetworkGroupManager {
       throw new ClientComputeException( "CannotDelete", "Group ("+group.getGroupId()+") cannot be deleted, it is the default group for " + group.getVpcId( ) );
     }
 
-    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
+    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) &&
+        getDefaultVpcId( ctx.getUserFullName( ).asAccountFullName( ) ) == null ) {
       NetworkGroups.createDefault( AccountFullName.getInstance( group.getOwnerAccountNumber( ) ) );
     }
     try {
@@ -217,8 +225,10 @@ public class NetworkGroupManager {
       final boolean showAll =
           request.getSecurityGroupSet( ).remove( "verbose" ) ||
           request.getSecurityGroupIdSet( ).remove( "verbose" );
-      //TODO:STEVE: Skip creation of default group when using VPC
-      NetworkGroups.createDefault( ctx.getUserFullName( ) ); //ensure the default group exists to cover some old broken installs
+
+      if ( getDefaultVpcId( ctx.getUserFullName( ).asAccountFullName( ) ) == null ) {
+          NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
+      }
 
       final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
       final Predicate<? super NetworkGroup> requestedAndAccessible =
@@ -264,7 +274,7 @@ public class NetworkGroupManager {
       final RevokeSecurityGroupIngressResponseType reply = request.getReply( ).markFailed( );
       final Context ctx = Contexts.lookup( );
       try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
-        final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() ); //TODO:STEVE: Group lookup by name for default VPC
+        final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
         final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
             ruleGroup.getVpcId( ) != null,
             request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(), 
@@ -303,7 +313,7 @@ public class NetworkGroupManager {
     final AuthorizeSecurityGroupIngressResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
-      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() ); //TODO:STEVE: Group lookup by name for default VPC
+      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
@@ -364,7 +374,9 @@ public class NetworkGroupManager {
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
         throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
-      //TODO:STEVE: fail for non-vpc group ...
+      if ( ruleGroup.getVpcId( ) == null ) {
+        throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
+      }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       try {
@@ -414,10 +426,12 @@ public class NetworkGroupManager {
     final RevokeSecurityGroupEgressResponseType reply = request.getReply( ).markFailed( );
     final Context ctx = Contexts.lookup( );
     try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
-      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null ); //TODO:STEVE: Group lookup by name for default VPC
+      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null );
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
       if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
-        //TODO:STEVE: fail for non-vpc group ...
+        if ( ruleGroup.getVpcId( ) == null ) {
+          throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
+        }
         try {
           final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null );
           for ( final NetworkRule rule : rules ) rule.setEgress( true );
@@ -556,9 +570,14 @@ public class NetworkGroupManager {
                                            final String groupName ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName();
-    try {
+    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ){
       if ( groupName != null ) {
-        return NetworkGroups.lookup( lookUpGroupAccount, groupName );
+        final String defaultVpcId = getDefaultVpcId( lookUpGroupAccount );
+        if ( defaultVpcId != null ) {
+          return NetworkGroups.lookup( lookUpGroupAccount, defaultVpcId, groupName );
+        } else {
+          return NetworkGroups.lookup( lookUpGroupAccount, groupName );
+        }
       } else if ( groupId != null ) {
         return NetworkGroups.lookupByGroupId(
             ctx.isAdministrator( ) ?
@@ -572,6 +591,15 @@ public class NetworkGroupManager {
       throw new ClientComputeException(
           "InvalidGroup.NotFound",
           String.format( "The security group '%s' does not exist", Objects.firstNonNull( groupName, groupId ) ) );
+    }
+  }
+
+  private static String getDefaultVpcId( final AccountFullName accountFullName ) {
+    try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
+      return Iterables.tryFind(
+          Entities.query( Vpc.exampleDefault( accountFullName ) ),
+          Predicates.alwaysTrue()
+      ).transform( CloudMetadatas.toDisplayName() ).orNull();
     }
   }
 

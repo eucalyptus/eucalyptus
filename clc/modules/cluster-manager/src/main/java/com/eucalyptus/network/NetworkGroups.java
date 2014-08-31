@@ -561,11 +561,17 @@ public class NetworkGroups {
 
   public static NetworkGroup lookupDefault( final OwnerFullName ownerFullName,
                                             final String vpcId ) throws MetadataException {
+    return lookup( ownerFullName, vpcId, defaultNetworkName( ) );
+  }
+
+  public static NetworkGroup lookup( final OwnerFullName ownerFullName,
+                                     final String vpcId,
+                                     final String name ) throws MetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      return Entities.uniqueResult( NetworkGroup.withUniqueName( ownerFullName, vpcId, defaultNetworkName( ) ) );
+      return Entities.uniqueResult( NetworkGroup.withUniqueName( ownerFullName, vpcId, name ) );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find default security group for vpc: " + vpcId + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: " + name +", for vpc: " + vpcId + " for " + ownerFullName, ex );
     }
   }
 
@@ -701,7 +707,7 @@ public class NetworkGroups {
     }
   }
 
-  static void flushRules( ) {
+  public static void flushRules( ) {
     if ( EdgeNetworking.isEnabled( ) ) {
       NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
     }

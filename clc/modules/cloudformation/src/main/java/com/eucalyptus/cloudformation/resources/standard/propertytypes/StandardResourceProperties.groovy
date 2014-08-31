@@ -281,6 +281,8 @@ public class AWSEC2InstanceProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2InternetGatewayProperties implements ResourceProperties {
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -353,6 +355,16 @@ public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetProperties implements ResourceProperties {
+  @Property
+  String availabilityZone;
+  @Required
+  @Property
+  String cidrBlock;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
+  @Required
+  @Property
+  String vpcId;
 }
 
 @ToString(includeNames=true)
@@ -395,6 +407,17 @@ public class AWSEC2VolumeAttachmentProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2VPCProperties implements ResourceProperties {
+  @Required
+  @Property
+  String cidrBlock;
+  @Property
+  Boolean enableDnsSupport;
+  @Property
+  Boolean enableDnsHostnames;
+  @Property
+  String instanceTenancy;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -403,6 +426,13 @@ public class AWSEC2VPCDHCPOptionsAssociationProperties implements ResourceProper
 
 @ToString(includeNames=true)
 public class AWSEC2VPCGatewayAttachmentProperties implements ResourceProperties {
+  @Required
+  @Property
+  String internetGatewayId;
+  @Property
+  String vpcId;
+  @Property
+  String VpnGatewayId;
 }
 
 @ToString(includeNames=true)

@@ -76,6 +76,8 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Consumer;
+import com.eucalyptus.util.Consumers;
 import com.eucalyptus.ws.util.ReplyQueue;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -105,6 +107,14 @@ public class Contexts {
     if ( previousContext != null && previousContext.getCorrelationId() != null ) {
       uuidContexts.remove( previousContext.getCorrelationId() );
     }
+    return ctx;
+  }
+  
+  public static Context update ( Context ctx, final String correlationId) {
+    final String oldId = ctx.getCorrelationId();
+    uuidContexts.remove(oldId);
+    ctx.setCorrelationId(correlationId);
+    uuidContexts.put( ctx.getCorrelationId( ), ctx );
     return ctx;
   }
   
@@ -144,23 +154,31 @@ public class Contexts {
     tlContext.remove( );
   }
 
-  public static Runnable runnableWithCurrentContext( final Runnable runnable ) {
-    return runnableWithContext( runnable, Contexts.lookup( ) );
+  public static <T> Consumer<T> consumerWithCurrentContext( final Consumer<T> consumer ) {
+    return consumerWithContext( consumer, Contexts.lookup() );
   }
 
-  public static Runnable runnableWithContext( final Runnable runnable, final Context context ) {
-    return new Runnable() {
+  public static <T> Consumer<T> consumerWithContext( final Consumer<T> consumer, final Context context ) {
+    return new Consumer<T>( ) {
       @Override
-      public void run( ) {
+      public void accept( final T t ) {
         final Context previously = tlContext.get( );
         threadLocal( context );
         try {
-          runnable.run( );
+          consumer.accept( t );
         } finally {
           threadLocal( previously );
         }
       }
     };
+  }
+
+  public static Runnable runnableWithCurrentContext( final Runnable runnable ) {
+    return runnableWithContext( runnable, Contexts.lookup( ) );
+  }
+
+  public static Runnable runnableWithContext( final Runnable runnable, final Context context ) {
+    return Consumers.partial( consumerWithContext( Consumers.forRunnable( runnable ), context ), null );
   }
 
   public static Context lookup( String correlationId ) throws NoSuchContextException {

@@ -110,27 +110,27 @@ typedef struct gni_internet_gateway_t {
 } gni_internet_gateway;
 
 typedef struct gni_vpcsubnet_t {
-  char name[16];
-  char accountId[128];
-  char cidr[24];
-  char cluster_name[HOSTNAME_SIZE];
-  char networkAcl_name[16];
-  char routeTable_name[16];
+    char name[16];
+    char accountId[128];
+    char cidr[24];
+    char cluster_name[HOSTNAME_SIZE];
+    char networkAcl_name[16];
+    char routeTable_name[16];
 } gni_vpcsubnet;
 
 typedef struct gni_vpc_t {
-  char name[16];
-  char accountId[128];
-  char cidr[24];
-  char dhcpOptionSet[16];
-  gni_vpcsubnet *subnets;
-  int max_subnets;
-  gni_network_acl *networkAcls;
-  int max_networkAcls;
-  gni_route_table *routeTables;
-  int max_routeTables;
-  gni_internet_gateway *internetGateways;
-  int max_internetGateways;
+    char name[16];
+    char accountId[128];
+    char cidr[24];
+    char dhcpOptionSet[16];
+    gni_vpcsubnet *subnets;
+    int max_subnets;
+    gni_network_acl *networkAcls;
+    int max_networkAcls;
+    gni_route_table *routeTables;
+    int max_routeTables;
+    gni_internet_gateway *internetGateways;
+    int max_internetGateways;
 } gni_vpc;
 
 typedef struct globalNetworkInfo_t {
@@ -165,7 +165,7 @@ int gni_cluster_clear(gni_cluster * cluster);
 int gni_node_clear(gni_node * node);
 int gni_instance_clear(gni_instance * instance);
 int gni_secgroup_clear(gni_secgroup * secgroup);
-int gni_vpc_clear(gni_vpc *vpc);
+int gni_vpc_clear(gni_vpc * vpc);
 
 int gni_is_self(char *test_ip);
 int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);

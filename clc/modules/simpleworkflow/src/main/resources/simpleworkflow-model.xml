@@ -50,6 +50,7 @@
       <inbound>
         <vm:inbound-endpoint ref="SimpleWorkflowRequestQueueEndpoint" />
       </inbound>
+      <component class="com.eucalyptus.simpleworkflow.SimpleWorkflowMessageValidator"/>
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="SimpleWorkflowWS" />

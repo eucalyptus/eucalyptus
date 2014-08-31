@@ -27,19 +27,26 @@ import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
+import com.eucalyptus.reporting.service.ReportingService;
 import com.google.common.base.Preconditions;
+import org.apache.log4j.Logger;
 
 /**
  * Address event listener for user actions.
  */
 public class AddressUsageEventListener implements EventListener<AddressEvent> {
-
+  private static final Logger LOG = Logger.getLogger(AddressUsageEventListener.class);
   public static void register( ) {
     Listeners.register( AddressEvent.class, new AddressUsageEventListener() );
   }
 
   @Override
   public void fireEvent( @Nonnull final AddressEvent event ) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service data collection disabled....AddressUsageEvent discarded");
+      return;
+    }
     Preconditions.checkNotNull( event, "Event is required" );
 
     final long timestamp = getCurrentTimeMillis();

@@ -202,7 +202,7 @@ int main(int argc, char **argv)
     virtualMachine params = { 64, 1, 64, "m1.small" };
     sensorResource **res;
 
-    euca_srand(); // seed the random number generator
+    euca_srand();                      // seed the random number generator
     bzero(&mymeta, sizeof(ncMetadata));
 
     mymeta.userId = strdup("admin");

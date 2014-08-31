@@ -77,6 +77,7 @@ import com.eucalyptus.compute.vpc.InternetGateways;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NetworkInterfaceAssociation;
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -90,6 +91,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
@@ -97,6 +99,7 @@ import com.google.common.base.Enums;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
@@ -128,8 +131,11 @@ public class AddressManager {
   public AllocateAddressResponseType allocateAddress( final AllocateAddressType request ) throws Exception {
     final AllocateAddressResponseType reply = request.getReply( );
     try {
-      final Address.Domain domain = Optional.fromNullable( request.getDomain( ) )
-          .transform( Enums.valueOfFunction( Address.Domain.class ) ).or( Address.Domain.standard );
+      final String defaultVpcId = getDefaultVpcId( );
+      final Address.Domain domain = defaultVpcId != null ?
+          Address.Domain.vpc :
+          Optional.fromNullable( request.getDomain( ) )
+              .transform( Enums.valueOfFunction( Address.Domain.class ) ).or( Address.Domain.standard );
       final Addresses.Allocator allocator = Addresses.allocator( domain );
       final Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, allocator, allocator ).get( 0 );
       reply.setPublicIp( address.getName( ) );
@@ -328,14 +334,24 @@ public class AddressManager {
             }
           }
 
-          address.assign( eni, eni.isAttached() ? eni.getAttachment( ).getInstance( ) : null );
+          address.assign( eni );
+          if ( eni.isAttached( ) && VmInstance.VmStateSet.RUN.apply( eni.getAttachment( ).getInstance( ) ) ) {
+            address.start( eni.getAttachment( ).getInstance( ) );
+          }
+          final boolean hostnamesEnabled = eni.getVpc( ).getDnsHostnames( );
           eni.associate( NetworkInterfaceAssociation.create(
             address.getAssociationId( ),
             address.getAllocationId( ),
             address.getOwnerAccountNumber( ),
             address.getName( ),
-            null // TODO:STEVE: DNS name for ENI public ip
+            hostnamesEnabled ?
+                VmInstances.dnsName( address.getName( ), DomainNames.externalSubdomain( ) ) :
+                null
           ) );
+          eni.setPrivateDnsName( hostnamesEnabled ?
+                  VmInstances.dnsName( eni.getPrivateIpAddress( ), DomainNames.internalSubdomain( ) ) :
+                  null
+          );
           if ( eni.isAttached( ) ) {
             eni.getAttachment( ).getInstance( ).updatePublicAddress( address.getName( ) );
           }
@@ -401,6 +417,9 @@ public class AddressManager {
       final NetworkInterface networkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
       try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
         final NetworkInterface eni = Entities.merge( networkInterface );
+        if ( address.isStarted( ) ) {
+          address.stop( );
+        }
         address.unassign( eni );
         eni.disassociate( );
         if ( eni.isAttached( ) ) {
@@ -434,6 +453,19 @@ public class AddressManager {
       }
     }
     return oldVm;
+  }
+
+  private static String getDefaultVpcId( ) {
+    return getDefaultVpcId( Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) );
+  }
+
+  private static String getDefaultVpcId( final AccountFullName accountFullName ) {
+    try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
+      return Iterables.tryFind(
+          Entities.query( Vpc.exampleDefault( accountFullName ) ),
+          Predicates.alwaysTrue()
+      ).transform( CloudMetadatas.toDisplayName() ).orNull( );
+    }
   }
 
   private static String normalizeIdentifier( final String identifier,

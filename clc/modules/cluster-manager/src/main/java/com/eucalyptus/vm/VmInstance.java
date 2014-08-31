@@ -133,6 +133,7 @@ import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -147,6 +148,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.Subnet;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -180,6 +182,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
@@ -625,7 +628,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       BootableSet bootSet;
       try {
         bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-      } catch ( final NoSuchMetadataException e ) {
+      } catch ( final NoSuchMetadataException | NoSuchImageIdException e ) {
         LOG.error( "Using transient bootset in place of imageId " + imageId
             + ", kernelId " + kernelId
             + ", ramdiskId " + ramdiskId
@@ -874,6 +877,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         VmInstance vmInst = builder
                                                      .owner( allocInfo.getOwnerFullName( ) )
                                                      .withIds( token.getInstanceId(),
+                                                               token.getInstanceUuid(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
                                                                allocInfo.getUniqueClientToken( token.getLaunchIndex( ) ) )
@@ -891,7 +895,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
-        vmInst.setNaturalId( token.getInstanceUuid( ) );
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -921,6 +924,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static class Builder {
     private VmId                vmId;
+    private String              uuid;
     private VmBootRecord        vmBootRecord;
     private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
@@ -958,10 +962,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public Builder withIds( @Nonnull  final String instanceId,
+                            @Nonnull  final String instanceUuid,
                             @Nonnull  final String reservationId,
                             @Nullable final String clientToken,
                             @Nullable final String uniqueClientToken ) {
       this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken );
+      this.uuid = instanceUuid;
       return this;
     }
     
@@ -992,6 +998,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
       VmInstance instance = new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
+      instance.setNaturalId( uuid );
       for ( final Callback<VmInstance> callback : callbacks ) {
         callback.fire( instance );
       }
@@ -1100,13 +1107,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public void updatePublicAddress( final String publicAddr ) {
-    this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.ipOrDefault( publicAddr ) );
-    this.getNetworkConfig( ).updateDns( );
+    final String ip = VmNetworkConfig.ipOrDefault( publicAddr );
+    this.getNetworkConfig( ).setPublicAddress( ip );
+    this.getNetworkConfig( ).setPublicDnsName( dnsHostnamesEnabled( ) ?
+      VmNetworkConfig.generateDnsName( ip, DomainNames.externalSubdomain( ) ) :
+      "" );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
-    this.getNetworkConfig( ).setPrivateAddress( VmNetworkConfig.ipOrDefault( privateAddr ) );
-    this.getNetworkConfig( ).updateDns( );
+    final String ip = VmNetworkConfig.ipOrDefault( privateAddr );
+    this.getNetworkConfig( ).setPrivateAddress( ip );
+    this.getNetworkConfig( ).setPrivateDnsName( dnsHostnamesEnabled( ) ?
+        VmNetworkConfig.generateDnsName( ip, DomainNames.internalSubdomain( ) ) :
+        ""  );
   }
 
   public void updateMacAddress( final String macAddress ) {
@@ -1125,7 +1138,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void setRuntimeState( final VmState state ) {
     this.setState( state, Reason.NORMAL );
   }
-  
+
+  private boolean dnsHostnamesEnabled( ) {
+    final Vpc vpc = getBootRecord( ).getVpc( );
+    return vpc == null || Objects.firstNonNull( vpc.getDnsHostnames(), Boolean.FALSE );
+  }
+
   void store( ) {
     this.updateTimeStamps( );
     this.firePersist( );
@@ -1857,7 +1875,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   *
+   * Updates VM states from DescribeInstances call
    */
   public Predicate<VmInfo> doUpdate( ) {
     return new Predicate<VmInfo>( ) {
@@ -1872,7 +1890,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
               final BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
+              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState, runVm.getBundleTaskProgress() );
             } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
@@ -2156,7 +2174,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               String.valueOf( networkInterface.getState( ) ),
               networkInterface.getMacAddress( ),
               networkInterface.getPrivateIpAddress( ),
-              null,
+              networkInterface.getPrivateDnsName( ),
               networkInterface.getSourceDestCheck( ),
               new GroupSetType( Collections2.transform(
                   networkInterface.getNetworkGroups( ),
@@ -2176,7 +2194,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               new InstancePrivateIpAddressesSetType( Lists.newArrayList(
                 new InstancePrivateIpAddressesSetItemType(
                     networkInterface.getPrivateIpAddress( ),
-                    null,
+                    networkInterface.getPrivateDnsName( ),
                     true,
                     networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
                         networkInterface.getAssociation( ).getPublicIp( ),

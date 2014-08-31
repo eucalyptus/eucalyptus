@@ -20,6 +20,9 @@
 package com.eucalyptus.util
 
 import com.eucalyptus.scripting.Groovyness
+import com.google.common.base.Functions
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.net.InetAddresses
 import spock.lang.Specification
@@ -158,6 +161,18 @@ class CidrSpecification extends Specification {
     '0.0.0.0'         | 0         | '0.0.0.0/0'
     '0.0.0.0'         | 1         | '0.0.0.0/1'
   }
+
+  def 'should be able to split a CIDR'(){
+    expect: 'cidr split has expected result'
+    Lists.newArrayList( Iterables.transform( Groovyness.expandoMetaClass( parse( cidr ) ).split( split ), Functions.toStringFunction( ) ) ) == result
+
+    where:
+    cidr              | split     | result
+    '172.31.0.0/16'   | 16        | [ '172.31.0.0/20', '172.31.16.0/20', '172.31.32.0/20', '172.31.48.0/20', '172.31.64.0/20', '172.31.80.0/20', '172.31.96.0/20', '172.31.112.0/20', '172.31.128.0/20', '172.31.144.0/20', '172.31.160.0/20', '172.31.176.0/20', '172.31.192.0/20', '172.31.208.0/20', '172.31.224.0/20', '172.31.240.0/20' ]
+    '172.31.0.0/16'   | 1         | [ '172.31.0.0/16' ]
+    '10.0.0.0/8'      | 2         | [ '10.0.0.0/9', '10.128.0.0/9' ]
+  }
+
 
   private static Cidr cidr( int ip, int prefix ) {
     Cidr.of( ip, prefix )

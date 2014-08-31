@@ -2982,7 +2982,8 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
         return (EUCA_INVALID_ERROR);
     }
 
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         if (vnetconfig->role == NC) {
             *outbrname = strdup(vnetconfig->bridgedev);
         } else {
@@ -3643,7 +3644,8 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
 //!
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName)
 {
-    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)
+        || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
         return (EUCA_OK);
     }
     return (vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));

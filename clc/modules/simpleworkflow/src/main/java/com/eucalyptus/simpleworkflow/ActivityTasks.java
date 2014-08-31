@@ -20,6 +20,8 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.util.List;
+import com.eucalyptus.entities.AbstractPersistentSupport;
+import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -44,4 +46,12 @@ public interface ActivityTasks {
   ActivityTask save( ActivityTask activityTask ) throws SwfMetadataException;
 
   List<ActivityTask> deleteByExample( ActivityTask example ) throws SwfMetadataException;
+
+  long countByWorkflowExecution( OwnerFullName ownerFullName,
+                                 String domain,
+                                 String runId ) throws SwfMetadataException;
+
+  AbstractPersistentSupport<SimpleWorkflowMetadata.ActivityTaskMetadata,ActivityTask,SwfMetadataException> withRetries( );
+
+
 }

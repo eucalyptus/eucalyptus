@@ -70,6 +70,10 @@ import com.google.common.base.Function
 import com.google.common.collect.Lists
 import groovy.transform.Canonical
 
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRange
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
+
 class VpcMessage extends EucalyptusMessage {
 }
 // ****************************** TODO ************************************
@@ -217,6 +221,10 @@ class DescribeAccountAttributesType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeAccountAttributesType() {  }
+
+  Iterable<String> attributeNames( ) {
+    accountAttributeNameSet?.item?.collect{ AccountAttributeNameSetItemType item -> item.attributeName } ?: [ ]
+  }
 }
 class RouteTableIdSetType extends EucalyptusData {
   RouteTableIdSetType() {  }
@@ -278,12 +286,15 @@ class ResetNetworkInterfaceAttributeResponseType extends VpcMessage {
   ResetNetworkInterfaceAttributeResponseType() {  }
 }
 class PortRangeType extends EucalyptusData {
+  @FieldRange( max = 65535l )
   Integer from;
+  @FieldRange( max = 65535l )
   Integer to;
   PortRangeType() {  }
 }
 class DeleteRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   DeleteRouteType() {  }
 }
@@ -461,10 +472,14 @@ class EnableVgwRoutePropagationType extends VpcMessage {
 }
 class ReplaceNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
+  @FieldRegex( FieldRegexValue.EC2_PROTOCOL )
   String protocol;
+  @FieldRegex( FieldRegexValue.EC2_ACL_ACTION )
   String ruleAction;
   Boolean egress = false
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
   @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
@@ -510,7 +525,9 @@ class VpnConnectionType extends VpcMessage {
 }
 class CreateNetworkInterfaceType extends VpcMessage {
   String subnetId;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String description;
+  @FieldRegex( FieldRegexValue.IP_ADDRESS )
   String privateIpAddress;
   @HttpEmbedded
   SecurityGroupIdSetType groupSet;
@@ -558,6 +575,7 @@ class VpcPeeringConnectionType extends VpcMessage {
 }
 class DeleteNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
   Boolean egress = false
   DeleteNetworkAclEntryType() {  }
@@ -673,14 +691,14 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
     this.association = association
     this.attachment = attachment;
     this.privateIpAddressesSet = new NetworkInterfacePrivateIpAddressesSetType(
-      item: [
-          new NetworkInterfacePrivateIpAddressesSetItemType(
-              privateIpAddress: privateIpAddress,
-              privateDnsName: privateDnsName,
-              primary: true,
-              association: association
-          )
-      ] as ArrayList<NetworkInterfacePrivateIpAddressesSetItemType>
+        item: [
+            new NetworkInterfacePrivateIpAddressesSetItemType(
+                privateIpAddress: privateIpAddress,
+                privateDnsName: privateDnsName,
+                primary: true,
+                association: association
+            )
+        ] as ArrayList<NetworkInterfacePrivateIpAddressesSetItemType>
     )
     this.groupSet = new GroupSetType( securityGroups )
   }
@@ -1005,8 +1023,8 @@ class DescribeInternetGatewaysType extends VpcMessage {
 class ModifyNetworkInterfaceAttributeType extends VpcMessage {
   String networkInterfaceId;
   NullableAttributeValueType description;
-  @HttpEmbedded
   AttributeBooleanValueType sourceDestCheck;
+  @HttpEmbedded
   SecurityGroupIdSetType groupSet;
   ModifyNetworkInterfaceAttachmentType attachment;
   ModifyNetworkInterfaceAttributeType() {  }
@@ -1253,7 +1271,9 @@ class CreateNetworkAclResponseType extends VpcMessage {
   CreateNetworkAclResponseType() {  }
 }
 class IcmpTypeCodeType extends EucalyptusData {
+  @FieldRange( min = -1l, max = 255l )
   Integer code;
+  @FieldRange( min = -1l, max = 255l )
   Integer type;
   IcmpTypeCodeType() {  }
 }
@@ -1400,6 +1420,7 @@ class CreateVpcPeeringConnectionResponseType extends VpcMessage {
 }
 class DhcpValueType extends EucalyptusData {
   @HttpValue
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String value;
   DhcpValueType() {  }
 }
@@ -1427,6 +1448,7 @@ class IpRangeSetType extends EucalyptusData {
 }
 class ReplaceRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;
@@ -1459,12 +1481,15 @@ class VpcIdSetItemType extends EucalyptusData {
 }
 class CreateSubnetType extends VpcMessage {
   String vpcId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String availabilityZone;
   CreateSubnetType() {  }
 }
 class CreateRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;
@@ -1505,10 +1530,14 @@ class DescribeVpcAttributeResponseType extends VpcMessage {
 }
 class CreateNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
+  @FieldRegex( FieldRegexValue.EC2_PROTOCOL )
   String protocol;
+  @FieldRegex( FieldRegexValue.EC2_ACL_ACTION )
   String ruleAction;
   Boolean egress = false
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
   @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
@@ -1524,11 +1553,14 @@ class DeleteNetworkInterfaceType extends VpcMessage {
   DeleteNetworkInterfaceType() {  }
 }
 class NullableAttributeValueType extends EucalyptusData {
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String value;
   NullableAttributeValueType() {  }
 }
 class CreateVpcType extends VpcMessage {
+  @FieldRegex( FieldRegexValue.EC2_ACCOUNT_OR_CIDR )
   String cidrBlock;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String instanceTenancy;
   CreateVpcType() {  }
 }

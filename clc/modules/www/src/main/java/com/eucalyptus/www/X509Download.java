@@ -257,15 +257,17 @@ public class X509Download extends HttpServlet {
           "Please register an OSG and/or set a valid s3 endpoint and download credentials again. " +
           "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
           remotePublicify( ObjectStorage.class ) ) );
+      sb.append( entryFor( "AWS_IAM_URL", "IAM service URL is not configured.",
+          remotePublicify( Euare.class ) ) );
       sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
           remotePublicify( Euare.class ) ) );
       sb.append( entryFor( "TOKEN_URL", "TOKEN URL is not configured.",
           remotePublicify( Tokens.class ) ) );
       sb.append( entryFor( "AWS_AUTO_SCALING_URL", "Auto Scaling service URL is not configured.",
           remotePublicify( AutoScaling.class ) ) );
-      sb.append( entryFor( "AWS_CLOUDFORMATION_URL", null,
+      sb.append( entryFor( "AWS_CLOUDFORMATION_URL", "CloudFormation service URL is not configured.",
           remotePublicify( CloudFormation.class ) ) );
-      sb.append( entryFor( "AWS_CLOUDWATCH_URL", "Cloud Watch service URL is not configured.",
+      sb.append( entryFor( "AWS_CLOUDWATCH_URL", "CloudWatch service URL is not configured.",
           remotePublicify( CloudWatch.class ) ) );
       sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
           remotePublicify( LoadBalancing.class ) ) );

@@ -26,12 +26,27 @@ import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpValue
 import com.google.common.base.Function
 import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import groovy.transform.Canonical;
+import edu.ucsb.eucalyptus.msgs.VpcMessageValidation
+import groovy.transform.Canonical
 
+import static com.eucalyptus.util.MessageValidation.validateRecursively;
+import static com.eucalyptus.util.MessageValidation.ValidatableMessage;
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRange
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
 
-class VpcMessage extends ComputeMessage {
+class VpcMessage extends ComputeMessage implements ValidatableMessage {
+
+  Map<String,String> validate( ) {
+    validateRecursively(
+        Maps.<String,String>newTreeMap( ),
+        new VpcMessageValidation.VpcMessageValidationAssistant( ),
+        "",
+        this )
+  }
 }
 // ********************************** TODO ****************************************
 // * Everything below should be exactly the same in the backend (msgs) VPC.groovy *
@@ -178,6 +193,10 @@ class DescribeAccountAttributesType extends VpcMessage {
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   DescribeAccountAttributesType() {  }
+
+  Iterable<String> attributeNames( ) {
+    accountAttributeNameSet?.item?.collect{ AccountAttributeNameSetItemType item -> item.attributeName } ?: [ ]
+  }
 }
 class RouteTableIdSetType extends EucalyptusData {
   RouteTableIdSetType() {  }
@@ -239,12 +258,15 @@ class ResetNetworkInterfaceAttributeResponseType extends VpcMessage {
   ResetNetworkInterfaceAttributeResponseType() {  }
 }
 class PortRangeType extends EucalyptusData {
+  @FieldRange( max = 65535l )
   Integer from;
+  @FieldRange( max = 65535l )
   Integer to;
   PortRangeType() {  }
 }
 class DeleteRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   DeleteRouteType() {  }
 }
@@ -422,10 +444,14 @@ class EnableVgwRoutePropagationType extends VpcMessage {
 }
 class ReplaceNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
+  @FieldRegex( FieldRegexValue.EC2_PROTOCOL )
   String protocol;
+  @FieldRegex( FieldRegexValue.EC2_ACL_ACTION )
   String ruleAction;
   Boolean egress = false
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
   @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
@@ -471,7 +497,9 @@ class VpnConnectionType extends VpcMessage {
 }
 class CreateNetworkInterfaceType extends VpcMessage {
   String subnetId;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String description;
+  @FieldRegex( FieldRegexValue.IP_ADDRESS )
   String privateIpAddress;
   @HttpEmbedded
   SecurityGroupIdSetType groupSet;
@@ -519,6 +547,7 @@ class VpcPeeringConnectionType extends VpcMessage {
 }
 class DeleteNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
   Boolean egress = false
   DeleteNetworkAclEntryType() {  }
@@ -1214,7 +1243,9 @@ class CreateNetworkAclResponseType extends VpcMessage {
   CreateNetworkAclResponseType() {  }
 }
 class IcmpTypeCodeType extends EucalyptusData {
+  @FieldRange( min = -1l, max = 255l )
   Integer code;
+  @FieldRange( min = -1l, max = 255l )
   Integer type;
   IcmpTypeCodeType() {  }
 }
@@ -1361,6 +1392,7 @@ class CreateVpcPeeringConnectionResponseType extends VpcMessage {
 }
 class DhcpValueType extends EucalyptusData {
   @HttpValue
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String value;
   DhcpValueType() {  }
 }
@@ -1388,6 +1420,7 @@ class IpRangeSetType extends EucalyptusData {
 }
 class ReplaceRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;
@@ -1420,12 +1453,15 @@ class VpcIdSetItemType extends EucalyptusData {
 }
 class CreateSubnetType extends VpcMessage {
   String vpcId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String availabilityZone;
   CreateSubnetType() {  }
 }
 class CreateRouteType extends VpcMessage {
   String routeTableId;
+  @FieldRegex( FieldRegexValue.CIDR )
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;
@@ -1466,10 +1502,14 @@ class DescribeVpcAttributeResponseType extends VpcMessage {
 }
 class CreateNetworkAclEntryType extends VpcMessage {
   String networkAclId;
+  @FieldRange( min = 1l, max = 32766l )
   Integer ruleNumber;
+  @FieldRegex( FieldRegexValue.EC2_PROTOCOL )
   String protocol;
+  @FieldRegex( FieldRegexValue.EC2_ACL_ACTION )
   String ruleAction;
   Boolean egress = false
+  @FieldRegex( FieldRegexValue.CIDR )
   String cidrBlock;
   @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
@@ -1485,11 +1525,14 @@ class DeleteNetworkInterfaceType extends VpcMessage {
   DeleteNetworkInterfaceType() {  }
 }
 class NullableAttributeValueType extends EucalyptusData {
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String value;
   NullableAttributeValueType() {  }
 }
 class CreateVpcType extends VpcMessage {
+  @FieldRegex( FieldRegexValue.EC2_ACCOUNT_OR_CIDR )
   String cidrBlock;
+  @FieldRegex( FieldRegexValue.STRING_255 )
   String instanceTenancy;
   CreateVpcType() {  }
 }

@@ -132,6 +132,7 @@ public class VmInfo extends EucalyptusData {
   String placement;
   String platform;
   String bundleTaskStateName;
+  Double bundleTaskProgress;
   String createImageStateName;
   String guestStateName;
   //TODO:GRZE: these are to be cleaned up into a separate object rather than being munged in and possibly null.

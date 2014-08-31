@@ -105,6 +105,7 @@
     <value name="launchIndex" field="launchIndex" usage="optional" />
     <value name="platform" field="platform" usage="optional" />
     <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional" />
+    <value name="bundleTaskProgress" field="bundleTaskProgress" usage="optional" />
     <value name="createImageStateName" field="createImageStateName" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
@@ -228,6 +229,7 @@
     <value name="userPublicKey" field="awsAccessKeyId" usage="required" />
     <value name="S3Policy" field="uploadPolicy" usage="required" />
     <value name="S3PolicySig" field="uploadPolicySignature" usage="required" />
+    <value name="architecture" field="architecture" usage="required" />
   </mapping>
   <mapping name="BundleInstanceResponse" class="com.eucalyptus.vm.BundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
