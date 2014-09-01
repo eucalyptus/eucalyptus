@@ -383,6 +383,16 @@ public class CloudFormationResourceTag {
 
 }
 @ToString(includeNames=true)
+public class PrivateIpAddressSpecification {
+  @Required
+  @Property
+  String privateIpAddress;
+  @Required
+  @Property
+  Boolean primary;
+}
+
+@ToString(includeNames=true)
 public class S3VersioningConfiguration {
   @Required
   @Property

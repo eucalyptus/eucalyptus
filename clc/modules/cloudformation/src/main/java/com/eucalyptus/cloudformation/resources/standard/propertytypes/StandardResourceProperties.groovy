@@ -334,10 +334,38 @@ public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceProperties implements ResourceProperties {
+  @Property
+  String description;
+  @Property
+  List<String> groupSet = Lists.newArrayList();
+  @Property
+  String privateIpAddress;
+  @Property
+  List<PrivateIpAddressSpecification> privateIpAddresses = Lists.newArrayList();
+  @Property
+  Integer secondaryPrivateIpAddressCount;
+  @Property
+  Boolean sourceDestCheck;
+  @Required
+  @Property
+  String subnetId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
+  @Property
+  Boolean deleteOnTermination;
+  @Required
+  @Property
+  Integer deviceIndex;
+  @Required
+  @Property
+  String instanceId;
+  @Required
+  @Property
+  String networkInterfaceId;
 }
 
 @ToString(includeNames=true)
@@ -439,10 +467,22 @@ public class AWSEC2SubnetProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String subnetId;
+  @Required
+  @Property
+  String networkAclId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String routeTableId;
+  @Required
+  @Property
+  String subnetId;
 }
 
 @ToString(includeNames=true)
@@ -492,6 +532,12 @@ public class AWSEC2VPCProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2VPCDHCPOptionsAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String dhcpOptionsId;
+  @Required
+  @Property
+  String vpcId;
 }
 
 @ToString(includeNames=true)

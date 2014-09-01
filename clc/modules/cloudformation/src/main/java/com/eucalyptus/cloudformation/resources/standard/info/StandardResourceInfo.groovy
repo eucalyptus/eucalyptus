@@ -233,6 +233,10 @@ public class AWSEC2NetworkAclEntryResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String primaryPrivateIpAddress
+  @AttributeJson
+  String secondaryPrivateIpAddresses
   public AWSEC2NetworkInterfaceResourceInfo() {
     setType("AWS::EC2::NetworkInterface");
   }
@@ -301,6 +305,8 @@ public class AWSEC2SubnetResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String availabilityZone;
   public AWSEC2SubnetNetworkAclAssociationResourceInfo() {
     setType("AWS::EC2::SubnetNetworkAclAssociation");
   }

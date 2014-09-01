@@ -113,8 +113,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends ResourceAction {
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }
-
-
   }
 
   private PortRangeType convertPortRange(EC2PortRange portRange) {
