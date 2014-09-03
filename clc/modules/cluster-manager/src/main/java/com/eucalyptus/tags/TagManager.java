@@ -96,11 +96,15 @@ public class TagManager {
       final String key = resourceTag.getKey();
       final String value = Strings.nullToEmpty( resourceTag.getValue() ).trim();
 
-      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );     
+      if ( isReserved( key ) ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag keys starting with 'aws:' and 'euca:' are reserved for internal use" );
       }
-      if ( value.length() > 256 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid value (max length 256, reserved prefixes "+reservedPrefixes+"): "+value );
+
+      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 127 ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag key exceeds the maximum length of 127 characters" );
+      }
+      if ( value.length() > 255 ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag value exceeds the maximum length of 255 characters" );
       }
     }
     
