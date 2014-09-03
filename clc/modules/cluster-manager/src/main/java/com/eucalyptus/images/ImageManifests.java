@@ -376,10 +376,18 @@ public class ImageManifests {
     }
     
     public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
-      String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
-      String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" )
-                                                 .replaceAll( "</machine_configuration>.*",
-                                                              "</machine_configuration>" );
+      int idxImgOpen = this.manifest.indexOf("<image>");
+      int idxImgClose = this.manifest.lastIndexOf("</image>");
+      if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String image = this.manifest.substring(idxImgOpen, idxImgClose+"</image>".length());
+     
+      int idxConfOpen = this.manifest.indexOf("<machine_configuration>");
+      int idxConfClose = this.manifest.lastIndexOf("</machine_configuration>");
+      if (idxConfOpen < 0 || idxConfClose < 0 || idxConfOpen > idxConfClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String machineConfiguration = this.manifest.substring(idxConfOpen, idxConfClose+"</machine_configuration>".length());
+      
       final String pad = ( machineConfiguration + image );
       Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
         
