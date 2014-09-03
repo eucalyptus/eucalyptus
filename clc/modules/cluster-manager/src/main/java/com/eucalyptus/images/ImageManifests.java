@@ -69,6 +69,8 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -149,7 +151,7 @@ public class ImageManifests {
     return results;
   }
   
-  static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
+  static String requestManifestData( String bucketName, String objectName ) throws EucalyptusCloudException {
       try {
           EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
           return s3Client.getObjectContent(bucketName, objectName);
@@ -204,8 +206,8 @@ public class ImageManifests {
     private String                                 userId;
     private List<ManifestDeviceMapping>            deviceMappings = Lists.newArrayList( );
     
-    ImageManifest( String imageLocation ) throws EucalyptusCloudException {
-      Context ctx = Contexts.lookup( );
+    ImageManifest( @Nonnull  final String imageLocation,
+                   @Nullable final User user ) throws EucalyptusCloudException {
       String cleanLocation = imageLocation.replaceAll( "^/*", "" );
       this.imageLocation = cleanLocation;
       int index = cleanLocation.indexOf( '/' );
@@ -245,12 +247,12 @@ public class ImageManifests {
             }
           }
       };
-      if ( ( checkIdType.apply( ImageMetadata.Type.kernel )  ) && !ctx.hasAdministrativePrivileges( ) ) {
+      if ( checkIdType.apply( ImageMetadata.Type.kernel ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-      } else if  ( ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      } else if  ( checkIdType.apply( ImageMetadata.Type.ramdisk ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
-      this.manifest = ImageManifests.requestManifestData( ctx.getUserFullName( ), bucketName, manifestKey );
+      this.manifest = ImageManifests.requestManifestData( bucketName, manifestKey );
       try {
         DocumentBuilder builder = XMLParser.getDocBuilder( );
         this.inputSource = builder.parse( new ByteArrayInputStream( this.manifest.getBytes( ) ) );
@@ -495,13 +497,19 @@ public class ImageManifests {
     }
     
   }
-  
+
+  /**
+   * Lookup an ImageManifest
+   */
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
-    return new ImageManifest( imageLocation );
+    return new ImageManifest( imageLocation, null );
   }
-  
-  public static ImageManifest lookup( String imageLocation , User owner) throws EucalyptusCloudException {
-    final ImageManifest manifest =  new ImageManifest( imageLocation );
+
+  /**
+   * Lookup an ImageManifest, verifying permissions for the given user
+   */
+  public static ImageManifest lookup( String imageLocation, User owner) throws EucalyptusCloudException {
+    final ImageManifest manifest = new ImageManifest( imageLocation, owner );
     try{
       final String ownerAcctId = owner.getAccountNumber();
       if(ownerAcctId.equals(manifest.getAccountId()))

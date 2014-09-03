@@ -558,8 +558,6 @@ public class Emis {
         } catch ( final Exception ex ) {
           if ( input.isBlockStorage( ) ) {
             return input;
-          } else if (input.isHvm()) {
-        	return input;  
           } else {
             throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
                                                                         + " because of: "
@@ -610,7 +608,7 @@ public class Emis {
         kernelId = ( ( RunInstancesType ) ctx.getRequest( ) ).getKernelId( );
       }
     } catch ( final IllegalContextAccessException ex ) {
-      LOG.error( ex, ex );
+      LOG.debug( "Context not found when determining kernel id:" + ex.getMessage( ) );
     }
     if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = disk.getKernelId( );
@@ -635,12 +633,16 @@ public class Emis {
       throw new InvalidMetadataException( "Image specified does not have a kernel: " + bootSet );
     }
     String ramdiskId = bootSet.getMachine( ).getRamdiskId( );//GRZE: use the ramdisk that is part of the registered image definition to start.
-    final Context ctx = Contexts.lookup( );
-    if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-      final RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
-      if ( ( msg.getRamdiskId( ) != null ) && !"".equals( msg.getRamdiskId( ) ) ) {
-        ramdiskId = msg.getRamdiskId( );//GRZE: maybe update w/ a specific ramdisk user requests
+    try {
+      final Context ctx = Contexts.lookup( );
+      if ( ctx.getRequest( ) instanceof RunInstancesType ) {
+        final RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
+        if ( ( msg.getRamdiskId( ) != null ) && !"".equals( msg.getRamdiskId( ) ) ) {
+          ramdiskId = msg.getRamdiskId( );//GRZE: maybe update w/ a specific ramdisk user requests
+        }
       }
+    } catch ( final IllegalContextAccessException ex ) {
+      LOG.debug( "Context not found when determining ramdisk id:" + ex.getMessage( ) );
     }
     //GRZE: perfectly legitimate for there to be no ramdisk, carry on. **/
     if ( ramdiskId == null ) {
