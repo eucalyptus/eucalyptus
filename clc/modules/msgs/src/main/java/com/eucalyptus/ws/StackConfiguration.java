@@ -243,6 +243,10 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error)." )
   public static String        UNKNOWN_PARAMETER_HANDLING        = "default";
 
+  @ConfigurableField( description = "Enable request logging.", initial = "true",
+      changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
+  public static volatile Boolean LOG_REQUESTS                   = true;
+
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
   public enum BasicTransport implements TransportDefinition {

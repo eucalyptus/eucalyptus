@@ -65,7 +65,6 @@ package com.eucalyptus.auth.euare;
 import com.eucalyptus.auth.AuthContext;
 
 import java.security.KeyPair;
-import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -100,13 +99,10 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -115,6 +111,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 
+@SuppressWarnings( "UnusedDeclaration" )
 public class EuareService {
   
   private static final Logger LOG = Logger.getLogger( EuareService.class );
@@ -382,7 +379,7 @@ public class EuareService {
       final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
       final ServerCertificateMetadataListTypeType lists = new ServerCertificateMetadataListTypeType();
-      lists.setMemberList(new ArrayList<ServerCertificateMetadataType>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
+      lists.setMemberList(new ArrayList<>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
         @Override
         public ServerCertificateMetadataType apply(ServerCertificate cert) {
           return getServerCertificateMetadata(cert);
@@ -2152,9 +2149,6 @@ public class EuareService {
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);
-    }catch(final AuthException ex){
-      LOG.error("failed to prepare server certificate", ex);
-      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }catch(final Exception ex){
       LOG.error("failed to prepare server certificate", ex);
       throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);

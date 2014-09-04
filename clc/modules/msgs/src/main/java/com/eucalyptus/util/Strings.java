@@ -162,6 +162,42 @@ public class Strings {
   }
 
   /**
+   * Get a Function that appends the given text to it's parameter.
+   *
+   * @param suffix The suffix to append.
+   * @return The function
+   */
+  public static Function<String,String> append( final String suffix ) {
+    return new Function<String, String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return text == null ?
+            suffix :
+            text + suffix;
+      }
+    };
+  }
+
+  /**
+   * Get a Function that prepends the given text to it's parameter.
+   *
+   * @param prefix The prefix to prepend.
+   * @return The function
+   */
+  public static Function<String,String> prepend( final String prefix ) {
+    return new Function<String, String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return text == null ?
+            prefix :
+            prefix + text;
+      }
+    };
+  }
+
+  /**
    * Convert an object to a string.
    *
    * <P>The returned function will pass through null values.</P>
