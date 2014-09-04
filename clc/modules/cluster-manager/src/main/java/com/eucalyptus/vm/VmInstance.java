@@ -158,6 +158,7 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
@@ -1293,12 +1294,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     } else if (this.bootRecord.getMachine() instanceof MachineImageInfo) {
       MachineImageInfo mii = (MachineImageInfo) this.bootRecord.getMachine();
-      // probably using mii.getRootDeviceName() is a better idea instead of hard-coded "/dev/sda1"
-      // but it might create a collision with ephemeral0 and swap
-      m.put( "block-device-mapping/emi", "sda1" );
-      m.put( "block-device-mapping/ami", "sda1" );
-      m.put( "block-device-mapping/root", "/dev/sda1" );
-      if (mii.getVirtualizationType() == ImageMetadata.VirtualizationType.paravirtualized) {
+      String s = mii.getRootDeviceName();
+      m.put( "block-device-mapping/emi", mii.getShortRootDeviceName() );
+      m.put( "block-device-mapping/ami", mii.getShortRootDeviceName() );
+      m.put( "block-device-mapping/root", s );
+      if (ImageManager.isPathAPartition(s)) {
         m.put( "block-device-mapping/ephemeral0", "sda2" );
         m.put( "block-device-mapping/swap", "sda3" );
       } else {

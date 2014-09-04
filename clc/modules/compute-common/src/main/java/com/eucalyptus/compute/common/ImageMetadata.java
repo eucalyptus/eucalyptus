@@ -213,7 +213,7 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum DeviceMappingType {
-    root, swap, suppress, ephemeral, blockstorage
+    root, swap, suppress, ephemeral, blockstorage, ami
   }
   
   public enum Architecture {

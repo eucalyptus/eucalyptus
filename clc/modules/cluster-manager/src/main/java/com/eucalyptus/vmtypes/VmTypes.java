@@ -92,6 +92,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -547,11 +548,11 @@ public class VmTypes {
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
     VmTypeInfo vmTypeInfo = null;
-    if ( img instanceof StaticDiskImage ) {
+    if ( img instanceof MachineImageInfo ) { // instance-store image
       if ( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
-      } else if(ImageMetadata.VirtualizationType.hvm.equals(img.getVirtualizationType())){
+      } else if( !ImageManager.isPathAPartition( img.getRootDeviceName() ) ){
         vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
       } else {
@@ -570,12 +571,10 @@ public class VmTypes {
         }
         vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
       }
-    } else if ( img instanceof BlockStorageImageInfo ) {
+    } else if ( img instanceof BlockStorageImageInfo ) { // bfEBS
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setRootDeviceName(img.getRootDeviceName());
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      // Getting rid of default ephemeral partition for bfebs instances to match AWS behavior. Fixes EUCA-3461, EUCA-3271  
-      // vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
     } else {
       throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }

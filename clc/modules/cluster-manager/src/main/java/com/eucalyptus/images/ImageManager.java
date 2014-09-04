@@ -257,15 +257,15 @@ public class ImageManager {
     		@Override
     		public ImageInfo get( ) {
     			try {
-    			  /// TODO: we use virt-type as the heuristics for determining image-format
-    			  /// In the future, we should manifest's block device mapping which is an ec2-way for expressing the image format
+      			  String amiFromManifest = manifest.getAmi();
     			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
-    			      ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType))
-              return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
-                  request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
+    	            ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType) &&
+    			      (amiFromManifest == null || isPathAPartition(amiFromManifest)) )
+                    return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
+                      request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
     			  else
     			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
-    			        request.getDescription( ), arch, virtualizationType, imagePlatform, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
+    			      request.getDescription( ), arch, virtualizationType, imagePlatform, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
     			} catch ( Exception ex ) {
     				LOG.error( ex );
     				Logs.extreme( ).error( ex, ex );
@@ -315,6 +315,11 @@ public class ImageManager {
     return reply;
   }
   
+  public static boolean isPathAPartition(String str) {
+    char lastChar = str.charAt(str.length() - 1); // get last letter/number
+	return !Character.isLetter(lastChar);
+  }
+
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
     DeregisterImageResponseType reply = request.getReply( );
 
