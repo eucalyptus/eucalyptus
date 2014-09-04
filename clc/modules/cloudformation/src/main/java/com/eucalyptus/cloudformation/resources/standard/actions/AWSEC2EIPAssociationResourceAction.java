@@ -114,7 +114,8 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
         if (properties.getPrivateIpAddress() != null) {
           associateAddressType.setNetworkInterfaceId(properties.getNetworkInterfaceId());
         }
-        AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        associateAddressResponseType.getAssociationId(); // TODO: do we use this anywhere?
         info.setPhysicalResourceId(getDefaultPhysicalResourceId());
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;

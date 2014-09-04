@@ -37,10 +37,11 @@ import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+import org.apache.log4j.Logger
 
 @CompileStatic(TypeCheckingMode.SKIP)
 public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
-
+  private static final Logger LOG = Logger.getLogger(DeleteStackWorkflowImpl.class);
   @Delegate
   WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity);
 
@@ -148,7 +149,8 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             }
           }.withCatch { Throwable t->
             String errorMessage = ((t != null) &&  (t.getMessage() != null) ? t.getMessage() : null);
-            promiseFor(activities.logException(t));
+            DeleteStackWorkflowImpl.LOG.error(t);
+            DeleteStackWorkflowImpl.LOG.debug(t, t);
             promiseFor(activities.createGlobalStackEvent(
               stackId,
               accountId,
@@ -158,10 +160,13 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
         }
       } withCatch {
         Throwable t ->
-          promiseFor(activities.logException(t));
+        DeleteStackWorkflowImpl.LOG.error(t);
+        DeleteStackWorkflowImpl.LOG.debug(t, t);
+        Promise.Void();
       }
     } catch (Exception ex) {
-      activities.logException(ex);
+      DeleteStackWorkflowImpl.LOG.error(ex);
+      DeleteStackWorkflowImpl.LOG.debug(ex, ex);
     }
   }
 }

@@ -333,11 +333,6 @@ public class StackActivityImpl implements StackActivity{
     return ""; // promiseFor() doesn't work on void return types
   }
 
-  @Override
-  public String logException(Throwable t) {
-    LOG.error(t, t);
-    return "";  // promiseFor() doesn't work on void return types
-  }
 
   @Override
   public String deleteAllStackRecords(String stackId, String accountId) {

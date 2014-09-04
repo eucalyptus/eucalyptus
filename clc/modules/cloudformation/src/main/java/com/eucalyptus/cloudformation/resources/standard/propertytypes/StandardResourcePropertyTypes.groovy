@@ -111,6 +111,12 @@ public class EC2EBSBlockDevice {
   @Property
   String volumeType;
 }
+public class EC2ICMP {
+  @Property
+  Integer code;
+  @Property
+  Integer type;
+}
 @ToString(includeNames=true)
 public class EC2MountPoint {
   @Required
@@ -153,15 +159,22 @@ public class EC2NetworkInterfacePrivateIPSpecification {
   @Property
   Boolean primary;
 }
+
+public class EC2PortRange {
+  @Property
+  Integer from;
+  @Property
+  Integer to;
+}
+
 @ToString(includeNames=true)
 public class EC2SecurityGroupRule {
   @Property
   String cidrIp;
   @Property
   String destinationSecurityGroupId;
-  @Required
   @Property
-  String fromPort;
+  Integer fromPort;
   @Required
   @Property
   String ipProtocol;
@@ -171,10 +184,10 @@ public class EC2SecurityGroupRule {
   String sourceSecurityGroupName;
   @Property
   String sourceSecurityGroupOwnerId;
-  @Required
   @Property
-  String toPort;
+  Integer toPort;
 }
+
 @ToString(includeNames=true)
 public class EC2Tag {
   @Property
@@ -369,6 +382,16 @@ public class CloudFormationResourceTag {
   String value;
 
 }
+@ToString(includeNames=true)
+public class PrivateIpAddressSpecification {
+  @Required
+  @Property
+  String privateIpAddress;
+  @Required
+  @Property
+  Boolean primary;
+}
+
 @ToString(includeNames=true)
 public class S3VersioningConfiguration {
   @Required
