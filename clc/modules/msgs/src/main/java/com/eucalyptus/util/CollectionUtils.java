@@ -376,8 +376,9 @@ public class CollectionUtils {
    * @param <T> The result type
    * @return The flipped function
    */
-  public static <F1,F2,T> Function<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
-    return new Function<F2,Function<F1,T>>( ){
+  public static <F1,F2,T> NonNullFunction<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
+    return new NonNullFunction<F2,Function<F1,T>>( ){
+      @Nonnull
       @Override
       public Function<F1, T> apply( @Nullable final F2 f2 ) {
         return new Function<F1, T>( ){

@@ -19,14 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.persist;
 
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getDeprecatedActivityTypeRetentionDurationMillis;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTypeMetadata;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.ActivityType;
 import com.eucalyptus.simpleworkflow.ActivityTypes;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  *
@@ -44,6 +49,16 @@ public class PersistenceActivityTypes extends SwfPersistenceSupport<ActivityType
         ActivityType.exampleWithOwner( ownerFullName ),
         Restrictions.eq( "domain.displayName", domain ),
         Collections.singletonMap( "domain", "domain" ) );
+  }
+
+  public <T> List<T> listDeprecatedExpired( final long time,
+                                            final Function<? super ActivityType,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        ActivityType.exampleWithOwner( null ),
+        Predicates.alwaysTrue( ),
+        Restrictions.lt( "deprecationTimestamp", new Date( time - getDeprecatedActivityTypeRetentionDurationMillis( ) ) ),
+        Collections.<String, String>emptyMap(),
+        transform );
   }
 
   @Override

@@ -20,8 +20,13 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.DomainMetadata;
+import java.util.Collection;
+import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
@@ -31,6 +36,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Predicate;
 
 /**
  *
@@ -42,13 +48,18 @@ import com.eucalyptus.util.OwnerFullName;
 public class Domain extends UserMetadata<Domain.Status> implements DomainMetadata {
   private static final long serialVersionUID = 1L;
 
-  public enum Status {
+  public enum Status implements Predicate<UserMetadata<Status>> {
     Registered,
     Deprecated,
     ;
 
     public String toString( ) {
       return name().toUpperCase( );
+    }
+
+    @Override
+    public boolean apply( @Nullable final UserMetadata<Status> metadata ) {
+      return metadata != null && metadata.getState( ) == this;
     }
   }
 
@@ -57,6 +68,12 @@ public class Domain extends UserMetadata<Domain.Status> implements DomainMetadat
 
   @Column( name = "workflow_retention_days", nullable = false, updatable = false  )
   private Integer workflowExecutionRetentionPeriodInDays;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "domain" )
+  private Collection<ActivityType> activityTypes;
+
+  @OneToMany( fetch = FetchType.LAZY, mappedBy = "domain" )
+  private Collection<WorkflowType> workflowTypes;
 
   protected Domain( ) {
   }
@@ -87,6 +104,14 @@ public class Domain extends UserMetadata<Domain.Status> implements DomainMetadat
   public static Domain exampleWithUuid( final OwnerFullName owner, final String uuid ) {
     final Domain domain = new Domain( owner, null );
     domain.setNaturalId( uuid );
+    return domain;
+  }
+
+  public static Domain exampleWithStatus( final Status status ) {
+    final Domain domain = new Domain( null, null );
+    domain.setState( status );
+    domain.setStateChangeStack( null );
+    domain.setLastState( null );
     return domain;
   }
 

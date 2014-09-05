@@ -20,10 +20,8 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
-import org.hibernate.criterion.Criterion;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.simpleworkflow.common.model.TaskList;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeConfiguration;
@@ -50,10 +48,11 @@ public interface WorkflowTypes {
                          Function<? super WorkflowType,T> transform ) throws SwfMetadataException;
 
   <T> List<T> list( OwnerFullName ownerFullName,
-                    Criterion criterion,
-                    Map<String,String> aliases,
                     Predicate<? super WorkflowType> filter,
                     Function<? super WorkflowType,T> transform ) throws SwfMetadataException;
+
+  <T> List<T> listDeprecatedExpired( long time,
+                                     Function<? super WorkflowType,T> transform ) throws SwfMetadataException;
 
   WorkflowType updateByExample( WorkflowType example,
                                 OwnerFullName ownerFullName,
@@ -63,6 +62,8 @@ public interface WorkflowTypes {
   WorkflowType save( WorkflowType workflowType ) throws SwfMetadataException;
 
   long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
+  List<WorkflowType> deleteByExample( WorkflowType example ) throws SwfMetadataException;
 
   @TypeMapper
   public enum WorkflowTypeToWorkflowTypeDetailTransform implements Function<WorkflowType,WorkflowTypeDetail> {
