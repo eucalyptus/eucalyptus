@@ -92,6 +92,7 @@ import static java.util.regex.Pattern.quote
  * SUMMARY : The PostgresqlBootstrapper class attempts to control the postgres database.  The methods
  * that control the database are : init, start, stop, hup, load, isRunning and destroy.
  */
+@SuppressWarnings(["GroovyUnusedDeclaration", "UnnecessaryQualifiedReference"])
 public class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
   
   private static Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_db" )
@@ -307,7 +308,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     final File passFile = SubDirectory.DB.getChildFile( PG_PASSFILE )
     try {
       passFile.write( getPassword() )
-      def output = runProcessWithOutput([
+      runProcessWithOutput([
         PG_INITDB,
         PG_ENCODING,
         PG_LOCALE,
@@ -425,6 +426,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       } else {
         LOG.warn("Credentials not found for database, not creating SSL certificate/key files")
       }
+      void
     }
   }
   
@@ -510,7 +512,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     
     try {
-      def output = runProcessWithOutput([
+      runProcessWithOutput([
         PG_BIN,
         PG_START,
         PG_W_OPT,
@@ -574,7 +576,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     try {
       String pgPing = "SELECT USER"
       if( !dbExecute( databaseName, pgPing ) ) {
-        LOG.error("Unable to ping the database : " + url)
+        LOG.error("Unable to ping the database : " + databaseName)
       }
     } catch (Exception exception) {
       LOG.error("Failed to test the context : ", exception)
@@ -731,7 +733,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
     ])
     if ( value != 0 ) {
-      LOG.error("Unable to stop the postgresql server.", e)
+      LOG.error("Unable to stop the postgresql server (code:${value})")
       return false
     } else {
       LOG.info("Postgresql shutdown succeeded.")
@@ -779,7 +781,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public String getServicePath( String... pathParts ) {
-    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus"
+    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(Arrays.asList(pathParts)) : "eucalyptus"
   }
   
   @Override
