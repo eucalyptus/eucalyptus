@@ -215,6 +215,10 @@ int se_add(sequence_executor * se, char *command, char *cleanup_command, void *c
         return (1);
     }
 
+    if (se->max_commands >= MAX_SE_COMMANDS) {
+        return(1);
+    }
+
     if (command) {
         snprintf(cmd, EUCA_MAX_PATH, "%s %s", se->cmdprefix, command);
         se->commands[se->max_commands] = strdup(cmd);
