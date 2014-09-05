@@ -569,12 +569,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
 
     private static byte[] restoreUserData( final VmInfo input ) {
-      byte[] userData;
-      try {
+      byte[] userData = new byte[0];
+      if ( Strings.emptyToNull( input.getUserData( ) ) != null ) try {
         userData = Base64.decode( input.getUserData( ) );
       } catch ( final Exception ex ) {
-        LOG.debug("Failed to restore user data for : " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
-        userData = new byte[0];
+        LOG.error("Failed to restore user data for : " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
       }
       return userData;
     }
