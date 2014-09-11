@@ -464,7 +464,7 @@ public class ImageManifests {
           }});
         return root.deviceName;
       } catch (NoSuchElementException ex) {
-        return null;
+        return "";
       }
     }
 
@@ -477,7 +477,7 @@ public class ImageManifests {
           }});
         return root.deviceName;
       } catch (NoSuchElementException ex) {
-        return null;
+        return "";
       }
     }
 

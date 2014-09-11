@@ -64,6 +64,7 @@ package com.eucalyptus.vmtypes;
 
 import java.util.Map;
 import java.util.Set;
+
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -71,8 +72,10 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -81,6 +84,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.images.DeviceMapping;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -330,7 +334,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     }
     
     private String getDiskName( String deviceName ) {
-      if ( "/dev/sda1".equals( deviceName ) ) {
+      if ( Images.DEFAULT_PARTITIONED_ROOT_DEVICE.equals( deviceName ) ) {
         throw new IllegalArgumentException( "Attempt to assign restricted device name: " + deviceName );
       } else if ( deviceNames.containsValue( deviceName ) ) {
         throw new IllegalArgumentException( "Attempt to assign same device name to multiple devices: " + deviceName + " with " + deviceNames.entrySet( ) );

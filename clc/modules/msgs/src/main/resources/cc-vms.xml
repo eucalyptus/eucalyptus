@@ -155,6 +155,7 @@
     <value name="platform" field="platform" usage="required" />
     <value name="ownerId" field="ownerId" />
     <value name="accountId" field="accountId" />
+    <value name="rootDirective" field="rootDirective" usage="optional" />
   </mapping>
   <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.cloud.VmRunResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

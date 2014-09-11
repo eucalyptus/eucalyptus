@@ -490,6 +490,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     axis2_char_t *credential = NULL;
     axis2_char_t *launchIndex = NULL;
     axis2_char_t *platform = NULL;
+    axis2_char_t *rootDirective = NULL;
     virtualMachine params = { 0 };
     axutil_date_time_t *dt = NULL;
     adb_netConfigType_t *net_type = NULL;
@@ -538,14 +539,15 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         } else {
             for (i = 0; i < groupNamesSize; i++) {
                 groupNames[i] = adb_ncRunInstanceType_get_groupNames_at(input, env, i);
-            }
+        }
+        rootDirective = adb_ncRunInstanceType_get_rootDirective(input, env);
 
             // do it
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
             threadCorrelationId* corr_id = set_corrid(meta.correlationId);
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
+                                  ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, &outInst);
             unset_corrid(corr_id);
 
             if (error != EUCA_OK) {

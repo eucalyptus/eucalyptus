@@ -160,6 +160,7 @@ import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
@@ -2667,8 +2668,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           if( vm.getBootRecord().getMachine() instanceof BlockStorageImageInfo ) {
         	LOG.info( "Upgrading bfebs VmInstance: " + vm.toString() );
         	if( vm.getBootRecord().getEphemeralStorage().isEmpty() ) {
-        	  LOG.info("Adding ephemeral disk at /dev/sdb");
-        	  vm.addEphemeralAttachment("/dev/sdb", "ephemeral0");	
+        	  LOG.info("Adding ephemeral disk at " + Images.DEFAULT_EPHEMERAL_DEVICE);
+        	  vm.addEphemeralAttachment(Images.DEFAULT_EPHEMERAL_DEVICE, "ephemeral0");	
         	}
         	
         	// Pre 3.3 code allowed only one persistent volume i.e. the root volume. Check before upgrading
@@ -2677,17 +2678,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         	  LOG.info("Found the only VmVolumeAttachment: " + attachment.toString());
         	  LOG.info("Setting root device flag to true");
               attachment.setIsRootDevice(Boolean.TRUE);
-              LOG.info("Changing the device name to /dev/sda");
-              attachment.setDevice("/dev/sda");  
+              LOG.info("Changing the device name to " + Images.DEFAULT_ROOT_DEVICE);
+              attachment.setDevice(Images.DEFAULT_ROOT_DEVICE);  
         	} else { // This should not be the case updating to 3.3
         	 // If the instance has more or less than one persistent volume, iterate through them and update the one with device "/dev/sda1"
         	  for ( VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes() ) {
         		LOG.info("Found VmVolumeAttachment: " + attachment.toString());
-        		if ( attachment.getDevice().equalsIgnoreCase("/dev/sda1") ) {
+        		if ( attachment.getDevice().equalsIgnoreCase(Images.DEFAULT_PARTITIONED_ROOT_DEVICE) ) {
         		  LOG.info("Setting root device flag to true");
                   attachment.setIsRootDevice(Boolean.TRUE);
-                  LOG.info("Changing the device name from /dev/sda1 to /dev/sda");
-                  attachment.setDevice("/dev/sda");  
+                  LOG.info("Changing the device name from " + Images.DEFAULT_PARTITIONED_ROOT_DEVICE + " to " + Images.DEFAULT_ROOT_DEVICE);
+                  attachment.setDevice(Images.DEFAULT_ROOT_DEVICE);  
                 }   
               }	
         	}
