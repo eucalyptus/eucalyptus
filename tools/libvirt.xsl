@@ -110,12 +110,20 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/kernel!='' and /instance/ramdisk!=''">
                             <xsl:choose>
                                 <xsl:when test="(/instance/hypervisor/@type = 'kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@virtioRoot = 'true'">
-                                     <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
-                                     <root>/dev/vda1</root>
+                                  <cmdline>
+                                    <xsl:choose>
+                                      <xsl:when test="/instance/rootDirective!=''">root=<xsl:value-of select="/instance/rootDirective"/> console=ttyS0</xsl:when>
+                                      <xsl:otherwise>root=/dev/vda1 console=ttyS0</xsl:otherwise>
+                                    </xsl:choose>
+                                  </cmdline>
                                 </xsl:when>
                                 <xsl:otherwise>
-			             <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
-                                     <root>/dev/sda1</root>
+                                  <cmdline>
+                                    <xsl:choose>
+                                      <xsl:when test="/instance/rootDirective!=''">root=<xsl:value-of select="/instance/rootDirective"/> console=ttyS0</xsl:when>
+                                      <xsl:otherwise>root=/dev/sda1 console=ttyS0</xsl:otherwise>
+                                    </xsl:choose>
+                                  </cmdline>
                                 </xsl:otherwise>
                             </xsl:choose>
                         </xsl:if>

@@ -1659,6 +1659,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char **uuids = NULL;
     char *accountId = NULL;
     char *ownerId = NULL;
+    char *rootDirective = NULL;
     ncMetadata ccMeta = { 0 };
     virtualMachine ccvm = { 0 };
     axutil_date_time_t *dt = NULL;
@@ -1761,13 +1762,20 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         ownerId = accountId;
     }
 
+    tmp = adb_runInstancesType_get_rootDirective(rit, env);
+    if (!tmp) {
+        rootDirective = strdup("");
+    } else {
+        rootDirective = strdup(tmp);
+    }
+
     rirt = adb_runInstancesResponseType_create(env);
     rc = 1;
     if (!DONOTHING) {
         threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
-                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
+                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective, &outInsts, &outInstsLen);
         unset_corrid(corr_id);
     }
 

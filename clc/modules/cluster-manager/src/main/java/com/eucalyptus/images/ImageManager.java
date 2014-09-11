@@ -253,14 +253,15 @@ public class ImageManager {
     	final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
     			? null
     					: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
+		final String amiFromManifest = manifest.getAmi();
+
     	Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
     		@Override
     		public ImageInfo get( ) {
     			try {
-      			  String amiFromManifest = manifest.getAmi();
     			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
     	            ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType) &&
-    			      (amiFromManifest == null || isPathAPartition(amiFromManifest)) )
+    			      (amiFromManifest.isEmpty() || isPathAPartition(amiFromManifest)) )
                     return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
                       request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
     			  else

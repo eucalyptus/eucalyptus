@@ -102,6 +102,9 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   private String ramdiskId;
   @Column( name = "metadata_image_ami" )
   private String ami;
+  // user can specify root location while bundling image EUCA-9908
+  @Column( name = "metadata_image_root_directive" )
+  private String rootDirective;
   @Column( name = "metadata_image_virtualization_type" )
   @Enumerated(  EnumType.STRING )
   private ImageMetadata.VirtualizationType virtType;
@@ -123,13 +126,14 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public MachineImageInfo( final UserFullName userFullName, final String imageId,
                            final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform,
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
-                           final String kernelId, final String ramdiskId, ImageMetadata.VirtualizationType virtType, final String ami ) {
+                           final String kernelId, final String ramdiskId, ImageMetadata.VirtualizationType virtType, final String ami, final String root ) {
     super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes,
            imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.virtType = virtType;
     this.ami = ami;
+    this.rootDirective = root;
   }
   
   @Override
@@ -167,8 +171,8 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 
   @Override
   public String getRootDeviceName( ) {
-    if (ami == null)
-      return virtType == ImageMetadata.VirtualizationType.hvm ? "/dev/sda" : "/dev/sda1";
+    if (ami == null || ami.isEmpty())
+      return virtType == ImageMetadata.VirtualizationType.hvm ? Images.DEFAULT_ROOT_DEVICE : Images.DEFAULT_PARTITIONED_ROOT_DEVICE;
     else
       return ami.startsWith("/dev/") ? ami : "/dev/" + ami;
   }
@@ -176,14 +180,14 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public String getShortRootDeviceName( ) {
     return getRootDeviceName().substring(5);
   }
- 
+
+  public String getRootDirective( ) {
+    return rootDirective;
+  }
+
   @Override
   public String getRootDeviceType( ) {
     return "instance-store";
-  }
-
-  public String getAmi( ) {
-    return ami;
   }
 
   @Override

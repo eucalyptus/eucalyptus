@@ -581,6 +581,7 @@ int gen_instance_xml(const ncInstance * instance)
         _ELEMENT(instanceNode, "VmType", instance->params.name);
         _ELEMENT(instanceNode, "NicType", libvirtNicTypeNames[instance->params.nicType]);
         _ELEMENT(instanceNode, "NicDevice", instance->params.guestNicDeviceName);
+        _ELEMENT(instanceNode, "rootDirective", instance->rootDirective);
 
         // SSH-key related
         key = _NODE(instanceNode, "key");
@@ -878,6 +879,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_STR("/instance/VmType", instance->params.name);
     XGET_ENUM("/instance/NicType", instance->params.nicType, libvirtNicType_from_string);
     XGET_STR("/instance/NicDevice", instance->params.guestNicDeviceName);
+    XGET_STR("/instance/rootDirective", instance->rootDirective);
     XGET_BOOL("/instance/key/@doInjectKey", instance->do_inject_key);
     XGET_STR("/instance/key/@sshKey", instance->keyName);
     XGET_STR("/instance/os/@platform", instance->platform);

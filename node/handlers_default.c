@@ -195,7 +195,7 @@ static int doInitialize(struct nc_state_t *nc);
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, ncInstance ** outInst);
+                         char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInst);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
@@ -320,7 +320,7 @@ static int doInitialize(struct nc_state_t *nc)
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, ncInstance ** outInstPtr)
+                         char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
 {
     int ret = EUCA_OK;
     ncInstance *instance = NULL;
@@ -354,6 +354,9 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 
     if (credential)
         euca_strncpy(instance->credential, credential, sizeof(instance->credential));
+
+    if (rootDirective)
+        euca_strncpy(instance->rootDirective, rootDirective, sizeof(instance->rootDirective));
 
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);

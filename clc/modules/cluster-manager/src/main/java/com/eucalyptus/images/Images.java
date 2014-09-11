@@ -142,6 +142,7 @@ public class Images {
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
   public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
+  public static final String DEFAULT_EPHEMERAL_DEVICE = "/dev/sdb";
 
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
     final boolean executableSelf = executableSet.remove( SELF );
@@ -1093,10 +1094,10 @@ public class Images {
     	ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
     	    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
     	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType,
-            manifestAmi);
+            manifestAmi, manifest.getRoot());
     	ret.setImageFormat(format.toString());
     	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) 
-    		|| ((manifestAmi != null) && !ImageManager.isPathAPartition(manifestAmi) )){
+    		|| (!manifestAmi.isEmpty() && !ImageManager.isPathAPartition(manifestAmi) )){
     	  ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
     	}
     	break;
