@@ -83,6 +83,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -146,6 +147,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
+import com.eucalyptus.util.Intervals;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -166,6 +168,8 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -178,6 +182,7 @@ import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
+import edu.ucsb.eucalyptus.msgs.InstanceStatusEventType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
@@ -217,7 +222,9 @@ public class VmInstances {
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
       public Integer getMinutes( ) {
-        return INSTANCE_TIMEOUT;
+        return (int) TimeUnit.MINUTES.convert(
+            Intervals.parse( INSTANCE_TIMEOUT, TimeUnit.MINUTES, TimeUnit.DAYS.toMillis( 180 ) ),
+            TimeUnit.MILLISECONDS );
       }
     },
     SHUTTING_DOWN( VmState.SHUTTING_DOWN ) {
@@ -333,9 +340,9 @@ public class VmInstances {
                       initial = "10" )
   public static final int TX_RETRIES                    = 10;
 
-  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
-                      initial = "720" )
-  public static Integer   INSTANCE_TIMEOUT              = 720;
+  @ConfigurableField( description = "Amount of time (default unit minutes) before a previously running instance which is not reported will be marked as terminated.",
+                      initial = "180d" )
+  public static String    INSTANCE_TIMEOUT              = "180d";
 
   @ConfigurableField( description = "Amount of time (in minutes) between updates for a running instance.",
                       initial = "15" )
@@ -402,6 +409,14 @@ public class VmInstances {
                       initial = "300" )
   public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
 
+  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will fail a reachability test.",
+      initial = "5" )
+  public static Integer INSTANCE_REACHABILITY_TIMEOUT   = 5;
+
+  @ConfigurableField( description = "Comma separate list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate')",
+      initial = "restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
+  public static String UNKNOWN_INSTANCE_HANDLERS        = "restore-failed";
+
   @ConfigurableField( description = "Instance metadata user data cache configuration.",
       initial = "maximumSize=50, expireAfterWrite=5s, softValues",
       changeListener = CacheSpecListener.class )
@@ -428,7 +443,6 @@ public class VmInstances {
     }
   }
 
-
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
@@ -439,7 +453,18 @@ public class VmInstances {
       
     }
   }
-  
+
+  public static class UnknownInstanceHandlerChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+       final Iterable<Optional<VmInstance.RestoreHandler>> handlers =
+           VmInstance.RestoreHandler.parseList( String.valueOf( newValue ) );
+       if ( Iterables.size( handlers ) != Iterables.size( Optional.presentInstances( handlers ) ) ) {
+         throw new ConfigurablePropertyException( "Invalid unknown instance handler in " + newValue + "; valid values are 'restore', 'restore-failed', 'terminate'" );
+       }
+    }
+  }
+
   private static final Logger LOG = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
@@ -742,9 +767,13 @@ public class VmInstances {
       }
     }
 
+    sendTerminate( vm.getInstanceId( ), vm.getPartition( ) );
+  }
+
+  static void sendTerminate( final String instanceId, final String partition ) {
     try {
-      final TerminateCallback cb = new TerminateCallback( vm.getInstanceId( ));
-      AsyncRequests.newRequest(  cb ).dispatch( vm.getPartition( ) );
+      final TerminateCallback cb = new TerminateCallback( instanceId );
+      AsyncRequests.newRequest(  cb ).dispatch( partition );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -1004,6 +1033,18 @@ public class VmInstances {
     if ( !VmStateSet.DONE.apply( vm ) ) {
       Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
+  }
+
+  public static void reachable( final VmInstance vm ) throws TransactionException {
+    transactional( VmInstance.InstanceStatusUpdate.REACHABLE ).apply( vm );
+  }
+
+  public static void unreachable( final VmInstance vm ) throws TransactionException {
+    transactional( VmInstance.InstanceStatusUpdate.UNREACHABLE ).apply( vm );
+  }
+
+  private static Function<VmInstance,VmInstance> transactional( final Function<VmInstance,VmInstance> update ) {
+    return Entities.asTransaction( VmInstance.class, update, VmInstances.TX_RETRIES );
   }
 
   /**
@@ -1429,20 +1470,24 @@ public class VmInstances {
   public static class VmInstanceStatusFilterSupport extends FilterSupport<VmInstance> {
     public VmInstanceStatusFilterSupport() {
       super( qualifierBuilderFor( VmInstance.class, "status" )
-          .withStringProperty( "availability-zone", VmInstanceFilterFunctions.AVAILABILITY_ZONE )
-          .withUnsupportedProperty( "event.code" )
-          .withUnsupportedProperty( "event.description" )
-          .withUnsupportedProperty( "event.not-after" )
-          .withUnsupportedProperty( "event.not-before" )
-          .withInternalStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
-          .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
-          .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
-          .withConstantProperty( "system-status.status", "ok" )
-          .withConstantProperty( "system-status.reachability", "passed" )
-          .withConstantProperty( "instance-status.status", "ok" )
-          .withConstantProperty( "instance-status.reachability", "passed" )
-          .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
-          .withPersistenceFilter( "instance-id", "displayName" )
+              .withStringProperty( "availability-zone", VmInstanceFilterFunctions.AVAILABILITY_ZONE )
+              .withStringSetProperty( "event.code", VmInstanceStringSetFilterFunctions.EVENT_CODE )
+              .withStringSetProperty( "event.description", VmInstanceStringSetFilterFunctions.EVENT_DESCRIPTION )
+              .withDateSetProperty( "event.not-after", VmInstanceDateSetFilterFunctions.EVENT_NOT_AFTER )
+              .withDateSetProperty( "event.not-before", VmInstanceDateSetFilterFunctions.EVENT_NOT_BEFORE )
+              .withInternalStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
+              .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
+              .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
+              .withStringProperty( "system-status.status", VmInstanceFilterFunctions.INSTANCE_STATUS )
+              .withStringProperty( "system-status.reachability", VmInstanceFilterFunctions.INSTANCE_REACHABILITY_STATUS )
+              .withStringProperty( "instance-status.status", VmInstanceFilterFunctions.INSTANCE_STATUS )
+              .withStringProperty( "instance-status.reachability", VmInstanceFilterFunctions.INSTANCE_REACHABILITY_STATUS )
+              .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
+              .withPersistenceFilter( "instance-id", "displayName" )
+              .withPersistenceFilter( "system-status.status", "runtimeState.instanceStatus", Collections.<String>emptySet( ), VmRuntimeState.InstanceStatus.fromString( ) )
+              .withPersistenceFilter( "system-status.reachability", "runtimeState.reachabilityStatus", Collections.<String>emptySet( ), VmRuntimeState.ReachabilityStatus.fromString( ) )
+              .withPersistenceFilter( "instance-status.status", "runtimeState.instanceStatus", Collections.<String>emptySet( ), VmRuntimeState.InstanceStatus.fromString( ) )
+              .withPersistenceFilter( "instance-status.reachability", "runtimeState.reachabilityStatus", Collections.<String>emptySet( ), VmRuntimeState.ReachabilityStatus.fromString( ) )
       );
     }
   }
@@ -1638,6 +1683,24 @@ public class VmInstances {
         return blockDeviceSet( instance, VmVolumeAttachmentFilterFunctions.VOLUME_ID );
       }
     },
+    EVENT_CODE {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        final Optional<InstanceStatusEventType> eventInfo = VmInstance.StatusTransform.getEventInfo( instance );
+        return eventInfo.isPresent( ) ?
+            Collections.singleton( eventInfo.get( ).getCode( ) ) :
+            Collections.<String>emptySet( );
+      }
+    },
+    EVENT_DESCRIPTION {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        final Optional<InstanceStatusEventType> eventInfo = VmInstance.StatusTransform.getEventInfo( instance );
+        return eventInfo.isPresent( ) ?
+            Collections.singleton( eventInfo.get( ).getDescription( ) ) :
+            Collections.<String>emptySet( );
+      }
+    },
     GROUP_ID {
       @Override
       public Set<String> apply( final VmInstance instance ) {
@@ -1803,6 +1866,24 @@ public class VmInstances {
         return blockDeviceSet( instance, VmVolumeAttachmentDateFilterFunctions.ATTACH_TIME );
       }
     },
+    EVENT_NOT_AFTER {
+      @Override
+      public Set<Date> apply( final VmInstance instance ) {
+        final Optional<InstanceStatusEventType> eventInfo = VmInstance.StatusTransform.getEventInfo( instance );
+        return eventInfo.isPresent( ) ?
+            Collections.singleton( eventInfo.get( ).getNotAfter( ) ) :
+            Collections.<Date>emptySet( );
+      }
+    },
+    EVENT_NOT_BEFORE {
+      @Override
+      public Set<Date> apply( final VmInstance instance ) {
+        final Optional<InstanceStatusEventType> eventInfo = VmInstance.StatusTransform.getEventInfo( instance );
+        return eventInfo.isPresent( ) ?
+            Collections.singleton( eventInfo.get( ).getNotBefore( ) ) :
+            Collections.<Date>emptySet( );
+      }
+    },
     NETWORK_INTERFACE_ATTACHMENT_ATTACH_TIME {
       @Override
       public Set<Date> apply( final VmInstance instance ) {
@@ -1875,6 +1956,22 @@ public class VmInstances {
         return instance.getDisplayState( ) == null ? 
             null : 
             instance.getDisplayState( ).getName( );
+      }
+    },
+    INSTANCE_STATUS {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return Objects.firstNonNull(
+            instance.getRuntimeState( ).getInstanceStatus( ),
+            VmRuntimeState.InstanceStatus.Ok ).toString( );
+      }
+    },
+    INSTANCE_REACHABILITY_STATUS {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return Objects.firstNonNull(
+            instance.getRuntimeState( ).getReachabilityStatus( ),
+            VmRuntimeState.ReachabilityStatus.Passed ).toString( );
       }
     },
     INSTANCE_TYPE {
