@@ -21,6 +21,7 @@
 package com.eucalyptus.cloudformation.workflow
 
 import com.eucalyptus.cloudformation.StackEvent
+import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
@@ -318,9 +319,16 @@ public class StackActivityImpl implements StackActivity{
         resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
       }
       List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
+
       for (StackEntity.Output output: outputs) {
         output.setReady(true);
-        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap).textValue());
+        output.setReady(true);
+        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap);
+        if (outputValue == null || !outputValue.isTextual()) {
+          throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
+        }
+        output.setStringValue(outputValue.textValue());
+        output.setJsonValue(JsonHelper.getStringFromJsonNode(outputValue));
       }
       stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
       stackEntity.setStackStatus(StackEntity.Status.CREATE_COMPLETE);

@@ -23,23 +23,15 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.hibernate.annotations.Type;
-
-import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Lob;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -222,5 +214,29 @@ public class StackEntityHelper {
   public static String resourceDependencyManagerToJson(DependencyManager resourceDependencyManager)
     throws CloudFormationException {
     return resourceDependencyManager.toJson();
+  }
+
+  public static void populateTemplateWithStackEntity(Template template, StackEntity stackEntity) throws CloudFormationException {
+    template.setDescription(stackEntity.getDescription());
+    template.setPseudoParameterMap(jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson()));
+    template.setAvailabilityZoneMap(jsonToAvailabilityZoneMap(stackEntity.getAvailabilityZoneMapJson()));
+    template.setTemplateFormatVersion(stackEntity.getTemplateFormatVersion());
+    template.setMapping(jsonToMapping(stackEntity.getMappingJson()));
+    template.setParameters(jsonToParameters(stackEntity.getParametersJson()));
+    template.setConditionMap(jsonToConditionMap(stackEntity.getConditionMapJson()));
+    template.setResourceDependencyManager(jsonToResourceDependencyManager(stackEntity.getResourceDependencyManagerJson()));
+    template.setOutputs(jsonToOutputs(stackEntity.getOutputsJson()));
+  }
+
+  public static void populateStackEntityWithTemplate(StackEntity stackEntity, Template template) throws CloudFormationException {
+    stackEntity.setDescription(template.getDescription());
+    stackEntity.setPseudoParameterMapJson(pseudoParameterMapToJson(template.getPseudoParameterMap()));
+    stackEntity.setAvailabilityZoneMapJson(availabilityZoneMapToJson(template.getAvailabilityZoneMap()));
+    stackEntity.setTemplateFormatVersion(template.getTemplateFormatVersion());
+    stackEntity.setMappingJson(mappingToJson(template.getMapping()));
+    stackEntity.setParametersJson(parametersToJson(template.getParameters()));
+    stackEntity.setConditionMapJson(conditionMapToJson(template.getConditionMap()));
+    stackEntity.setResourceDependencyManagerJson(resourceDependencyManagerToJson(template.getResourceDependencyManager()));
+    stackEntity.setOutputsJson(outputsToJson(template.getOutputs()));
   }
 }
