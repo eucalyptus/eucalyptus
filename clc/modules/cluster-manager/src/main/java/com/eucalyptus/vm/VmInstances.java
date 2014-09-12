@@ -1171,7 +1171,8 @@ public class VmInstances {
   }
 
   public static String dnsName( final String ip, final Name domain ) {
-    return "euca-" + ip.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + domain;
+    final String suffix = domain.relativize( Name.root ).toString( );
+    return "euca-" + ip.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + suffix;
   }
 
   @Resolver( VmInstanceMetadata.class )
