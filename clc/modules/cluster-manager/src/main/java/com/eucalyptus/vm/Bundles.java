@@ -232,21 +232,20 @@ public class Bundles {
     
   }
   
-  static void checkAndCreateBucket(final User user, String bucketName) throws ComputeException {
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    try{
-      final List<Bucket> buckets = s3c.listBuckets();
-      for(final Bucket bucket : buckets){
-        if(bucketName.equals(bucket.getName())){
-          throw new ClientComputeException("InvalidParameter","Existing bucket found with the same name");
-        }
+  static void checkAndCreateBucket( final User user, final String bucketName ) throws ComputeException {
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( user );
+    try {
+      boolean foundBucket = false;
+      final List<Bucket> buckets = s3c.listBuckets( );
+      for( final Bucket bucket : buckets ){
+        if ( foundBucket = bucketName.equals( bucket.getName( ) ) ) break;
       }
-      final Bucket created = s3c.createBucket(bucketName);
-    }catch(final EucalyptusCloudException ex){
-      throw ex;
-    }catch(final Exception ex){
-      LOG.debug("Uanble to create the bucket", ex);
-      throw new ComputeException("InternalError","Unable to create the bucket");
+      if ( !foundBucket ) {
+        s3c.createBucket( bucketName );
+      }
+    } catch( final Exception ex ) {
+      LOG.debug( "Unable to create bucket " + bucketName, ex);
+      throw new ComputeException( "InternalError", "Unable to create bucket " + bucketName );
     }
   }
 
