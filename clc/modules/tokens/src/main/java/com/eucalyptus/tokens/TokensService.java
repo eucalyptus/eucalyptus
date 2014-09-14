@@ -31,7 +31,6 @@ import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -56,6 +55,7 @@ import com.google.common.collect.Iterables;
 /**
  * Service component for temporary access tokens
  */
+@SuppressWarnings( "UnusedDeclaration" )
 public class TokensService {
 
   public GetSessionTokenResponseType getSessionToken( final GetSessionTokenType request ) throws EucalyptusCloudException {
@@ -83,7 +83,11 @@ public class TokensService {
     try {
       final int durationSeconds =
           Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 12 ) );
-      final SecurityToken token = SecurityTokenManager.issueSecurityToken( requestUser, accessKey, durationSeconds );
+      final SecurityToken token = SecurityTokenManager.issueSecurityToken(
+          requestUser,
+          accessKey,
+          requestUser.isAccountAdmin( ) ? (int)TimeUnit.HOURS.toSeconds( 1 ) : 0,
+          durationSeconds );
 
       reply.setResult( GetSessionTokenResultType.forCredentials(
           token.getAccessKeyId(),
@@ -180,6 +184,7 @@ public class TokensService {
     try {
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           requestUser,
+          requestUser.isAccountAdmin( ) ? (int)TimeUnit.DAYS.toSeconds( 1 ) : 0,
           Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
       reply.setResult( GetAccessTokenResultType.forCredentials(
           token.getAccessKeyId(),
@@ -231,6 +236,7 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           impersonated,
+          impersonated.isAccountAdmin( ) ? (int)TimeUnit.DAYS.toSeconds( 1 ) : 0,
           Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
       reply.setResult( GetImpersonationTokenResultType.forCredentials(
           token.getAccessKeyId(),

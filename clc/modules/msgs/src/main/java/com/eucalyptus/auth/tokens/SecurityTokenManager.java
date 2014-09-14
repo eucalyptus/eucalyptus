@@ -82,6 +82,7 @@ public class SecurityTokenManager {
    *
    * @param user The user for the token
    * @param accessKey The originating access key for the token
+   * @param durationTruncationSeconds The duration at which to truncate without error
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
@@ -90,8 +91,9 @@ public class SecurityTokenManager {
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   @Nullable final AccessKey accessKey,
+                                                            final int durationTruncationSeconds,
                                                             final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, accessKey, durationSeconds );
+    return instance.doIssueSecurityToken( user, accessKey, durationTruncationSeconds, durationSeconds );
   }
 
   /**
@@ -109,7 +111,27 @@ public class SecurityTokenManager {
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, durationSeconds );
+    return instance.doIssueSecurityToken( user, 0, durationSeconds );
+  }
+
+  /**
+   * Issue a security token.
+   *
+   * <p>The credential associated with the token is of type
+   * TemporaryAccessKey#Access.</p>
+   *
+   * @param user The user for the token
+   * @param durationTruncationSeconds The duration at which to truncate without error
+   * @param durationSeconds The desired duration for the token
+   * @return The newly issued security token
+   * @throws AuthException If an error occurs
+   * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Access
+   */
+  @Nonnull
+  public static SecurityToken issueSecurityToken( @Nonnull  final User user,
+                                                  final int durationTruncationSeconds,
+                                                  final int durationSeconds ) throws AuthException {
+    return instance.doIssueSecurityToken( user, durationTruncationSeconds, durationSeconds );
   }
 
   /**
@@ -150,6 +172,7 @@ public class SecurityTokenManager {
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
                                                 @Nullable final AccessKey accessKey,
+                                                          final int durationTruncationSeconds,
                                                           final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( user, "User is required" );
 
@@ -164,7 +187,7 @@ public class SecurityTokenManager {
       throw new AuthException("Key not found for user");
 
     final long restrictedDurationMillis =
-        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
+        restrictDuration( 36, durationTruncationSeconds, durationSeconds );
 
     if ( !key.getUser().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
@@ -188,6 +211,7 @@ public class SecurityTokenManager {
    */
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
+                                                final int durationTruncationSeconds,
                                                 final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( user, "User is required" );
 
@@ -197,7 +221,7 @@ public class SecurityTokenManager {
     }
 
     final long restrictedDurationMillis =
-        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
+        restrictDuration( 36, durationTruncationSeconds, durationSeconds );
 
     final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
         null,
@@ -218,7 +242,7 @@ public class SecurityTokenManager {
     Preconditions.checkNotNull( role, "Role is required" );
 
     final long restrictedDurationMillis =
-        restrictDuration( 1, false, durationSeconds );
+        restrictDuration( 1, 0, durationSeconds );
 
     if ( role.getSecret()==null || role.getSecret().length() < 30 ) {
       throw new AuthException("Cannot generate token for role");
@@ -339,7 +363,7 @@ public class SecurityTokenManager {
   }
 
   private long restrictDuration( final int maximumDurationHours,
-                                 final boolean isAdmin,
+                                 final int durationTruncationSeconds,
                                  final int durationSeconds ) throws SecurityTokenValidationException {
     long durationMillis = durationSeconds == 0 ?
         TimeUnit.HOURS.toMillis( 12 ) : // use default
@@ -355,8 +379,8 @@ public class SecurityTokenManager {
       validationFailure( "Invalid duration requested, minimum permitted duration is 900 seconds." );
     }
 
-    if ( isAdmin && durationMillis > TimeUnit.HOURS.toMillis( 1 ) ) {
-      durationMillis = TimeUnit.HOURS.toMillis( 1 );
+    if ( durationTruncationSeconds > 0 && durationMillis > TimeUnit.SECONDS.toMillis( durationTruncationSeconds ) ) {
+      durationMillis = TimeUnit.SECONDS.toMillis( durationTruncationSeconds );
     }
 
     return durationMillis;
