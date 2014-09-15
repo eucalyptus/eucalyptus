@@ -972,11 +972,13 @@ public class TemplateParser {
     ArrayList<StackEntity.Output> outputs = template.getOutputs();
     JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
     if (outputsJsonNode != null) {
+      List<String> unresolvedResourceDependencies = Lists.newArrayList();
       List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
       for (String outputKey: outputKeys) {
         // TODO: we could create an output object, but would have to serialize it to pass to inputs anyway, so just
         // parse for now, fail on any errors, and reparse once evaluated.
         JsonNode outputJsonNode = outputsJsonNode.get(outputKey);
+        validateValidResourcesInOutputs(outputKey, outputJsonNode, template, unresolvedResourceDependencies);
         Set<String> tempOutputKeys = Sets.newHashSet(outputJsonNode.fieldNames());
         for (OutputKey validOutputKey: OutputKey.values()) {
           tempOutputKeys.remove(validOutputKey.toString());
@@ -1026,7 +1028,68 @@ public class TemplateParser {
         output.setAllowedByCondition(conditionMap.get(conditionKey) != Boolean.FALSE);
         outputs.add(output);
       }
+      if (!unresolvedResourceDependencies.isEmpty()) {
+        throw new ValidationErrorException("Template format error: Unresolved resource dependencies " + unresolvedResourceDependencies + " in the Outputs block of the template");
+      }
       template.setOutputs(outputs);
+    }
+  }
+
+  private void validateValidResourcesInOutputs(String outputKey, JsonNode jsonNode, Template template, List<String> unresolvedResourceDependencies) throws CloudFormationException {
+    Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
+    Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
+    Map<String, ResourceInfo> resourceInfoMap = template.getResourceInfoMap();
+    if (jsonNode == null) {
+      return;
+    }
+    if (jsonNode.isArray()) {
+      for (int i=0;i<jsonNode.size();i++) {
+        validateValidResourcesInOutputs(outputKey, jsonNode.get(i), template, unresolvedResourceDependencies);
+      }
+    }
+
+    // Now we are dealing with an object, perhaps a function
+    // Check "If" (only track dependencies against true branch
+    IntrinsicFunction.MatchResult fnIfMatcher = IntrinsicFunctions.IF.evaluateMatch(jsonNode);
+    // Check "Ref" (only make sure not resource)
+    IntrinsicFunction.MatchResult refMatcher = IntrinsicFunctions.REF.evaluateMatch(jsonNode);
+    if (refMatcher.isMatch()) {
+      IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
+      // we have a match against a "ref"...
+      String refName = jsonNode.get(FunctionEvaluation.REF_STR).textValue();
+      if (!parameterMap.containsKey(refName) &&
+        !pseudoParameterMap.containsKey(refName) && !resourceInfoMap.containsKey(refName)) {
+        unresolvedResourceDependencies.add(refName);
+      }
+      return;
+    }
+
+    // Check "Fn::GetAtt" (make sure not resource or attribute)
+    IntrinsicFunction.MatchResult fnAttMatcher = IntrinsicFunctions.GET_ATT.evaluateMatch(jsonNode);
+    if (fnAttMatcher.isMatch()) {
+      IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
+      // we have a match against a "ref"...
+      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
+      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
+      // Not sure why, but AWS validates attribute types even in Conditions
+      if (resourceInfoMap.containsKey(refName)) {
+        ResourceInfo resourceInfo = resourceInfoMap.get(refName);
+        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+          throw new ValidationErrorException("Template error: resource " + refName +
+            " does not support attribute type " + attName + " in Fn::GetAtt");
+        }
+      } else {
+        // not a resource...
+        throw new ValidationErrorException("Template error: instance of Fn::GetAtt references undefined resource "
+          + refName);
+      }
+      return;
+    }
+
+    // Now either just an object or a different function.  Either way, crawl in the innards
+    List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
+    for (String fieldName: fieldNames) {
+      validateValidResourcesInOutputs(outputKey, jsonNode.get(fieldName), template, unresolvedResourceDependencies);
     }
   }
 }
