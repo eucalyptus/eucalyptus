@@ -89,6 +89,11 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   }
 
   @Override
+  public void setCorrelationId( final String corrId ) {
+    this.delegate.setCorrelationId( corrId );
+  }
+
+  @Override
   public Long getCreationTime( ) {
     return this.delegate.getCreationTime( );
   }

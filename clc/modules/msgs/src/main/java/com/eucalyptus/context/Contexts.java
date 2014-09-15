@@ -111,8 +111,12 @@ public class Contexts {
   public static Context update ( Context ctx, final String correlationId) {
     final String oldId = ctx.getCorrelationId();
     uuidContexts.remove(oldId);
+    final Context impersonatingCtx = uuidImpContexts.remove(oldId);
     ctx.setCorrelationId(correlationId);
     uuidContexts.put( ctx.getCorrelationId( ), ctx );
+    if ( impersonatingCtx != null ) {
+      uuidImpContexts.put( impersonatingCtx.getCorrelationId( ), impersonatingCtx );
+    }
     return ctx;
   }
   
