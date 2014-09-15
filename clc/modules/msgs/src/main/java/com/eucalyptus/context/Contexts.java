@@ -92,13 +92,10 @@ public class Contexts {
   private static int                             MAX             = 8192;
   private static int                             CONCUR          = MAX / ( Runtime.getRuntime( ).availableProcessors( ) * 2 + 1 );
   private static float                           THRESHOLD       = 1.0f;
-  private static ConcurrentMap<String, Context>  uuidContexts    = new ConcurrentHashMap<String, Context>( MAX, THRESHOLD, CONCUR );
-  private static ConcurrentMap<Channel, Context> channelContexts = new ConcurrentHashMap<Channel, Context>( MAX, THRESHOLD, CONCUR );
-  
-  static boolean hasOutstandingRequests( ) {
-    return uuidContexts.keySet( ).size( ) > 0;
-  }
-  
+  private static ConcurrentMap<String, Context>  uuidContexts    = new ConcurrentHashMap<>( MAX, THRESHOLD, CONCUR );
+  private static ConcurrentMap<String, Context>  uuidImpContexts = new ConcurrentHashMap<>( MAX, THRESHOLD, CONCUR );
+  private static ConcurrentMap<Channel, Context> channelContexts = new ConcurrentHashMap<>( MAX, THRESHOLD, CONCUR );
+
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
@@ -106,6 +103,7 @@ public class Contexts {
     final Context previousContext = channelContexts.put( channel, ctx );
     if ( previousContext != null && previousContext.getCorrelationId() != null ) {
       uuidContexts.remove( previousContext.getCorrelationId() );
+      uuidImpContexts.remove( previousContext.getCorrelationId() );
     }
     return ctx;
   }
@@ -136,10 +134,22 @@ public class Contexts {
     } else {
       Context ctx = channelContexts.get( channel );
       ctx.setMuleEvent( RequestContext.getEvent( ) );
-      return Context.maybeImpersonating( ctx );
+      return maybeImpersonating( ctx );
     }
   }
-  
+
+  private static Context maybeImpersonating( Context ctx ) {
+    final String uuid = ctx.getCorrelationId( );
+    Context resultContext = uuid == null ? null : uuidImpContexts.get( uuid );
+    if ( resultContext == null ) {
+      resultContext = Context.maybeImpersonating( ctx );
+      if ( resultContext != ctx ) {
+        uuidImpContexts.put( uuid, resultContext );
+      }
+    }
+    return resultContext;
+  }
+
   public static boolean exists( String correlationId ) {
     return correlationId != null && uuidContexts.containsKey( correlationId );
   }
@@ -188,14 +198,14 @@ public class Contexts {
     } else {
       Context ctx = uuidContexts.get( correlationId );
       ctx.setMuleEvent( RequestContext.getEvent( ) );
-      return Context.maybeImpersonating( ctx );
+      return maybeImpersonating( ctx );
     }
   }
   
   public static final Context lookup( ) throws IllegalContextAccessException {
     Context ctx;
     if ( ( ctx = tlContext.get( ) ) != null ) {
-      return Context.maybeImpersonating( ctx );
+      return maybeImpersonating( ctx );
     }
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
@@ -228,6 +238,7 @@ public class Contexts {
   
   public static void clear( String corrId ) {
     checkParam( "BUG: correlationId is null.", corrId, notNullValue() );
+    uuidImpContexts.remove( corrId );
     Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
@@ -253,7 +264,7 @@ public class Contexts {
     } else {
       Context ctx = new Context( dest, msg );
       uuidContexts.put( ctx.getCorrelationId( ), ctx );
-      return Context.maybeImpersonating( ctx );
+      return maybeImpersonating( ctx );
     }
   }
 

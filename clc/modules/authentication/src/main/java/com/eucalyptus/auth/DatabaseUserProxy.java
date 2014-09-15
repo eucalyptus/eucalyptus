@@ -118,7 +118,8 @@ public class DatabaseUserProxy implements User {
       DatabaseAuthUtils.getAccountNumberSupplier( this );
   private transient Supplier<Map<String,String>> userInfoSupplier =
       getUserInfoSupplier();
-  
+  private transient Boolean isSystemAdmin = null;
+
   public DatabaseUserProxy( UserEntity delegate ) {
     this.delegate = delegate;
   }
@@ -588,8 +589,15 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public boolean isSystemAdmin( ) {
+    if ( isSystemAdmin != null ) {
+      // Safe to cache as the account alias cannot be changed for
+      // system accounts
+      return isSystemAdmin;
+    }
     try {
-      return Accounts.isSystemAccount( this.getAccount( ).getName( ) );
+      final Account account = this.getAccount( );
+      accountNumberSupplier = Suppliers.ofInstance( account.getAccountNumber( ) );
+      return isSystemAdmin = Accounts.isSystemAccount( account.getName( ) );
     } catch ( AuthException e ) {
       LOG.error( e, e );
       return false;
