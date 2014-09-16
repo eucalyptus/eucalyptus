@@ -23,6 +23,7 @@ import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.ResourceList;
+import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.TemplateParameters;
 import com.eucalyptus.cloudformation.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.ValidationErrorException;
@@ -61,129 +62,6 @@ public class TemplateParser {
     String,
     Number,
     CommaDelimitedList
-  }
-
-  private static class TemplateParameter {
-    public TemplateParameter() {
-    }
-
-    private String parameterKey;
-    private String parameterValue;
-    private ParameterType type;
-    private String defaultValue;
-    private boolean noEcho;
-    private String[] allowedValues;
-    private String allowedPattern;
-    private Double minLength;
-    private Double maxLength;
-    private Double minValue;
-    private Double maxValue;
-    private String description;
-    private String constraintDescription; // 4000 chars max
-
-    public ParameterType getType() {
-      return type;
-    }
-
-    public String getParameterKey() {
-      return parameterKey;
-    }
-
-    public void setParameterKey(String parameterKey) {
-      this.parameterKey = parameterKey;
-    }
-
-    public String getParameterValue() {
-      return parameterValue;
-    }
-
-    public void setParameterValue(String parameterValue) {
-      this.parameterValue = parameterValue;
-    }
-
-    public void setType(ParameterType type) {
-      this.type = type;
-    }
-
-    public String getDefaultValue() {
-      return defaultValue;
-    }
-
-    public void setDefaultValue(String defaultValue) {
-      this.defaultValue = defaultValue;
-    }
-
-    public boolean isNoEcho() {
-      return noEcho;
-    }
-
-    public void setNoEcho(boolean noEcho) {
-      this.noEcho = noEcho;
-    }
-
-    public String[] getAllowedValues() {
-      return allowedValues;
-    }
-
-    public void setAllowedValues(String[] allowedValues) {
-      this.allowedValues = allowedValues;
-    }
-
-    public String getAllowedPattern() {
-      return allowedPattern;
-    }
-
-    public void setAllowedPattern(String allowedPattern) {
-      this.allowedPattern = allowedPattern;
-    }
-
-    public Double getMinLength() {
-      return minLength;
-    }
-
-    public void setMinLength(Double minLength) {
-      this.minLength = minLength;
-    }
-
-    public Double getMaxLength() {
-      return maxLength;
-    }
-
-    public void setMaxLength(Double maxLength) {
-      this.maxLength = maxLength;
-    }
-
-    public Double getMinValue() {
-      return minValue;
-    }
-
-    public void setMinValue(Double minValue) {
-      this.minValue = minValue;
-    }
-
-    public Double getMaxValue() {
-      return maxValue;
-    }
-
-    public void setMaxValue(Double maxValue) {
-      this.maxValue = maxValue;
-    }
-
-    public String getDescription() {
-      return description;
-    }
-
-    public void setDescription(String description) {
-      this.description = description;
-    }
-
-    public String getConstraintDescription() {
-      return constraintDescription;
-    }
-
-    public void setConstraintDescription(String constraintDescription) {
-      this.constraintDescription = constraintDescription;
-    }
   }
 
   private static final Logger LOG = Logger.getLogger(TemplateParser.class);
@@ -249,9 +127,7 @@ public class TemplateParser {
 
   public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
     Template template = new Template();
-    template.setStackEntity(new StackEntity());
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
-    Map<String, String> paramMap = Maps.newHashMap();
     JsonNode templateJsonNode = null;
     try {
       templateJsonNode = objectMapper.readTree(templateBody);
@@ -261,14 +137,14 @@ public class TemplateParser {
     if (!templateJsonNode.isObject()) {
       throw new ValidationErrorException("Template body is not a JSON object");
     }
-    template.getStackEntity().setTemplateBody(templateBody);
+    template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
     buildResourceMap(template, templateJsonNode);
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
-    parseParameters(userParameters, paramMap, template, templateJsonNode, false);
+    ParameterParser.parseParameters(template, templateJsonNode, userParameters, false);
     parseConditions(template, templateJsonNode, false);
     parseResources(template, templateJsonNode, false);
     List<String> requiredCapabilities = Lists.newArrayList();
@@ -294,9 +170,7 @@ public class TemplateParser {
 
   public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
     Template template = new Template();
-    template.setStackEntity(new StackEntity());
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
-    Map<String, String> paramMap = Maps.newHashMap();
     JsonNode templateJsonNode = null;
     try {
       templateJsonNode = objectMapper.readTree(templateBody);
@@ -306,14 +180,14 @@ public class TemplateParser {
     if (!templateJsonNode.isObject()) {
       throw new ValidationErrorException("Template body is not a JSON object");
     }
-    template.getStackEntity().setTemplateBody(templateBody);
+    template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
     buildResourceMap(template, templateJsonNode);
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
-    parseParameters(userParameters, paramMap, template, templateJsonNode, true );
+    ParameterParser.parseParameters(template, templateJsonNode, userParameters, true);
     parseConditions(template, templateJsonNode, true);
     parseResources(template, templateJsonNode, true);
     parseOutputs(template, templateJsonNode);
@@ -327,7 +201,7 @@ public class TemplateParser {
       }
     }
     ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
-    validateTemplateResult.setDescription(template.getStackEntity().getDescription());
+    validateTemplateResult.setDescription(template.getDescription());
     validateTemplateResult.setCapabilities(new ResourceList());
     validateTemplateResult.getCapabilities().setMember(Lists.newArrayList(requiredCapabilities));
     if (!requiredCapabilities.isEmpty()) {
@@ -341,7 +215,7 @@ public class TemplateParser {
 
 
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
-    Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
+    Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
     ObjectMapper mapper = new ObjectMapper();
     pseudoParameterMap.put(AWS_ACCOUNT_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
 
@@ -362,9 +236,9 @@ public class TemplateParser {
     pseudoParameterMap.put(AWS_STACK_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackId())));
 
     pseudoParameterMap.put(AWS_STACK_NAME, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackName())));
-    template.getStackEntity().setPseudoParameterMapJson(StackEntityHelper.pseudoParameterMapToJson(pseudoParameterMap));
+    template.setPseudoParameterMap(pseudoParameterMap);
     // More like an intrinsic function, but still do it here...
-    template.getStackEntity().setAvailabilityZoneMapJson(StackEntityHelper.availabilityZoneMapToJson(pseudoParameterValues.getAvailabilityZones()));
+    template.setAvailabilityZoneMap(pseudoParameterValues.getAvailabilityZones());
   }
 
   private void parseValidTopLevelKeys(JsonNode templateJsonNode) throws CloudFormationException {
@@ -382,14 +256,14 @@ public class TemplateParser {
       TemplateSection.AWSTemplateFormatVersion.toString(),
       "unsupported value for " + TemplateSection.AWSTemplateFormatVersion + ".  No such version.");
     if (templateFormatVersion == null) {
-      template.getStackEntity().setTemplateFormatVersion(DEFAULT_TEMPLATE_VERSION);
+      template.setTemplateFormatVersion(DEFAULT_TEMPLATE_VERSION);
       return;
     }
     if (!Arrays.asList(validTemplateVersions).contains(templateFormatVersion)) {
       throw new ValidationErrorException("Template format error: unsupported value for "
         + TemplateSection.AWSTemplateFormatVersion + ".");
     }
-    template.getStackEntity().setTemplateFormatVersion(templateFormatVersion);
+    template.setTemplateFormatVersion(templateFormatVersion);
   }
 
   private void parseDescription(Template template, JsonNode templateJsonNode) throws CloudFormationException {
@@ -399,12 +273,12 @@ public class TemplateParser {
       throw new ValidationErrorException("Template format error: " + TemplateSection.Description + " must "
         + "be no longer than 4000 characters.");
     }
-    template.getStackEntity().setDescription(description);
+    template.setDescription(description);
   }
 
 
   private void parseMappings(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    Map<String, Map<String, Map<String, String>>> mapping = StackEntityHelper.jsonToMapping(template.getStackEntity().getMappingJson());
+    Map<String, Map<String, Map<String, String>>> mapping = template.getMapping();
     JsonNode mappingsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Mappings.toString());
     if (mappingsJsonNode == null) return;
     for (String mapName: Lists.newArrayList(mappingsJsonNode.fieldNames())) {
@@ -427,287 +301,315 @@ public class TemplateParser {
         }
       }
     }
-    template.getStackEntity().setMappingJson(StackEntityHelper.mappingToJson(mapping));
-  }
-  private void parseParameters(List<Parameter> userParameters, Map<String, String> paramMap, Template template,
-                               JsonNode templateJsonNode, boolean onlyEvaluateTemplate) throws CloudFormationException {
-    ArrayList<StackEntity.Parameter> parameters = StackEntityHelper.jsonToParameters(template.getStackEntity().getParametersJson());
-    if (userParameters != null) {
-      for (Parameter userParameter: userParameters) {
-        paramMap.put(userParameter.getParameterKey(), userParameter.getParameterValue());
-      }
-    }
-    JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Parameters.toString());
-    if (parametersJsonNode == null) return;
-    Set<String> parameterNames = Sets.newHashSet(parametersJsonNode.fieldNames());
-    Set<String> noValueParameters = Sets.newHashSet();
-    for (String parameterName: parameterNames) {
-      JsonNode parameterJsonNode = JsonHelper.checkObject(parametersJsonNode, parameterName, "Any "
-        + TemplateSection.Parameters + " member must be a JSON object.");
-      parseParameter(parameterName, parameterJsonNode, paramMap, template, noValueParameters, parameters);
-    }
-    if (!noValueParameters.isEmpty() && !onlyEvaluateTemplate) {
-      throw new ValidationErrorException("Parameters: " + noValueParameters + " must have values");
-    }
-    // one last sanity check
-    Set<String> userParamKeys = Sets.newHashSet();
-    Set<String> templateParamKeys = Sets.newHashSet();
-    if (userParameters != null) {
-      userParamKeys.addAll(paramMap.keySet());
-    }
-    if (parametersJsonNode != null) {
-      templateParamKeys.addAll(Sets.newHashSet(parametersJsonNode.fieldNames()));
-    }
-    userParamKeys.removeAll(templateParamKeys);
-    if (!userParamKeys.isEmpty()) {
-      throw new ValidationErrorException("Parameters: " + userParamKeys + " do not exist in the template");
-    }
-    template.getStackEntity().setParametersJson(StackEntityHelper.parametersToJson(parameters));
+    template.setMapping(mapping);
   }
 
+  static class ParameterParser {
 
-
-  private void parseParameter(String parameterName, JsonNode parameterJsonNode, Map<String, String> paramMap,
-                              Template template, Set<String> noValueParameters, List<StackEntity.Parameter> parameters)
-    throws CloudFormationException {
-    Set<String> tempParameterKeys = Sets.newHashSet(parameterJsonNode.fieldNames());
-    for (ParameterKey validParameterKey: ParameterKey.values()) {
-      tempParameterKeys.remove(validParameterKey.toString());
-    }
-    if (!tempParameterKeys.isEmpty()) {
-      throw new ValidationErrorException("Invalid template parameter property or properties " + tempParameterKeys);
-    }
-    TemplateParameter templateParameter = new TemplateParameter();
-    String type = JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
-    if (type == null) {
-      throw new ValidationErrorException("Template format error: Every " + TemplateSection.Parameters + " object "
-        + "must contain a " +  ParameterKey.Type +" member.");
-    }
-    ParameterType parameterType = null;
-    try {
-      parameterType = ParameterType.valueOf(type);
-    } catch (Exception ex) {
-      throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
-    }
-    JsonNode allowedValuesJsonNode = JsonHelper.checkArray(parameterJsonNode, ParameterKey.AllowedValues.toString());
-    if (allowedValuesJsonNode != null) {
-      String[] allowedValues = new String[allowedValuesJsonNode.size()];
-      for (int index=0;index<allowedValues.length; index++) {
-        String errorMsg = "Every " + ParameterKey.AllowedValues + "value must be a string.";
-        String allowedValue = JsonHelper.getString(allowedValuesJsonNode, index, errorMsg);
-        if (allowedValue == null) {
-          throw new ValidationErrorException("Template format error: " + errorMsg);
+    static void parseParameters(Template template, JsonNode templateJsonNode,
+                                List<com.eucalyptus.cloudformation.Parameter> userParameters,
+                                boolean onlyEvaluateTemplate) throws CloudFormationException {
+      JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateParser.TemplateSection.Parameters.toString());
+      if (parametersJsonNode != null) {
+        Map<String, String> userParameterMap = Maps.newHashMap();
+        if (userParameters != null) {
+          for (com.eucalyptus.cloudformation.Parameter userParameter : userParameters) {
+            userParameterMap.put(userParameter.getParameterKey(), userParameter.getParameterValue());
+          }
         }
-        allowedValues[index] = allowedValue;
-      }
-      templateParameter.setAllowedValues(allowedValues);
-    }
-    templateParameter.setAllowedPattern(JsonHelper.getString(parameterJsonNode, ParameterKey.AllowedPattern.toString()));
-    String constraintDescription = JsonHelper.getString(parameterJsonNode,
-      ParameterKey.ConstraintDescription.toString());
-    if (constraintDescription != null && constraintDescription.length() > 4000) {
-      throw new ValidationErrorException("Template format error: " +
-        ParameterKey.ConstraintDescription + " must be no longer than 4000 characters.");
-    }
-    templateParameter.setConstraintDescription(constraintDescription);
-    templateParameter.setDefaultValue(JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
-    String description = JsonHelper.getString(parameterJsonNode, ParameterKey.Description.toString());
-    if (description != null && description.length() > 4000) {
-      throw new ValidationErrorException("Template format error: " + ParameterKey.Description + " must be no "
-        + "longer than 4000 characters.");
-    }
-    templateParameter.setDescription(description);
-    templateParameter.setMaxLength(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxLength.toString()));
-    templateParameter.setMinLength(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinLength.toString()));
-    templateParameter.setMaxValue(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxValue.toString()));
-    templateParameter.setMinValue(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinValue.toString()));
-    templateParameter.setDefaultValue(JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
-    templateParameter.setNoEcho("true".equalsIgnoreCase(JsonHelper.getString(parameterJsonNode,
-      ParameterKey.NoEcho.toString())));
-    templateParameter.setParameterKey(parameterName);
-    templateParameter.setType(parameterType);
-
-    templateParameter.setParameterValue(templateParameter.getDefaultValue());
-    JsonNode defaultReferenceValue = getParameterReferenceValue(templateParameter, parameterName, parameterType);
-
-    // reference value will be a JsonNode so we have a common object when evaluating.
-    JsonNode referenceValue = defaultReferenceValue;
-    if (paramMap.get(parameterName) != null) {
-      templateParameter.setParameterValue(paramMap.get(parameterName));
-      referenceValue =  getParameterReferenceValue(templateParameter, parameterName, parameterType);
-    }
-
-    if (templateParameter.getParameterValue() == null) {
-      noValueParameters.add(parameterName);
-    }
-    StackEntity.Parameter parameter = new StackEntity.Parameter();
-    parameter.setKey(templateParameter.getParameterKey());
-    parameter.setNoEcho(templateParameter.isNoEcho());
-    parameter.setJsonValue(JsonHelper.getStringFromJsonNode(referenceValue));
-    parameter.setStringValue(templateParameter.getParameterValue());
-    parameters.add(parameter);
-
-    com.eucalyptus.cloudformation.TemplateParameter realTemplateParameter = new com.eucalyptus.cloudformation.TemplateParameter();
-    realTemplateParameter.setDescription(templateParameter.getDescription());
-    realTemplateParameter.setDefaultValue(templateParameter.getDefaultValue());
-    realTemplateParameter.setNoEcho(templateParameter.isNoEcho());
-    realTemplateParameter.setParameterKey(templateParameter.getParameterKey());
-    template.getTemplateParameters().add(realTemplateParameter);
-  }
-
-  private JsonNode getParameterReferenceValue(TemplateParameter templateParameter, String parameterName, ParameterType parameterType) throws CloudFormationException {
-
-    if (templateParameter.getParameterValue() != null) {
-      if (templateParameter.getAllowedValues() != null
-        && !Arrays.asList(templateParameter.getAllowedValues()).contains(templateParameter.getParameterValue())) {
-        throw new ValidationErrorException(
-          templateParameter.getConstraintDescription() != null ?
-            templateParameter.getConstraintDescription() :
-            "Template error: Parameter '" + parameterName + "' must be one of " + ParameterKey.AllowedValues
-        );
-      }
-    }
-    JsonNode referenceValue = null;
-
-    switch(parameterType) {
-      case Number:
-        parseNumberParameter(parameterName, templateParameter);
-        referenceValue = new TextNode(templateParameter.getParameterValue());
-        break;
-      case String:
-        parseStringParameter(parameterName, templateParameter);
-        referenceValue = new TextNode(templateParameter.getParameterValue());
-        break;
-      case CommaDelimitedList:
-        parseCommaDelimitedListParameter(parameterName, templateParameter);
-        referenceValue = objectMapper.createArrayNode();
-        StringTokenizer tokenizer = new StringTokenizer(templateParameter.getParameterValue(), ",");
-        while (tokenizer.hasMoreTokens()) {
-          ((ArrayNode) referenceValue).add(tokenizer.nextToken());
+        List<Parameter> parameterList = Lists.newArrayList();
+        for (String parameterKey : Lists.newArrayList(parametersJsonNode.fieldNames())) {
+          JsonNode parameterJsonNode = JsonHelper.checkObject(parametersJsonNode, parameterKey, "Any "
+            + TemplateParser.TemplateSection.Parameters + " member must be a JSON object.");
+          Parameter parameter = parseParameter(parameterKey, parameterJsonNode, userParameterMap);
+          parameterList.add(parameter);
         }
-        break;
-      default:
-        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + parameterType);
-    }
-    return referenceValue;
-  }
+        // construct new objects and check non-existent values
+        List<String> noValueParameters = Lists.newArrayList();
 
-  private void parseCommaDelimitedListParameter(String parameterKey, TemplateParameter templateParameter)
-    throws CloudFormationException {
-    if (templateParameter.getMinLength() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinLength
-        + " must be on a parameter of type String");
-    }
-    if (templateParameter.getMaxLength() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxLength +
-        " must be on a parameter of type String");
-    }
-    if (templateParameter.getAllowedPattern() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " +
-        ParameterKey.AllowedPattern + " must be on a parameter of type String");
-    }
-    if (templateParameter.getMinValue() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " +
-        ParameterKey.MinValue + " must be on a parameter of type Number");
-    }
-    if (templateParameter.getMaxValue() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxValue +
-        " must be on a parameter of type Number");
-    }
-  }
+        for (Parameter parameter : parameterList) {
+          template.getParameters().add(parameter.getParameter());
+          template.getTemplateParameters().add(parameter.getTemplateParameter());
+          if (parameter.getParameter().getStringValue() == null) {
+            noValueParameters.add(parameter.getParameter().getKey());
+          }
+        }
+        if (!noValueParameters.isEmpty() && !onlyEvaluateTemplate) {
+          throw new ValidationErrorException("Parameters: " + noValueParameters + " must have values");
+        }
+        // check user supplied values actually match parameters
+        Set<String> userParamKeys = Sets.newHashSet();
+        Set<String> templateParamKeys = Sets.newHashSet();
+        if (userParameterMap != null) {
+          userParamKeys.addAll(userParameterMap.keySet());
+        }
+        if (parametersJsonNode != null) {
+          templateParamKeys.addAll(Sets.newHashSet(parametersJsonNode.fieldNames()));
+        }
+        userParamKeys.removeAll(templateParamKeys);
+        if (!userParamKeys.isEmpty()) {
+          throw new ValidationErrorException("Parameters: " + userParamKeys + " do not exist in the template");
+        }
 
-  private void parseStringParameter(String parameterKey, TemplateParameter templateParameter) throws CloudFormationException {
-    // boot out the unallowed parameters
-    if (templateParameter.getMinValue() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
-        + " must be on a parameter of type Number");
+      }
     }
-    if (templateParameter.getMaxValue() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxValue
-        + " must be on a parameter of type Number");
+
+    private static Parameter parseParameter(String parameterName, JsonNode parameterJsonNode, Map<String, String> userParameterMap) throws CloudFormationException {
+      validateParameterKeys(parameterJsonNode);
+      ParameterType type = parseType(parameterJsonNode);
+      String[] allowedValues = parseAllowedValues(parameterJsonNode); // type not needed
+      String allowedPattern = parseAllowedPattern(parameterName, parameterJsonNode, type);
+      String constraintDescription = parseConstraintDescription(parameterName, parameterJsonNode); // type not needed
+      String description = parseDescription(parameterName, parameterJsonNode); // type not needed
+
+      Double maxLength = parseMaxLength(parameterName, parameterJsonNode, type);
+      Double minLength = parseMinLength(parameterName, parameterJsonNode, type);
+      if (maxLength != null && minLength != null && maxLength < minLength) {
+        throw new ValidationErrorException("Template error: Parameter '" + parameterName + "' " + ParameterKey.MinLength
+          + " must be less than " + ParameterKey.MaxLength + ".");
+      }
+
+      Double maxValue = parseMaxValue(parameterName, parameterJsonNode, type);
+      Double minValue = parseMinValue(parameterName, parameterJsonNode, type);
+      if (maxValue != null && minValue != null && maxValue < minValue) {
+        throw new ValidationErrorException("Template error: Parameter '" + parameterName + "' " + ParameterKey.MinValue
+          + " must be less than " + ParameterKey.MaxValue + ".");
+      }
+
+      String defaultValue = JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()); // could be null
+      String userDefinedValue = userParameterMap.get(parameterName); // could be null
+      boolean noEcho = "true".equalsIgnoreCase(JsonHelper.getString(parameterJsonNode, ParameterKey.NoEcho.toString()));
+      // now check any values that exist
+      for (String value : Lists.newArrayList(defaultValue, userDefinedValue)) {
+        if (value != null) {
+          checkAllowedValues(parameterName, value, allowedValues, constraintDescription);
+        }
+        switch (type) {
+          case String:
+            parseStringParameter(parameterName, value, allowedPattern, minLength, maxLength, constraintDescription);
+            break;
+          case Number:
+            parseNumberParameter(parameterName, value, minValue, maxValue, constraintDescription);
+            break;
+          case CommaDelimitedList:
+            break; // currently nothing to check here
+          default:
+            throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+        }
+      }
+      String stringValue = null;
+      if (defaultValue != null) stringValue = defaultValue;
+      if (userDefinedValue != null) stringValue = userDefinedValue;
+      JsonNode jsonValueNode = null;
+      if (stringValue != null) {
+        switch (type) {
+          case String:
+            jsonValueNode = new TextNode(stringValue);
+            break;
+          case Number:
+            jsonValueNode = new TextNode(stringValue);
+            break;
+          case CommaDelimitedList:
+            ArrayNode arrayNode = new ObjectMapper().createArrayNode();
+            StringTokenizer stok = new StringTokenizer(stringValue, ",");
+            while (stok.hasMoreTokens()) {
+              arrayNode.add(stok.nextToken());
+            }
+            jsonValueNode = arrayNode;
+            break; // currently nothing to check here
+          default:
+            throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+        }
+      }
+
+      StackEntity.Parameter parameter = new StackEntity.Parameter();
+      parameter.setKey(parameterName);
+      parameter.setNoEcho(noEcho);
+      parameter.setJsonValue(JsonHelper.getStringFromJsonNode(jsonValueNode));
+      parameter.setStringValue(stringValue);
+
+      TemplateParameter templateParameter = new TemplateParameter();
+      templateParameter.setDescription(description);
+      templateParameter.setDefaultValue(defaultValue);
+      templateParameter.setNoEcho(noEcho);
+      templateParameter.setParameterKey(parameterName);
+      return new Parameter(parameter, templateParameter);
     }
-    if (templateParameter.getMaxLength() != null && templateParameter.getMinLength() != null
-      && templateParameter.getMaxLength() < templateParameter.getMinLength()) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
-        + " must be less than " + ParameterKey.MaxValue + ".");
-    }
-    if (templateParameter.getParameterValue() == null) return; // This line allows some parsing by validateTemplate() for non-user specified parameters
-    if (templateParameter.getMinLength() != null && templateParameter.getMinLength() > templateParameter.getParameterValue().length()) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must contain at least " + templateParameter.getMinLength()
-            + " characters"
-      );
-    }
-    if (templateParameter.getMaxLength() != null && templateParameter.getMaxLength() < templateParameter.getParameterValue().length()) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must contain at most " + templateParameter.getMaxLength()
-            + " characters"
-      );
-    }
-    if (templateParameter.getAllowedPattern() != null) {
+
+    private static void parseNumberParameter(String parameterName, String value, Double minValue, Double maxValue, String constraintDescription) throws ValidationErrorException {
+      String constraintErrorMessage = null;
+      Double valueDouble = null;
       try {
-        if (!templateParameter.getParameterValue().matches(templateParameter.getAllowedPattern())) {
-          throw new ValidationErrorException(
-            templateParameter.getConstraintDescription() != null ?
-              templateParameter.getConstraintDescription() :
-              "Template error: Parameter '" + parameterKey + "' must match pattern " + templateParameter.getAllowedPattern()
-          );
-        }
-      } catch (PatternSyntaxException ex) {
-        throw new ValidationErrorException("Parameter '"+parameterKey+"' " + ParameterKey.AllowedPattern
-          + " must be a valid regular expression.");
+        valueDouble = Double.parseDouble(value);
+      } catch (NumberFormatException ex) {
+        constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must be a number";
+      }
+      if (constraintErrorMessage == null && minValue != null && minValue > valueDouble) {
+        constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must be a number not less than " + minValue;
+      }
+      if (constraintErrorMessage == null && maxValue != null && maxValue < valueDouble) {
+        constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must be a number not greater than " + maxValue;
+      }
+      if (constraintErrorMessage != null && constraintDescription != null) {
+        constraintErrorMessage = "Parameter '" + parameterName + "' failed to satisfy constraint: " + constraintDescription;
+      }
+      if (constraintErrorMessage != null) {
+        throw new ValidationErrorException(constraintErrorMessage);
       }
     }
-  }
 
-  private void parseNumberParameter(String parameterKey, TemplateParameter templateParameter) throws CloudFormationException {
-    // boot out the unallowed parameters
-    if (templateParameter.getMinLength() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinLength
-        + " must be on a parameter of type String");
+    private static void parseStringParameter(String parameterName, String value, String allowedPattern, Double minLength, Double maxLength, String constraintDescription) throws ValidationErrorException {
+      String constraintErrorMessage = null;
+      if (minLength != null && minLength > value.length()) {
+        constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must contain at least " + minLength + " characters";
+      }
+      if (constraintErrorMessage == null && maxLength != null && maxLength < value.length()) {
+        constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must contain at most " + maxLength + " characters";
+      }
+      if (constraintErrorMessage == null && allowedPattern != null) {
+        try {
+          if (!value.matches(allowedPattern)) {
+            constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must match pattern " + allowedPattern;
+          }
+        } catch (PatternSyntaxException ex) {
+          // not a constraint violation
+          throw new ValidationErrorException("Parameter '" + parameterName + "' " + ParameterKey.AllowedPattern
+            + " must be a valid regular expression.");
+        }
+      }
+      if (constraintErrorMessage != null && constraintDescription != null) {
+        constraintErrorMessage = "Parameter '" + parameterName + "' failed to satisfy constraint: " + constraintDescription;
+      }
+      if (constraintErrorMessage != null) {
+        throw new ValidationErrorException(constraintErrorMessage);
+      }
     }
-    if (templateParameter.getMaxLength() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxLength
-        + " must be on a parameter of type String");
+
+    private static void checkAllowedValues(String parameterName,
+                                           String value,
+                                           String[] allowedValues,
+                                           String constraintDescription) throws ValidationErrorException {
+      if (allowedValues != null) {
+        if (!Arrays.asList(allowedValues).contains(value)) {
+          String constraintErrorMessage = "Template error: Parameter '" + parameterName + "' must be one of " + ParameterKey.AllowedValues;
+          if (constraintDescription != null) {
+            constraintErrorMessage = "Parameter '" + parameterName + "' failed to satisfy constraint: " + constraintDescription;
+          }
+          throw new ValidationErrorException(constraintErrorMessage);
+        }
+      }
     }
-    if (templateParameter.getAllowedPattern() != null) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' "
-        + ParameterKey.AllowedPattern + " must be on a parameter of type String");
+
+    private static Double parseMinValue(String parameterName, JsonNode parameterJsonNode, ParameterType type) throws CloudFormationException {
+      Double minValue = JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinValue.toString()); // null ok
+      checkParameterType(minValue, parameterName, ParameterKey.MinValue, type, ParameterType.Number);
+      return minValue;
     }
-    if (templateParameter.getMaxValue() != null && templateParameter.getMinValue() != null
-      && templateParameter.getMaxValue() < templateParameter.getMinValue()) {
-      throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
-        + " must be less than " + ParameterKey.MaxValue + ".");
+
+    private static Double parseMaxValue(String parameterName, JsonNode parameterJsonNode, ParameterType type) throws CloudFormationException {
+      Double maxValue = JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxValue.toString()); // null ok
+      checkParameterType(maxValue, parameterName, ParameterKey.MaxValue, type, ParameterType.Number);
+      return maxValue;
     }
-    if (templateParameter.getParameterValue() == null) return; // This line allows some parsing by validateTemplate() for non-user specified parameters
-    Double valueDouble = null;
-    try {
-      valueDouble = Double.parseDouble(templateParameter.getParameterValue());
-    } catch (NumberFormatException ex) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must be a number"
-      );
+
+    private static Double parseMinLength(String parameterName, JsonNode parameterJsonNode, ParameterType type) throws CloudFormationException {
+      Double minLength = JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinLength.toString()); // null ok
+      checkParameterType(minLength, parameterName, ParameterKey.MinLength, type, ParameterType.String);
+      return minLength;
     }
-    if (templateParameter.getMinValue() != null && templateParameter.getMinValue() > valueDouble) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must be a number not less than " + templateParameter.getMinValue()
-      );
+
+    private static Double parseMaxLength(String parameterName, JsonNode parameterJsonNode, ParameterType type) throws CloudFormationException {
+      Double maxLength = JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxLength.toString()); // null ok
+      checkParameterType(maxLength, parameterName, ParameterKey.MaxLength, type, ParameterType.String);
+      return maxLength;
     }
-    if (templateParameter.getMaxValue() != null && templateParameter.getMaxValue() < valueDouble) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must be a number not greater than "
-            + templateParameter.getMaxValue()
-      );
+
+    private static String parseConstraintDescription(String parameterName, JsonNode parameterJsonNode) throws CloudFormationException {
+      String constraintDescription = JsonHelper.getString(parameterJsonNode,
+        ParameterKey.ConstraintDescription.toString());
+      // Strangely no length constraints here
+      return constraintDescription;
+    }
+
+    private static String parseDescription(String parameterName, JsonNode parameterJsonNode) throws CloudFormationException {
+      String description = JsonHelper.getString(parameterJsonNode,
+        ParameterKey.Description.toString());
+      // Strangely no length constraints here (in practice, documentation is wrong currently)
+      return description;
+    }
+
+    private static String parseAllowedPattern(String parameterName, JsonNode parameterJsonNode, ParameterType type) throws CloudFormationException {
+      String allowedPattern = JsonHelper.getString(parameterJsonNode, ParameterKey.AllowedPattern.toString()); // null ok
+      checkParameterType(allowedPattern, parameterName, ParameterKey.AllowedPattern, type, ParameterType.String);
+      return allowedPattern;
+    }
+
+    private static void checkParameterType(Object value, String name, ParameterKey key, ParameterType valueType, ParameterType requiredType)
+      throws ValidationErrorException {
+      if (value != null && valueType != requiredType) {
+        throw new ValidationErrorException("Template error: Parameter '" + name + "' " + key +
+          " must be on a parameter of type " + requiredType);
+      }
+    }
+
+    private static void validateParameterKeys(JsonNode parameterJsonNode) throws ValidationErrorException {
+      Set<String> tempParameterKeys = Sets.newHashSet(parameterJsonNode.fieldNames());
+      for (ParameterKey validParameterKey : ParameterKey.values()) {
+        tempParameterKeys.remove(validParameterKey.toString());
+      }
+      if (!tempParameterKeys.isEmpty()) {
+        throw new ValidationErrorException("Invalid template parameter property or properties " + tempParameterKeys);
+      }
+    }
+
+    private static String[] parseAllowedValues(JsonNode parameterJsonNode) throws CloudFormationException {
+      String[] allowedValues = null;
+      JsonNode allowedValuesJsonNode = JsonHelper.checkArray(parameterJsonNode, ParameterKey.AllowedValues.toString());
+      if (allowedValuesJsonNode != null) {
+        allowedValues = new String[allowedValuesJsonNode.size()];
+        for (int index = 0; index < allowedValues.length; index++) {
+          String errorMsg = "Every " + ParameterKey.AllowedValues + "value must be a string.";
+          String allowedValue = JsonHelper.getString(allowedValuesJsonNode, index, errorMsg);
+          if (allowedValue == null) {
+            throw new ValidationErrorException("Template format error: " + errorMsg);
+          }
+          allowedValues[index] = allowedValue;
+        }
+      }
+      return allowedValues;
+    }
+
+    private static ParameterType parseType(JsonNode parameterJsonNode) throws CloudFormationException {
+      String typeStr = JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
+      if (typeStr == null) {
+        throw new ValidationErrorException("Template format error: Every " + TemplateParser.TemplateSection.Parameters + " object "
+          + "must contain a " + ParameterKey.Type + " member.");
+      }
+      ParameterType type = null;
+      try {
+        type = ParameterType.valueOf(typeStr);
+      } catch (IllegalArgumentException ex) {
+        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+      }
+      return type;
+    }
+
+    private static class Parameter {
+      private StackEntity.Parameter stackEntityParameter;
+      private TemplateParameter templateParameter;
+
+      private Parameter(StackEntity.Parameter stackEntityParameter, TemplateParameter templateParameter) {
+        this.stackEntityParameter = stackEntityParameter;
+        this.templateParameter = templateParameter;
+      }
+
+      StackEntity.Parameter getParameter() {
+        return stackEntityParameter;
+      }
+
+      TemplateParameter getTemplateParameter() {
+        return templateParameter;
+      }
     }
   }
 
@@ -742,14 +644,14 @@ public class TemplateParser {
       for (String conditionName: conditionDependencyManager.dependencyList()) {
         JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
         // Don't like to have to roll/unroll condition map like this but evaluateFunctions is used post-map a lot
-        Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
+        Map<String, Boolean> conditionMap = template.getConditionMap();
         // just put a placeholder in if evaluating
         if (onlyEvaluateTemplate) {
           conditionMap.put(conditionName, Boolean.FALSE);
         } else {
-          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template.getStackEntity(), template.getResourceInfoMap())));
+          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template)));
         }
-        template.getStackEntity().setConditionMapJson(StackEntityHelper.conditionMapToJson(conditionMap));
+        template.setConditionMap(conditionMap);
       }
     } catch (CyclicDependencyException ex) {
       throw new ValidationErrorException("Template error: Found circular condition dependency: " + ex.getMessage());
@@ -803,8 +705,8 @@ public class TemplateParser {
       // we have a match against a "ref"...
       String refName = currentNode.get(FunctionEvaluation.REF_STR).textValue();
       // it's ok if it's a psueodparameter or a parameter, but not a resource, or doesn't exist
-      Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
-      Map<String, StackEntity.Parameter> parameterMap = StackEntityHelper.jsonToParameterMap(template.getStackEntity().getParametersJson());
+      Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
+      Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
       if (!pseudoParameterMap.containsKey(refName) && !parameterMap.containsKey(refName)) {
         resourceReferences.add(refName);
       }
@@ -845,7 +747,7 @@ public class TemplateParser {
       throw new ValidationErrorException("At least one " + TemplateSection.Resources + " member must be defined.");
     }
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
-    Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
+    Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
     String accountId = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(AWS_ACCOUNT_ID)).textValue();
     for (String resourceKey: resourceKeys) {
       JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);
@@ -866,9 +768,9 @@ public class TemplateParser {
   }
 
   private void parseResources(Template template, JsonNode templateJsonNode, boolean onlyValidateTemplate) throws CloudFormationException {
-    Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
-    Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
-    Map<String, StackEntity.Parameter> parameterMap = StackEntityHelper.jsonToParameterMap(template.getStackEntity().getParametersJson());
+    Map<String, Boolean> conditionMap = template.getConditionMap();
+    Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
+    Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
     JsonNode resourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
     // make sure no duplicates betwen parameters and resources
@@ -975,15 +877,15 @@ public class TemplateParser {
     } catch (CyclicDependencyException ex) {
       throw new ValidationErrorException("Circular dependency between resources: " + ex.getMessage());
     }
-    template.getStackEntity().setResourceDependencyManagerJson(StackEntityHelper.resourceDependencyManagerToJson(resourceDependencies));
+    template.setResourceDependencyManager(resourceDependencies);
   }
 
   private void resourceDependencyCrawl(String resourceKey, JsonNode jsonNode,
                                        DependencyManager resourceDependencies, Template template,
                                        Set<String> unresolvedResourceDependencies, boolean onLiveBranch)
     throws CloudFormationException {
-    Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
-    Map<String, StackEntity.Parameter> parameterMap = StackEntityHelper.jsonToParameterMap(template.getStackEntity().getParametersJson());
+    Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
+    Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
     if (jsonNode == null) {
       return;
     }
@@ -1002,12 +904,12 @@ public class TemplateParser {
       JsonNode keyJsonNode = jsonNode.get(FunctionEvaluation.FN_IF);
 
       String key = keyJsonNode.get(0).textValue();
-      Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
+      Map<String, Boolean> conditionMap = template.getConditionMap();
 
       if (!conditionMap.containsKey(key)) {
         throw new ValidationErrorException("Template error: unresolved condition dependency: " + key);
       };
-      boolean booleanValue = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson()).get(key);
+      boolean booleanValue = template.getConditionMap().get(key);
       // AWS has weird behavior that on an Fn::If, undefined Ref values will be detected on branches that are not taken,
       // but circular dependencies won't care (as the branch won't be taken)
       resourceDependencyCrawl(resourceKey, keyJsonNode.get(1), resourceDependencies, template, unresolvedResourceDependencies, onLiveBranch && booleanValue);
@@ -1066,8 +968,8 @@ public class TemplateParser {
   }
 
   private void parseOutputs(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
-    ArrayList<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(template.getStackEntity().getOutputsJson());
+    Map<String, Boolean> conditionMap = template.getConditionMap();
+    ArrayList<StackEntity.Output> outputs = template.getOutputs();
     JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
     if (outputsJsonNode != null) {
       List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
@@ -1105,11 +1007,7 @@ public class TemplateParser {
           IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(outputValueNode);
           if (matchResult.isMatch()) {
             match = true;
-            intrinsicFunction.validateArgTypesWherePossible(matchResult);
-            if (intrinsicFunction == IntrinsicFunctions.IF) {
-              // don't allow if... (strange, other functions are ok).  Note: This is only at the top level.  Ifs are allowed within other functions. (AWS?!!)
-              throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a Map.");
-            }
+            break;
           }
         }
         if (!match) {
@@ -1128,7 +1026,7 @@ public class TemplateParser {
         output.setAllowedByCondition(conditionMap.get(conditionKey) != Boolean.FALSE);
         outputs.add(output);
       }
-      template.getStackEntity().setOutputsJson(StackEntityHelper.outputsToJson(outputs));
+      template.setOutputs(outputs);
     }
   }
 }
