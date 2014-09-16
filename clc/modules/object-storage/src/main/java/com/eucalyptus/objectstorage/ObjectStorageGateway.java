@@ -807,7 +807,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		}
 
         try {
-            OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, objectEntity, Contexts.lookup().getUser());
+            ObjectEntity responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, objectEntity, Contexts.lookup().getUser());
             try {
                 fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, objectEntity.getBucket().getBucketName(),
                         objectEntity.getObjectKey(), objectEntity.getVersionId(),
@@ -820,6 +820,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
             DeleteObjectResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("No Content");
+			if (responseEntity != null) {
+				reply.setVersionId(responseEntity.getVersionId());
+				if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
+					reply.setIsDeleteMarker(Boolean.TRUE);
+			}
             return reply;
         } catch (Exception e) {
             LOG.error("Transaction error during delete object: " + request.getBucket() + "/" + request.getKey(), e);
@@ -1484,12 +1489,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public DeleteVersionResponseType deleteVersion(final DeleteVersionType request) throws S3Exception {
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
 
-        OsgObjectFactory.getFactory().logicallyDeleteVersion(ospClient, objectEntity, Contexts.lookup().getUser());
+        ObjectEntity responseEntity = OsgObjectFactory.getFactory().logicallyDeleteVersion(ospClient, objectEntity, Contexts.lookup().getUser());
 
         DeleteVersionResponseType reply = request.getReply();
-        reply.setBucket(request.getBucket());
         reply.setStatus(HttpResponseStatus.NO_CONTENT);
         reply.setKey(request.getKey());
+        if (responseEntity != null) {
+			reply.setVersionId(responseEntity.getVersionId());
+			if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
+				reply.setIsDeleteMarker(Boolean.TRUE);
+		}
         return reply;
     }
 

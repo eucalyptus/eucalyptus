@@ -72,6 +72,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.msgs.DeleteResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -91,13 +92,21 @@ public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage();
 
 			if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-				// Normal response
+				if (msg instanceof DeleteResponseType) {
+					DeleteResponseType deleteResponse = (DeleteResponseType) msg;
+					if (deleteResponse.getVersionId() != null) {
+						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, deleteResponse.getVersionId());
+					}
+					if (deleteResponse.getIsDeleteMarker() != null) {
+						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_DELETE_MARKER, deleteResponse.getIsDeleteMarker());
+					}
+				}
+
 				httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 				if (msg.getCorrelationId() != null) {
 					httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
 				}
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
-				// TODO add version Ids, delete markers etc
 				// Since a DELETE response, never include a body
 				httpResponse.setMessage(null);
 			}
