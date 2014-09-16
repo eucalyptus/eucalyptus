@@ -175,14 +175,13 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 					removeResponseBody(msg, httpResponse);
 				}
 			} else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
-				// TODO uncomment when PUT object acl response is fixed and contains version ID
-				// if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
-				// httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
-				// }
 				// Remove the content in response for certain operations
 				if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
 						|| msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
 						|| msg instanceof SetObjectAccessControlPolicyResponseType) {
+					if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
+						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
+					}
 					removeResponseBody(msg, httpResponse);
 				}
 			}

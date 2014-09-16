@@ -625,7 +625,9 @@ public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
     String versionId;
 }
 
-public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
+	String versionId;
+}
 
 /* GET /bucket?location */
 

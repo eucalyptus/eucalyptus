@@ -144,6 +144,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -164,13 +165,16 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
+
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -1002,6 +1006,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             //Get the listing from the back-end and copy results in.
             ObjectMetadataManagers.getInstance().setAcp(objectEntity, request.getAccessControlPolicy());
+			if (!objectEntity.getBucket().getVersioning().equals(VersioningStatus.Disabled))
+				reply.setVersionId(objectEntity.getVersionId());
+			else 
+				reply.setVersionId(null);
+			
             return reply;
         } catch(Exception e) {
             LOG.error("Internal error during PUT object?acl for object " + request.getBucket() + "/" + request.getKey(), e);
