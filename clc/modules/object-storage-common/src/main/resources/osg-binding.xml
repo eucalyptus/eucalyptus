@@ -232,6 +232,7 @@
 
     <mapping name="SetObjectAccessControlPolicyTypeResponse"
              class="com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType">
+        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="CreateBucket"
