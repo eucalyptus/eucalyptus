@@ -62,34 +62,46 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import java.util.Date;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
-    private static Logger LOG = Logger.getLogger(ObjectStorageDELETEOutboundHandler.class);
+	private static Logger LOG = Logger.getLogger(ObjectStorageDELETEOutboundHandler.class);
 
-    @Override
-    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if (event.getMessage() instanceof MappingHttpResponse) {
-            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
-            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+	@Override
+	public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+		if (event.getMessage() instanceof MappingHttpResponse) {
+			MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+			BaseMessage msg = (BaseMessage) httpResponse.getMessage();
 
-            if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-                //Normal response
-                httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
-                //Since a DELETE response, never include a body
-                httpResponse.setMessage(null);
-            }
-        }
-    }
+			if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
+				// Normal response
+				httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+				if (msg.getCorrelationId() != null) {
+					httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
+				}
+				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
+				// TODO add version Ids, delete markers etc
+				// Since a DELETE response, never include a body
+				httpResponse.setMessage(null);
+			}
+		}
+	}
 
 }

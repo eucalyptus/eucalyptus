@@ -88,31 +88,38 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
         if (event.getMessage() instanceof MappingHttpResponse) {
             MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
             BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-            httpResponse.setHeader("Date", DateFormatter.dateToHeaderFormattedString(new Date()));
-            httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
+            httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+            httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
             if (msg instanceof ObjectStorageDataResponseType) {
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType) msg).getEtag() + "\""); //etag in quotes, per s3-spec.
+            	ObjectStorageDataResponseType headResponse = (ObjectStorageDataResponseType) msg;
+            	
+                httpResponse.setHeader(HttpHeaders.Names.ETAG, "\"" + headResponse.getEtag() + "\""); //etag in quotes, per s3-spec.
 
                 //Fix for euca-9081
-                String contentType = ((ObjectStorageDataResponseType) msg).getContentType();
+                String contentType = headResponse.getContentType();
                 if(!Strings.isNullOrEmpty(contentType)) {
                     httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
                 }
 
-                String contentLength = String.valueOf(((ObjectStorageDataResponseType) msg).getSize());
+                String contentLength = String.valueOf(headResponse.getSize());
                 if(!Strings.isNullOrEmpty(contentLength)) {
-                    httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
+                    httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
                 }
 
-                if (!Strings.isNullOrEmpty(((ObjectStorageDataResponseType) msg).getVersionId()) &&
+                if (!Strings.isNullOrEmpty(headResponse.getVersionId()) &&
                         !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
-                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
+                    httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
                 }
 
                 //Add user metadata
-                for (MetaDataEntry m : ((ObjectStorageDataResponseType) msg).getMetaData()) {
+                for (MetaDataEntry m : headResponse.getMetaData()) {
                     httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
                 }
+                
+				Date lastModified = headResponse.getLastModified();
+				if (lastModified != null) {
+					httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
+				}
             }
             //Since a HEAD response, never include a body
             httpResponse.setMessage(null);
