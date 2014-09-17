@@ -146,6 +146,19 @@ that describes a Eucalyptus instance to be launched.
             <vcpu>
                 <xsl:value-of select="/instance/cores"/>
             </vcpu>
+            <cpu>
+              <topology>
+                <xsl:attribute name="sockets">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+                <xsl:attribute name="cores">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+                <xsl:attribute name="threads">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+	      </topology>
+            </cpu>
             <memory>
                 <xsl:value-of select="/instance/memoryKB"/>
             </memory>
