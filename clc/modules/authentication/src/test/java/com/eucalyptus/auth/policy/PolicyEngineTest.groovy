@@ -152,7 +152,8 @@ class PolicyEngineTest {
   @TupleConstructor private static class AuthorizationEntityAsAuthorization implements Authorization {
     @Delegate AuthorizationEntity entity
     @Override List<Condition> getConditions() { [] } //TODO:Conditions from statement
-    @Override Group getGroup() { null }
+    @Override Authorization.Scope getScope( ) throws AuthException { Authorization.Scope.USER}
+    @Override String getScopeId( ) throws AuthException { null }
     @Override Principal getPrincipal() { null }
   }
 }

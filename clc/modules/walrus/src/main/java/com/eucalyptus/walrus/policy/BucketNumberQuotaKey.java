@@ -67,8 +67,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
-import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.Authorization;
 
 //@PolicyKey( Keys.S3_QUOTA_BUCKET_NUMBER_FAKE )
 public class BucketNumberQuotaKey extends QuotaKey {
@@ -89,7 +89,7 @@ public class BucketNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( WalrusQuotaUtil.countBucketByAccount( id ) + 1 );

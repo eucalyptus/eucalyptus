@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,22 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
+import java.util.Collections;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-@PolicyKey( Keys.IAM_QUOTA_ROLE_NUMBER )
-public class RoleNumberQuotaKey  extends QuotaKey {
+@PolicyKey( SigningCertificateNumberQuotaKey.KEY )
+public class SigningCertificateNumberQuotaKey extends QuotaKey {
 
-  private static final String KEY = Keys.IAM_QUOTA_ROLE_NUMBER;
+  public static final String KEY = Keys.IAM_QUOTA_SIGNING_CERTIFICATE_NUMBER_PER_USER;
 
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -43,18 +48,23 @@ public class RoleNumberQuotaKey  extends QuotaKey {
 
   @Override
   public boolean canApply( String action, String resourceType ) {
-    return PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_CREATEROLE ).equals( action );
+    return PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPLOADSIGNINGCERTIFICATE ).equals( action );
   }
 
   @Override
   public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( EuareQuotaUtil.countRoleByAccount( id ) + quantity );
+        return NOT_SUPPORTED;
       case GROUP:
         return NOT_SUPPORTED;
       case USER:
-        return NOT_SUPPORTED;
+        try ( final TransactionResource tx = Entities.transactionFor( CertificateEntity.class ) ) {
+          return String.valueOf( Entities.count(
+              new CertificateEntity(),
+              Restrictions.eq( "user.userId", id ),
+              Collections.singletonMap( "user", "user" ) ) + quantity );
+        }
     }
     throw new AuthException( "Invalid scope" );
   }

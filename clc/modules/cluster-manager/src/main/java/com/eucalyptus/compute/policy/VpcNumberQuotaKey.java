@@ -26,6 +26,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.util.RestrictedTypes;
@@ -50,7 +51,7 @@ public class VpcNumberQuotaKey extends QuotaKey {
   }
 
   @Override
-  public String value( final Scope scope,
+  public String value( final Authorization.Scope scope,
                        final String id,
                        final String resource,
                        final Long quantity ) throws AuthException {

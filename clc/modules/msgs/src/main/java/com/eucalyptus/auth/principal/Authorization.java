@@ -74,7 +74,13 @@ public interface Authorization extends Serializable {
     Allow,
     Limit, // extension to IAM for quota
   }
-  
+
+  enum Scope {
+    ACCOUNT,
+    GROUP,
+    USER,
+  }
+
   EffectType getEffect( );
 
   String getAccount( );
@@ -90,8 +96,10 @@ public interface Authorization extends Serializable {
   Set<String> getResources( ) throws AuthException;
   
   List<Condition> getConditions( ) throws AuthException;
-  
-  Group getGroup( ) throws AuthException;
+
+  Scope getScope( ) throws AuthException;
+
+  String getScopeId( ) throws AuthException;
 
   Principal getPrincipal() throws AuthException;
 }

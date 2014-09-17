@@ -25,6 +25,7 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.Authorization;
 import net.sf.json.JSONException;
 
 /**
@@ -46,7 +47,7 @@ public class ServerCertificateNumberQuotaKey extends QuotaKey {
   }
 
   @Override
-  public String value( QuotaKey.Scope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( EuareQuotaUtil.countServerCertificatesByAccount( id ) + quantity );

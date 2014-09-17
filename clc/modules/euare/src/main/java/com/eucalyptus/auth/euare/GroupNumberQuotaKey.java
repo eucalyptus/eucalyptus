@@ -69,6 +69,7 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.Authorization;
 
 @PolicyKey( Keys.IAM_QUOTA_GROUP_NUMBER )
 public class GroupNumberQuotaKey extends QuotaKey {
@@ -89,7 +90,7 @@ public class GroupNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( EuareQuotaUtil.countGroupByAccount( id ) + quantity );
