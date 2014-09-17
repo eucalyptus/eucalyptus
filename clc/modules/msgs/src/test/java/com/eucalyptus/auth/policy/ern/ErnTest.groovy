@@ -35,4 +35,11 @@ class ErnTest {
     assertEquals( "Resource type", qualifiedName( VENDOR_IAM, IAM_RESOURCE_ROLE ), ern.getResourceType() );
     assertEquals( "Resource name", "/Role1", ern.getResourceName() );
   }
+
+  @Test
+  void testSubnetArn( ) {
+    final Ern ern = Ern.parse( "arn:aws:ec2::332895979617:subnet/subnet-75d75dc3" )
+    assertEquals( "Resource type", qualifiedName( VENDOR_EC2, EC2_RESOURCE_SUBNET ), ern.getResourceType() );
+    assertEquals( "Resource name", "subnet-75d75dc3", ern.getResourceName() );
+  }
 }

@@ -20,16 +20,13 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
-import org.hibernate.criterion.Criterion;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeConfiguration;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeDetail;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfo;
 import com.eucalyptus.simpleworkflow.common.model.TaskList;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowTypeInfo;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -51,10 +48,11 @@ public interface ActivityTypes {
                          Function<? super ActivityType,T> transform ) throws SwfMetadataException;
 
   <T> List<T> list( OwnerFullName ownerFullName,
-                    Criterion criterion,
-                    Map<String,String> aliases,
                     Predicate<? super ActivityType> filter,
                     Function<? super ActivityType,T> transform ) throws SwfMetadataException;
+
+  <T> List<T> listDeprecatedExpired( long time,
+                                     Function<? super ActivityType,T> transform ) throws SwfMetadataException;
 
   ActivityType updateByExample( ActivityType example,
                                 OwnerFullName ownerFullName,
@@ -64,6 +62,8 @@ public interface ActivityTypes {
   ActivityType save( ActivityType activityType ) throws SwfMetadataException;
 
   long countByDomain( OwnerFullName ownerFullName, String domain ) throws SwfMetadataException;
+
+  List<ActivityType> deleteByExample( ActivityType example ) throws SwfMetadataException;
 
   @TypeMapper
   public enum ActivityTypeToActivityTypeDetailTransform implements Function<ActivityType,ActivityTypeDetail> {

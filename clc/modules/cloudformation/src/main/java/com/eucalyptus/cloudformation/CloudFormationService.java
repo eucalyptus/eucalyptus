@@ -125,26 +125,28 @@ public class CloudFormationService {
         capabilities = request.getCapabilities().getMember();
       }
       final Template template = new TemplateParser().parse(templateBody, parameters, capabilities, pseudoParameterValues);
-      template.getStackEntity().setStackName(stackName);
-      template.getStackEntity().setStackId(stackId);
-      template.getStackEntity().setAccountId(accountId);
-      template.getStackEntity().setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
-      template.getStackEntity().setStackStatusReason("User initiated");
-      template.getStackEntity().setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
-      template.getStackEntity().setCreationTimestamp(new Date());
+      StackEntity stackEntity = new StackEntity();
+      StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
+      stackEntity.setStackName(stackName);
+      stackEntity.setStackId(stackId);
+      stackEntity.setAccountId(accountId);
+      stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
+      stackEntity.setStackStatusReason("User initiated");
+      stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
+      stackEntity.setCreationTimestamp(new Date());
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        template.getStackEntity().setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
+        stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
       }
       if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
-        template.getStackEntity().setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
+        stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
       }
       if (request.getTags()!= null && request.getTags().getMember() != null) {
-        template.getStackEntity().setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
+        stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
       }
       if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
         throw new ValidationErrorException("Either DisableRollback or OnFailure can be specified, not both.");
       }
-      template.getStackEntity().setRecordDeleted(Boolean.FALSE);
+      stackEntity.setRecordDeleted(Boolean.FALSE);
       String onFailure = "ROLLBACK";
       if (request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
         if (!request.getOnFailure().equals("ROLLBACK") && !request.getOnFailure().equals("DELETE") &&
@@ -157,7 +159,7 @@ public class CloudFormationService {
       } else {
         onFailure = (request.getDisableRollback() == Boolean.TRUE) ? "DO_NOTHING" : "ROLLBACK";
       }
-      StackEntityManager.addStack(template.getStackEntity());
+      StackEntityManager.addStack(stackEntity);
       for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
         StackResourceEntity stackResourceEntity = new StackResourceEntity();
         stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
@@ -168,7 +170,7 @@ public class CloudFormationService {
         stackResourceEntity.setRecordDeleted(Boolean.FALSE);
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
-      new StackCreator(template.getStackEntity(), userId, onFailure).start();
+      new StackCreator(stackEntity, userId, onFailure).start();
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);

@@ -69,11 +69,38 @@ public class SimpleWorkflowConfiguration {
       changeListener = SimpleWorkflowIntervalPropertyChangeListener.class )
   public static volatile String workflowExecutionRetentionDuration = "90d";
 
+  @ConfigurableField(
+      initial = "30d",
+      description = "Deprecated activity type retention time.",
+      changeListener = SimpleWorkflowIntervalPropertyChangeListener.class )
+  public static volatile String deprecatedActivityTypeRetentionDuration = "30d";
+
+  @ConfigurableField(
+      initial = "1d",
+      description = "Deprecated workflow type minimum retention time.",
+      changeListener = SimpleWorkflowIntervalPropertyChangeListener.class )
+  public static volatile String deprecatedWorkflowTypeRetentionDuration = "1d";
+
+  @ConfigurableField(
+      initial = "1d",
+      description = "Deprecated domain minimum retention time.",
+      changeListener = SimpleWorkflowIntervalPropertyChangeListener.class )
+  public static volatile String deprecatedDomainRetentionDuration = "1d";
+
   private static AtomicLong workflowExecutionDurationMillis =
       new AtomicLong( Intervals.parse( workflowExecutionDuration, TimeUnit.DAYS.toMillis( 365 ) ) );
 
   private static AtomicLong workflowExecutionRetentionDurationMillis =
       new AtomicLong( Intervals.parse( workflowExecutionRetentionDuration, TimeUnit.DAYS.toMillis( 90 ) ) );
+
+  private static AtomicLong deprecatedActivityTypeRetentionDurationMillis =
+      new AtomicLong( Intervals.parse( deprecatedActivityTypeRetentionDuration, TimeUnit.DAYS.toMillis( 30 ) ) );
+
+  private static AtomicLong deprecatedWorkflowTypeRetentionDurationMillis =
+      new AtomicLong( Intervals.parse( deprecatedWorkflowTypeRetentionDuration, TimeUnit.DAYS.toMillis( 1 ) ) );
+
+  private static AtomicLong deprecatedDomainRetentionDurationMillis =
+      new AtomicLong( Intervals.parse( deprecatedDomainRetentionDuration, TimeUnit.DAYS.toMillis( 1 ) ) );
 
   public static int getActivityTypesPerDomain() {
     return activityTypesPerDomain;
@@ -105,6 +132,18 @@ public class SimpleWorkflowConfiguration {
 
   public static long getWorkflowExecutionRetentionDurationMillis() {
     return workflowExecutionRetentionDurationMillis.get();
+  }
+
+  public static long getDeprecatedActivityTypeRetentionDurationMillis() {
+    return deprecatedActivityTypeRetentionDurationMillis.get();
+  }
+
+  public static long getDeprecatedWorkflowTypeRetentionDurationMillis() {
+    return deprecatedWorkflowTypeRetentionDurationMillis.get();
+  }
+
+  public static long getDeprecatedDomainRetentionDurationMillis() {
+    return deprecatedDomainRetentionDurationMillis.get();
   }
 
   public static final class SimpleWorkflowIntervalPropertyChangeListener implements PropertyChangeListener {

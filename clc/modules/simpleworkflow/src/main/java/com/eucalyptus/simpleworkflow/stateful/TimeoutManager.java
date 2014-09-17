@@ -35,6 +35,10 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.simpleworkflow.ActivityTask;
 import com.eucalyptus.simpleworkflow.ActivityTasks;
+import com.eucalyptus.simpleworkflow.ActivityType;
+import com.eucalyptus.simpleworkflow.ActivityTypes;
+import com.eucalyptus.simpleworkflow.Domain;
+import com.eucalyptus.simpleworkflow.Domains;
 import com.eucalyptus.simpleworkflow.NotifyClient;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.Timer;
@@ -42,6 +46,8 @@ import com.eucalyptus.simpleworkflow.Timers;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;
 import com.eucalyptus.simpleworkflow.WorkflowHistoryEvent;
+import com.eucalyptus.simpleworkflow.WorkflowType;
+import com.eucalyptus.simpleworkflow.WorkflowTypes;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTaskTimedOutEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.DecisionTaskScheduledEventAttributes;
@@ -50,8 +56,11 @@ import com.eucalyptus.simpleworkflow.common.model.TaskList;
 import com.eucalyptus.simpleworkflow.common.model.TimerFiredEventAttributes;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTimedOutEventAttributes;
 import com.eucalyptus.simpleworkflow.persist.PersistenceActivityTasks;
+import com.eucalyptus.simpleworkflow.persist.PersistenceActivityTypes;
+import com.eucalyptus.simpleworkflow.persist.PersistenceDomains;
 import com.eucalyptus.simpleworkflow.persist.PersistenceTimers;
 import com.eucalyptus.simpleworkflow.persist.PersistenceWorkflowExecutions;
+import com.eucalyptus.simpleworkflow.persist.PersistenceWorkflowTypes;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
@@ -70,7 +79,10 @@ public class TimeoutManager {
   private static final Logger logger = Logger.getLogger( TimeoutManager.class );
 
   private final WorkflowExecutions workflowExecutions = new PersistenceWorkflowExecutions( );
+  private final WorkflowTypes workflowTypes = new PersistenceWorkflowTypes( );
   private final ActivityTasks activityTasks = new PersistenceActivityTasks( );
+  private final ActivityTypes activityTypes = new PersistenceActivityTypes( );
+  private final Domains domains = new PersistenceDomains( );
   private final Timers timers = new PersistenceTimers( );
 
   public void doTimeouts( ) {
@@ -121,14 +133,45 @@ public class TimeoutManager {
   public void doExpunge( ) {
     try {
       for ( final WorkflowExecution workflowExecution :
-          workflowExecutions.listRetentionExpired( System.currentTimeMillis( ), Functions.<WorkflowExecution>identity() ) ) {
+          workflowExecutions.listRetentionExpired( System.currentTimeMillis( ), Functions.<WorkflowExecution>identity( ) ) ) {
         logger.debug( "Removing workflow execution with expired retention period: " +
-            workflowExecution.getDisplayName() + "/" + workflowExecution.getWorkflowId() );
+            workflowExecution.getDisplayName( ) + "/" + workflowExecution.getWorkflowId( ) );
         workflowExecutions.deleteByExample( workflowExecution );
-        //TODO:STEVE: do we need to remove deprecated domain / activity / workflows here?
       }
     } catch ( final SwfMetadataException e ) {
       logger.error( "Error processing workflow execution retention expiry", e );
+    }
+
+    try {
+      for ( final ActivityType activityType :
+          activityTypes.listDeprecatedExpired( System.currentTimeMillis( ), Functions.<ActivityType>identity( ) ) ) {
+        logger.debug( "Removing expired deprecated activity type: " +
+            activityType.getDisplayName( ) + "/" + activityType.getActivityVersion( ) );
+        activityTypes.deleteByExample( activityType );
+      }
+    } catch ( final SwfMetadataException e ) {
+      logger.error( "Error processing deprecated activity type expiry", e );
+    }
+
+    try {
+      for ( final WorkflowType workflowType :
+          workflowTypes.listDeprecatedExpired( System.currentTimeMillis( ), Functions.<WorkflowType>identity( ) ) ) {
+        logger.debug( "Removing expired deprecated workflow type: " +
+            workflowType.getDisplayName( ) + "/" + workflowType.getWorkflowVersion( ) );
+        workflowTypes.deleteByExample( workflowType );
+      }
+    } catch ( final SwfMetadataException e ) {
+      logger.error( "Error processing deprecated workflow type expiry", e );
+    }
+
+    try {
+      for ( final Domain domain :
+          domains.listDeprecatedExpired( System.currentTimeMillis( ), Functions.<Domain>identity( ) ) ) {
+        logger.debug( "Removing domain with expired retention period: " + domain.getDisplayName( ) );
+        domains.deleteByExample( domain );
+      }
+    } catch ( final SwfMetadataException e ) {
+      logger.error( "Error processing domain retention expiry", e );
     }
   }
 

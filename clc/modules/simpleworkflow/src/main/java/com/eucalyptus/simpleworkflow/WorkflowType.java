@@ -20,11 +20,15 @@
 package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowTypeMetadata;
+import java.util.Collection;
 import java.util.Date;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -37,6 +41,8 @@ import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 /**
  *
@@ -48,13 +54,32 @@ import com.eucalyptus.util.OwnerFullName;
 public class WorkflowType extends UserMetadata<WorkflowType.Status> implements WorkflowTypeMetadata {
   private static final long serialVersionUID = 1L;
 
-  public enum Status {
+  public enum Status implements Predicate<UserMetadata<Status>> {
     Registered,
     Deprecated,
     ;
 
     public String toString( ) {
       return name().toUpperCase( );
+    }
+
+    @Override
+    public boolean apply( @Nullable final UserMetadata<Status> metadata ) {
+      return metadata != null && metadata.getState( ) == this;
+    }
+
+    public Function<WorkflowType,WorkflowType> set( ) {
+      return new Function<WorkflowType, WorkflowType>() {
+        @Nullable
+        @Override
+        public WorkflowType apply( @Nullable final WorkflowType workflowType ) {
+          if ( workflowType != null && !Status.this.apply( workflowType ) ) {
+            workflowType.setState( Status.this );
+            workflowType.setDeprecationTimestamp( new Date( ) );
+          }
+          return workflowType;
+        }
+      };
     }
   }
 
@@ -84,6 +109,9 @@ public class WorkflowType extends UserMetadata<WorkflowType.Status> implements W
   @Column( name = "deprecation_timestamp" )
   @Temporal( TemporalType.TIMESTAMP )
   private Date deprecationTimestamp;
+
+  @OneToMany( fetch = FetchType.LAZY, mappedBy = "workflowType" )
+  private Collection<WorkflowExecution> executions;
 
   protected WorkflowType( ) {
   }

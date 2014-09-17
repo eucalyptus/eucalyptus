@@ -21,6 +21,7 @@ package com.eucalyptus.simpleworkflow;
 
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.ActivityTypeMetadata;
 import java.util.Date;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
@@ -37,6 +38,8 @@ import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 /**
  *
@@ -48,13 +51,32 @@ import com.eucalyptus.util.OwnerFullName;
 public class ActivityType extends UserMetadata<ActivityType.Status> implements ActivityTypeMetadata {
   private static final long serialVersionUID = 1L;
 
-  public enum Status {
+  public enum Status implements Predicate<UserMetadata<Status>> {
     Registered,
     Deprecated,
     ;
 
     public String toString( ) {
       return name().toUpperCase( );
+    }
+
+    @Override
+    public boolean apply( @Nullable final UserMetadata<Status> metadata ) {
+      return metadata != null && metadata.getState( ) == this;
+    }
+
+    public Function<ActivityType,ActivityType> set( ) {
+      return new Function<ActivityType, ActivityType>() {
+        @Nullable
+        @Override
+        public ActivityType apply( @Nullable final ActivityType activityType ) {
+          if ( activityType != null && !Status.this.apply( activityType ) ) {
+            activityType.setState( Status.this );
+            activityType.setDeprecationTimestamp( new Date( ) );
+          }
+          return activityType;
+        }
+      };
     }
   }
 

@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.MetadataConstraintException;
@@ -198,7 +199,7 @@ public class NetworkGroupManager {
 
     final NetworkGroup group = lookupGroup( request.getGroupId(), request.getGroupName() );
     if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
-      throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
+      throw new ClientUnauthorizedComputeException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) );
     }
 
     if ( group.getVpcId( ) != null && NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
@@ -292,10 +293,10 @@ public class NetworkGroupManager {
             throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
           }
         } else {
-            throw new EucalyptusCloudException(
+            throw new ClientUnauthorizedComputeException(
               "Not authorized to revoke network group "
                 + request.getGroupName() + " for "
-                + ctx.getUser());
+                + ctx.getUser().getName());
         }
         reply.set_return(true);    
         tx.commit( );
@@ -315,7 +316,7 @@ public class NetworkGroupManager {
     try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
       final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
+        throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
       }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
@@ -372,7 +373,7 @@ public class NetworkGroupManager {
     try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
       final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null );
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
+        throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
       }
       if ( ruleGroup.getVpcId( ) == null ) {
         throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
@@ -445,10 +446,10 @@ public class NetworkGroupManager {
           throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
         }
       } else {
-        throw new EucalyptusCloudException(
+        throw new ClientUnauthorizedComputeException(
             "Not authorized to revoke network group "
                 + request.getGroupId() + " for "
-                + ctx.getUser());
+                + ctx.getUser().getName());
       }
       reply.set_return(true);
       tx.commit( );

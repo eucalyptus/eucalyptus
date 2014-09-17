@@ -525,7 +525,7 @@ public class PutObjectInlineResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class DeleteObjectType extends ObjectStorageRequestType {}
 
-public class DeleteObjectResponseType extends ObjectStorageResponseType {}
+public class DeleteObjectResponseType extends DeleteResponseType {}
 
 /* DELETE /bucket/object?versionid=x */
 
@@ -537,7 +537,12 @@ public class DeleteVersionType extends ObjectStorageRequestType {
     String versionId;
 }
 
-public class DeleteVersionResponseType extends ObjectStorageResponseType {}
+public class DeleteVersionResponseType extends DeleteResponseType {}
+
+public class DeleteResponseType extends ObjectStorageResponseType {
+	String versionId;
+	Boolean isDeleteMarker;
+}
 
 /* GET /bucket */
 
@@ -625,7 +630,9 @@ public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
     String versionId;
 }
 
-public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
+	String versionId;
+}
 
 /* GET /bucket?location */
 

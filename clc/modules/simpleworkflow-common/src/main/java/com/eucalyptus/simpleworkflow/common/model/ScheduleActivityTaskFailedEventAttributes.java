@@ -44,7 +44,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class ScheduleActivityTaskFailedEventAttributes implements Serializable {
+public class ScheduleActivityTaskFailedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The activity type provided in the <code>ScheduleActivityTask</code>
@@ -361,6 +361,11 @@ public class ScheduleActivityTaskFailedEventAttributes implements Serializable {
     public ScheduleActivityTaskFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
+    }
+
+    @Override
+    public void attach( final HistoryEvent historyEvent ) {
+        historyEvent.setScheduleActivityTaskFailedEventAttributes( this );
     }
 
     /**

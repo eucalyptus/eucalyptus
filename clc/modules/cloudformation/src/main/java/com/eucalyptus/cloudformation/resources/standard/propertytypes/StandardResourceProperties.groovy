@@ -206,6 +206,18 @@ public class AWSEC2CustomerGatewayProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2DHCPOptionsProperties implements ResourceProperties {
+  @Property
+  String domainName;
+  @Property
+  List<String> domainNameServers = Lists.newArrayList();
+  @Property
+  List<String> netbiosNameServers = Lists.newArrayList();
+  @Property
+  Integer netbiosNodeType;
+  @Property
+  List<String> ntpServers = Lists.newArrayList();
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -287,26 +299,100 @@ public class AWSEC2InternetGatewayProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
+  @Required
+  @Property
+  String cidrBlock;
+  @Required
+  @Property
+  Boolean egress;
+  @Property
+  EC2ICMP icmp;
+  @Required
+  @Property
+  String networkAclId;
+  @Property
+  EC2PortRange portRange;
+  @Required
+  @Property
+  Integer protocol;
+  @Required
+  @Property
+  String ruleAction;
+  @Required
+  @Property
+  Integer ruleNumber;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceProperties implements ResourceProperties {
+  @Property
+  String description;
+  @Property
+  List<String> groupSet = Lists.newArrayList();
+  @Property
+  String privateIpAddress;
+  @Property
+  List<PrivateIpAddressSpecification> privateIpAddresses = Lists.newArrayList();
+  @Property
+  Integer secondaryPrivateIpAddressCount;
+  @Property
+  Boolean sourceDestCheck;
+  @Required
+  @Property
+  String subnetId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
+  @Property
+  Boolean deleteOnTermination;
+  @Required
+  @Property
+  Integer deviceIndex;
+  @Required
+  @Property
+  String instanceId;
+  @Required
+  @Property
+  String networkInterfaceId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2RouteProperties implements ResourceProperties {
+  @Required
+  @Property
+  String destinationCidrBlock;
+  @Property
+  String gatewayId;
+  @Property
+  String instanceId;
+  @Property
+  String networkInterfaceId;
+  @Required
+  @Property
+  String routeTableId;
+  @Property
+  String vpcPeeringConnectionId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2RouteTableProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -341,16 +427,28 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
   String sourceSecurityGroupId;
   @Property
   String sourceSecurityGroupOwnerId;
-  @Required
   @Property
-  String fromPort;
-  @Required // not required for ip protocol other than ICMP, TCP, UDP but we don't support VPC currently
+  Integer fromPort;
   @Property
-  String toPort;
+  Integer toPort;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
+  @Property
+  String cidrIp;
+  @Property
+  String destinationSecurityGroupId;
+  @Property
+  Integer fromPort;
+  @Required
+  @Property
+  String groupId;
+  @Required
+  @Property
+  String ipProtocol;
+  @Property
+  Integer toPort;
 }
 
 @ToString(includeNames=true)
@@ -369,10 +467,22 @@ public class AWSEC2SubnetProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String subnetId;
+  @Required
+  @Property
+  String networkAclId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String routeTableId;
+  @Required
+  @Property
+  String subnetId;
 }
 
 @ToString(includeNames=true)
@@ -422,6 +532,12 @@ public class AWSEC2VPCProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2VPCDHCPOptionsAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String dhcpOptionsId;
+  @Required
+  @Property
+  String vpcId;
 }
 
 @ToString(includeNames=true)

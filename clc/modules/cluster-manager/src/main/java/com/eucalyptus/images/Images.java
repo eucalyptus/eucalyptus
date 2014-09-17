@@ -111,7 +111,6 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.FilterSupport;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -143,6 +142,7 @@ public class Images {
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
   public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
+  public static final String DEFAULT_EPHEMERAL_DEVICE = "/dev/sdb";
 
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
     final boolean executableSelf = executableSet.remove( SELF );
@@ -1073,6 +1073,7 @@ public class Images {
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
+
     final ImageMetadata.Platform imagePlatform = platform;    
     switch ( manifest.getImageType( ) ) {
       case kernel:
@@ -1089,12 +1090,14 @@ public class Images {
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
     		  virtType = ImageMetadata.VirtualizationType.hvm;
     	}
-    	
+        String manifestAmi = manifest.getAmi();
     	ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
     	    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-    	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
+    	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType,
+            manifestAmi, manifest.getRoot());
     	ret.setImageFormat(format.toString());
-    	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
+    	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) 
+    		|| (!manifestAmi.isEmpty() && !ImageManager.isPathAPartition(manifestAmi) )){
     	  ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
     	}
     	break;

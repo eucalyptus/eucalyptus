@@ -109,6 +109,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Cluster       cluster;
   private boolean             aborted;
   private final boolean       unorderedType;
+  private boolean             zombie;
 
   public ResourceToken( final Allocation allocInfo, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -321,4 +322,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     return this.cluster;
   }
 
+  public boolean isZombie() {
+    return zombie;
+  }
+
+  public void setZombie( final boolean zombie ) {
+    this.zombie = zombie;
+  }
 }

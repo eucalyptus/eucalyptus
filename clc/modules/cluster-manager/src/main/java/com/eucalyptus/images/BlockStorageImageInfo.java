@@ -72,10 +72,12 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -200,16 +202,16 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
         for ( BlockStorageImageInfo image : images ) {
           LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
           if (StringUtils.isBlank(image.getRootDeviceName())) {
-        	LOG.info("Setting the root device name to /dev/sda");
-            image.setRootDeviceName("/dev/sda");
+        	LOG.info("Setting the root device name to " + Images.DEFAULT_ROOT_DEVICE);
+            image.setRootDeviceName(Images.DEFAULT_ROOT_DEVICE);
           }
           DeviceMapping mapping = null;
           if ( image.getDeviceMappings().size() == 1 && (mapping = image.getDeviceMappings().iterator().next()) != null 
         		  && mapping instanceof BlockStorageDeviceMapping ) {
-            LOG.info("Setting the device mapping name to /dev/sda");
-            mapping.setDeviceName("/dev/sda"); 
-            LOG.info("Adding ephemeral disk at /dev/sdb");
-        	image.getDeviceMappings().add(new EphemeralDeviceMapping( image, "/dev/sdb", "ephemeral0" ));
+            LOG.info("Setting the device mapping name to " + Images.DEFAULT_ROOT_DEVICE);
+            mapping.setDeviceName(Images.DEFAULT_ROOT_DEVICE);
+            LOG.info("Adding ephemeral disk at " + Images.DEFAULT_EPHEMERAL_DEVICE);
+        	image.getDeviceMappings().add(new EphemeralDeviceMapping( image, Images.DEFAULT_EPHEMERAL_DEVICE, "ephemeral0" ));
           } else {
         	LOG.error("Expected to see only the root block device mapping but encountered " + image.getDeviceMappings().size() + " device mappings.");
           }

@@ -81,10 +81,10 @@ public interface CloudMetadata extends RestrictedType {
   @PolicyResourceType( "availabilityzone" )
   public interface AvailabilityZoneMetadata extends CloudMetadata {}
   
-  @PolicyResourceType( "keypair" )
+  @PolicyResourceType( "key-pair" )
   public interface KeyPairMetadata extends CloudMetadata {}
   
-  @PolicyResourceType( "securitygroup" )
+  @PolicyResourceType( "security-group" )
   public interface NetworkGroupMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "address" )

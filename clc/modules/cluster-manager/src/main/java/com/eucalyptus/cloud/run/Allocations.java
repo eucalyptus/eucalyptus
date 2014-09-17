@@ -63,6 +63,7 @@
 package com.eucalyptus.cloud.run;
 
 import com.eucalyptus.auth.AuthContextSupplier;
+
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -72,11 +73,14 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
@@ -91,7 +95,9 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -109,6 +115,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -125,6 +132,7 @@ public class Allocations {
     private final UserFullName ownerFullName;
     private byte[] userData;
     private String credential;
+    private String rootDirective;
     private final int minCount;
     private final int maxCount;
     private final boolean usePrivateAddressing;
@@ -414,7 +422,20 @@ public class Allocations {
     public String getCredential(){
       return this.credential;
     }
-    
+
+    public void setRootDirective() {
+      if ( ! bootSet.isBlockStorage( ) ) {
+        try {
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply( this.getRequest( ).getImageId());
+          rootDirective = emi.getRootDirective();
+        } catch (Exception ex) {}
+      }
+    }
+
+    public String getRootDirective(){
+      return this.rootDirective;
+    }
+
     public Long getReservationIndex() {
       return this.reservationIndex;
     }

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
+import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
@@ -47,6 +48,7 @@ public interface Domains {
 
   <T> T lookupByName( @Nullable OwnerFullName ownerFullName,
                       String name,
+                      Predicate<? super Domain> filter,
                       Function<? super Domain,T> transform ) throws SwfMetadataException;
 
   <T> T lookupByExample( Domain example,
@@ -61,12 +63,20 @@ public interface Domains {
                     Predicate<? super Domain> filter,
                     Function<? super Domain,T> transform ) throws SwfMetadataException;
 
+  <T> List<T> listDeprecatedExpired( long time,
+                                     Function<? super Domain,T> transform ) throws SwfMetadataException;
+
   Domain updateByExample( Domain example,
                           OwnerFullName ownerFullName,
                           String key,
                           Callback<Domain> updateCallback ) throws SwfMetadataException;
 
   Domain save( Domain domain ) throws SwfMetadataException;
+
+
+  List<Domain> deleteByExample( Domain example ) throws SwfMetadataException;
+
+  AbstractPersistentSupport<SimpleWorkflowMetadata.DomainMetadata,Domain,SwfMetadataException> withRetries( );
 
   @TypeMapper
   public enum DomainToDomainDetailTransform implements Function<Domain,DomainDetail> {

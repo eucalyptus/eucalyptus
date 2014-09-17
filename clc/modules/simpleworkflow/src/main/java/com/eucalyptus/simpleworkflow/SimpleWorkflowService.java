@@ -19,9 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow;
 
+import static com.eucalyptus.simpleworkflow.Domain.Status.Registered;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.*;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.WorkflowHistorySizeLimitException;
 import static com.eucalyptus.simpleworkflow.WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE;
+import static com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskFailedCause.*;
 import java.lang.System;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -137,16 +139,31 @@ public class SimpleWorkflowService {
     final Predicate<? super Domain> accessible =
         SimpleWorkflowMetadatas.filteringFor( Domain.class ).byPrivileges( ) .buildPredicate( );
     try {
-      domains.updateByExample( Domain.exampleWithName( accountFullName, request.getName( ) ), accountFullName, request.getName( ), new Callback<Domain>( ) {
+      domains.withRetries( ).updateByExample(
+          Domain.exampleWithName( accountFullName, request.getName( ) ),
+          accountFullName,
+          request.getName( ),
+          new Callback<Domain>( ) {
         @Override
         public void fire( final Domain domain ) {
-          if ( accessible.apply( domain ) ) {
+          if ( accessible.apply( domain ) ) try {
             if  ( domain.getState( ) == Domain.Status.Deprecated ) {
-              throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
-                  "DomainDeprecatedFault",
-                  "Domain already deprecated: " + request.getName( ) ) );
+              throw upClient( "DomainDeprecatedFault", "Domain already deprecated: " + request.getName() );
             }
+
             domain.setState( Domain.Status.Deprecated );
+
+            activityTypes.list( // transform modifies state
+                accountFullName,
+                CollectionUtils.propertyPredicate( domain.getDisplayName( ), ActivityTypes.StringFunctions.DOMAIN ),
+                ActivityType.Status.Deprecated.set( ) );
+
+            workflowTypes.list( // transform modifies state
+                accountFullName,
+                CollectionUtils.propertyPredicate( domain.getDisplayName( ), WorkflowTypes.StringFunctions.DOMAIN ),
+                WorkflowType.Status.Deprecated.set( ) );
+          } catch ( final Exception e ) {
+            throw up( e );
           }
         }
       } );
@@ -209,10 +226,10 @@ public class SimpleWorkflowService {
       public ActivityType get( ) {
         try {
           final Domain domain =
-              domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+              domains.lookupByName( accountFullName, request.getDomain( ),  Registered, Functions.<Domain>identity( ) );
           if ( activityTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
               SimpleWorkflowConfiguration.getActivityTypesPerDomain( ) ) {
-            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: activity-type" ) );
+            throw upClient( "LimitExceededFault", "Request would exceed limit for type: activity-type" );
           }
           final ActivityType activityType = ActivityType.create(
               userFullName,
@@ -228,7 +245,7 @@ public class SimpleWorkflowService {
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {
-          throw Exceptions.toUndeclared( ex );
+          throw up( ex );
         }
       }
     }, ActivityType.class, request.getName( ) );
@@ -254,9 +271,9 @@ public class SimpleWorkflowService {
             public void fire( final ActivityType activityType ) {
               if ( accessible.apply( activityType ) ) {
                 if ( activityType.getState( ) == ActivityType.Status.Deprecated ) {
-                  throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                  throw upClient(
                       "TypeDeprecatedFault",
-                      "Activity type already deprecated: " + request.getActivityType( ).getName( ) ) );
+                      "Activity type already deprecated: " + request.getActivityType().getName() );
                 }
                 activityType.setState( ActivityType.Status.Deprecated );
                 activityType.setDeprecationTimestamp( new Date( ) );
@@ -286,8 +303,6 @@ public class SimpleWorkflowService {
     try {
       activityTypeInfos.getTypeInfos( ).addAll( activityTypes.list(
           accountFullName,
-          Restrictions.conjunction( ),
-          Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( ActivityType.class, ActivityTypeInfo.class ) ) );
       final Ordering<ActivityTypeInfo> ordering =
@@ -335,23 +350,25 @@ public class SimpleWorkflowService {
       public WorkflowType get( ) {
         try {
           final Domain domain =
-              domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
-          if ( workflowTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
-              SimpleWorkflowConfiguration.getWorkflowTypesPerDomain( ) ) {
-            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for type: workflow-type" ) );
+              domains.lookupByName( accountFullName, request.getDomain(), Registered, Functions.<Domain>identity() );
+          if ( workflowTypes.countByDomain( accountFullName, domain.getDisplayName() ) >=
+              SimpleWorkflowConfiguration.getWorkflowTypesPerDomain() ) {
+            throw upClient( "LimitExceededFault", "Request would exceed limit for type: workflow-type" );
           }
           final WorkflowType workflowType = WorkflowType.create(
               userFullName,
-              request.getName( ),
-              request.getVersion( ),
+              request.getName(),
+              request.getVersion(),
               domain,
-              request.getDescription( ),
-              request.getDefaultTaskList( ) == null ? null : request.getDefaultTaskList( ).getName( ),
-              request.getDefaultChildPolicy( ),
-              parsePeriod( request.getDefaultExecutionStartToCloseTimeout( ) ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ) )
+              request.getDescription(),
+              request.getDefaultTaskList() == null ? null : request.getDefaultTaskList().getName(),
+              request.getDefaultChildPolicy(),
+              parsePeriod( request.getDefaultExecutionStartToCloseTimeout() ),
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout() )
           );
           return workflowTypes.save( workflowType );
+        } catch ( SwfMetadataNotFoundException e ) {
+          throw upClient( "UnknownResourceFault", "Unknown domain: " + request.getDomain( ) );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
@@ -379,9 +396,9 @@ public class SimpleWorkflowService {
             public void fire( final WorkflowType workflowType ) {
               if ( accessible.apply( workflowType ) ) {
                 if ( workflowType.getState( ) == WorkflowType.Status.Deprecated ) {
-                  throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                  throw upClient(
                       "TypeDeprecatedFault",
-                      "Workflow type already deprecated: " + request.getWorkflowType( ).getName( ) ) );
+                      "Workflow type already deprecated: " + request.getWorkflowType().getName() );
                 }
                 workflowType.setState( WorkflowType.Status.Deprecated );
                 workflowType.setDeprecationTimestamp( new Date( ) );
@@ -411,8 +428,6 @@ public class SimpleWorkflowService {
     try {
       workflowTypeInfos.getTypeInfos( ).addAll( workflowTypes.list(
           accountFullName,
-          Restrictions.conjunction( ),
-          Collections.<String, String>emptyMap( ),
           requestedAndAccessible,
           TypeMappers.lookup( WorkflowType.class, WorkflowTypeInfo.class ) ) );
       final Ordering<WorkflowTypeInfo> ordering =
@@ -735,23 +750,37 @@ public class SimpleWorkflowService {
                 "WorkflowExecutionAlreadyStartedFault", "Workflow open with ID " + request.getWorkflowId( ) );
           }
 
-          final Domain domain =
-              domains.lookupByName( accountFullName, request.getDomain( ), Functions.<Domain>identity( ) );
+          final Domain domain;
+          try {
+              domain = domains.lookupByName( accountFullName, request.getDomain( ), Registered, Functions.<Domain>identity( ) );
+          } catch ( SwfMetadataNotFoundException e ) {
+            throw upClient( "UnknownResourceFault", "Unknown domain: " + request.getDomain() );
+          }
           if ( workflowExecutions.countOpenByDomain( accountFullName, domain.getDisplayName( ) ) >=
               SimpleWorkflowConfiguration.getOpenWorkflowExecutionsPerDomain( ) ) {
-            throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "LimitExceededFault", "Request would exceed limit for open workflow executions" ) );
+            throw upClient( "LimitExceededFault", "Request would exceed limit for open workflow executions" );
           }
-          final WorkflowType workflowType =
-              workflowTypes.lookupByExample(
-                  WorkflowType.exampleWithUniqueName(
-                      accountFullName,
-                      request.getDomain( ),
-                      request.getWorkflowType( ).getName( ),
-                      request.getWorkflowType( ).getVersion( ) ),
-                  accountFullName,
-                  request.getWorkflowType( ).getName( ),
-                  accessible,
-                  Functions.<WorkflowType>identity( ) );
+          final WorkflowType workflowType;
+          try {
+            workflowType = workflowTypes.lookupByExample(
+                WorkflowType.exampleWithUniqueName(
+                    accountFullName,
+                    request.getDomain(),
+                    request.getWorkflowType().getName(),
+                    request.getWorkflowType().getVersion() ),
+                accountFullName,
+                request.getWorkflowType().getName(),
+                Predicates.and( accessible, WorkflowType.Status.Registered ),
+                Functions.<WorkflowType>identity() );
+          } catch ( SwfMetadataNotFoundException e ) {
+            throw upClient( "UnknownResourceFault", "Unknown workflow type: " + request.getWorkflowType().getName() );
+          }
+          if ( request.getChildPolicy( ) == null && workflowType.getDefaultChildPolicy( ) == null ) {
+            throw upClient( "DefaultUndefinedFault", "Default child policy undefined" );
+          }
+          if ( request.getTaskList( ) == null && workflowType.getDefaultTaskList( ) == null ) {
+            throw upClient( "DefaultUndefinedFault", "Default task list undefined" );
+          }
           final String childPolicy = Objects.firstNonNull(
               request.getChildPolicy( ),
               workflowType.getDefaultChildPolicy( ) );
@@ -1023,7 +1052,7 @@ public class SimpleWorkflowService {
                       token.getRunId( ),
                       token.getScheduledEventId( ) ) );
                 } catch ( SwfMetadataException e ) {
-                  throw Exceptions.toUndeclared( e );
+                  throw up( e );
                 }
 
                 // TODO:STEVE: verify token valid (no reuse, etc)
@@ -1087,7 +1116,7 @@ public class SimpleWorkflowService {
                       token.getRunId( ),
                       token.getScheduledEventId( ) ) );
                 } catch ( SwfMetadataException e ) {
-                  throw Exceptions.toUndeclared( e );
+                  throw up( e );
                 }
 
                 // TODO:STEVE: verify token valid (no reuse, etc)
@@ -1252,7 +1281,7 @@ public class SimpleWorkflowService {
                     reverseEvents,
                     CollectionUtils.propertyPredicate( "DecisionTaskStarted", EVENT_TYPE ) );
                 if ( !started.getEventId( ).equals( token.getStartedEventId( ) ) ) {
-                  throw Exceptions.toUndeclared( new SimpleWorkflowClientException( "ValidationError", "Bad token" ) );
+                  throw upClient( "ValidationError", "Bad token" );
                 }
                 final WorkflowHistoryEvent scheduled = Iterables.find(
                     reverseEvents,
@@ -1312,7 +1341,7 @@ public class SimpleWorkflowService {
                           scheduleDecisionTask = true;
                         }
                       } catch ( SwfMetadataException e ) {
-                        throw Exceptions.toUndeclared( e );
+                        throw up( e );
                       }
                       break;
                     case "CancelWorkflowExecution":
@@ -1419,7 +1448,7 @@ public class SimpleWorkflowService {
                                 .withActivityId( cancelActivity.getActivityId( ) )
                         ) );
                       } catch ( SwfMetadataException e ) {
-                        throw Exceptions.toUndeclared( e );
+                        throw up( e );
                       }
                       scheduleDecisionTask = true;
                       break;
@@ -1456,29 +1485,41 @@ public class SimpleWorkflowService {
                               .withTaskList( scheduleActivity.getTaskList( ) )
                       ) );
                       try {
-                        final ActivityType activityType = activityTypes.lookupByExample(
-                            ActivityType.exampleWithUniqueName(
-                                accountFullName,
-                                domain.getDisplayName( ),
-                                scheduleActivity.getActivityType( ).getName( ),
-                                scheduleActivity.getActivityType( ).getVersion( ) ),
-                            accountFullName,
-                            scheduleActivity.getActivityType( ).getName( ),
-                            Predicates.alwaysTrue( ),
-                            Functions.<ActivityType>identity( ) );
+                        final ActivityType activityType;
+                        try {
+                          activityType = activityTypes.lookupByExample(
+                              ActivityType.exampleWithUniqueName(
+                                  accountFullName,
+                                  domain.getDisplayName(),
+                                  scheduleActivity.getActivityType().getName(),
+                                  scheduleActivity.getActivityType().getVersion() ),
+                              accountFullName,
+                              scheduleActivity.getActivityType().getName(),
+                              Predicates.alwaysTrue(),
+                              Functions.<ActivityType>identity() );
+                        } catch ( final SwfMetadataNotFoundException e ) {
+                          throw new ScheduleActivityTaskException( ACTIVITY_TYPE_DOES_NOT_EXIST );
+                        }
 
-                        final String list = scheduleActivity.getTaskList() == null ?
-                            activityType.getDefaultTaskList() :
-                            scheduleActivity.getTaskList().getName();
+                        if ( ActivityType.Status.Deprecated.apply( activityType ) ) {
+                          throw new ScheduleActivityTaskException( ACTIVITY_TYPE_DEPRECATED );
+                        }
+
+                        final String list = scheduleActivity.getTaskList( ) == null ?
+                            activityType.getDefaultTaskList( ) :
+                            scheduleActivity.getTaskList( ).getName( );
+                        if ( list == null ) {
+                          throw new ScheduleActivityTaskException( DEFAULT_TASK_LIST_UNDEFINED );
+                        }
+
                         if ( activityTasks.countByWorkflowExecution(
                             accountFullName,
                             domain.getDisplayName( ),
                             workflowExecution.getDisplayName( ) ) >=
                             SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
-                          throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
-                              "LimitExceededFault",
-                              "Request would exceed limit for open activity tasks per workflow execution" ) );
+                          throw new ScheduleActivityTaskException( OPEN_ACTIVITIES_LIMIT_EXCEEDED );
                         }
+
                         activityTasks.save( com.eucalyptus.simpleworkflow.ActivityTask.create(
                             userFullName,
                             workflowExecution,
@@ -1489,15 +1530,37 @@ public class SimpleWorkflowService {
                             scheduleActivity.getInput(),
                             scheduledId,
                             list,
-                            parsePeriod( scheduleActivity.getScheduleToCloseTimeout( ), activityType.getDefaultTaskScheduleToCloseTimeout( ) ),
-                            parsePeriod( scheduleActivity.getScheduleToStartTimeout( ), activityType.getDefaultTaskScheduleToStartTimeout( ) ),
-                            parsePeriod( scheduleActivity.getStartToCloseTimeout( ), activityType.getDefaultTaskStartToCloseTimeout( ) ),
-                            parsePeriod( scheduleActivity.getHeartbeatTimeout( ), activityType.getDefaultTaskHeartbeatTimeout( ) )
+                            parseActivityPeriod(
+                                scheduleActivity.getScheduleToCloseTimeout( ),
+                                activityType.getDefaultTaskScheduleToCloseTimeout( ),
+                                DEFAULT_SCHEDULE_TO_CLOSE_TIMEOUT_UNDEFINED ),
+                            parseActivityPeriod(
+                                scheduleActivity.getScheduleToStartTimeout( ),
+                                activityType.getDefaultTaskScheduleToStartTimeout( ),
+                                DEFAULT_SCHEDULE_TO_START_TIMEOUT_UNDEFINED ),
+                            parseActivityPeriod(
+                                scheduleActivity.getStartToCloseTimeout( ),
+                                activityType.getDefaultTaskStartToCloseTimeout( ),
+                                DEFAULT_START_TO_CLOSE_TIMEOUT_UNDEFINED ),
+                            parseActivityPeriod(
+                                scheduleActivity.getHeartbeatTimeout() ,
+                                activityType.getDefaultTaskHeartbeatTimeout( ),
+                                DEFAULT_HEARTBEAT_TIMEOUT_UNDEFINED )
                         ) );
 
                         notificationTypeListPairs.add( Pair.pair( "activity", list ) );
-                      } catch ( Exception e ) {
-                        throw Exceptions.toUndeclared( e );
+                      } catch ( final ScheduleActivityTaskException e ) {
+                        workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new ScheduleActivityTaskFailedEventAttributes( )
+                                .withActivityId( scheduleActivity.getActivityId( ) )
+                                .withActivityType( scheduleActivity.getActivityType( ) )
+                                .withCause( e.getFailedCause( ) )
+                                .withDecisionTaskCompletedEventId( completedId )
+                        ) );
+                        scheduleDecisionTask = true;
+                      } catch ( final Exception e ) {
+                        throw up( e );
                       }
                       break;
                     case "SignalExternalWorkflowExecution":
@@ -1553,9 +1616,9 @@ public class SimpleWorkflowService {
                               domain.getDisplayName( ),
                               workflowExecution.getDisplayName( ) ) >=
                               SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution( ) ) {
-                            throw Exceptions.toUndeclared( new SimpleWorkflowClientException(
+                            throw upClient(
                                 "LimitExceededFault",
-                                "Request would exceed limit for open timers per workflow execution" ) );
+                                "Request would exceed limit for open timers per workflow execution" );
                           }
                           timers.save( Timer.create(
                               userFullName,
@@ -1578,11 +1641,11 @@ public class SimpleWorkflowService {
                           scheduleDecisionTask = true;
                         }
                       } catch ( SwfMetadataException e ) {
-                        throw Exceptions.toUndeclared( e );
+                        throw up( e );
                       }
                       break;
                     default:
-                      throw Exceptions.toUndeclared( new SimpleWorkflowException(
+                      throw up( new SimpleWorkflowException(
                           "InternalFailure",
                           Role.Receiver,
                           "Unsupported decision type: " + decision.getDecisionType( ) ) );
@@ -1733,9 +1796,9 @@ public class SimpleWorkflowService {
   }
 
   public SimpleWorkflowMessage terminateWorkflowExecution( final TerminateWorkflowExecutionRequest request ) throws SimpleWorkflowException {
-    final Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName( );
-    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName();
     final Predicate<? super WorkflowExecution> accessible =
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
@@ -1850,7 +1913,7 @@ public class SimpleWorkflowService {
               workflowExecution.getDomainName( ),
               workflowExecution.getDisplayName( ) ) );
     } catch ( SwfMetadataException e ) {
-      throw Exceptions.toUndeclared( e );
+      throw up( e );
     }
   }
 
@@ -1899,6 +1962,21 @@ public class SimpleWorkflowService {
         filter.add( Restrictions.eq( "workflowType.workflowVersion", parameters.getTypeFilter().getVersion() ) );
       }
     }
+  }
+
+  /**
+   * Method always throws, signature allows use of "throw up ..."
+   */
+  private static RuntimeException up( final Throwable throwable ) {
+    throw Exceptions.toUndeclared( throwable );
+  }
+
+  /**
+   * Method always throws, signature allows use of "throw upClient ..."
+   */
+  private static RuntimeException upClient( final String errorCode,
+                                            final String message ) {
+    throw up( new SimpleWorkflowClientException( errorCode, message ) );
   }
 
   /**
@@ -1951,6 +2029,22 @@ public class SimpleWorkflowService {
 
   private static Integer parsePeriod( final String period, final Integer defaultValue ) {
     if ( period == null ) {
+      return defaultValue;
+    } else if ( "NONE".equals( period ) ) {
+      return null;
+    } else {
+      return Integer.parseInt( period );
+    }
+  }
+
+  private static Integer parseActivityPeriod(
+      final String period,
+      final Integer defaultValue,
+      final ScheduleActivityTaskFailedCause failureOnNoDefault
+  ) throws ScheduleActivityTaskException {
+    if ( period == null && defaultValue == null ) {
+      throw new ScheduleActivityTaskException( failureOnNoDefault );
+    } else if ( period == null ) {
       return defaultValue;
     } else if ( "NONE".equals( period ) ) {
       return null;
@@ -2014,4 +2108,17 @@ public class SimpleWorkflowService {
     }
   }
 
+  private static final class ScheduleActivityTaskException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    private final ScheduleActivityTaskFailedCause failedCause;
+
+    public ScheduleActivityTaskException( final ScheduleActivityTaskFailedCause failedCause ) {
+      this.failedCause = failedCause;
+    }
+
+    public ScheduleActivityTaskFailedCause getFailedCause( ) {
+      return failedCause;
+    }
+  }
 }

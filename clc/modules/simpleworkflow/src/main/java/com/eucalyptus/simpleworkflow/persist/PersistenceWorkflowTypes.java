@@ -19,14 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.persist;
 
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getDeprecatedWorkflowTypeRetentionDurationMillis;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowTypeMetadata;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowTypes;
 import com.eucalyptus.simpleworkflow.WorkflowType;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  *
@@ -44,6 +49,18 @@ public class PersistenceWorkflowTypes extends SwfPersistenceSupport<WorkflowType
         WorkflowType.exampleWithOwner( ownerFullName ),
         Restrictions.eq( "domain.displayName", domain ),
         Collections.singletonMap( "domain", "domain" ) );
+  }
+
+  public <T> List<T> listDeprecatedExpired( final long time,
+                                            final Function<? super WorkflowType,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        WorkflowType.exampleWithOwner( null ),
+        Predicates.alwaysTrue(),
+        Restrictions.conjunction( )
+            .add( Restrictions.isEmpty( "executions" ) )
+            .add( Restrictions.lt( "deprecationTimestamp", new Date( time - getDeprecatedWorkflowTypeRetentionDurationMillis( ) ) ) ),
+        Collections.<String, String>emptyMap(),
+        transform );
   }
 
   @Override

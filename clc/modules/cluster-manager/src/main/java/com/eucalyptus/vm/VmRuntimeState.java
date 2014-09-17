@@ -76,6 +76,8 @@ import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 
@@ -113,6 +115,10 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.system.Threads.EucaCallable;
 import com.eucalyptus.system.tracking.MessageContexts;
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Enums;
+import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
@@ -133,6 +139,60 @@ public class VmRuntimeState {
   private static final String VM_NC_HOST_TAG      = "euca:node";
 
   private static final Logger LOG                 = Logger.getLogger( VmRuntimeState.class );
+
+  public enum InstanceStatus implements Predicate<VmInstance> {
+    Ok,
+    Impaired,
+    InsufficientData,
+    NotApplicable,
+    ;
+
+    public String toString( ) {
+      return CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_HYPHEN, name( ) );
+    }
+
+    public static Function<String,InstanceStatus> fromString( ) {
+      return new Function<String,InstanceStatus>( ){
+        @Nullable
+        @Override
+        public InstanceStatus apply( final String value ) {
+          return Enums.getIfPresent(
+              InstanceStatus.class,
+              CaseFormat.LOWER_HYPHEN.to( CaseFormat.UPPER_CAMEL, value )
+          ).orNull( );
+        }
+      };
+    }
+
+    @Override
+    public boolean apply( @Nullable final VmInstance instance ) {
+      return instance != null && instance.getRuntimeState( ).getInstanceStatus( ) == this;
+    }
+  }
+
+  public enum ReachabilityStatus {
+    Passed,
+    Failed,
+    Insufficient_Data,
+    ;
+
+    public String toString( ) {
+      return CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_HYPHEN, name( ) );
+    }
+
+    public static Function<String,ReachabilityStatus> fromString( ) {
+      return new Function<String,ReachabilityStatus>( ){
+        @Nullable
+        @Override
+        public ReachabilityStatus apply( final String value ) {
+          return Enums.getIfPresent(
+              ReachabilityStatus.class,
+              CaseFormat.LOWER_HYPHEN.to( CaseFormat.UPPER_CAMEL, value )
+          ).orNull( );
+        }
+      };
+    }
+  }
 
   @Parent
   private VmInstance          vmInstance;
@@ -155,15 +215,31 @@ public class VmRuntimeState {
   private String              passwordData;
   @Column( name = "metadata_vm_pending" )
   private Boolean             pending;
+  @Column( name = "metadata_vm_zombie" )
+  private Boolean             zombie;
   @Column( name = "metadata_vm_guest_state" )
   private String              guestState;
   
   @Embedded
   private VmMigrationTask     migrationTask;
-  
+
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_instance_status" )
+  private InstanceStatus instanceStatus;
+
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_reachability_status" )
+  private ReachabilityStatus reachabilityStatus;
+
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "metadata_instance_unreachable_timestamp")
+  private Date unreachableTimestamp;
+
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
+    this.instanceStatus = InstanceStatus.Ok;
+    this.reachabilityStatus = ReachabilityStatus.Passed;
   }
   
   VmRuntimeState( ) {
@@ -211,7 +287,58 @@ public class VmRuntimeState {
       } );
     }
   }
-  
+
+  public void reachable( ) {
+    // zombie instances cannot be reachable
+    if ( !Objects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
+      setUnreachableTimestamp( null );
+      setInstanceStatus( VmRuntimeState.InstanceStatus.Ok );
+      setReachabilityStatus( VmRuntimeState.ReachabilityStatus.Passed );
+    }
+  }
+
+  public void zombie( ) {
+    setZombie( true );
+    setUnreachableTimestamp( new Date( ) );
+    setInstanceStatus( InstanceStatus.Impaired );
+    setReachabilityStatus( ReachabilityStatus.Failed );
+  }
+
+  public Boolean getZombie( ) {
+    return zombie;
+  }
+
+  public void setZombie( final Boolean zombie ) {
+    this.zombie = zombie;
+  }
+
+  @Nullable
+  public InstanceStatus getInstanceStatus( ) {
+    return instanceStatus;
+  }
+
+  public void setInstanceStatus( final InstanceStatus instanceStatus ) {
+    this.instanceStatus = instanceStatus;
+  }
+
+  @Nullable
+  public ReachabilityStatus getReachabilityStatus( ) {
+    return reachabilityStatus;
+  }
+
+  public void setReachabilityStatus( final ReachabilityStatus reachabilityStatus ) {
+    this.reachabilityStatus = reachabilityStatus;
+  }
+
+  @Nullable
+  public Date getUnreachableTimestamp() {
+    return unreachableTimestamp;
+  }
+
+  public void setUnreachableTimestamp( final Date unreachableTimestamp ) {
+    this.unreachableTimestamp = unreachableTimestamp;
+  }
+
   private Callable<Boolean> handleStateTransition( final VmState newState, final VmState oldState, final VmState olderState ) {
     Callable<Boolean> action = null;
     LOG.info( String.format( "%s state change: %s -> %s (previously %s)", this.getVmInstance( ).getInstanceId( ), oldState, newState, olderState ) );
@@ -610,6 +737,9 @@ public class VmRuntimeState {
     if ( Entities.isReadable( this.reasonDetails ) ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
     if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
+    if ( this.zombie != null ) builder.append( "zombie=" ).append( this.zombie );
+    if ( this.instanceStatus != null ) builder.append( "instanceStatus=" ).append( this.instanceStatus );
+    if ( this.reachabilityStatus != null ) builder.append( "reachabilityStatus=" ).append( this.reachabilityStatus );
     return builder.toString( );
   }
   

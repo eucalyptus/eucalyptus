@@ -73,6 +73,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -102,6 +103,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -353,7 +355,16 @@ public class AdmissionControl {
               /* We should only pick clusters that are part of the selected AZ */
           	  continue;
             }
-            
+
+            if ( !RestrictedTypes.filterPrivileged( ).apply( VmInstance.exampleResource(
+                allocInfo.getOwnerFullName( ),
+                allocInfo.getPartition( ).getName( ),
+                allocInfo.getIamInstanceProfileArn( ),
+                allocInfo.getVmType( ).getName( ),
+                allocInfo.getBootSet().isBlockStorage( ) ) ) ) {
+              throw new IllegalMetadataAccessException( "Instance resource denied." );
+            }
+
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
                 Topology.lookup( Storage.class, partition );

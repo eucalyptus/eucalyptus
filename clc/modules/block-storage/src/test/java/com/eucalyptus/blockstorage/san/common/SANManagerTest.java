@@ -70,6 +70,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.EucalyptusCloudException;
+
 import org.jmock.Expectations;
 import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.After;
@@ -434,6 +435,11 @@ public class SANManagerTest {
                 public OutputStream getOutputStream() throws Exception {
                     return null;
                 }
+
+				@Override
+				public Boolean isDownloadSynchronous() {
+					return Boolean.TRUE;
+				}
             }));
         }});
 
@@ -487,6 +493,11 @@ public class SANManagerTest {
                 public OutputStream getOutputStream() throws Exception {
                     return null;
                 }
+
+				@Override
+				public Boolean isDownloadSynchronous() {
+					return Boolean.TRUE;
+				}
             }));
             oneOf(sanProvider).disconnectTarget(sanVolId, volIqn);
         }});
@@ -570,6 +581,11 @@ public class SANManagerTest {
                 public OutputStream getOutputStream() throws Exception {
                     return null;
                 }
+
+				@Override
+				public Boolean isDownloadSynchronous() {
+					return Boolean.TRUE;
+				}
             }));
             oneOf(sanProvider).disconnectTarget(sanVolId, volIqn);
         }});
@@ -923,6 +939,7 @@ public class SANManagerTest {
         context.checking(new Expectations(){{
             //oneOf(sanProvider).snapshotExists(existing.getSanVolumeId()); will(returnValue(Boolean.FALSE));
             oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, "bar"); will(returnValue("foo-iqn"));
+            oneOf(sanProvider).removeAllInitiatorRules(rezPrefix + "foo" + rezSuffix);
         }});
 
         SANManager test = new SANManager(sanProvider);
@@ -963,6 +980,7 @@ public class SANManagerTest {
         context.checking(new Expectations(){{
             oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId()); will(returnValue(Boolean.FALSE));
             oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "testvol" + rezSuffix, "bar"); will(returnValue("foo-iqn"));
+            oneOf(sanProvider).removeAllInitiatorRules(rezPrefix + "testvol" + rezSuffix);
         }});
 
         SANManager test = new SANManager(sanProvider);
@@ -1095,6 +1113,11 @@ public class SANManagerTest {
                 public OutputStream getOutputStream() throws Exception {
                     return null;
                 }
+
+				@Override
+				public Boolean isDownloadSynchronous() {
+					return Boolean.TRUE;
+				}
             }));
         }});
 

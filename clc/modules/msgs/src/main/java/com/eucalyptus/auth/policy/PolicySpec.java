@@ -531,27 +531,50 @@ public class PolicySpec {
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";
-  public static final String EC2_RESOURCE_SECURITYGROUP = "securitygroup";
+  public static final String EC2_RESOURCE_SECURITYGROUP = "security-group";
   public static final String EC2_RESOURCE_ADDRESS = "address";
   public static final String EC2_RESOURCE_AVAILABILITYZONE = "availabilityzone";
   public static final String EC2_RESOURCE_INSTANCE = "instance";
-  public static final String EC2_RESOURCE_KEYPAIR = "keypair";
+  public static final String EC2_RESOURCE_KEYPAIR = "key-pair";
   public static final String EC2_RESOURCE_VOLUME = "volume";
   public static final String EC2_RESOURCE_SNAPSHOT = "snapshot";
   public static final String EC2_RESOURCE_VMTYPE = "vmtype";
   public static final String EC2_RESOURCE_TAG = "tag";
-  
+  public static final String EC2_RESOURCE_PLACEMENTGROUP = "placement-group";
+  public static final String EC2_RESOURCE_CUSTOMERGATEWAY = "customer-gateway";
+  public static final String EC2_RESOURCE_DHCPOPTIONS = "dhcp-options";
+  public static final String EC2_RESOURCE_INTERNETGATEWAY = "internet-gateway";
+  public static final String EC2_RESOURCE_NETWORKACL = "network-acl";
+  public static final String EC2_RESOURCE_NETWORKINTERFACE = "network-interface";
+  public static final String EC2_RESOURCE_ROUTETABLE = "route-table";
+  public static final String EC2_RESOURCE_SUBNET = "subnet";
+  public static final String EC2_RESOURCE_VPCPEERINGCONNECTION = "vpc-peering-connection";
+  public static final String EC2_RESOURCE_VPC = "vpc";
+
+
   public static final Set<String> EC2_RESOURCES = new ImmutableSet.Builder<String>()
     .add( EC2_RESOURCE_IMAGE )
     .add( EC2_RESOURCE_SECURITYGROUP )
+    .add( EC2_RESOURCE_SECURITYGROUP.replace( "-", "" ) ) // no '-' until v4.1
     .add( EC2_RESOURCE_ADDRESS )
     .add( EC2_RESOURCE_AVAILABILITYZONE )
     .add( EC2_RESOURCE_INSTANCE )
     .add( EC2_RESOURCE_KEYPAIR )
+    .add( EC2_RESOURCE_KEYPAIR.replace( "-", "" ) ) // no '-' until v4.1
     .add( EC2_RESOURCE_VOLUME )
     .add( EC2_RESOURCE_SNAPSHOT )
     .add( EC2_RESOURCE_VMTYPE )
     .add( EC2_RESOURCE_TAG )
+    .add( EC2_RESOURCE_PLACEMENTGROUP )
+    .add( EC2_RESOURCE_CUSTOMERGATEWAY )
+    .add( EC2_RESOURCE_DHCPOPTIONS )
+    .add( EC2_RESOURCE_INTERNETGATEWAY )
+    .add( EC2_RESOURCE_NETWORKACL )
+    .add( EC2_RESOURCE_NETWORKINTERFACE )
+    .add( EC2_RESOURCE_ROUTETABLE )
+    .add( EC2_RESOURCE_SUBNET )
+    .add( EC2_RESOURCE_VPCPEERINGCONNECTION )
+    .add( EC2_RESOURCE_VPC )
     .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );

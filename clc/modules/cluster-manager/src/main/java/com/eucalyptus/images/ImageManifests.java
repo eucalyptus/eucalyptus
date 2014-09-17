@@ -68,6 +68,7 @@ import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
@@ -320,7 +321,7 @@ public class ImageManifests {
           }
           if ( virtualName != null && device != null ) {
             if ( "ami".equals( virtualName ) ) {
-              continue;
+              this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.ami, virtualName, device ) );;
             } else if ( "root".equals( virtualName ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.root, virtualName, device ) );
             } else if ( "swap".equals( virtualName ) ) {
@@ -449,7 +450,37 @@ public class ImageManifests {
     public String getKernelId( ) {
       return this.kernelId;
     }
-    
+
+    public List<ManifestDeviceMapping> getDeviceMappings() {
+      return this.deviceMappings;
+    }
+
+    public String getAmi() {
+	  try {
+        ManifestDeviceMapping root = Iterables.find(this.deviceMappings, new Predicate<ManifestDeviceMapping>() {
+          @Override
+          public boolean apply(ManifestDeviceMapping man) {
+            return man.type == DeviceMappingType.ami;
+          }});
+        return root.deviceName;
+      } catch (NoSuchElementException ex) {
+        return "";
+      }
+    }
+
+    public String getRoot() {
+      try {
+        ManifestDeviceMapping root = Iterables.find(this.deviceMappings, new Predicate<ManifestDeviceMapping>() {
+          @Override
+          public boolean apply(ManifestDeviceMapping man) {
+            return man.type == DeviceMappingType.root;
+          }});
+        return root.deviceName;
+      } catch (NoSuchElementException ex) {
+        return "";
+      }
+    }
+
     public String getRamdiskId( ) {
       return this.ramdiskId;
     }

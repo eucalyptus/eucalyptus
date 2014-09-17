@@ -19,11 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.persist;
 
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getDeprecatedDomainRetentionDurationMillis;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.DomainMetadata;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.Domain;
 import com.eucalyptus.simpleworkflow.Domains;
+import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  *
@@ -33,6 +41,18 @@ public class PersistenceDomains extends SwfPersistenceSupport<DomainMetadata,Dom
 
   public PersistenceDomains( ) {
     super( "domain" );
+  }
+
+  public <T> List<T> listDeprecatedExpired( final long time,
+                                            final Function<? super Domain,T> transform ) throws SwfMetadataException {
+    return listByExample(
+        Domain.exampleWithStatus( Domain.Status.Deprecated ),
+        Predicates.alwaysTrue( ),
+        Restrictions.conjunction( )
+            .add( Restrictions.isEmpty( "workflowTypes" ) )
+            .add( Restrictions.lt( "lastUpdateTimestamp", new Date( time - getDeprecatedDomainRetentionDurationMillis( ) ) ) ),
+        Collections.<String, String>emptyMap(),
+        transform );
   }
 
   @Override

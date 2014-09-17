@@ -339,9 +339,11 @@ public class SANManager implements LogicalStorageManager {
 				// TODO some cleanup pending here
 			}
 
-			if (shouldTransferSnapshots) {
+			if (shouldTransferSnapshots) { 
 				storageResource = connectionManager.connectTarget(iqn);
 				storageResource.setId(snapshotId);
+			} else { // snapshots are always exported to the SC, unexport it from SC if its not being uploaded
+				connectionManager.removeAllInitiatorRules(sanSnapshotId);
 			}
 		} else {
 			throw new EucalyptusCloudException("Unable to create snapshot: " + snapshotId + " from volume: " + volumeId);

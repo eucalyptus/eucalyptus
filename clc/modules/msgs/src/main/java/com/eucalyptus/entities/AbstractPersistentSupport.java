@@ -53,7 +53,14 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
   public <T> T lookupByName( @Nullable final OwnerFullName ownerFullName,
                              final String name,
                              final Function<? super AP,T> transform ) throws PE {
-    return lookupByExample( exampleWithName( ownerFullName, name ), ownerFullName, name, Predicates.alwaysTrue( ), transform );
+    return lookupByName( ownerFullName, name, Predicates.alwaysTrue(), transform );
+  }
+
+  public <T> T lookupByName( @Nullable final OwnerFullName ownerFullName,
+                             final String name,
+                             final Predicate<? super AP> filter,
+                             final Function<? super AP,T> transform ) throws PE {
+    return lookupByExample( exampleWithName( ownerFullName, name ), ownerFullName, name, filter, transform );
   }
 
   public <T> T lookupByExample( final AP example,
@@ -353,6 +360,11 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
 
     public <T> T lookupByName( @Nullable final OwnerFullName ownerFullName, final String name, final Function<? super AP, T> transform ) throws PE {
       return delegate.lookupByName( ownerFullName, name, transform );
+    }
+
+    @Override
+    public <T> T lookupByName( @Nullable final OwnerFullName ownerFullName, final String name, final Predicate<? super AP> filter, final Function<? super AP, T> transform ) throws PE {
+      return delegate.lookupByName( ownerFullName, name, filter, transform );
     }
 
     public <T> T lookupByExample( final AP example, @Nullable final OwnerFullName ownerFullName, final String key, final Predicate<? super AP> filter, final Function<? super AP, T> transform ) throws PE {

@@ -22,10 +22,12 @@ package com.eucalyptus.cloudformation.template;
 import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 
@@ -33,9 +35,20 @@ import java.util.Map;
  * Created by ethomas on 12/10/13.
  */
 public class Template {
-  private StackEntity stackEntity;
   private Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
   private ArrayList<TemplateParameter> templateParameters = Lists.newArrayList(); // used only for validate template
+  private String templateBody;
+
+  // All the below are "object" forms of items in the StackEntity
+  private String description;
+  private Map<String, String> pseudoParameterMap = Maps.newLinkedHashMap();
+  private Map<String, List<String>> availabilityZoneMap = Maps.newLinkedHashMap();
+  private String templateFormatVersion;
+  private Map<String, Map<String, Map<String, String>>> mapping = Maps.newLinkedHashMap();
+  private ArrayList<StackEntity.Parameter> parameters = Lists.newArrayList();
+  private Map<String, Boolean> conditionMap = Maps.newLinkedHashMap();
+  private DependencyManager resourceDependencyManager = new DependencyManager();
+  private ArrayList<StackEntity.Output> outputs = Lists.newArrayList();
 
   public Template() {
   }
@@ -48,20 +61,99 @@ public class Template {
     this.resourceInfoMap = resourceInfoMap;
   }
 
-
-  public StackEntity getStackEntity() {
-    return stackEntity;
-  }
-
-  public void setStackEntity(StackEntity stackEntity) {
-    this.stackEntity = stackEntity;
-  }
-
   public ArrayList<TemplateParameter> getTemplateParameters() {
     return templateParameters;
   }
 
   public void setTemplateParameters(ArrayList<TemplateParameter> templateParameters) {
     this.templateParameters = templateParameters;
+  }
+
+  public void setTemplateBody(String templateBody) {
+    this.templateBody = templateBody;
+  }
+
+  public String getTemplateBody() {
+    return templateBody;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public Map<String, String> getPseudoParameterMap() {
+    return pseudoParameterMap;
+  }
+
+  public void setPseudoParameterMap(Map<String, String> pseudoParameterMap) {
+    this.pseudoParameterMap = pseudoParameterMap;
+  }
+
+  public void setAvailabilityZoneMap(Map<String, List<String>> availabilityZoneMap) {
+    this.availabilityZoneMap = availabilityZoneMap;
+  }
+
+  public Map<String, List<String>> getAvailabilityZoneMap() {
+    return availabilityZoneMap;
+  }
+
+  public void setTemplateFormatVersion(String templateFormatVersion) {
+    this.templateFormatVersion = templateFormatVersion;
+  }
+
+  public String getTemplateFormatVersion() {
+    return templateFormatVersion;
+  }
+
+  public Map<String, Map<String, Map<String, String>>> getMapping() {
+    return mapping;
+  }
+
+  public void setMapping(Map<String, Map<String, Map<String, String>>> mapping) {
+    this.mapping = mapping;
+  }
+
+  public ArrayList<StackEntity.Parameter> getParameters() {
+    return parameters;
+  }
+
+  public void setParameters(ArrayList<StackEntity.Parameter> parameters) {
+    this.parameters = parameters;
+  }
+
+  public Map<String, Boolean> getConditionMap() {
+    return conditionMap;
+  }
+
+  public void setConditionMap(Map<String, Boolean> conditionMap) {
+    this.conditionMap = conditionMap;
+  }
+
+  public Map<String, StackEntity.Parameter> getParameterMap() {
+    Map<String, StackEntity.Parameter> map = Maps.newLinkedHashMap();
+    for (StackEntity.Parameter parameter: parameters) {
+      map.put(parameter.getKey(), parameter);
+    }
+    return map;
+  }
+
+  public void setResourceDependencyManager(DependencyManager resourceDependencyManager) {
+    this.resourceDependencyManager = resourceDependencyManager;
+  }
+
+  public DependencyManager getResourceDependencyManager() {
+    return resourceDependencyManager;
+  }
+
+  public ArrayList<StackEntity.Output> getOutputs() {
+    return outputs;
+  }
+
+  public void setOutputs(ArrayList<StackEntity.Output> outputs) {
+    this.outputs = outputs;
   }
 }

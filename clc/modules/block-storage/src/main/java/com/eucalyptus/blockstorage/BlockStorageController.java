@@ -1900,23 +1900,27 @@ public class BlockStorageController {
                     LOG.error(e);
                     continue;
                 }
-                try {
-                	String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
-                	if(snapshotTransfer == null) {
-                        if (mock == null ) {
-                            snapshotTransfer = new S3SnapshotTransfer();
-                        }
-                		else {
-                            snapshotTransfer = mock;
-                        }
-                	}
-                	snapshotTransfer.setSnapshotId(snapshotId);
-                	snapshotTransfer.setBucketName(names[0]);
-                	snapshotTransfer.setKeyName(names[1]);
-                    snapshotTransfer.delete();
-                } catch (Exception e) {
-                    LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
-                } 
+                
+				if (StringUtils.isNotBlank(foundSnapshotInfo.getSnapshotLocation())) {
+					try {
+						String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
+						if (snapshotTransfer == null) {
+							if (mock == null) {
+								snapshotTransfer = new S3SnapshotTransfer();
+							} else {
+								snapshotTransfer = mock;
+							}
+						}
+						snapshotTransfer.setSnapshotId(snapshotId);
+						snapshotTransfer.setBucketName(names[0]);
+						snapshotTransfer.setKeyName(names[1]);
+						snapshotTransfer.delete();
+					} catch (Exception e) {
+						LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+					}
+				} else {
+					LOG.debug("Snapshot location missing for " + snapshotId + ". Skipping deletion from ObjectStorageGateway");
+				}
             }
         }
     }

@@ -448,6 +448,7 @@ typedef struct ncInstance_t {
     //! @name field added in 4.0 for faster termination
     boolean bail_flag;                 //!< instance termination was requested
     //! @}
+    char rootDirective[SMALL_CHAR_BUFFER_SIZE]; //!< root directive provided by user in the instance manifest
 } ncInstance;
 
 //! Structure defining NC resource information

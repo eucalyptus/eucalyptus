@@ -243,7 +243,7 @@ public class ClusterAllocator implements Runnable {
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
       this.setupVolumeMessages( );
-      this.setupCredentialMessages();
+      this.setupCredentialMessages( );
       this.updateResourceMessages( );
       db.commit( );
     } catch ( final Exception e ) {
@@ -303,7 +303,7 @@ public class ClusterAllocator implements Runnable {
       }
     }
   }
-  
+
   private void setupCredentialMessages( ) {
     try{
       final User owner = Accounts.lookupUserById(this.allocInfo.getOwnerFullName().getUserId());
@@ -497,6 +497,7 @@ public class ClusterAllocator implements Runnable {
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( this.allocInfo.getPartition( ), token.getAllocationInfo().getReservationId() );
+    allocInfo.setRootDirective();
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo );
@@ -680,6 +681,7 @@ public class ClusterAllocator implements Runnable {
                                    .credential( this.allocInfo.getCredential( ) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
+                                   .rootDirective( this.allocInfo.getRootDirective() )
                                    .create( );
     return new VmRunCallback( run, childToken );
   }

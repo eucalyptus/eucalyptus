@@ -90,11 +90,16 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import com.eucalyptus.vm.VmRuntimeState;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
@@ -114,7 +119,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         regarding( );
       }
     } );
-    this.initialInstances = createInstanceSupplier( this, partitionFilter( this ) );
+    this.initialInstances = createInstanceSupplier( this, Predicates.and( VmState.STOPPED.not( ), partitionFilter( this ) ) );
   }
   
   private static Supplier<Set<String>> createInstanceSupplier( final StateUpdateMessageCallback<Cluster, ?, ?> cb, final Predicate<VmInstance> filter ) {
@@ -172,14 +177,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       
       final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances.get( ), reportedInstances ) );
-      final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances.get( ) ) );
+      final Set<String> unknownInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances.get( ) ) );
       for ( final VmInfo runVm : reply.getVms( ) ) {
         if ( Databases.isVolatile( ) ) {
           return;
         } else if ( this.initialInstances.get( ).contains( runVm.getInstanceId( ) ) ) {
           VmStateCallback.handleReportedState( runVm );
-        } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
-          VmStateCallback.handleRestore( runVm );
+        } else if ( unknownInstances.contains( runVm.getInstanceId( ) ) ) {
+          VmStateCallback.handleUnknown( runVm );
         }
       }
       for ( final String vmId : unreportedInstances ) {
@@ -194,7 +199,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   private static void handleUnreported( final String vmId ) {
     try {
-      VmInstance vm = VmInstances.lookupAny( vmId );
+      final VmInstance vm = VmInstances.lookupAny( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         return;
@@ -214,8 +219,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstances.stopped( vm );
       } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.terminated( vm );
-      } else {
-        return;
+      } else if ( VmStateSet.RUN.apply( vm ) && VmRuntimeState.InstanceStatus.Ok.apply( vm ) ) {
+        VmInstances.unreachable( vm );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex );
@@ -232,7 +237,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         if ( VmStateSet.DONE.apply( vm ) ) {
           db.rollback( );
           if ( VmInstance.Reason.EXPIRED.apply( vm ) ) {
-            VmStateCallback.handleRestore( runVm );
+            VmStateCallback.handleUnknown( runVm );
           } else {
             LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
           }
@@ -274,14 +279,23 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       Logs.extreme( ).error( ex1, ex1 );
     }
   }
-  
-  private static boolean handleRestore( final VmInfo runVm ) {
+
+  private static void handleUnknown( final VmInfo runVm ) {
+    for ( final Optional<VmInstance.RestoreHandler> restoreHandler :
+        VmInstance.RestoreHandler.parseList( VmInstances.UNKNOWN_INSTANCE_HANDLERS ) ) {
+      if ( restoreHandler.isPresent( ) && handleRestore( runVm, restoreHandler.get( ) ) ) {
+        break;
+      }
+    }
+  }
+
+  private static boolean handleRestore( final VmInfo runVm,
+                                        final Predicate<VmInfo> restorer ) {
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     if ( VmStateSet.RUN.contains( runVmState ) ) {
       try {
         final VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
-        if ( vm != null &&
-            !( VmStateSet.DONE.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
+        if ( !( VmStateSet.DONE.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
           return false;
         }
       } catch ( NoSuchElementException ex ) {
@@ -293,7 +307,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       try {
         LOG.debug( "Instance " + runVm.getInstanceId( ) + " " + runVm );
-        return VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+        return restorer.apply( runVm );
       } catch ( Throwable ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
@@ -301,7 +315,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     return false;
   }
-  
+
   private static void handleReportedTeardown( VmInstance vm, final VmInfo runVm ) throws TransactionException {
     /**
      * TODO:GRZE: based on current local instance state we need to handle reported
@@ -336,7 +350,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   private static Predicate<VmInstance> partitionFilter( final SubjectMessageCallback<Cluster, ?, ?> cb ) {
     return new Predicate<VmInstance>( ) {
-      
       @Override
       public boolean apply( VmInstance arg0 ) {
         return arg0.getPartition( ).equals( cb.getSubject( ).getConfiguration( ).getPartition( ) );
