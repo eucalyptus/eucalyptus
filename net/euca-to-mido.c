@@ -28,6 +28,48 @@
 #include "midonet-api.h"
 #include "euca-to-mido.h"
 
+int create_mido_veth(char *name, char *subnet, char *slashnet, char **tapiface) {
+  int ret=0, rc=0;
+  u32 nw, gw;
+  char cmd[EUCA_MAX_PATH], *gateway=NULL, sid[16];
+  sequence_executor cmds;
+
+  // create a meta tap
+
+  sscanf(name, "subnet-%8s", sid);
+  
+  rc = se_init(&cmds, "/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap", 2, 1);
+  
+  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip link add vn0_%s type veth peer name vn1_%s", sid, sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip link set vn0_%s up", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip link set vn1_%s up", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+  
+  nw = dot2hex(subnet);
+  gw = nw+2;
+  gateway = hex2dot(gw);
+  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip addr add %s/%s dev vn1_%s", gateway, slashnet, sid);
+  EUCA_FREE(gateway);
+  se_add(&cmds, cmd, NULL, ignore_exit2);
+  
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute tap interface create/ip assign commands: see above log entries for details\n");
+    *tapiface = NULL;
+    ret=1;
+  } else {
+    *tapiface = calloc(16, sizeof(char));
+    snprintf(*tapiface, 16, "vn0_%s", sid);
+  }
+  se_free(&cmds);
+
+  return(ret);
+}
 
 int do_midonet_populate(mido_config *mido) {
   int i=0, j=0, k=0, rc=0, rtid=0, ret=0;
@@ -212,6 +254,12 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
   mido_vpc_subnet *vpcsubnet=NULL;
   mido_vpc *vpc=NULL;
   
+  if (!gni || !mido) {
+    return(1);
+  }
+
+  mido->enabledCLCIp = gni->enabledCLCIp;
+
   rc = do_midonet_populate(mido);
   if (rc) {
     LOGERROR("could not populate prior to update: see above log entries for details\n");
@@ -352,6 +400,15 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 	    } else {
 	      rulepos++;
 	    }
+
+#if 0
+	    snprintf(tmp_name3, 32, "%d", rulepos);
+	    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst", mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", "192.168.4.2", "natTargets:addressFrom", "192.168.4.2", "natTargets:portFrom", "8000", "natTargets:portTo", "8000", "natTargets:END", "END", NULL);
+	    if (rc) {
+	    } else {
+	      rulepos++;
+	    }
+#endif
 
 	    snprintf(tmp_name3, 32, "%d", rulepos);
 	    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "accept", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "matchForwardFlow", "true", NULL);
@@ -902,8 +959,8 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc_
     for (i=0; i<vpcsubnet->max_dhcphosts && !found; i++) {
       tmpstr = NULL;
       rc = mido_getel_midoname(&(vpcsubnet->dhcphosts[i]), "name", &tmpstr);
-      if (!rc && tmpstr && strlen(tmpstr)) {
-	LOGTRACE("HELLOFOO: %d\n", vpcinstance->midos[VPCBR_DHCPHOST].init);
+      if (!rc && tmpstr && strlen(tmpstr) && !strcmp(tmpstr, vpcinstance->name)) {
+	LOGTRACE("HELLOFOO: %d/%s\n", vpcinstance->midos[VPCBR_DHCPHOST].init, tmpstr);
 	mido_copy_midoname(&(vpcinstance->midos[VPCBR_DHCPHOST]), &(vpcsubnet->dhcphosts[i]));
 	found=1;
       }
@@ -1065,7 +1122,7 @@ int delete_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
   return(ret);
 }
 
-int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *int_rtnetwork, char *int_rtslashnet) {
+int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet) {
   int ret=0;
   
   if (!mido || !ext_rthostname || !ext_rtaddr || !ext_rtiface || !int_rtnetwork || !int_rtslashnet || !strlen(ext_rthostname) || !strlen(ext_rtaddr) || !strlen(ext_rtiface)) return(1);
@@ -1075,6 +1132,8 @@ int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, c
   mido->ext_rthostname = strdup(ext_rthostname);
   mido->ext_rtaddr = strdup(ext_rtaddr);
   mido->ext_rtiface = strdup(ext_rtiface);
+  mido->ext_pubnw = strdup(ext_pubnw);
+  mido->ext_pubgwip = strdup(ext_pubgwip);
   mido->int_rtnw = dot2hex(int_rtnetwork); // strdup(int_rtnetwork);
   mido->int_rtsn = atoi(int_rtslashnet);
   mido->int_rtaddr = mido->int_rtnw + 1;
@@ -1702,8 +1761,8 @@ int delete_mido_vpc(mido_vpc *vpc) {
 }
 
 int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, char *subnet, char *slashnet, char *gw) {
-  int rc=0, ret=0;
-  char name_buf[32];
+  int rc=0, ret=0, i=0, found=0;
+  char name_buf[32], *tapiface=NULL;
   
   rc = mido_create_port(&(vpc->midos[VPCRT]), "InteriorRouter", gw, subnet, slashnet, &(vpcsubnet->midos[VPCRT_BRPORT]));
   if (rc) {
@@ -1743,6 +1802,47 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     return(1);
   }
 
+  // meta tap
+
+
+#if 0
+  // find the interface mapping
+  found=0;
+  for (i=0; i<mido->max_hosts && !found; i++) {
+    if (strstr(mido->hosts[i].name, "h-41.qa1")) {
+      mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->hosts[i]));
+      found=1;
+    }
+  }
+  
+  if (vpcsubnet->midos[VPCBR_METAHOST].init) {
+    rc = create_mido_veth(vpcsubnet->name, subnet, slashnet, &tapiface);
+    if (rc || !tapiface) {
+      LOGERROR("cannot create metadata taps: check log output for details\n");
+      ret = 1;
+    } else {
+      LOGDEBUG("created tap iface: %s\n", SP(tapiface));
+    }
+    
+    if (!ret) {
+      // create tap port
+      rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "ExteriorBridge", NULL, NULL, NULL, &(vpcsubnet->midos[VPCBR_METAPORT]));
+      if (rc) {
+	LOGERROR("cannot create midonet bridge port: check midonet health\n");
+	ret=1;
+      }
+    }
+
+    if (!ret) {
+      // link tap port
+      rc = mido_link_host_port(&(vpcsubnet->midos[VPCBR_METAHOST]), tapiface, &(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_METAPORT]));
+      if (rc) {
+	LOGERROR("cannot link port to host interface: check midonet health\n");
+	return(1);
+      }
+    }
+  }
+#endif
   return(ret);
 }
 
@@ -1861,8 +1961,11 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
   rc = mido_create_rule(&(vpc->midos[VPCRT_PRECHAIN]), NULL, "position", "5", "type", "jump", "jumpChainId", vpc->midos[VPCRT_PREFWCHAIN].uuid, NULL);
   
   // meta
-  rc = mido_create_rule(&(vpc->midos[VPCRT_PREMETACHAIN]), NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst", midocore->midos[METADATA_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", "10.111.5.34", "natTargets:addressFrom", "10.111.5.34", "natTargets:portFrom", "8773", "natTargets:portTo", "8773", "natTargets:END", "END", NULL);
+  tmpstr = hex2dot(mido->enabledCLCIp);
+  rc = mido_create_rule(&(vpc->midos[VPCRT_PREMETACHAIN]), NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst", midocore->midos[METADATA_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", tmpstr, "natTargets:addressFrom", tmpstr, "natTargets:portFrom", "8773", "natTargets:portTo", "8773", "natTargets:END", "END", NULL);
+  EUCA_FREE(tmpstr);
   rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), NULL, "type", "rev_dnat", "flowAction", "accept", NULL);
+
   
   // apply the chains to the vpc router
   rc = mido_update_router(&(vpc->midos[VPCRT]), "inboundFilterId", vpc->midos[VPCRT_PRECHAIN].uuid, NULL);
@@ -1894,7 +1997,7 @@ int delete_mido_core(mido_core *midocore) {
 
 int create_mido_core(mido_config *mido, mido_core *midocore) {
   int ret=0, rc=0;
-  char nw[32], sn[32], gw[32], *tmpstr=NULL;
+  char nw[32], sn[32], gw[32], *tmpstr=NULL, pubnw[32], pubnm[32];
   
   tmpstr = hex2dot(mido->int_rtnw);
   snprintf(nw, 32, "%s", tmpstr);
@@ -1926,22 +2029,24 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
     return(1);
   }
 
+  
+  cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL);
   //  rc = mido_create_port(&(midocore->midos[EUCART]), "ExteriorRouter", "10.111.5.57", "10.111.0.0", "16", &(midocore->midos[EUCART_GWPORT]));
-  rc = mido_create_port(&(midocore->midos[EUCART]), "ExteriorRouter", "10.111.5.57", "10.111.0.0", "16", &(midocore->midos[EUCART_GWPORT]));
+  rc = mido_create_port(&(midocore->midos[EUCART]), "ExteriorRouter", mido->ext_rtaddr, pubnw, pubnm, &(midocore->midos[EUCART_GWPORT]));
   if (rc) {
     LOGERROR("cannot create router port: check midonet health\n");
     return(1);
   }
 
   //  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "10.111.0.0", "16", NULL, "0", NULL);
-  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "10.111.0.0", "16", "UNSET", "0", NULL);
+  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
   if (rc) {
     LOGERROR("cannot create router route: check midonet health\n");
     return(1);
   }
   
   //  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "0.0.0.0", "0", "10.111.5.34", "0", NULL);
-  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "0.0.0.0", "0", "10.111.5.34", "0", NULL);
+  rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
   if (rc) {
     LOGERROR("cannot create router route: check midonet health\n");
     return(1);
@@ -1995,17 +2100,25 @@ int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw) {
   tok = strchr(cpy, '/');
   if (tok) {
     *tok='\0';
-    snprintf(outnet, strlen(cpy)+1, "%s", cpy);
+    if (outnet) {
+      snprintf(outnet, strlen(cpy)+1, "%s", cpy);
+    }
     tok++;
-    snprintf(outslashnet, strlen(tok)+1, "%s", tok);
+    if (outslashnet) {
+      snprintf(outslashnet, strlen(tok)+1, "%s", tok);
+    }
   }
   EUCA_FREE(cpy);
 
-  nw = dot2hex(outnet);
-  gw = nw+1;
-  tok = hex2dot(gw);
-  snprintf(outgw, strlen(tok)+1, "%s", tok);
-  EUCA_FREE(tok);
+  if (outnet) {
+    nw = dot2hex(outnet);
+    gw = nw+1;
+    tok = hex2dot(gw);
+    if (outgw) {
+      snprintf(outgw, strlen(tok)+1, "%s", tok);
+    }
+    EUCA_FREE(tok);
+  }
 
   return(0);
 }

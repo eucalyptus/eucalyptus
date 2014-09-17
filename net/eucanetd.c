@@ -186,6 +186,10 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDOGWIFACE", NULL}
     ,
+    {"MIDOPUBNW", NULL}
+    ,
+    {"MIDOPUBGWIP", NULL}
+    ,
     {NULL, NULL}
     ,
 };
@@ -384,7 +388,7 @@ int main(int argc, char **argv)
                     free_mido_config(mido);
                     bzero(mido, sizeof(mido_config));
                 }
-                rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, "192.168.254.0", "24");
+                rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
                 if (rc) {
                     LOGERROR("could not initialize mido config\n");
                     update_globalnet_failed = 1;
@@ -1554,7 +1558,8 @@ int read_config(void)
     cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
     cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
     cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
-    
+    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
+    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
 
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
@@ -1646,6 +1651,8 @@ int read_config(void)
     if (cvals[EUCANETD_CVAL_MIDOGWHOST]) snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
     if (cvals[EUCANETD_CVAL_MIDOGWIP]) snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
     if (cvals[EUCANETD_CVAL_MIDOGWIFACE]) snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBNW]) snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP]) snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
 
     LOGDEBUG
         ("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n",
@@ -1701,7 +1708,7 @@ int read_config(void)
     } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
         // VPCMIDO mode init
         //        rc = initialize_mido(mido, "a-15.qa1.eucalyptus-systems.com", "10.111.5.57", "192.168.254.0", "24");
-        rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, "192.168.254.0", "24");
+        rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
         if (rc) {
             LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
             ret = 1;

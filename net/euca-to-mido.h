@@ -20,7 +20,7 @@ typedef struct mido_vpc_instance_t {
   int gnipresent;
 } mido_vpc_instance;
 
-enum {VPCBR, VPCBR_RTPORT, VPCRT_BRPORT, VPCBR_DHCP, VPCSUBNETEND};
+enum {VPCBR, VPCBR_RTPORT, VPCRT_BRPORT, VPCBR_DHCP, VPCBR_METAPORT, VPCBR_METAHOST, VPCSUBNETEND};
 typedef struct mido_vpc_subnet_t {
   char name[16], vpcname[16];
   midoname midos[VPCSUBNETEND];
@@ -49,8 +49,8 @@ typedef struct mido_core_t {
 } mido_core;
 
 typedef struct mido_config_t {
-  char *ext_rthostname, *ext_rtaddr, *ext_rtiface;//, *int_rtnetwork, *int_rtslashnet, *int_rtaddr;
-  u32 int_rtnw, int_rtaddr;
+  char *ext_rthostname, *ext_rtaddr, *ext_rtiface, *ext_pubnw, *ext_pubgwip;
+  u32 int_rtnw, int_rtaddr, enabledCLCIp;
   int int_rtsn;
   midoname *hosts, *routers, *bridges, *chains, *brports, *rtports, *ipaddrgroups;
   int max_hosts, max_routers, max_bridges, max_chains, max_brports, max_rtports, max_ipaddrgroups;
@@ -67,7 +67,7 @@ int set_router_id(mido_config *mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw);
 
-int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *int_rtnetwork, char *int_rtslashnet);
+int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config *mido);
 
 int populate_mido_core(mido_config *mido, mido_core *midocore);
@@ -99,7 +99,6 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *ins
 int connect_mido_vpc_instance_elip(mido_config *mido, mido_core *midocore, mido_vpc *vpc, mido_vpc_instance *inst);
 int disconnect_mido_vpc_instance_elip(mido_vpc_instance *vpcinstance);
 
-
 int free_mido_config(mido_config *mido);
 int free_mido_core(mido_core *midocore);
 int free_mido_vpc(mido_vpc *vpc);
@@ -113,5 +112,7 @@ void print_mido_vpc_instance(mido_vpc_instance *vpcinstance);
 
 int do_midonet_update(globalNetworkInfo *gni, mido_config *mido);
 int do_midonet_teardown(mido_config *mido);
+
+int create_mido_veth(char *name, char *subnet, char *slashnet, char **tapiface);
 
 #endif
