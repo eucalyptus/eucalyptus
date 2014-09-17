@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2009-2013 Eucalyptus Systems, Inc.
+# Copyright 2009-2014 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -175,12 +175,21 @@ class Euca2ools(object):
             op_args.extend(['--image-size', args.image_size])
         if hasattr(args, 'upload_policy') and args.upload_policy is not None:
             policy = args.upload_policy
+            policyObject = None
             try:
-                json.loads(policy) # try parsing as JSON
+                policyObject = json.loads(policy) # try parsing as JSON
             except ValueError:
                 policy = args.upload_policy.decode('base64', 'strict')
-                json.loads(policy) # try parsing again, which should work
+                policyObject = json.loads(policy) # try parsing again, which should work
             op_args.extend(['--upload-policy', policy])
+            if policyObject is not None:
+              policyConditions = policyObject.get('conditions')
+              if policyConditions is not None:
+                for policyCondition in policyConditions:
+                  policySecurityToken = policyCondition.get('x-amz-security-token')
+                  if policySecurityToken is not None:
+                    op_args.extend(['--security-token', policySecurityToken])
+                    break
         if hasattr(args, 'upload_policy_signature') and args.upload_policy_signature is not None:
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
