@@ -22,7 +22,9 @@ package com.eucalyptus.imaging;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
@@ -88,6 +90,7 @@ import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
@@ -102,6 +105,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
@@ -139,12 +143,15 @@ import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
@@ -158,10 +165,13 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import edu.ucsb.eucalyptus.msgs.Snapshot;
+import edu.ucsb.eucalyptus.msgs.SubnetType;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.Volume;
+import edu.ucsb.eucalyptus.msgs.VpcMessage;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -641,9 +651,25 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
-	public List<DescribeKeyPairsResponseItemType> describeKeyPairsAsUser(final String userId, final List<String> keyNames){
-	  final EucaDescribeKeyPairsTask task =
+
+  public List<SubnetType> describeSubnetsAsUser(final String userId, final Set<String> subnetIds) {
+    try {
+      final DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType( );
+      describeSubnetsType.setUserId( userId );
+      describeSubnetsType.markPrivileged( );
+      final Filter filter = new Filter( );
+      filter.setName( "subnet-id" );
+      filter.setValueSet( Lists.newArrayList( subnetIds ) );
+      describeSubnetsType.getFilterSet( ).add( filter );
+      final DescribeSubnetsResponseType response = AsyncRequests.sendSync( Eucalyptus.class, describeSubnetsType );
+      return response.getSubnetSet( ).getItem( );
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public List<DescribeKeyPairsResponseItemType> describeKeyPairsAsUser(final String userId, final List<String> keyNames){
+    final EucaDescribeKeyPairsTask task =
         new EucaDescribeKeyPairsTask(keyNames);
     final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
     try{
@@ -654,7 +680,7 @@ public class EucalyptusActivityTasks {
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
-	}
+  }
 	
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
 		final EucaDescribeKeyPairsTask task =
@@ -1047,32 +1073,44 @@ public class EucalyptusActivityTasks {
       throw Exceptions.toUndeclared(ex);
     }
 	}
-	
-	public String runInstancesAsUser(final String userId, final String imageId, final String groupName, 
-	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring, final String keyName){
-	  if(userId == null || userId.length()<=0)
-	    throw new IllegalArgumentException("User ID is required");
-	  if(imageId == null || imageId.length()<=0)
-	    throw new IllegalArgumentException("Image ID is required");
-	  
-	  final EucalyptusRunInstancesTask task = new EucalyptusRunInstancesTask(imageId);
-	  task.setGroupName(groupName);
-	  task.setUserData(userData);
-	  task.setInstanceType(instanceType);
-	  task.setAvailabilityZone(availabilityZone);
-	  task.setMonitoring(monitoring);
-	  task.setKeyName(keyName);
-	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
-	  try{
-	    if(result.get())
-	      return task.getInstanceId();
-	    else
-	      throw new EucalyptusActivityException("failed to run instances");
-	  }catch(final Exception ex){
-	    throw Exceptions.toUndeclared(ex);
-	  }
-	}
-	
+
+  public String runInstancesAsUser(
+      final String userId,
+      final String imageId,
+      final Set<String> groupNames,
+      final String userData,
+      final String instanceType,
+      final String availabilityZone,
+      final String subnetId,
+      final String privateIp,
+      boolean monitoring,
+      final String keyName
+  ){
+    if(userId == null || userId.length()<=0)
+      throw new IllegalArgumentException("User ID is required");
+    if(imageId == null || imageId.length()<=0)
+      throw new IllegalArgumentException("Image ID is required");
+
+    final EucalyptusRunInstancesTask task = new EucalyptusRunInstancesTask(imageId);
+    task.setGroupNames( groupNames );
+    task.setUserData( userData );
+    task.setInstanceType( instanceType );
+    task.setAvailabilityZone( availabilityZone );
+    task.setSubnetId( subnetId );
+    task.setPrivateIp( privateIp );
+    task.setMonitoring( monitoring );
+    task.setKeyName( keyName );
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get())
+        return task.getInstanceId();
+      else
+        throw new EucalyptusActivityException("failed to run instances");
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
 	public List<Snapshot> describeSnapshotsAsUser(final String userId, final List<String> snapshotIds){
 	  final EucalyptusDescribeSnapshotsTask task = new EucalyptusDescribeSnapshotsTask(snapshotIds);
     final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
@@ -1292,61 +1330,70 @@ public class EucalyptusActivityTasks {
       this.results = resp.getSnapshotSet();
     }
     
-	  public List<Snapshot> getResult(){
-	    return this.results;
-	  }
-	}
-	
-	private class EucalyptusRunInstancesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-	  private String imageId = null;
-	  private String groupName = null;
-	  private String userData = null;
-	  private String instanceType = null;
-	  private String availabilityZone = null;
-	  private boolean monitoringEnabled = false;
-	  private String keyName = null;
-	  private String instanceId = null;
-	  private EucalyptusRunInstancesTask(final String imageId){
-	    this.imageId = imageId;
-	  }
-	  private void setGroupName(final String groupName){
-	    this.groupName = groupName;
-	  }
-	  private void setUserData(final String userData){
-	    this.userData = userData;
-	  }
-	  private void setInstanceType(final String instanceType){
-	    this.instanceType = instanceType;
-	  }
-	  private void setAvailabilityZone(final String availabilityZone){
-	    this.availabilityZone = availabilityZone;
-	  }
-	  private void setMonitoring(final boolean monitoring){
-	    this.monitoringEnabled = monitoring;
-	  }
-	  private void setKeyName(final String keyName){
-	    this.keyName = keyName;
-	  }
-	  
-	  private RunInstancesType runInstances(){
-	    final RunInstancesType req = new RunInstancesType();
-	    req.setImageId(this.imageId);
-	    if(this.groupName != null)
-	      req.setGroupSet(Lists.newArrayList(this.groupName));
-	    if(this.userData != null)
-	      req.setUserData(this.userData);
-	    if(this.instanceType!=null)
-	      req.setInstanceType(this.instanceType);
-	    if(this.availabilityZone!=null)
-	      req.setAvailabilityZone(this.availabilityZone);
-	    if(this.keyName!=null)
-	      req.setKeyName(this.keyName);
-	    req.setMonitoring(this.monitoringEnabled);
-	    req.setMinCount(1);
-	    req.setMaxCount(1);
-	    return req;
-	  }
-	  
+    public List<Snapshot> getResult(){
+      return this.results;
+    }
+  }
+
+  private class EucalyptusRunInstancesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+    private String imageId = null;
+    private Set<String> groupNames = Collections.emptySet( );
+    private String userData = null;
+    private String instanceType = null;
+    private String availabilityZone = null;
+    private String subnetId = null;
+    private String privateIp = null;
+    private boolean monitoringEnabled = false;
+    private String keyName = null;
+    private String instanceId = null;
+    private EucalyptusRunInstancesTask(final String imageId){
+      this.imageId = imageId;
+    }
+    private void setGroupNames(final Set<String> groupNames){
+      this.groupNames = groupNames;
+    }
+    private void setUserData(final String userData){
+      this.userData = userData;
+    }
+    private void setInstanceType(final String instanceType){
+      this.instanceType = instanceType;
+    }
+    private void setAvailabilityZone(final String availabilityZone){
+      this.availabilityZone = availabilityZone;
+    }
+    private void setPrivateIp( final String privateIp ) {
+      this.privateIp = privateIp;
+    }
+    private void setSubnetId( final String subnetId ) {
+      this.subnetId = subnetId;
+    }
+    private void setMonitoring(final boolean monitoring){
+      this.monitoringEnabled = monitoring;
+    }
+    private void setKeyName(final String keyName){
+      this.keyName = keyName;
+    }
+
+    private RunInstancesType runInstances(){
+      final RunInstancesType req = new RunInstancesType();
+      req.setImageId( this.imageId );
+      req.setUserData( this.userData );
+      req.setInstanceType( this.instanceType );
+      req.setKeyName(this.keyName);
+      req.setMonitoring(this.monitoringEnabled);
+      req.setMinCount(1);
+      req.setMaxCount(1);
+      if ( subnetId != null ) {
+        final InstanceNetworkInterfaceSetItemRequestType networkInterface = req.primaryNetworkInterface( true );
+        networkInterface.setSubnetId(this.subnetId);
+        networkInterface.setPrivateIpAddress(this.privateIp);
+      } else {
+        req.setGroupSet(Lists.newArrayList(this.groupNames));
+        req.setAvailabilityZone( this.availabilityZone );
+      }
+      return req;
+    }
+
     @Override
     void dispatchInternal(
         ActivityContext<EucalyptusMessage, Eucalyptus> context,
