@@ -72,6 +72,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.util.Cidr;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -88,6 +89,12 @@ public class AuthenticationProperties {
 
   @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
   public static volatile String CREDENTIAL_DOWNLOAD_HOST_MATCH = "";
+
+  @ConfigurableField( description = "Limit for access keys per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public static volatile Integer ACCESS_KEYS_LIMIT = 2;
+
+  @ConfigurableField( description = "Limit for signing certificates per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public static volatile Integer SIGNING_CERTIFICATES_LIMIT = 2;
 
   public static class LicChangeListener implements PropertyChangeListener {
     @Override

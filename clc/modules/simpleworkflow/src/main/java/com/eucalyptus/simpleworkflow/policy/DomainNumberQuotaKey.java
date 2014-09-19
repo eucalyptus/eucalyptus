@@ -25,6 +25,7 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
 import com.eucalyptus.util.RestrictedTypes;
@@ -50,7 +51,7 @@ public class DomainNumberQuotaKey extends QuotaKey {
   }
 
   @Override
-  public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( RestrictedTypes.quantityMetricFunction( SimpleWorkflowMetadata.DomainMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );

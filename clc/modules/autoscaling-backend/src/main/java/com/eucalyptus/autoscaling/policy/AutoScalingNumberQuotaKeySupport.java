@@ -24,6 +24,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.util.RestrictedTypes;
@@ -59,7 +60,7 @@ abstract class AutoScalingNumberQuotaKeySupport<T extends AutoScalingMetadata> e
   }
 
   @Override
-  public final String value( final QuotaKey.Scope scope, 
+  public final String value( final Authorization.Scope scope,
                              final String id, 
                              final String resource, 
                              final Long quantity ) throws AuthException {
