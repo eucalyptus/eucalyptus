@@ -62,13 +62,8 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
-import java.util.List;
-
 import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
 
-/**
- * Created by wesw on 7/14/14.
- */
 public interface EucaRbd {
 
 	/**
@@ -95,19 +90,12 @@ public interface EucaRbd {
 	public void deleteImage(String imageName);
 
 	/**
-	 * Check if the image exists
+	 * Check if the image exists in any of the configured pools and return the pool name
 	 * 
 	 * @param imageName Name of the image to be checked on
 	 * @return Returns true if the image exists and false otherwise
 	 */
-	public boolean imageExists(String imageName);
-
-	/**
-	 * List all RBD images in the pool
-	 * 
-	 * @return Returns a list of image names
-	 */
-	public List<String> listImages();
+	public String getImagePool(String imageName);
 
 	/**
 	 * Create an RBD snapshot

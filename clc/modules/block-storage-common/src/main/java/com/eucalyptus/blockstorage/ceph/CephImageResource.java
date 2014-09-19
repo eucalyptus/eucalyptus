@@ -65,18 +65,33 @@ package com.eucalyptus.blockstorage.ceph;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.log4j.Logger;
+
 import com.ceph.rbd.RbdImage;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
 public class CephImageResource extends StorageResource {
 
+	private static final Logger LOG = Logger.getLogger(CephImageResource.class);
+
+	private String imageName = null;
+	private String poolName = null;
 	private CephInfo info = null;
 
 	public CephImageResource(String id, String path) {
 		super(id, path, StorageResource.Type.CEPH);
 		info = CephInfo.getStorageInfo();
+		String[] poolImage = path.split(CephInfo.POOL_IMAGE_DELIMITER);
+		if (poolImage == null || poolImage.length != 2) {
+			LOG.warn("Invalid format for path CephImageResource, expected pool/image but got " + path);
+			throw new EucalyptusCephException("Invalid format for path CephImageResource, expected pool/image but got " + path);
+		} else {
+			poolName = poolImage[0];
+			imageName = poolImage[1];
+		}
 	}
 
 	@Override
@@ -88,10 +103,10 @@ public class CephImageResource extends StorageResource {
 	public Long getSize() throws UnknownSizeException {
 		CephConnectionManager conn = null;
 		try {
-			conn = CephConnectionManager.getConnection(info);
+			conn = CephConnectionManager.getConnection(info, poolName);
 			RbdImage rbdImage = null;
 			try {
-				rbdImage = conn.getRbd().open(this.getId());
+				rbdImage = conn.getRbd().open(imageName);
 				return rbdImage.stat().size;
 			} finally {
 				if (rbdImage != null) {
@@ -99,7 +114,7 @@ public class CephImageResource extends StorageResource {
 				}
 			}
 		} catch (Exception e) {
-			throw new UnknownSizeException("Failed to determine size of ceph image " + this.getId(), e);
+			throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
 		} finally {
 			if (conn != null) {
 				conn.disconnect();
@@ -109,11 +124,11 @@ public class CephImageResource extends StorageResource {
 
 	@Override
 	public InputStream getInputStream() throws Exception {
-		return new CephInputStream(this.getPath(), info);
+		return new CephInputStream(imageName, poolName, info);
 	}
 
 	@Override
 	public OutputStream getOutputStream() throws Exception {
-		return new CephOutputStream(this.getPath(), info);
+		return new CephOutputStream(imageName, poolName, info);
 	}
 }

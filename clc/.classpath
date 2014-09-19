@@ -196,7 +196,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/proxool-cglib.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/quartz-2.1.7.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/rhq-pluginAnnotations-3.0.4.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/serializer.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/servlet-api-3.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/slf4j-api-1.7.5.jar"/>
@@ -234,5 +233,6 @@
 	<classpathentry kind="lib" path="lib/jackson-annotations-2.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/rados-0.1.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

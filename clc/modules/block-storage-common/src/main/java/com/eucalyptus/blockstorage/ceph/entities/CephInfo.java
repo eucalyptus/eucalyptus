@@ -62,9 +62,12 @@
 
 package com.eucalyptus.blockstorage.ceph.entities;
 
+import java.util.UUID;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
@@ -78,6 +81,7 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.google.common.base.Strings;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -105,10 +109,16 @@ public class CephInfo extends AbstractPersistent {
 	@ConfigurableField(description = "Ceph username to be employed Eucalyptus operations. If no user is configured, Eucalyptus will default to admin", displayName = "Ceph Username", initial = "admin")
 	@Column(name = "ceph_user")
 	private String cephUser;
-	@ConfigurableField(description = "Ceph storage pools made available to Eucalyptus for EBS operations. Use a CSV list for configuring multiple pools. "
-			+ "If no pools is configured, Eucalyptus will default to rbd pool", displayName = "Ceph Pools", initial = "rbd", type = ConfigurableFieldType.KEYVALUE)
-	@Column(name = "ceph_pools")
-	private String cephPools;
+	@ConfigurableField(description = "Ceph storage pools made available to Eucalyptus for EBS volumes. Use a CSV list for configuring multiple pools. "
+			+ "If no pools is configured, Eucalyptus will default to rbd pool", displayName = "Ceph Volume Pools", initial = "rbd", type = ConfigurableFieldType.KEYVALUE)
+	@Column(name = "ceph_volume_pools")
+	private String cephVolumePools;
+	@ConfigurableField(description = "Ceph storage pools made available to Eucalyptus for EBS snapshots. Use a CSV list for configuring multiple pools. "
+			+ "If no pools is configured, Eucalyptus will default to rbd pool", displayName = "Ceph Snapshot Pools", initial = "rbd", type = ConfigurableFieldType.KEYVALUE)
+	@Column(name = "ceph_snapshot_pools")
+	private String cephSnapshotPools;
+	@Column(name = "virsh_secret")
+	private String virshSecret;
 
 	public CephInfo() {
 		this.clusterName = StorageProperties.NAME;
@@ -138,12 +148,28 @@ public class CephInfo extends AbstractPersistent {
 		this.cephUser = cephUser;
 	}
 
-	public String getCephPools() {
-		return cephPools;
+	public String getCephVolumePools() {
+		return cephVolumePools;
 	}
 
-	public void setCephPools(String cephPools) {
-		this.cephPools = cephPools;
+	public void setCephVolumePools(String cephVolumePools) {
+		this.cephVolumePools = cephVolumePools;
+	}
+
+	public String getCephSnapshotPools() {
+		return cephSnapshotPools;
+	}
+
+	public void setCephSnapshotPools(String cephSnapshotPools) {
+		this.cephSnapshotPools = cephSnapshotPools;
+	}
+
+	public String getVirshSecret() {
+		return virshSecret;
+	}
+
+	public void setVirshSecret(String virshSecret) {
+		this.virshSecret = virshSecret;
 	}
 
 	@Override
@@ -171,11 +197,19 @@ public class CephInfo extends AbstractPersistent {
 		return true;
 	}
 
+	@PrePersist
+	public void checkPrePersist() {
+		if (Strings.isNullOrEmpty(virshSecret)) {
+			virshSecret = UUID.randomUUID().toString();
+		}
+	}
+
 	private static CephInfo generateDefault() {
 		CephInfo info = new CephInfo();
 		info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
 		info.setCephUser(DEFAULT_CEPH_USER);
-		info.setCephPools(DEFAULT_POOL);
+		info.setCephVolumePools(DEFAULT_POOL);
+		info.setCephSnapshotPools(DEFAULT_POOL);
 		return info;
 	}
 

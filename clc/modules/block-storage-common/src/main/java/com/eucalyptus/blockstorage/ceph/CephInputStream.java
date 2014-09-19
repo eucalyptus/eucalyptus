@@ -69,7 +69,6 @@ import org.apache.log4j.Logger;
 
 import com.ceph.rbd.RbdImage;
 import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
-import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 
 public class CephInputStream extends InputStream {
 
@@ -80,19 +79,14 @@ public class CephInputStream extends InputStream {
 	private long position;
 	private boolean isOpen;
 
-	public CephInputStream(String poolImage, CephInfo info) throws IOException {
+	public CephInputStream(String imageName, String poolName, CephInfo info) throws IOException {
 		try {
-			String[] imageDetails = poolImage.split(CephInfo.POOL_IMAGE_DELIMITER);
-			if (imageDetails == null || imageDetails.length != 2) {
-				LOG.warn("Invalid format, expected pool/image but got " + poolImage);
-				throw new EucalyptusCephException("Invalid format, expected pool/image but got " + poolImage);
-			}
-			conn = CephConnectionManager.getConnection(info, imageDetails[0]);
-			rbdImage = conn.getRbd().open(imageDetails[1]);
+			conn = CephConnectionManager.getConnection(info, poolName);
+			rbdImage = conn.getRbd().open(imageName);
 			isOpen = true;
 			position = 0;
 		} catch (Exception e) {
-			throw new IOException("Failed to open CephInputStream for " + poolImage, e);
+			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
 		}
 	}
 
