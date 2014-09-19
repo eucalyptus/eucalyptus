@@ -63,7 +63,7 @@
 package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
-import java.util.Iterator;
+import static com.eucalyptus.util.RestrictedTypes.BatchAllocator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
@@ -83,6 +83,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.network.DnsHostNamesFeature;
 import com.eucalyptus.compute.common.network.NetworkFeature;
 import com.eucalyptus.compute.common.network.NetworkResource;
@@ -106,10 +107,8 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
@@ -214,7 +213,6 @@ public class AdmissionControl {
   
   private static final List<ResourceAllocator> allocators = ImmutableList.<ResourceAllocator>of(
       NodeResourceAllocator.INSTANCE,
-      VmTypePrivAllocator.INSTANCE,
       NetworkingAllocator.INSTANCE
   );
 
@@ -222,22 +220,6 @@ public class AdmissionControl {
       NetworkingAllocator.INSTANCE
   );
 
-  enum VmTypePrivAllocator implements ResourceAllocator {
-    INSTANCE;
-    
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public void allocate( Allocation allocInfo ) throws Exception {
-      RestrictedTypes.allocateNamedUnitlessResources( allocInfo.getAllocationTokens( ).size( ),
-                                                      allocInfo.getVmType( ).allocator( ),
-                                                      ( Predicate ) Predicates.alwaysTrue( ) );
-    }
-    
-    @Override
-    public void fail( Allocation allocInfo, Throwable t ) {}
-    
-  }
-  
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
     private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
@@ -269,29 +251,20 @@ public class AdmissionControl {
           if ( forceResourceRefresh ) {
             cluster.refreshResources( );
           }
-          final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
-          final Iterator<ResourceToken> tokenIterator = tokens.iterator( );
-          try {
-            final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
-              @Override
-              public ResourceToken get( ) {
-                final ResourceToken ret = tokenIterator.next( );
-                allocInfo.getAllocationTokens( ).add( ret );
+          final BatchAllocator<ResourceToken> allocator = new BatchAllocator<ResourceToken>( ) {
+            @Override
+            public List<ResourceToken> allocate( int min, int max ) {
+              try {
+                final List<ResourceToken> ret = state.requestResourceAllocation( allocInfo, min, max );
+                allocInfo.getAllocationTokens().addAll( ret );
                 return ret;
+              } catch ( final NotEnoughResourcesException e ) {
+                throw Exceptions.toUndeclared( e );
               }
-            };
+            }
+          };
 
-            RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
-          } finally {
-            // release any tokens that were not allocated
-            Iterators.all( tokenIterator, new Predicate<ResourceToken>() {
-              @Override
-              public boolean apply(final ResourceToken resourceToken) {
-                state.releaseToken( resourceToken );
-                return true;
-              }
-            } );
-          }
+          RestrictedTypes.allocateUnitlessResources( CloudMetadata.VmInstanceMetadata.class, tryAmount, maxAmount, allocator );
           return allocInfo.getAllocationTokens( );
         } finally {
           cluster.getGateLock( ).readLock( ).unlock( );

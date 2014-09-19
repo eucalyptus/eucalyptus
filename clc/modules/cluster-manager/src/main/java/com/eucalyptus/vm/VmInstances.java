@@ -440,18 +440,27 @@ public class VmInstances {
     INSTANCE;
     
     @Override
-    public Long apply( final OwnerFullName input ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      final long i;
-      try {
-        i = Entities.count(
-            VmInstance.named( input, null ),
+    public Long apply( final OwnerFullName ownerFullName ) {
+      return
+          countPersistentInstances( ownerFullName ) +
+          countPendingInstances( ownerFullName );
+    }
+
+    private long countPersistentInstances( final OwnerFullName ownerFullName ) {
+      try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
+        return Entities.count(
+            VmInstance.named( ownerFullName, null ),
             Restrictions.not( criterion( VmStateSet.DONE.array() ) ),
             Collections.<String,String>emptyMap( ) );
-      } finally {
-        db.rollback( );
       }
-      return i;
+    }
+
+    private long countPendingInstances( final OwnerFullName ownerFullName ) {
+      long pending = 0;
+      for ( final Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+        pending += cluster.getNodeState( ).countUncommittedPendingInstances( ownerFullName );
+      }
+      return pending;
     }
   }
   
