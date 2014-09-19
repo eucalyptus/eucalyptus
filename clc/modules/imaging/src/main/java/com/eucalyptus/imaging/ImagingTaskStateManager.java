@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
@@ -53,8 +54,10 @@ import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.XMLParser;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
@@ -187,39 +190,33 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       if(imageId!=null && imageId.length() > 0){
         try{
           // launch the image with the launch spec
-          String groupName = null;
-          if(instanceTask.getLaunchSpecGroupNames()!=null &&
-              instanceTask.getLaunchSpecGroupNames().size()>0){
-            groupName = instanceTask.getLaunchSpecGroupNames().get(0);
+          final String userData = Strings.emptyToNull( instanceTask.getLaunchSpecUserData( ) );
+          final String instanceType = Strings.emptyToNull( instanceTask.getLaunchSpecInstanceType( ) );
+          final String keyName = Strings.emptyToNull( instanceTask.getLaunchSpecKeyName( ) );
+          final String subnetId = Strings.emptyToNull( instanceTask.getLaunchSpecSubnetId( ) );
+          final String privateIp = subnetId==null ? null : Strings.emptyToNull( instanceTask.getLaunchSpecPrivateIpAddress( ) );
+          final Set<String> groupNames = Sets.newLinkedHashSet(  );
+          if( subnetId == null && instanceTask.getLaunchSpecGroupNames( ) != null ){
+            groupNames.addAll( instanceTask.getLaunchSpecGroupNames( ) );
           }
-          String userData = null;
-          if(instanceTask.getLaunchSpecUserData()!=null &&
-              instanceTask.getLaunchSpecUserData().length()>0){
-            userData = instanceTask.getLaunchSpecUserData();
-          }
-          String instanceType = null;
-          if(instanceTask.getLaunchSpecInstanceType()!=null &&
-              instanceTask.getLaunchSpecInstanceType().length()>0){
-            instanceType = instanceTask.getLaunchSpecInstanceType();
-          }
-          String availabilityZone = null;
-          if(instanceTask.getLaunchSpecAvailabilityZone()!=null &&
-              instanceTask.getLaunchSpecAvailabilityZone().length()>0){
-            availabilityZone = instanceTask.getLaunchSpecAvailabilityZone();
-          }
-          String keyName = null;
-          if(instanceTask.getLaunchSpecKeyName()!=null && 
-              instanceTask.getLaunchSpecKeyName().length()>0){
-            keyName = instanceTask.getLaunchSpecKeyName();
-          }
-          
-          Boolean monitoringEnabled = instanceTask.getLaunchSpecMonitoringEnabled();
-          boolean monitoring = false;
-          if(monitoringEnabled!=null && monitoringEnabled.booleanValue())
-            monitoring = true;
-          instanceId = 
-              EucalyptusActivityTasks.getInstance().runInstancesAsUser(instanceTask.getOwnerUserId(),
-              imageId, groupName, userData, instanceType, availabilityZone, monitoring, keyName);
+          final String availabilityZone = subnetId == null ?
+            instanceTask.getLaunchSpecAvailabilityZone( ) :
+            null;
+
+          final Boolean monitoringEnabled = instanceTask.getLaunchSpecMonitoringEnabled();
+          final boolean monitoring = monitoringEnabled!=null && monitoringEnabled;
+          instanceId = EucalyptusActivityTasks.getInstance( ).runInstancesAsUser(
+              instanceTask.getOwnerUserId( ),
+              imageId,
+              groupNames,
+              userData,
+              instanceType,
+              availabilityZone,
+              subnetId,
+              privateIp,
+              monitoring,
+              keyName
+          );
           conversionTask.getImportInstance().setInstanceId(instanceId);
           ImagingTasks.updateTaskInJson(instanceTask);
         }catch(final Exception ex){

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -29,10 +30,12 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
@@ -44,6 +47,7 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 import edu.ucsb.eucalyptus.msgs.InstancePlacement;
+import edu.ucsb.eucalyptus.msgs.SubnetType;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
@@ -139,30 +143,52 @@ public class ImagingTasks {
       }
     }
 
-    List<String> clusters = null;
+    String availabilityZone = null;
+    if( Strings.emptyToNull( launchSpec.getSubnetId( ) ) != null ){
+      try{
+        final List<SubnetType> subnets =
+            EucalyptusActivityTasks.getInstance().describeSubnetsAsUser(
+                Contexts.lookup( ).getUser( ).getUserId( ),
+                Collections.singleton( launchSpec.getSubnetId( ) ));
+        if( subnets.size( ) != 1 ) {
+          throw new ImagingServiceException( "Subnet " + launchSpec.getSubnetId() + " not found" );
+        }
+        availabilityZone = subnets.get( 0 ).getAvailabilityZone( );
+        final String cidr = subnets.get( 0 ).getCidrBlock( );
+        final String privateIp = Strings.emptyToNull( launchSpec.getPrivateIpAddress( ) );
+        if ( privateIp != null && !Cidr.parse( cidr ).contains( privateIp ) ) {
+          throw new ImagingServiceException("Private IP "+privateIp+" not valid for subnet "+launchSpec.getSubnetId());
+        }
+      } catch( final Exception ex ){
+        Exceptions.findAndRethrow( ex, ImagingServiceException.class );
+        throw new ImagingServiceException("Subnet "+launchSpec.getSubnetId()+" not found");
+      }
+    }
+
+    final List<String> clusters;
     try{
-      clusters =ImagingServiceProperties.listConfiguredZones();
+      clusters = ImagingServiceProperties.listConfiguredZones( );
     }catch(final Exception ex){
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to verify availability zones");
     }
-    String availabilityZone = null;
-    if(launchSpec.getPlacement()!=null)
-      availabilityZone = launchSpec.getPlacement().getAvailabilityZone();
-    if(availabilityZone != null){
-      if(!clusters.contains(availabilityZone))
-        throw new ImagingServiceException(String.format("The availability zone %s is not configured for import", availabilityZone));
-    }else{
-      if (clusters.size()>0){
-        //Default: Amazon EC2 chooses a zone for you.
-        availabilityZone = clusters.get(0);
-        if(request.getLaunchSpecification().getPlacement()==null)
-          request.getLaunchSpecification().setPlacement(new InstancePlacement());
-        request.getLaunchSpecification().getPlacement().setAvailabilityZone(availabilityZone);
-      }else
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-            "No availability zone is found in the Cloud");
+
+    if ( availabilityZone == null ) {
+      if ( launchSpec.getPlacement() != null ) {
+        availabilityZone = launchSpec.getPlacement().getAvailabilityZone();
+      } else if ( clusters.size() > 0 ) {  //Default: Amazon EC2 chooses a zone for you.
+        availabilityZone = clusters.get( 0 );
+      } else {
+        throw new ImagingServiceException( ImagingServiceException.INTERNAL_SERVER_ERROR,
+            "No availability zone is found in the Cloud" );
+      }
     }
-    
+    if ( !clusters.contains( availabilityZone ) ) {
+      throw new ImagingServiceException( String.format( "The availability zone %s is not configured for import", availabilityZone ) );
+    }
+    if ( request.getLaunchSpecification().getPlacement() == null )
+      request.getLaunchSpecification().setPlacement( new InstancePlacement() );
+    request.getLaunchSpecification().getPlacement().setAvailabilityZone( availabilityZone );
+
     List<DiskImage> disks = request.getDiskImageSet();
     if(disks==null || disks.size()<=0)
       throw new ImagingServiceException("Disk images are required");
