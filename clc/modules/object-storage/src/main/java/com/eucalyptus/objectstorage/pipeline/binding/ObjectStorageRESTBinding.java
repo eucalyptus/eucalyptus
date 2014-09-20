@@ -86,6 +86,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -604,7 +605,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             Object key = iterator.next();
             String keyString = key.toString();
             boolean dontIncludeParam = false;
-            for(ObjectStorageAuthenticationHandler.SecurityParameter securityParam : ObjectStorageAuthenticationHandler.SecurityParameter.values()) {
+            for(S3Authentication.SecurityParameter securityParam : S3Authentication.SecurityParameter.values()) {
                 if(keyString.equals(securityParam.toString().toLowerCase())) {
                     dontIncludeParam = true;
                     break;
