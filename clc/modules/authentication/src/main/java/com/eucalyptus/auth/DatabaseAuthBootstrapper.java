@@ -79,6 +79,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 @Provides( Empyrean.class )
@@ -87,9 +88,14 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
     
   public boolean load( ) throws Exception {
-  	DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-  	Accounts.setAccountProvider( dbAuth );
-  	Permissions.setPolicyEngine( new PolicyEngineImpl( ) );
+    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+    Accounts.setAccountProvider( dbAuth );
+    Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>( ){
+      @Override
+      public Boolean get( ) {
+        return AuthenticationProperties.SYSTEM_ACCOUNT_QUOTA_ENABLED;
+      }
+    } ) );
     return true;
   }
   

@@ -96,6 +96,9 @@ public class AuthenticationProperties {
   @ConfigurableField( description = "Limit for signing certificates per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public static volatile Integer SIGNING_CERTIFICATES_LIMIT = 2;
 
+  @ConfigurableField( description = "Process quotas for system accounts", initial = "true" )
+  public static volatile Boolean SYSTEM_ACCOUNT_QUOTA_ENABLED = true;
+
   public static class LicChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {

@@ -119,6 +119,8 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Nonnull
   private final Function<String,String> accountResolver;
+  @Nonnull
+  private final Supplier<Boolean> enableSystemQuotas;
 
   private enum Decision {
     DEFAULT, // no match
@@ -172,12 +174,16 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   };
   
-  public PolicyEngineImpl( ) {
-    this( DefaultAccountResolver.INSTANCE );
+  public PolicyEngineImpl( @Nonnull final Supplier<Boolean> enableSystemQuotas ) {
+    this( DefaultAccountResolver.INSTANCE, enableSystemQuotas );
   }
 
-  public PolicyEngineImpl( @Nonnull final Function<String,String> accountResolver ) {
+  public PolicyEngineImpl(
+      @Nonnull final Function<String,String> accountResolver,
+      @Nonnull final Supplier<Boolean> enableSystemQuotas
+  ) {
     this.accountResolver = checkParam( "accountResolver", accountResolver, notNullValue( ) );
+    this.enableSystemQuotas = checkParam( "enableSystemQuotas", enableSystemQuotas, notNullValue( ) );
   }
 
   /*
@@ -288,8 +294,8 @@ public class PolicyEngineImpl implements PolicyEngine {
       resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
       String action = context.getAction().toLowerCase();
 
-      // System users are not restricted by quota limits.
-      if ( !evaluationContext.isSystemUser() ) {
+      // Quotas can be disabled for system users
+      if ( !evaluationContext.isSystemUser( ) || enableSystemQuotas.get( ) ) {
         List<Authorization> quotas = lookupQuotas( resourceType, requestUser, evaluationContext.getRequestAccount( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }

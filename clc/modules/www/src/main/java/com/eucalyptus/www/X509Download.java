@@ -124,7 +124,8 @@ public class X509Download extends HttpServlet {
   public static String  PARAMETER_ACCOUNTNAME = "account";
   public static String  PARAMETER_KEYNAME     = "keyName";
   public static String  PARAMETER_CODE        = "code";
-  
+  public static String  PARAMETER_FORCE       = "force";
+
   public void doGet( HttpServletRequest request, HttpServletResponse response ) {
     String code = request.getParameter( PARAMETER_CODE );
     String userName = request.getParameter( PARAMETER_USERNAME );
@@ -173,7 +174,7 @@ public class X509Download extends HttpServlet {
     
     byte[] x509zip = null;
     try {
-      x509zip = getX509Zip( user );
+      x509zip = getX509Zip( user, "true".equals( request.getParameter( PARAMETER_FORCE ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to return user credentials", response );
@@ -203,7 +204,7 @@ public class X509Download extends HttpServlet {
     }
   }
   
-  private static byte[] getX509Zip( User u ) throws Exception {
+  private static byte[] getX509Zip( User u, boolean force ) throws Exception {
     X509Certificate cloudCert = null;
     X509Certificate x509 = null;
     String userAccessKey = null;
@@ -218,7 +219,7 @@ public class X509Download extends HttpServlet {
         }
       }
       if ( userAccessKey == null &&
-          ( accessKeys.isEmpty( ) || u.isSystemAdmin( ) || accessKeys.size( ) < AuthenticationProperties.ACCESS_KEYS_LIMIT ) ) {
+          ( accessKeys.isEmpty( ) || (u.isSystemAdmin( ) && force) || accessKeys.size( ) < AuthenticationProperties.ACCESS_KEYS_LIMIT ) ) {
         final AccessKey k = u.createKey( );
         userAccessKey = k.getAccessKey( );
         userSecretKey = k.getSecretKey( );
