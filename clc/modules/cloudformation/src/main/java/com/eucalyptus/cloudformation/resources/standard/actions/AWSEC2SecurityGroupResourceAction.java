@@ -25,6 +25,7 @@ import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2SecurityGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2SecurityGroupProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2SecurityGroupRule;
@@ -130,13 +131,15 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
         break;
       case 1: // create tags
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          CreateTagsType createTagsType = new CreateTagsType();
-          createTagsType.setEffectiveUserId(info.getEffectiveUserId());
-          createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue()));
-          createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
-          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+          tags.addAll(properties.getTags());
         }
+        CreateTagsType createTagsType = new CreateTagsType();
+        createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
+        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         break;
       case 2: // create ingress rules
         if (properties.getSecurityGroupIngress() != null && !properties.getSecurityGroupIngress().isEmpty()) {

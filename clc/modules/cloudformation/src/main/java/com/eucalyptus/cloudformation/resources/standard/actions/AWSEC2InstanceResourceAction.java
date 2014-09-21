@@ -21,13 +21,16 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InstanceResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPoint;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -36,6 +39,8 @@ import com.eucalyptus.compute.common.AttachVolumeType;
 import com.eucalyptus.compute.common.AttachedVolume;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
@@ -138,7 +143,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
   @Override
   public int getNumCreateSteps() {
-    return 3;
+    return 4;
   }
 
   @Override
@@ -193,7 +198,6 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
         if (properties.getSubnetId() != null && !properties.getSubnetId().isEmpty()) {
           runInstancesType.setSubnetId(properties.getSubnetId());
         }
-        // Skipping mapping resourceProperties.getTags() for now
         // Skipping mapping resourceProperties.getTenancy() for now
         if (properties.getUserData() != null && !properties.getUserData().isEmpty()) {
           runInstancesType.setUserData(properties.getUserData());
@@ -253,7 +257,18 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           throw new Exception("Timeout");
         }
         break;
-      case 2: // attach volumes
+      case 2: // add tags
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
+          tags.addAll(properties.getTags());
+        }
+        CreateTagsType createTagsType = new CreateTagsType();
+        createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
+        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+        break;
+      case 3: // attach volumes
         if (properties.getVolumes() != null && !properties.getVolumes().isEmpty()) {
           ArrayList<String> volumeIds = Lists.newArrayList();
           Map<String, String> deviceMap = Maps.newHashMap();
