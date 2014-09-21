@@ -2242,6 +2242,8 @@ public class EuareService {
   private static String sanitizePath( String path ) {
     if ( path == null || "".equals( path ) ) {
       return "/";
+    } else if ( path.length( ) > 1 && !path.endsWith( "/" ) ) {
+      return path.concat( "/" );
     }
     return path;
   }

@@ -83,7 +83,7 @@ public class EuareResourceName extends Ern {
     StringBuilder sb = new StringBuilder( );
     sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( "::" ).append( this.getNamespace( ) )
         .append( ':' ).append( this.userOrGroup ).append( this.path );
-    if ( !"/".equals( this.path ) ) {
+    if ( !"/".equals( this.path ) && !this.path.endsWith( "/" ) ) {
       sb.append( '/' );
     }
     sb.append( this.name );
@@ -116,7 +116,7 @@ public class EuareResourceName extends Ern {
 
   @Override
   public String getResourceName( ) {
-    if ( "/".equals( this.path ) ) {
+    if ( "/".equals( this.path ) || this.path.endsWith( "/" ) ) {
       return this.path + this.name;
     } else {
       return this.path + "/" + this.name;
