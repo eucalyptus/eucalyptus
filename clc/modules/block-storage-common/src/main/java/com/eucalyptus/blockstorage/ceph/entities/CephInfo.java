@@ -219,14 +219,14 @@ public class CephInfo extends AbstractPersistent {
 		try {
 			info = Transactions.find(new CephInfo());
 		} catch (Exception e) {
-			LOG.warn("Failed to get Ceph storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+			LOG.warn("Ceph-RBD information for " + StorageProperties.NAME + " not found. Loading defaults.");
 			try {
 				info = Transactions.saveDirect(generateDefault());
 			} catch (Exception e1) {
 				try {
 					info = Transactions.find(new CephInfo());
 				} catch (Exception e2) {
-					LOG.warn("Failed to retrieve->persist->retrieve storage info (CephInfo entity)");
+					LOG.warn("Failed to persist and retrieve CephInfo entity");
 				}
 			}
 		}
