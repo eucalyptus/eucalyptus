@@ -2,6 +2,7 @@ package com.eucalyptus.cloudformation.resources.standard;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -10,8 +11,13 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InternetGatew
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.util.Strings;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -72,5 +78,36 @@ public class TagHelper {
       tags.add(tag);
     }
     return tags;
+  }
+
+  private static List<String> reservedPrefixes = Lists.newArrayList("euca:","aws:");
+  public static void checkReservedAutoScalingTemplateTags(List<AutoScalingTag> tags) throws ValidationErrorException {
+    if (tags == null) return;
+    List<String> tagNames = Lists.newArrayList();
+    for (AutoScalingTag tag: tags) {
+      if (Iterables.any(reservedPrefixes, Strings.isPrefixOf(tag.getKey()))) {
+        throw new ValidationErrorException("Tag " + tag.getKey() + " uses a reserved prefix " + reservedPrefixes);
+      }
+    }
+  }
+
+  public static void checkReservedCloudFormationResourceTemplateTags(List<CloudFormationResourceTag> tags) throws ValidationErrorException {
+    if (tags == null) return;
+    List<String> tagNames = Lists.newArrayList();
+    for (CloudFormationResourceTag tag: tags) {
+      if (Iterables.any(reservedPrefixes, Strings.isPrefixOf(tag.getKey()))) {
+        throw new ValidationErrorException("Tag " + tag.getKey() + " uses a reserved prefix " + reservedPrefixes);
+      }
+    }
+  }
+
+  public static void checkReservedEC2TemplateTags(List<EC2Tag> tags) throws ValidationErrorException {
+    if (tags == null) return;
+    List<String> tagNames = Lists.newArrayList();
+    for (EC2Tag tag: tags) {
+      if (Iterables.any(reservedPrefixes, Strings.isPrefixOf(tag.getKey()))) {
+        throw new ValidationErrorException("Tag " + tag.getKey() + " uses a reserved prefix " + reservedPrefixes);
+      }
+    }
   }
 }

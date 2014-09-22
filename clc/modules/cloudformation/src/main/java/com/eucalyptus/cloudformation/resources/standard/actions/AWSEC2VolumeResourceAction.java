@@ -126,10 +126,12 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
       case 2:
         List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
           tags.addAll(properties.getTags());
         }
         CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+        createTagsType.setUserId(info.getEffectiveUserId());
+        createTagsType.markPrivileged(); // due to stack aws: tags
         createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
         createTagsType.setTagSet(EC2Helper.createTagSet(tags));
         AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);

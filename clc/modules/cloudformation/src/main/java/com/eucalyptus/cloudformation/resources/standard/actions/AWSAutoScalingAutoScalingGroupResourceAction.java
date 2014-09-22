@@ -52,7 +52,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
@@ -127,10 +126,12 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         }
         List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
+          TagHelper.checkReservedAutoScalingTemplateTags(properties.getTags());
           tags.addAll(properties.getTags());
         }
         createAutoScalingGroupType.setTags(convertTags(tags));
-        createAutoScalingGroupType.setEffectiveUserId(info.getEffectiveUserId());
+        createAutoScalingGroupType.setUserId(info.getEffectiveUserId());
+        createAutoScalingGroupType.markPrivileged(); // due to stack aws: tags
         AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
         info.setPhysicalResourceId(autoScalingGroupName);
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));

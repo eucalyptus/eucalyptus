@@ -145,8 +145,10 @@ public class CloudFormationService {
         for (Tag tag: request.getTags().getMember()) {
           if (Strings.isNullOrEmpty(tag.getKey()) || Strings.isNullOrEmpty(tag.getValue())) {
             throw new ValidationErrorException("Tags can not be null or empty");
-          } else if (tag.getKey().startsWith("aws:")) {
+          } else if (tag.getKey().startsWith("aws:") ) {
             throw new ValidationErrorException("Invalid tag key.  \"aws:\" is a reserved prefix.");
+          } else if (tag.getKey().startsWith("euca:") ) {
+            throw new ValidationErrorException("Invalid tag key.  \"euca:\" is a reserved prefix.");
           }
         }
         stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));

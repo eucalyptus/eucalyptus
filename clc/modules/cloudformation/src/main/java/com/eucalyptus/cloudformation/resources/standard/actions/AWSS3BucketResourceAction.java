@@ -135,7 +135,8 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         }
         List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          tags.addAll(properties.getTags());
+          TagHelper.checkReservedCloudFormationResourceTemplateTags(properties.getTags());
+          tags.addAll(properties.getTags()); // TODO: can we do aws: tags?
         }
         s3c.setBucketTaggingConfiguration(bucketName, convertTags(tags));
 
