@@ -35,13 +35,17 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
+
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -175,15 +179,30 @@ public class GenericS3ClientFactory {
         return s3Client;
     }
 
-    protected static URI getRandomOSGUri() throws NoSuchElementException {
-        //Get a random OSG endpoint
+    protected static URI getRandomOSGUri(boolean usePublicDns) throws NoSuchElementException {
         List<ServiceConfiguration> osgs = Lists.newArrayList(Topology.lookupMany(ObjectStorage.class));
         if(osgs == null || osgs.size() == 0) {
             throw new NoSuchElementException("No ENABLED OSGs found. Cannot generate client with no set endpoint");
         } else {
             int osgIndex = randomizer.nextInt(osgs.size());
             LOG.trace("Using osg index " + osgIndex + " from list: " + osgs);
-            return ServiceUris.remote(osgs.get(osgIndex));
+            ServiceConfiguration conf = osgs.get(osgIndex);
+            if (usePublicDns) {
+                try {
+                    if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.DOMAIN) )
+                        return ServiceUris.remote(conf);
+                    else
+                        return new URI(String.format("objectstorage.%s:%s", DNSProperties.DOMAIN, conf.getPort()));
+                } catch (URISyntaxException e) {
+                    throw new NoSuchElementException("Cannot generate client with invalid OSG configuration");//TODO: better error message
+                }
+            } else {
+                return ServiceUris.remote(conf);
+            }
         }
+    }
+
+    protected static URI getRandomOSGUri() throws NoSuchElementException {
+        return getRandomOSGUri(false);
     }
 }

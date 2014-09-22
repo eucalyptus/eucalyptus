@@ -495,7 +495,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       try{
         final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile(machineImage.getRunManifestLocation(), BundleImageManifest.INSTANCE ), 
-            partition.getNodeCertificate().getPublicKey(), reservationId);
+            partition.getNodeCertificate().getPublicKey(), reservationId, false);
         LOG.debug(String.format("Generated download manifest for instance %s", instance.getDisplayName()));
       }catch(final Exception ex){
         LOG.error(String.format("Failed to generate download manifest for instance %s", instance.getDisplayName()), ex);
