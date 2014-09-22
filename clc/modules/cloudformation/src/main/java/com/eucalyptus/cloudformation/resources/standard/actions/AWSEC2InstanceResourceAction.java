@@ -265,7 +265,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
         CreateTagsType createTagsType = new CreateTagsType();
         createTagsType.setEffectiveUserId(info.getEffectiveUserId());
         createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
         AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         break;
       case 3: // attach volumes

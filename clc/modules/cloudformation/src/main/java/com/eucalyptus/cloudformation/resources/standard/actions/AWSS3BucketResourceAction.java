@@ -137,7 +137,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
           tags.addAll(properties.getTags());
         }
-        s3c.setBucketTaggingConfiguration(bucketName, convertTags(properties.getTags()));
+        s3c.setBucketTaggingConfiguration(bucketName, convertTags(tags));
 
         if (properties.getVersioningConfiguration() != null) {
           s3c.setBucketVersioningConfiguration(convertVersioningConfiguration(bucketName, properties.getVersioningConfiguration()));
