@@ -20,15 +20,20 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VolumeResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VolumeProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.CreateVolumeResponseType;
 import com.eucalyptus.compute.common.CreateVolumeType;
 import com.eucalyptus.compute.common.DeleteVolumeResponseType;
@@ -38,6 +43,8 @@ import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -68,7 +75,7 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
 
   @Override
   public int getNumCreateSteps() {
-    return 2;
+    return 3;
   }
 
   @Override
@@ -116,6 +123,18 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
           throw new Exception("Timeout");
         }
         break;
+      case 2:
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
+          tags.addAll(properties.getTags());
+        }
+        CreateTagsType createTagsType = new CreateTagsType();
+        createTagsType.setEffectiveUserId(info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
+        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+        break;
+
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }

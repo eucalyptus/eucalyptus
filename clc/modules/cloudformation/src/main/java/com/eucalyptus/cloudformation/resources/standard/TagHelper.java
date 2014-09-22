@@ -5,7 +5,9 @@ import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InternetGatewayResourceInfo;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.google.common.collect.Lists;
@@ -51,10 +53,23 @@ public class TagHelper {
     // TOO many tags
     List<EC2Tag> tags = Lists.newArrayList();
     for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(info, stackEntity)) {
-      EC2Tag cloudFormationResourceTag = new EC2Tag();
-      cloudFormationResourceTag.setKey(otherTag.getKey());
-      cloudFormationResourceTag.setValue(otherTag.getValue());
-      tags.add(cloudFormationResourceTag);
+      EC2Tag tag = new EC2Tag();
+      tag.setKey(otherTag.getKey());
+      tag.setValue(otherTag.getValue());
+      tags.add(tag);
+    }
+    return tags;
+  }
+
+  public static List<AutoScalingTag> getAutoScalingStackTags(AWSAutoScalingAutoScalingGroupResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+    // TOO many tags
+    List<AutoScalingTag> tags = Lists.newArrayList();
+    for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(info, stackEntity)) {
+      AutoScalingTag tag = new AutoScalingTag();
+      tag.setKey(otherTag.getKey());
+      tag.setValue(otherTag.getValue());
+      tag.setPropagateAtLaunch(true); // TODO: verify this
+      tags.add(tag);
     }
     return tags;
   }

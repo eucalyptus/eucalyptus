@@ -212,7 +212,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
     }
     tagSets.add(tagSet);
     bucketTaggingConfiguration.setTagSets(tagSets);
-    return null;
+    return bucketTaggingConfiguration;
   }
 
   private BucketNotificationConfiguration convertNotificationConfiguration(S3NotificationConfiguration notificationConfiguration) {
