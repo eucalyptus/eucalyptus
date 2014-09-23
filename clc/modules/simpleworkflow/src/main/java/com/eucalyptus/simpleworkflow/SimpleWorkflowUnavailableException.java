@@ -19,33 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow;
 
-import java.util.Map;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  *
  */
-public class SimpleWorkflowMessageValidator {
+@QueryBindingInfo( statusCode = 503 )
+public class SimpleWorkflowUnavailableException extends SimpleWorkflowException {
+  private static final long serialVersionUID = 1L;
 
-  public Object validate( final Object object ) throws SimpleWorkflowException {
+  public SimpleWorkflowUnavailableException( ) {
+    this( "Service not available." );
+  }
 
-    // check system-only mode
-    final Context context = Contexts.lookup( );
-    if ( SimpleWorkflowConfiguration.isSystemOnly( ) && !context.hasAdministrativePrivileges( ) ) {
-      throw new SimpleWorkflowUnavailableException( );
-    }
 
-    // validate message
-    if ( object instanceof SimpleWorkflowMessage ) {
-      final SimpleWorkflowMessage simpleWorkflowRequest = (SimpleWorkflowMessage) object;
-      final Map<String,String> validationErrorsByField = simpleWorkflowRequest.validate( );
-      if ( !validationErrorsByField.isEmpty() ) {
-        throw new SimpleWorkflowClientException( "ValidationError", validationErrorsByField.values().iterator().next() );
-      }
-    }
-
-    return object;
+  public SimpleWorkflowUnavailableException( final String message ) {
+    super( "ServiceUnavailable", Role.Receiver, message );
   }
 }
