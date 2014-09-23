@@ -139,7 +139,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         CreateTagsType createTagsType = new CreateTagsType();
         createTagsType.setUserId(info.getEffectiveUserId());
         createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue()));
         createTagsType.setTagSet(EC2Helper.createTagSet(tags));
         AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         break;
