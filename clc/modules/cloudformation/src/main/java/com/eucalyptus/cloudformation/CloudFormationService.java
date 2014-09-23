@@ -34,14 +34,22 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
+import com.eucalyptus.cloudformation.template.url.S3Helper;
+import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
@@ -50,6 +58,13 @@ import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import org.apache.log4j.Logger;
 
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -61,6 +76,9 @@ public class CloudFormationService {
 
   @ConfigurableField(initial = "", description = "The value of AWS::Region and value in CloudFormation ARNs for Region")
   public static volatile String REGION = "";
+
+  @ConfigurableField(initial = "*.s3.amazonaws.com", description = "A comma separated white list of domains (other than Eucalyptus S3 URLs) allowed by CloudFormation URL parameters")
+  public static volatile String URL_DOMAIN_WHITELIST = "*s3.amazonaws.com";
 
   private static final String NO_ECHO_PARAMETER_VALUE = "****";
 
@@ -93,9 +111,10 @@ public class CloudFormationService {
 
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
-
+      final String templateUrl = request.getTemplateURL();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      if (templateBody == null) throw new ValidationErrorException("template body is null");
+      if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
+      if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
       List<Parameter> parameters = null;
       if (request.getParameters() != null && request.getParameters().getMember() != null) {
         parameters = request.getParameters().getMember();
@@ -124,7 +143,10 @@ public class CloudFormationService {
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         capabilities = request.getCapabilities().getMember();
       }
-      final Template template = new TemplateParser().parse(templateBody, parameters, capabilities, pseudoParameterValues);
+
+      String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
+
+      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
       StackEntity stackEntity = new StackEntity();
       StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
       stackEntity.setStackName(stackName);
@@ -180,6 +202,67 @@ public class CloudFormationService {
     }
     return reply;
   }
+
+
+  private String extractTemplateTextFromURL(String templateUrl, User user) throws ValidationErrorException {
+    URL url = null;
+    try {
+      url = new URL(templateUrl);
+    } catch (MalformedURLException e) {
+      throw new ValidationErrorException("Invalid template url " + templateUrl);
+    }
+    // First try straight HTTP GET if url is in whitelist
+    boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
+    if (inWhitelist) {
+      try {
+        return copyStreamToString(url.openStream());
+      } catch (UnknownHostException ex) {
+        throw new ValidationErrorException("Invalid template url " + templateUrl);
+      } catch (IOException ex) {
+        // TODO: do something with this...
+      }
+    }
+
+
+    // Otherwise, assume the URL is a eucalyptus S3 url...
+    String[] validHostBucketSuffixes = new String[]{"walrus", "objectstorage"};
+    String[] validServicePaths = new String[]{ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH, ComponentIds.lookup(ObjectStorage.class).getServicePath()};
+    String[] validDomains = new String[]{removeLastDot(DomainNames.externalSubdomain().toString())};
+    S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
+    EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client(user);
+    try {
+      return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getBucket());
+    } catch (Exception ex) {
+      LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getBucket());
+      LOG.debug(ex, ex);
+      throw new ValidationErrorException("Template url is an S3 URL to a non-existent or unauthorized bucket/key.  (bucket=" + bucketAndKey.getBucket() + ", key=" + bucketAndKey.getKey());
+    }
+  }
+
+  private String removeLastDot(String input) {
+    if (input == null) return null;
+    if (input.endsWith(".")) {
+      return input.substring(0, input.length() - 1);
+    }
+    return input;
+  }
+
+  private static String copyStreamToString(InputStream in) throws IOException {
+    StringBuilder stringBuilder = new StringBuilder();
+    BufferedReader br = new BufferedReader(new InputStreamReader(in));
+    try {
+      String line = null;
+      while ((line = br.readLine()) != null) {
+        stringBuilder.append(line + "\n");
+      }
+    } finally {
+      if (br != null) {
+        br.close();
+      }
+    }
+    return stringBuilder.toString();
+  }
+
 
   private List<String> describeAvailabilityZones(String userId) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
