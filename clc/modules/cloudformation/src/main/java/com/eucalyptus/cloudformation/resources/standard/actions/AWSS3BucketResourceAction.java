@@ -42,6 +42,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSS3BucketResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSS3BucketProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
@@ -132,9 +133,13 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         if (properties.getNotificationConfiguration() != null) {
           s3c.setBucketNotificationConfiguration(bucketName, convertNotificationConfiguration(properties.getNotificationConfiguration()));
         }
+        List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          s3c.setBucketTaggingConfiguration(bucketName, convertTags(properties.getTags()));
+          TagHelper.checkReservedCloudFormationResourceTemplateTags(properties.getTags());
+          tags.addAll(properties.getTags()); // TODO: can we do aws: tags?
         }
+        s3c.setBucketTaggingConfiguration(bucketName, convertTags(tags));
+
         if (properties.getVersioningConfiguration() != null) {
           s3c.setBucketVersioningConfiguration(convertVersioningConfiguration(bucketName, properties.getVersioningConfiguration()));
         }
@@ -208,7 +213,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
     }
     tagSets.add(tagSet);
     bucketTaggingConfiguration.setTagSets(tagSets);
-    return null;
+    return bucketTaggingConfiguration;
   }
 
   private BucketNotificationConfiguration convertNotificationConfiguration(S3NotificationConfiguration notificationConfiguration) {

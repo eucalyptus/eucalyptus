@@ -50,6 +50,7 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
@@ -163,6 +164,15 @@ public class CloudFormationService {
         stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
       }
       if (request.getTags()!= null && request.getTags().getMember() != null) {
+        for (Tag tag: request.getTags().getMember()) {
+          if (Strings.isNullOrEmpty(tag.getKey()) || Strings.isNullOrEmpty(tag.getValue())) {
+            throw new ValidationErrorException("Tags can not be null or empty");
+          } else if (tag.getKey().startsWith("aws:") ) {
+            throw new ValidationErrorException("Invalid tag key.  \"aws:\" is a reserved prefix.");
+          } else if (tag.getKey().startsWith("euca:") ) {
+            throw new ValidationErrorException("Invalid tag key.  \"euca:\" is a reserved prefix.");
+          }
+        }
         stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
       }
       if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {

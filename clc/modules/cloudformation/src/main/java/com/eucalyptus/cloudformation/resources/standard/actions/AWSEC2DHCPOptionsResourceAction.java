@@ -25,8 +25,11 @@ import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2DHCPOptionsResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2DHCPOptionsProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -122,13 +125,17 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
         break;
       case 1: // tag dhcp options
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
         if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          CreateTagsType createTagsType = new CreateTagsType();
-          createTagsType.setEffectiveUserId(info.getEffectiveUserId());
-          createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-          createTagsType.setTagSet(EC2Helper.createTagSet(properties.getTags()));
-          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
+          tags.addAll(properties.getTags());
         }
+        CreateTagsType createTagsType = new CreateTagsType();
+        createTagsType.setUserId(info.getEffectiveUserId());
+        createTagsType.markPrivileged(); // due to stack aws: tags
+        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
         break;
       default:
         throw new IllegalStateException("Invalid step " + stepNum);

@@ -1472,7 +1472,7 @@ public class AutoScalingBackendService {
   }
 
   private static boolean isReserved( final String text ) {
-    return Iterables.any( reservedPrefixes, Strings.isPrefixOf( text ) );
+    return !Contexts.lookup( ).isPrivileged( ) && Iterables.any( reservedPrefixes, Strings.isPrefixOf( text ) );
   }
 
   private static void handleException( final Exception e ) throws AutoScalingException {
