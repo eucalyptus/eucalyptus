@@ -228,8 +228,11 @@ public class CloudFormationService {
         return copyStreamToString(url.openStream());
       } catch (UnknownHostException ex) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
+      } catch (javax.net.ssl.SSLHandshakeException ex) {
+        throw new ValidationErrorException(ex.getMessage());
       } catch (IOException ex) {
-        // TODO: do something with this...
+        LOG.info("Unable to connect to whitelisted URL, trying S3 instead");
+        LOG.debug(ex, ex);
       }
     }
 
