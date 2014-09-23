@@ -244,9 +244,9 @@ public class CloudFormationService {
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client(user);
     try {
-      return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getBucket());
+      return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getKey());
     } catch (Exception ex) {
-      LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getBucket());
+      LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getKey());
       LOG.debug(ex, ex);
       throw new ValidationErrorException("Template url is an S3 URL to a non-existent or unauthorized bucket/key.  (bucket=" + bucketAndKey.getBucket() + ", key=" + bucketAndKey.getKey());
     }
