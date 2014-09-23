@@ -64,9 +64,14 @@ package com.eucalyptus.address;
 
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
 import static com.eucalyptus.address.Address.UNASSIGNED_INSTANCEADDR;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
+
+import com.eucalyptus.crypto.Crypto;
+import com.google.common.collect.Collections2;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -172,7 +177,29 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   public static void updateAddressingMode( ) {
     getProvider( );
   }
-  
+
+  @Override
+  public List<Address> listDisabledValues() {
+    List<Address> addrList = super.listDisabledValues();
+    Collections.shuffle( addrList, Crypto.getSecureRandomSupplier().get() );
+    return addrList;
+  }
+
+  @Override
+  public Address enableFirst( Predicate<Address> filter ) throws NoSuchElementException {
+    this.canHas.writeLock( ).lock( );
+    try {
+      Address first = Collections2.filter( this.listDisabledValues(), filter ).iterator( ).next( );
+      if ( first == null ) {
+        throw new NoSuchElementException( "Disabled map is empty." );
+      }
+      this.register( first );
+      return first;
+    } finally {
+      this.canHas.writeLock( ).unlock( );
+    }
+  }
+
   @Resolver( Address.class )
   public enum Lookup implements Function<String, Address> {
     INSTANCE;
