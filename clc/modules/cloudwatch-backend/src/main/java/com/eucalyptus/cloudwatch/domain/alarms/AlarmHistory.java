@@ -32,7 +32,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name="eucalyptus_cloudwatch")
+@PersistenceContext(name="eucalyptus_cloudwatch_backend")
 @Table(name="alarm_history")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AlarmHistory extends AbstractPersistent {

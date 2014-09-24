@@ -37,7 +37,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( "cloudwatch" )
 @Partition( value = CloudWatch.class, manyToOne = true )
 @FaultLogPrefix( "services" )
-@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Database )
+@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema )
 @Description( "CloudWatch API service" )
 public class CloudWatch extends ComponentId {
   private static final long serialVersionUID = 1L;

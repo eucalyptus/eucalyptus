@@ -27,7 +27,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
-@PersistenceContext(name="eucalyptus_reporting")
+@PersistenceContext(name="eucalyptus_reporting_backend")
 @Table(name="reporting_volume_attach_events")
 public class ReportingVolumeAttachEvent
 	extends ReportingEventSupport

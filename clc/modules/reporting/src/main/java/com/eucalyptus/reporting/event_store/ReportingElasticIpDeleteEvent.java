@@ -26,7 +26,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
-@PersistenceContext(name="eucalyptus_reporting")
+@PersistenceContext(name="eucalyptus_reporting_backend")
 @Table(name="reporting_elastic_ip_delete_events")
 public class ReportingElasticIpDeleteEvent
 	extends ReportingEventSupport

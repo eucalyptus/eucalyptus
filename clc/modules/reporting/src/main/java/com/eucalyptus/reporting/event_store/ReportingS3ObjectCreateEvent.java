@@ -26,7 +26,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
-@PersistenceContext(name="eucalyptus_reporting")
+@PersistenceContext(name="eucalyptus_reporting_backend")
 @Table(name="reporting_s3_object_create_events")
 public class ReportingS3ObjectCreateEvent
 	extends ReportingEventSupport

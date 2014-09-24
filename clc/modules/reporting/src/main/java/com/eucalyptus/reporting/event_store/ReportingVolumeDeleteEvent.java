@@ -26,7 +26,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
-@PersistenceContext(name="eucalyptus_reporting")
+@PersistenceContext(name="eucalyptus_reporting_backend")
 @Table(name="reporting_volume_delete_events")
 public class ReportingVolumeDeleteEvent
 	extends ReportingEventSupport

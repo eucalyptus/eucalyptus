@@ -75,7 +75,7 @@ import com.eucalyptus.empyrean.Empyrean;
 @Partition( Empyrean.class )
 @FaultLogPrefix( "cloud" )
 @PolicyVendor( Reporting.VENDOR_REPORTING )
-@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Database)
+@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema)
 public class Reporting extends ComponentId {
   private static final long serialVersionUID = 1L;
   public static final String VENDOR_REPORTING = "eureport";
