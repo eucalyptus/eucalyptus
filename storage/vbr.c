@@ -2131,26 +2131,34 @@ w_out:
     case NC_LOCATION_IMAGING:{
             char *manifest = NULL;
 
-            // get the manifest for size and signature
-            if ((manifest = http_get2str(vbr->preparedResourceLocation, bail_flag)) == NULL) {
-                LOGERROR("[%s] failed to obtain image manifest from object storage\n", current_instanceId);
-                goto i_out;
+            // If this is a migration destination, we do not want to use
+            // pre-signed URLs generated at run time, since they may have
+            // expired (see EUCA-9887). So we only pull the manifest on
+            // the original run request, purely as a sanity check. The 
+            // info we need (image size) should already be in the VBR.
+            if (!is_migration_dest) {
+                // get the manifest for size and signature
+                if ((manifest = http_get2str(vbr->preparedResourceLocation, bail_flag)) == NULL) {
+                    LOGERROR("[%s] failed to obtain image manifest from object storage\n", current_instanceId);
+                    goto i_out;
+                }
+                // extract size from the manifest
+                long long bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
+                if (bb_size_bytes < 1) {
+                    LOGERROR("[%s] incorrect image manifest [no size] or error from object storage\n", current_instanceId);
+                    goto i_out;
+                }
+                if (vbr->sizeBytes != bb_size_bytes) {
+                    LOGERROR("[%s] image size in manifest (%lld) and in VBR (%lld) do not match\n", current_instanceId, bb_size_bytes, vbr->sizeBytes);
+                    goto i_out;
+                }
             }
-            // extract size from the manifest
-            long long bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
-            if (bb_size_bytes < 1) {
-                LOGERROR("[%s] incorrect image manifest [no size] or error from object storage\n", current_instanceId);
-                goto i_out;
-            }
-            vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
 
             //! @TODO add proper image checksum into download manifests and use that
             //!       instead of using the image size as the digest
-            blob_digest = euca_strestr(manifest, "<unbundled-size>", "</unbundled-size>");
-            if (blob_digest == NULL) {
-                LOGERROR("[%s] incorrect image manifest [no signature] or error from object storage\n", current_instanceId);
-                goto i_out;
-            }
+            char blob_digest[128];
+            snprintf(blob_digest, sizeof(blob_digest), "%lld", vbr->sizeBytes);
+
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
             if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
@@ -2158,10 +2166,9 @@ w_out:
                 goto i_out;
             }
             // allocate artifact struct
-            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
+            a = art_alloc(art_id, art_id, vbr->sizeBytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
 
 i_out:
-            EUCA_FREE(blob_digest);
             EUCA_FREE(manifest);
             break;
         }
