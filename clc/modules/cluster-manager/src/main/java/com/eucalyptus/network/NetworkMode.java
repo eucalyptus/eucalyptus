@@ -17,32 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.network;
 
 /**
- * Features supported by NetworkService implementations
+ *
  */
-public enum NetworkingFeature {
+public enum NetworkMode {
 
-  /**
-   * EC2-Classic platform
-   */
-  Classic,
+  EDGE,
 
-  /**
-   * Consistent (e.g. view based)
-   */
-  Consistent,
+  VPCMIDO,
 
-  /**
-   * Elastic IP addresses
-   */
-  ElasticIPs,
-
-  /**
-   * EC2-VPC platform
-   */
-  Vpc,
   ;
+
+  public String toString( ) {
+    return name( ).replace( '_', '-' );
+  }
 
 }

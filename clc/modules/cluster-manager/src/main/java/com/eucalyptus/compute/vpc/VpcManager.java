@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.Account;
@@ -44,6 +45,8 @@ import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
@@ -1080,6 +1083,11 @@ public class VpcManager {
         try {
           final Vpc vpc = vpcs.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<Vpc>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
+            if ( Boolean.TRUE.equals( vpc.getDefaultVpc( ) ) &&  Contexts.lookup( ).isAdministrator( ) ) try {
+              final InternetGateway internetGateway =
+                  internetGateways.lookupByVpc( null, vpc.getDisplayName( ), Functions.<InternetGateway>identity( ) );
+              internetGateways.delete( internetGateway );
+            } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() ) );
             routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() ) );
             try {
@@ -1122,12 +1130,15 @@ public class VpcManager {
     final DescribeAccountAttributesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    final List<String> platforms = Lists.newArrayList( "VPC" );
+    final List<String> platforms = Lists.newArrayList( );
+    final Set<NetworkingFeature> features = Networking.getInstance( ).describeFeatures( );
+    if ( features.contains( NetworkingFeature.Classic ) ) platforms.add( "EC2" );
+    if ( features.contains( NetworkingFeature.Vpc ) ) platforms.add( "VPC" );
     String vpcId = "none";
     try {
       vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName( ) );
     } catch ( VpcMetadataNotFoundException e) {
-      platforms.add( "EC2" );
+      // no default vpc
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1889,6 +1900,9 @@ public class VpcManager {
     try {
       transactional( deleter ).apply( Pair.pair( accountName, id ) );
     } catch ( Exception e ) {
+      if ( Exceptions.isCausedBy( e, ConstraintViolationException.class ) ) {
+        throw new ClientComputeException( "DependencyViolation", "Resource ("+idParam+") is in use" );
+      }
       if ( !Exceptions.isCausedBy( e, VpcMetadataNotFoundException.class ) ) {
         throw handleException( e );
       } // else ignore missing on delete?

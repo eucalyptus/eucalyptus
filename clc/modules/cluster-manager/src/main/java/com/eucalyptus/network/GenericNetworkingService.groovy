@@ -132,8 +132,8 @@ class GenericNetworkingService extends NetworkingServiceSupport {
     DescribeNetworkingFeaturesResponseType.cast( request.reply(new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
             networkingFeatures: NetworkGroups.networkingConfiguration( ).hasNetworking( ) ?
-                [ ElasticIPs ] as ArrayList<NetworkingFeature>:
-                [ ] as ArrayList<NetworkingFeature>
+                [ Classic, ElasticIPs ] as ArrayList<NetworkingFeature>:
+                [ Classic ] as ArrayList<NetworkingFeature>
         )
     ) ) )
   }

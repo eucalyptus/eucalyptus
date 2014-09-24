@@ -147,6 +147,8 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.compute.vpc.Vpc;
@@ -463,9 +465,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public enum RestoreHandler implements Predicate<VmInfo> {
-    Restore { //TODO:STEVE: ensure restore is not attempted in VPC mode
+    Restore {
       @Override
       public boolean apply( final VmInfo input ) {
+        if ( Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) {
+          return false; // restore not supported with VPC
+        }
         final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
         if ( !VmStateSet.RUN.contains( inputState ) ) {
           return false;
@@ -518,6 +523,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     RestoreFailed {
       @Override
       public boolean apply( final VmInfo input ) {
+        if ( Networking.getInstance( ).supports( NetworkingFeature.Consistent ) ) {
+          return false; // consistent back-end required for restore-failed
+        }
         final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
         if ( !VmStateSet.RUN.contains( inputState ) ) {
           return false;

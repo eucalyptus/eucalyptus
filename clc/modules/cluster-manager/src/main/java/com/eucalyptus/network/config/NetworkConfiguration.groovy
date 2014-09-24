@@ -20,8 +20,12 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.network.IPRange
+import com.eucalyptus.network.NetworkMode
 import com.google.common.base.CaseFormat
+import com.google.common.base.Functions
+import com.google.common.base.Joiner
 import com.google.common.base.Strings
+import com.google.common.collect.Iterables
 import com.google.common.net.InetAddresses
 import com.google.common.net.InternetDomainName
 import groovy.transform.Canonical
@@ -38,6 +42,7 @@ import java.util.regex.Pattern
 @CompileStatic
 @Canonical
 class NetworkConfiguration {
+  String mode
   String instanceDnsDomain
   List<String> instanceDnsServers
   String macPrefix
@@ -142,11 +147,16 @@ abstract class TypedValidator<T> implements Validator {
 @PackageScope
 class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration> {
   public static final Pattern MAC_PREFIX_PATTERN = Pattern.compile( '[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' )
+  public static final Pattern MODE_PATTERN = Pattern.compile(
+      Joiner.on('|').join( Iterables.transform( Arrays.asList( NetworkMode.values( ) ), Functions.toStringFunction( ) ) )
+  )
+
   Errors errors
 
   @Override
   void validate( final NetworkConfiguration configuration ) {
     require( configuration.&getPublicIps );
+    validate( configuration.&getMode, new RegexValidator( errors, MODE_PATTERN, 'Invalid mode "{0}": "{1}"' ) )
     validate( configuration.&getInstanceDnsDomain, new DomainValidator(errors) )
     validateAll( configuration.&getInstanceDnsServers, new IPValidator(errors) )
     validate( configuration.&getMacPrefix, new RegexValidator( errors, MAC_PREFIX_PATTERN, 'Invalid MAC prefix "{0}": "{1}"' ) )
