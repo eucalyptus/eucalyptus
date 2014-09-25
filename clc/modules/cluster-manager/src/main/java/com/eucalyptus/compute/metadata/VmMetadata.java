@@ -69,6 +69,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
@@ -212,13 +213,15 @@ public class VmMetadata {
   public byte[] handle( final String path ) {
     final String[] parts = path.split( ":" );
     try {
-      final String requestIp = parts[0];
+      //TODO:STEVE: only allow localhost metadata access in VPC mode
+      final String requestIpOrInstanceId = ResourceIdentifiers.tryNormalize( ).apply( parts[0] );
+      final boolean isInstanceId = requestIpOrInstanceId.startsWith( "i-" );
       final MetadataRequest request = new MetadataRequest(
-          requestIp,
+          isInstanceId ? "127.0.0.1" : requestIpOrInstanceId,
           parts.length == 2 ?
               parts[1] :
               "/",
-          ipToVmIdCache.get( requestIp ) );
+          isInstanceId ? Optional.of( requestIpOrInstanceId ) : ipToVmIdCache.get( requestIpOrInstanceId ) );
 
       if ( instanceMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isInstance( ) ) {
         return instanceMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
