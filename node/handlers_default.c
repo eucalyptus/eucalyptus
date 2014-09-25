@@ -401,7 +401,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_THREAD_ERROR;
         goto error;
     }
-    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , instance->tcb); 
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, instance->tcb);
     pthread_attr_destroy(attr);
     EUCA_FREE(attr);
 
@@ -1782,8 +1782,8 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
         LOGERROR("[%s][%s] failed to start VM createImage thread\n", instanceId, volumeId);
         return cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
     }
-    
-    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
+
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tid);
     return EUCA_OK;
 }
 
@@ -2059,7 +2059,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
         return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     }
-    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tid); 
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tid);
 
     return EUCA_OK;
 }
@@ -2410,7 +2410,7 @@ static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
-    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {
@@ -2460,7 +2460,7 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
-    set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {

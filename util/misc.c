@@ -2451,32 +2451,33 @@ char *get_username(void)
 }
 
 //! Make a correlation ID that is prefixed with the ID received from other components
-char* create_corrid(const char* id) {
-    char*new_corr_id = NULL;
+char *create_corrid(const char *id)
+{
+    char *new_corr_id = NULL;
     char hex_id[8];
-    long int hex_val=-1;
-    if(id==NULL)
+    long int hex_val = -1;
+    if (id == NULL)
         return NULL;
     // correlation_id = [prefix(36)::new_id(36)]
     if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
         char *newid = system_output("uuidgen");
         memset(hex_id, '\0', 8);
-        strncpy(hex_id, strstr(id, "::")+11, 4);
+        strncpy(hex_id, strstr(id, "::") + 11, 4);
         hex_val = strtol(hex_id, NULL, 16);
-        hex_val = (hex_val+1) % 65536;
-        sprintf(hex_id, "%x", (unsigned int) hex_val);
-        while( strlen(hex_id) < 4 ) {
-            for(int i = strlen(hex_id)+1; i > 0 ; i--) {
-                hex_id[i] = hex_id[i-1]; 
+        hex_val = (hex_val + 1) % 65536;
+        sprintf(hex_id, "%x", (unsigned int)hex_val);
+        while (strlen(hex_id) < 4) {
+            for (int i = strlen(hex_id) + 1; i > 0; i--) {
+                hex_id[i] = hex_id[i - 1];
             }
             hex_id[0] = '0';
         }
         if (newid != NULL) {
             new_corr_id = calloc(75, sizeof(char));
-            strncpy(new_corr_id, id, 38); // copy request id part
-            strncpy(new_corr_id + 38, newid, 9); // copy the first part of the uuid
-            strncpy(new_corr_id + 47, hex_id, 4); // copy the incremented hex string from base id
-            strcpy(new_corr_id + 51, newid + 13); // copy the remaining part of the uuid
+            strncpy(new_corr_id, id, 38);   // copy request id part
+            strncpy(new_corr_id + 38, newid, 9);    // copy the first part of the uuid
+            strncpy(new_corr_id + 47, hex_id, 4);   // copy the incremented hex string from base id
+            strcpy(new_corr_id + 51, newid + 13);   // copy the remaining part of the uuid
             EUCA_FREE(newid);
         }
     }
@@ -2485,10 +2486,11 @@ char* create_corrid(const char* id) {
 
 threadCorrelationId *corr_ids = NULL;
 sem *corr_sem = NULL;
-threadCorrelationId* set_corrid_impl(const char* corr_id, pid_t* pid, pthread_t* tid){
+threadCorrelationId *set_corrid_impl(const char *corr_id, pid_t * pid, pthread_t * tid)
+{
     if (corr_sem == NULL)
         corr_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
-    if(corr_id == NULL || strstr(corr_id, "::") == NULL) {
+    if (corr_id == NULL || strstr(corr_id, "::") == NULL) {
         return NULL;
     }
     threadCorrelationId *newId = EUCA_ZALLOC(1, sizeof(threadCorrelationId));
@@ -2508,58 +2510,65 @@ threadCorrelationId* set_corrid_impl(const char* corr_id, pid_t* pid, pthread_t*
         newId->tid = *tid;
         newId->pid = -1;
     }
-    euca_strncpy(newId->correlation_id , corr_id, strlen(corr_id)+1);
+    euca_strncpy(newId->correlation_id, corr_id, strlen(corr_id) + 1);
     sem_p(corr_sem);
     newId->next = corr_ids;
-    corr_ids = newId;            
+    corr_ids = newId;
     sem_v(corr_sem);
 
     return newId;
 }
 
-threadCorrelationId* set_corrid(const char* corr_id) {
+threadCorrelationId *set_corrid(const char *corr_id)
+{
     return set_corrid_impl(corr_id, NULL, NULL);
 }
-threadCorrelationId* set_corrid_fork(const char* corr_id, pid_t pid ) {
+
+threadCorrelationId *set_corrid_fork(const char *corr_id, pid_t pid)
+{
     return set_corrid_impl(corr_id, &pid, NULL);
 }
-threadCorrelationId* set_corrid_pthread(const char* corr_id, pthread_t tid) {
+
+threadCorrelationId *set_corrid_pthread(const char *corr_id, pthread_t tid)
+{
     return set_corrid_impl(corr_id, NULL, &tid);
 }
 
-void unset_corrid( threadCorrelationId* corr_id) {
-    threadCorrelationId* cur = corr_ids;
-    threadCorrelationId* pre = NULL;
+void unset_corrid(threadCorrelationId * corr_id)
+{
+    threadCorrelationId *cur = corr_ids;
+    threadCorrelationId *pre = NULL;
     if (corr_id == NULL)
         return;
     sem_p(corr_sem);
-    if(corr_ids == corr_id) {
+    if (corr_ids == corr_id) {
         corr_ids = corr_ids->next;
-        EUCA_FREE(corr_id); 
+        EUCA_FREE(corr_id);
         sem_v(corr_sem);
         return;
     }
 
     while (cur != NULL) {
-        if (cur == corr_id){
+        if (cur == corr_id) {
             pre->next = cur->next;
             EUCA_FREE(corr_id);
-            break;        
+            break;
         }
         pre = cur;
-        cur = cur->next; 
+        cur = cur->next;
     }
     sem_v(corr_sem);
 }
 
-threadCorrelationId * get_corrid() {
-    threadCorrelationId* cur = corr_ids;
-    while(cur!=NULL) {
+threadCorrelationId *get_corrid()
+{
+    threadCorrelationId *cur = corr_ids;
+    while (cur != NULL) {
         if (cur->pthread && pthread_equal(cur->tid, pthread_self()))
             return cur;
         else if (cur->pid == getpid())
             return cur;
-        cur = cur->next; 
+        cur = cur->next;
     }
     return NULL;
 }

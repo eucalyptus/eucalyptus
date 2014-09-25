@@ -828,7 +828,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     char **res_array = NULL;
     virtualBootRecord *vbr = NULL;
 
-
     euca_strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
 
     XGET_STR("/instance/hypervisor/@type", instance->hypervisorType);
@@ -976,7 +975,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             EUCA_FREE(res_array[i]);
         EUCA_FREE(res_array);
     }
-
     // pull out volumes
     if ((res_array = get_xpath_content(xml_path, "/instance/volumes/volume")) != NULL) {
         for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VOLUMES); i++) {
@@ -1001,7 +999,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             EUCA_FREE(res_array[i]);
         EUCA_FREE(res_array);
     }
-
     // get NIC information
     XGET_INT("/instance/nics/nic/@vlan", instance->ncnet.vlan);
     XGET_INT("/instance/nics/nic/@networkIndex", instance->ncnet.networkIndex);

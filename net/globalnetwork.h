@@ -51,11 +51,11 @@ typedef struct gni_name_t {
 } gni_name;
 
 typedef struct gni_rule_t {
-  int protocol;
-  int fromPort, toPort, icmpType, icmpCode, slashnet;
-  char cidr[16];
-  char groupId[16];
-  char groupOwnerId[16];
+    int protocol;
+    int fromPort, toPort, icmpType, icmpCode, slashnet;
+    char cidr[16];
+    char groupId[16];
+    char groupOwnerId[16];
 } gni_rule;
 
 typedef struct gni_secgroup_t {
