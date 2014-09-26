@@ -186,10 +186,11 @@ class Euca2ools(object):
               policyConditions = policyObject.get('conditions')
               if policyConditions is not None:
                 for policyCondition in policyConditions:
-                  policySecurityToken = policyCondition.get('x-amz-security-token')
-                  if policySecurityToken is not None:
-                    op_args.extend(['--security-token', policySecurityToken])
-                    break
+                  if hasattr( policyCondition, 'get' ):
+                    policySecurityToken = policyCondition.get('x-amz-security-token')
+                    if policySecurityToken is not None:
+                      op_args.extend(['--security-token', policySecurityToken])
+                      break
         if hasattr(args, 'upload_policy_signature') and args.upload_policy_signature is not None:
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
