@@ -242,6 +242,25 @@ public class Accounts {
     return system.lookupAdmin();
   }
   
+  public static User lookupAwsExecReadAdmin(boolean ensureActiveKey) throws AuthException {
+	Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+	User user = system.lookupAdmin();
+	if (ensureActiveKey) {
+      boolean hasActiveKey = false;
+      for (AccessKey k:user.getKeys()) {
+	    if ( k.isActive() ) {
+          hasActiveKey = true;
+          break;
+	    }
+      }
+      if (!hasActiveKey) {
+        user.createKey();
+	    LOG.debug("Created new user key for " + user.getName());
+      }
+	}
+	return user;
+  }
+
   public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {

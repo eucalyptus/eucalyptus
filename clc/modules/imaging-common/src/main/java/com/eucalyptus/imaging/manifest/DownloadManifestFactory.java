@@ -44,12 +44,9 @@ import javax.xml.xpath.XPathFactory;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.imaging.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
@@ -77,7 +74,7 @@ public class DownloadManifestFactory {
 	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );
 	
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
-	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
+	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests-v2";
 	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
 	private static String MANIFEST_EXPIRATION = "expire";
 	private static int DEFAULT_EXPIRE_TIME_HR = 3;
@@ -86,10 +83,6 @@ public class DownloadManifestFactory {
       final String manifestName) throws DownloadManifestException {
 	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
 	}
-
-    public static User getDownloadManifestS3User() throws AuthException {
-        return Accounts.lookupSystemAdmin();
-    }
 
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
@@ -105,7 +98,7 @@ public class DownloadManifestFactory {
 			final String manifestName, int expirationHours) throws DownloadManifestException {
 		try {
 			//prepare to do pre-signed urls
-      EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+      EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
 
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
@@ -117,6 +110,8 @@ public class DownloadManifestFactory {
         URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
             DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
         return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
+      } else {
+        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' does not exist");
       }
 
       UrlValidator urlValidator = new UrlValidator();
@@ -232,7 +227,7 @@ public class DownloadManifestFactory {
 			root.appendChild(signature);
 			String downloadManifest = nodeToString(manifestDoc, true);
 			//TODO: move this ?
-			createManifestsBucket(s3Client);
+			createManifestsBucketIfNeeded(s3Client);
 			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest, expiration);
 			// generate pre-sign url for download manifest
 			URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
@@ -246,7 +241,7 @@ public class DownloadManifestFactory {
 	
 	public static String generatePresignedUrl(final String manifestName) throws DownloadManifestException {
 	  try{
-	    EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+	    EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
 	    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
 	    Date expiration = new Date();
 	    long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
@@ -343,60 +338,40 @@ public class DownloadManifestFactory {
 	}
 
 	/**
-	 * Creates system owned bucket to store download manifest files
+	 * Creates system owned bucket to store download manifest files if needed
 	 * @throws EucalyptusCloudException
 	 */
-	public static void createManifestsBucket(@Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
-		if (checkManifestsBucket(s3Client))
-			return;
-
-        Bucket manifestBucket;
-        try {
-            manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-        } catch(Exception e) {
-            LOG.error("Error creating manifest bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
-            throw new EucalyptusCloudException( "Failed to create bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
-        }
-
-        try {
-            BucketLifecycleConfiguration lc = new BucketLifecycleConfiguration();
-            BucketLifecycleConfiguration.Rule expireRule= new BucketLifecycleConfiguration.Rule();
-            expireRule.setId("Manifest Expiration Rule");
-            expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
-            expireRule.setStatus("Enabled");
-            expireRule.setExpirationInDays(1);
-            lc = lc.withRules(expireRule);
-            s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
-		} catch (Exception e) {
-			throw new EucalyptusCloudException( "Failed to set bucket lifecycle on bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
+	private static void createManifestsBucketIfNeeded(@Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
+        Bucket manifestBucket = null;
+		try {
+		    s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
+		} catch (AmazonServiceException e1) {
+		  try {
+		       manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+		    } catch(Exception e) {
+		        LOG.error("Error creating manifest bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
+		        throw new EucalyptusCloudException( "Failed to create bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
+		    }
+		}
+		BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
+		if (config.getRules() == null ||
+            config.getRules().size() != 1 ||
+            config.getRules().get(0).getExpirationInDays() != 1 ||
+            !"enabled".equalsIgnoreCase(config.getRules().get(0).getStatus()) ||
+            !DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix())) {
+	        try {
+	            BucketLifecycleConfiguration lc = new BucketLifecycleConfiguration();
+	            BucketLifecycleConfiguration.Rule expireRule= new BucketLifecycleConfiguration.Rule();
+	            expireRule.setId("Manifest Expiration Rule");
+	            expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
+	            expireRule.setStatus("Enabled");
+	            expireRule.setExpirationInDays(1);
+	            lc = lc.withRules(expireRule);
+	            s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
+			} catch (Exception e) {
+				throw new EucalyptusCloudException( "Failed to set bucket lifecycle on bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
+			}
 		}
 		LOG.debug( "Created bucket for download-manifests " + DOWNLOAD_MANIFEST_BUCKET_NAME);
-	}
-
-	private static boolean checkManifestsBucket(EucaS3Client s3Client) {
-		try {
-        //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
-        AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
-        if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
-            //Bucket exists, but is owned by another account
-            LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME +
-                " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
-            return false;
-        }
-
-        BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
-
-        return (config.getRules() != null &&
-                config.getRules().size() == 1 &&
-                config.getRules().get(0).getExpirationInDays() == 1 &&
-                "enabled".equalsIgnoreCase(config.getRules().get(0).getStatus()) &&
-                DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
-    } catch(AmazonServiceException e) {
-        //Expected possible path if doesn't exist.
-        return false;
-    } catch(Exception e) {
-        LOG.warn("Unexpected error checking for download manifest bucket", e);
-        return false;
-    }
 	}
 }

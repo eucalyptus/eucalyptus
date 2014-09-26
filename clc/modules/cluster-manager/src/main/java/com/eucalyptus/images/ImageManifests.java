@@ -152,7 +152,7 @@ public class ImageManifests {
   
   static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
       try {
-          EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
+          EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
           return s3Client.getObjectContent(bucketName, objectName);
       } catch ( Exception e ) {
           throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );

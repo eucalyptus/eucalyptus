@@ -111,6 +111,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       this.ensureBlockStorageAccountExists();
       //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
       this.ensureCloudFormationAccountExists();
+      //EUCA-9533 - System account for pre-signed urls in download manifests
+      this.ensureExecReadAccountExists();
       LdapSync.start( );
     }
     return true;
@@ -259,5 +261,18 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     }
   }
 
+  //EUCA-9533 - System account for pre-signed urls in download manifests
+  private void ensureExecReadAccountExists( ) throws Exception {
+    try {
+      Accounts.lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+    } catch ( Exception e ) {
+      try {
+        Accounts.addSystemAccountWithAdmin( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+        LOG.info("Created " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT + " account");
+      } catch (Exception e1) {
+        LOG.error("Error during account creation for " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT, e1);
+      }
+    }
+  }
 
 }
