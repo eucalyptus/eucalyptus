@@ -170,7 +170,6 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
@@ -1652,8 +1651,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         for ( BucketTags bucketTags : bucketTagsList ) {
           BucketTag bucketTag = new BucketTag( );
-          bucketTag.setKey( bucketTags.getKey( ) );
-          bucketTag.setValue( bucketTags.getValue( ) );
+          bucketTag.setKey( bucketTags.getKey() );
+          bucketTag.setValue( bucketTags.getValue() );
           bucketTagList.add( bucketTag );
         }
 

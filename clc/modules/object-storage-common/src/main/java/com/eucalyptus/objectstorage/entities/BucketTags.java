@@ -41,10 +41,10 @@ public class BucketTags extends AbstractPersistent {
   @Index(name = "IDX_bucket_uuid")
   private String bucketUuid;
 
-  @Column(name = "key", length = 128)
+  @Column(name = "tag_key", length = 128)
   private String key;
 
-  @Column(name = "value", length = 256)
+  @Column(name = "tag_value", length = 256)
   private String value;
 
   public BucketTags withUuid(String bucketUuid) {
@@ -64,7 +64,7 @@ public class BucketTags extends AbstractPersistent {
     return key;
   }
 
-  public void setKey( String key ) {
+  public void setKey(String key) {
     this.key = key;
   }
 
@@ -72,7 +72,7 @@ public class BucketTags extends AbstractPersistent {
     return value;
   }
 
-  public void setValue( String value ) {
+  public void setValue(String value) {
     this.value = value;
   }
 }

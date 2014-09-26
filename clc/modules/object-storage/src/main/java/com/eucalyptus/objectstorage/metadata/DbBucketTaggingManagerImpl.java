@@ -51,8 +51,8 @@ public class DbBucketTaggingManagerImpl implements BucketTaggingManager {
       for ( BucketTag bucketTag : tags ) {
         BucketTags entity = new BucketTags( );
         entity.setBucketUuid( bucketUuid );
-        entity.setKey( bucketTag.getKey( ) );
-        entity.setValue( bucketTag.getValue( ) );
+        entity.setKey(bucketTag.getKey());
+        entity.setValue(bucketTag.getValue());
         Entities.merge( entity );
       }
       tx.commit( );

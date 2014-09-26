@@ -359,6 +359,12 @@ public class GetBucketTaggingRequest extends S3Request {}
 public class BucketTag {
 	String key;
 	String value;
+    public BucketTag() {}
+
+    public BucketTag(String k, String v) {
+        this.key = k;
+        this.value = v;
+    }
 }
 
 /*
