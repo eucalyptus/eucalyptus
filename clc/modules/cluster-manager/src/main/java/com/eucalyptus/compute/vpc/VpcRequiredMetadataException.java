@@ -17,32 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.compute.vpc;
+
+import com.eucalyptus.cloud.util.InvalidMetadataException;
 
 /**
- * Features supported by NetworkService implementations
+ *
  */
-public enum NetworkingFeature {
+public class VpcRequiredMetadataException extends InvalidMetadataException {
+  private static final long serialVersionUID = 1L;
 
-  /**
-   * EC2-Classic platform
-   */
-  Classic,
-
-  /**
-   * Consistent (e.g. view based)
-   */
-  Consistent,
-
-  /**
-   * Elastic IP addresses
-   */
-  ElasticIPs,
-
-  /**
-   * EC2-VPC platform
-   */
-  Vpc,
-  ;
-
+  public VpcRequiredMetadataException( ) {
+    super( "VPC required but not specified" );
+  }
 }

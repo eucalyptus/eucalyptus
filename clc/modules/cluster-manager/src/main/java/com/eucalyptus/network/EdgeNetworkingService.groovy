@@ -40,11 +40,13 @@ import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.vpc.Subnet
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
+import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.Strings
 import com.google.common.base.Function
+import com.google.common.base.Optional
 import com.google.common.collect.Iterables
 import com.google.common.collect.Iterators
 import com.google.common.collect.Lists
@@ -72,13 +74,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     request.resources.each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:
-          //TODO:STEVE: prepare the IP correctly for VPC vs EC2-Classic
-          //
-          // Currently we allocate one public IP for the instance, we should support
-          // optional allocation of a public IP for the default network interface
-          if ( networkResource.ownerId.startsWith( 'i-' ) ) {
-            resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
-          }
+          resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
           break
         case PrivateIPResource:
           if ( !vpc ) {
@@ -126,9 +122,14 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
 
   @Override
   DescribeNetworkingFeaturesResponseType describeFeatures(final DescribeNetworkingFeaturesType request) {
+    final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: Lists.newArrayList( ElasticIPs, Vpc )
+            networkingFeatures: Lists.newArrayList(
+                Consistent,
+                ElasticIPs,
+                configurationOptional.isPresent( ) && NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode ? Vpc : Classic
+            )
         )
     ) ) )
   }

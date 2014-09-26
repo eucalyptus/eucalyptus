@@ -17,32 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.cloud.util;
 
 /**
- * Features supported by NetworkService implementations
+ *
  */
-public enum NetworkingFeature {
-
-  /**
-   * EC2-Classic platform
-   */
-  Classic,
-
-  /**
-   * Consistent (e.g. view based)
-   */
-  Consistent,
-
-  /**
-   * Elastic IP addresses
-   */
-  ElasticIPs,
-
-  /**
-   * EC2-VPC platform
-   */
-  Vpc,
-  ;
-
+public class SecurityGroupLimitMetadataException extends MetadataException {
+  private static final long serialVersionUID = 1L;
 }
