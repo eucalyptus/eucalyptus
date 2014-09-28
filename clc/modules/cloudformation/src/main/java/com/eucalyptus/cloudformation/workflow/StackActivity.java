@@ -30,7 +30,9 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrati
 )
 @Activities(version="20.0")
 public interface StackActivity {
-  public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  public String initResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String determineResourceFailures(String stackId, String accountId);
   public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);

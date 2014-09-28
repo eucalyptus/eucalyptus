@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -31,29 +32,25 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Secu
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2SecurityGroupRule;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.create.CreateStep;
+import com.eucalyptus.cloudformation.workflow.create.MultiStepCreatePromise;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AllocateAddressResponseType;
-import com.eucalyptus.compute.common.AllocateAddressType;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
-import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
@@ -63,15 +60,13 @@ import com.eucalyptus.compute.common.DeleteSecurityGroupType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
 import org.apache.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -80,6 +75,13 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
+
+  public AWSEC2SecurityGroupResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -100,55 +102,70 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     info = (AWSEC2SecurityGroupResourceInfo) resourceInfo;
   }
 
-  @Override
-  public int getNumCreateSteps() {
-    return 4;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create security group
-        CreateSecurityGroupType createSecurityGroupType = new CreateSecurityGroupType();
-        if (!Strings.isNullOrEmpty(properties.getGroupDescription())) {
-          createSecurityGroupType.setGroupDescription(properties.getGroupDescription());
+  private enum CreateSteps implements CreateStep {
+    CREATE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        CreateSecurityGroupType createSecurityGroupType = MessageHelper.createMessage(CreateSecurityGroupType.class, action.info.getEffectiveUserId());
+        if (!Strings.isNullOrEmpty(action.properties.getGroupDescription())) {
+          createSecurityGroupType.setGroupDescription(action.properties.getGroupDescription());
         }
-        if (!Strings.isNullOrEmpty(properties.getVpcId())) {
-          createSecurityGroupType.setVpcId(properties.getVpcId());
+        if (!Strings.isNullOrEmpty(action.properties.getVpcId())) {
+          createSecurityGroupType.setVpcId(action.properties.getVpcId());
         }
-        String groupName = getDefaultPhysicalResourceId();
+        String groupName = action.getDefaultPhysicalResourceId();
         createSecurityGroupType.setGroupName(groupName);
-        createSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
         CreateSecurityGroupResponseType createSecurityGroupResponseType = AsyncRequests.<CreateSecurityGroupType,CreateSecurityGroupResponseType> sendSync(configuration, createSecurityGroupType);
         String groupId = createSecurityGroupResponseType.getGroupId();
-        if (!Strings.isNullOrEmpty(properties.getVpcId())) {
-          info.setPhysicalResourceId(groupId);
+        if (!Strings.isNullOrEmpty(action.properties.getVpcId())) {
+          action.info.setPhysicalResourceId(groupId);
         } else {
-          info.setPhysicalResourceId(groupName);
+          action.info.setPhysicalResourceId(groupName);
         }
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
-        break;
-      case 1: // create tags
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        action.info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
+        return action;
+      }
+
+      @Override
+      public boolean createStackEventWhenDone() {
+        return true;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
         }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue()));
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue()));
         createTagsType.setTagSet(EC2Helper.createTagSet(tags));
         AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      case 2: // create ingress rules
-        if (properties.getSecurityGroupIngress() != null && !properties.getSecurityGroupIngress().isEmpty()) {
-          for (EC2SecurityGroupRule ec2SecurityGroupRule : properties.getSecurityGroupIngress()) {
-            AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
-            authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-            authorizeSecurityGroupIngressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+        return action;
+      }
+
+      @Override
+      public boolean createStackEventWhenDone() {
+        return true;
+      }
+    },
+    CREATE_INGRESS_RULES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getSecurityGroupIngress() != null && !action.properties.getSecurityGroupIngress().isEmpty()) {
+          for (EC2SecurityGroupRule ec2SecurityGroupRule : action.properties.getSecurityGroupIngress()) {
+            AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = MessageHelper.createMessage(AuthorizeSecurityGroupIngressType.class, action.info.getEffectiveUserId());
+            authorizeSecurityGroupIngressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
 
             // Can't specify cidr and source security group
             if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp()) &&
@@ -178,7 +195,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
               // I think SourceSecurityGroupOwnerId is needed here.  If not provided, use the local account id
               String sourceSecurityGroupOwnerId = ec2SecurityGroupRule.getSourceSecurityGroupOwnerId();
               if (Strings.isNullOrEmpty(sourceSecurityGroupOwnerId)) {
-                sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+                sourceSecurityGroupOwnerId = action.getStackEntity().getAccountId();
               }
               ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, ec2SecurityGroupRule.getSourceSecurityGroupName(), null)));
             }
@@ -186,20 +203,28 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
             AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
           }
         }
-        break;
-      case 3: // create egress rules
-        if (properties.getSecurityGroupEgress() != null && !properties.getSecurityGroupEgress().isEmpty()) {
+        return action;
+      }
+      @Override
+      public boolean createStackEventWhenDone() {
+        return true;
+      }
+    },
+    CREATE_EGRESS_RULES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getSecurityGroupEgress() != null && !action.properties.getSecurityGroupEgress().isEmpty()) {
           // revoke default
-          RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = new RevokeSecurityGroupEgressType();
-          revokeSecurityGroupEgressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-          revokeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+          RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = MessageHelper.createMessage(RevokeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
+          revokeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
           revokeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(DEFAULT_EGRESS_RULE()));
           RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
 
-          for (EC2SecurityGroupRule ec2SecurityGroupRule : properties.getSecurityGroupEgress()) {
-            AuthorizeSecurityGroupEgressType authorizeSecurityGroupEgressType = new AuthorizeSecurityGroupEgressType();
-            authorizeSecurityGroupEgressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-            authorizeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+          for (EC2SecurityGroupRule ec2SecurityGroupRule : action.properties.getSecurityGroupEgress()) {
+            AuthorizeSecurityGroupEgressType authorizeSecurityGroupEgressType = MessageHelper.createMessage(AuthorizeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
+            authorizeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
 
             // Can't specify cidr and Destination security group
             if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp()) && !Strings.isNullOrEmpty(ec2SecurityGroupRule.getDestinationSecurityGroupId())) {
@@ -220,9 +245,12 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
             AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgressResponseType = AsyncRequests.<AuthorizeSecurityGroupEgressType, AuthorizeSecurityGroupEgressResponseType> sendSync(configuration, authorizeSecurityGroupEgressType);
           }
         }
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
+        return action;
+      }
+      @Override
+      public boolean createStackEventWhenDone() {
+        return true;
+      }
     }
   }
 
@@ -231,15 +259,6 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     ipPermissionType.setIpProtocol("-1");
     ipPermissionType.setCidrIpRanges(Lists.newArrayList("0.0.0.0/0"));
     return ipPermissionType;
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
   }
 
   @Override
@@ -276,10 +295,20 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
+    return new MultiStepCreatePromise(createStackWorkflow, stepIds).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
   }
 
+  private enum CREATE_STEPS_TRANSFORM implements Function<CreateSteps, String> {
+    INSTANCE {
+      @Nullable
+      @Override
+      public String apply(@Nullable CreateSteps createSteps) {
+        return createSteps.name();
+      }
+    }
+  }
 }
 
 

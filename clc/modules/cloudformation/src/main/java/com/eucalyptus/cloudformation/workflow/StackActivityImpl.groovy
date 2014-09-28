@@ -35,10 +35,14 @@ import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
+import com.eucalyptus.cloudformation.workflow.create.CreateStep
+import com.eucalyptus.cloudformation.workflow.create.NotAResourceFailureException
+import com.eucalyptus.cloudformation.workflow.create.ResourceFailureException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.netflix.glisten.ActivityOperations
@@ -84,14 +88,15 @@ public class StackActivityImpl implements StackActivity{
   }
 
   @Override
-  public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+  public String initResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
     LOG.debug("Creating resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
-    ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? new ArrayList<String>()
-      : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>(){})
+    ArrayList<String> reverseDependentResourceIds = (reverseDependentResourcesJson == null) ? new ArrayList<String>()
+      : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>() {
+    })
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-    for (String reverseDependentResourceId: reverseDependentResourceIds) {
+    for (String reverseDependentResourceId : reverseDependentResourceIds) {
       resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId));
     }
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
@@ -100,13 +105,13 @@ public class StackActivityImpl implements StackActivity{
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     if (!resourceInfo.getAllowedByCondition()) {
       LOG.debug("Resource " + resourceId + " not allowed by condition, skipping");
-      return JsonHelper.getStringFromJsonNode(returnNode);
+      return "SKIP"; //TODO: codify this somewhere...
     };
     // Evaluate all properties
     if (resourceInfo.getPropertiesJson() != null) {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
-      for (String propertyKey: propertyKeys) {
+      for (String propertyKey : propertyKeys) {
         JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
@@ -116,11 +121,11 @@ public class StackActivityImpl implements StackActivity{
       }
       resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
     }
-    // Update metadata: 
+    // Update metadata:
     if (resourceInfo.getMetadataJson() != null) {
       JsonNode metadataJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson());
       List<String> metadataKeys = Lists.newArrayList(metadataJsonNode.fieldNames());
-      for (String metadataKey: metadataKeys) {
+      for (String metadataKey : metadataKeys) {
         JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedMetadataNode).isMatch()) {
           ((ObjectNode) metadataJsonNode).remove(metadataKey);
@@ -130,11 +135,11 @@ public class StackActivityImpl implements StackActivity{
       }
       resourceInfo.setMetadataJson(JsonHelper.getStringFromJsonNode(metadataJsonNode));
     }
-    // Update update policy: 
+    // Update update policy:
     if (resourceInfo.getUpdatePolicyJson() != null) {
       JsonNode updatePolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getUpdatePolicyJson());
       List<String> updatePolicyKeys = Lists.newArrayList(updatePolicyJsonNode.fieldNames());
-      for (String updatePolicyKey: updatePolicyKeys) {
+      for (String updatePolicyKey : updatePolicyKeys) {
         JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedUpdatePolicyNode).isMatch()) {
           ((ObjectNode) updatePolicyJsonNode).remove(updatePolicyKey);
@@ -145,7 +150,6 @@ public class StackActivityImpl implements StackActivity{
       resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyJsonNode));
     }
 
-
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
@@ -155,7 +159,8 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setStackName(stackName);
     stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
     stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-    stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+    stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
+    //TODO: see if this really matches
     stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
     stackEvent.setResourceType(resourceInfo.getType());
     stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
@@ -167,53 +172,9 @@ public class StackActivityImpl implements StackActivity{
     stackResourceEntity.setDescription(""); // deal later
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    try {
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      // create each step
-      for (int step = 0; step < resourceAction.getNumCreateSteps(); step++) {
-        resourceAction.create(step);
-        if (step < resourceAction.getNumCreateSteps() - 1) { // don't bother on the last one
-          Thread.sleep(1L); // just so event is not exactly the same time
-          stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
-          stackResourceEntity.setResourceStatusReason(null);
-          stackResourceEntity.setDescription(""); // deal later
-          stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-          StackResourceEntityManager.updateStackResource(stackResourceEntity);
-          stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-          stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
-          stackEvent.setTimestamp(new Date());
-          StackEventEntityManager.addStackEvent(stackEvent, accountId);
-        }
-      }
-      resourceInfo.setReady(Boolean.TRUE);
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
-      stackResourceEntity.setResourceStatusReason("");
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
-      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
-      stackEvent.setResourceStatusReason("");
-      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-      stackEvent.setTimestamp(new Date());
-      StackEventEntityManager.addStackEvent(stackEvent, accountId);
-      LOG.debug("Finished creating resource " + resourceId);
-      return JsonHelper.getStringFromJsonNode(returnNode);
-    } catch (Exception ex) {
-      LOG.debug("Error creating resource " + resourceId);
-      LOG.error(ex, ex);
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
-      stackResourceEntity.setResourceStatusReason(""+ex.getMessage());
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
-      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
-      stackEvent.setTimestamp(new Date());
-      stackEvent.setResourceStatusReason(""+ex.getMessage());
-      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-      StackEventEntityManager.addStackEvent(stackEvent, accountId);
-      throw ex;
-    }
+    return "";
   }
+
   @Override
   public String logInfo(String message) {
     LOG.info(message);
@@ -310,6 +271,17 @@ public class StackActivityImpl implements StackActivity{
   }
 
   @Override
+  public String determineResourceFailures(String stackId, String accountId) {
+    Collection<String> failedResources = Lists.newArrayList();
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
+      if (stackResourceEntity.getResourceStatus() == StackResourceEntity.Status.CREATE_FAILED) {
+        failedResources.add(stackResourceEntity.getLogicalResourceId());
+      }
+    }
+    return "The following resource(s) failed to create: " + failedResources + ".";
+  }
+
+  @Override
   public String finalizeCreateStack(String stackId, String accountId) {
     LOG.info("Finalizing create stack");
     try {
@@ -341,6 +313,66 @@ public class StackActivityImpl implements StackActivity{
     return ""; // promiseFor() doesn't work on void return types
   }
 
+  @Override
+  public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+    resourceAction.setStackEntity(stackEntity);
+    resourceInfo.setEffectiveUserId(effectiveUserId);
+    resourceAction.setResourceInfo(resourceInfo);
+    try {
+      CreateStep createStep = resourceAction.getCreateStep(stepId);
+      resourceAction = createStep.perform(resourceAction);
+      resourceInfo = resourceAction.getResourceInfo();
+      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
+      stackResourceEntity.setResourceStatusReason(null);
+      stackResourceEntity.setDescription(""); // deal later
+      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      if (createStep.createStackEventWhenDone()) {
+        StackEvent stackEvent = new StackEvent();
+        stackEvent.setStackId(stackId);
+        stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+        stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+        stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
+        stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+        stackEvent.setResourceType(resourceInfo.getType());
+        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
+        stackEvent.setResourceStatusReason(null);
+        stackEvent.setTimestamp(new Date());
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      }
+    } catch (NotAResourceFailureException ex) {
+      LOG.error(ex);
+      LOG.debug(ex, ex);
+      throw ex; // not a big enough object footprint to be an issue with data converters
+    } catch (Exception ex) {
+      LOG.debug("Error creating resource " + resourceId);
+      LOG.error(ex, ex);
+      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
+      stackResourceEntity.setResourceStatusReason("" + ex.getMessage());
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      StackEvent stackEvent = new StackEvent();
+      stackEvent.setStackId(stackId);
+      stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+      stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis());
+      stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+      stackEvent.setResourceType(resourceInfo.getType());
+      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
+      stackEvent.setResourceStatusReason("" + ex.getMessage());
+      stackEvent.setTimestamp(new Date());
+      StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      Throwable rootCause = Throwables.getRootCause(ex);
+      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
+    }
+  }
 
   @Override
   public String deleteAllStackRecords(String stackId, String accountId) {
