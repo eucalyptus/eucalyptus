@@ -20,19 +20,13 @@ public class MultiStepCreatePromise {
   private final List<String> stepIds;
 
   public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
-    Promise<String> initPromise = promiseFor(activities.initResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson));
-    waitFor(initPromise) { String result ->
-      if ("SKIP".equals(result)) {
-        return promiseFor("");
-      } else {
-        Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
-        for (String stepId: stepIds) {
-          previousPromise = waitFor(previousPromise) {
-            promiseFor(activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId));
-          }
-        }
-        return previousPromise;
+    Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
+    for (String stepId: stepIds) {
+      String stepIdLocal = new String(stepId); // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration
+      previousPromise = waitFor(previousPromise) {
+        promiseFor(activities.performCreateStep(stepIdLocal, resourceId, stackId, accountId, effectiveUserId));
       }
     }
+    return previousPromise;
   }
 }

@@ -72,14 +72,21 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           // This is in case any part of setting up the stack fails
           // Now for each resource, set up the promises and the dependencies they have for each other
           for (String resourceId : resourceDependencyManager.getNodes()) {
+            String resourceIdLocalCopy = new String(resourceId); // passing "resourceId" into a waitFor() uses the for reference pointer after the for loop has expired
             Collection<Promise<String>> promisesDependedOn = Lists.newArrayList();
-            for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceId)) {
+            for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)) {
               promisesDependedOn.add(createdResourcePromiseMap.get(dependingResourceId));
             }
             AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
             waitFor(dependentAndPromise) {
-              Promise<String> currentResourcePromise = null;
-              createdResourcePromiseMap.put(resourceId, currentResourcePromise);
+              String reverseDependentResourcesJson = new ObjectMapper().writeValueAsString(
+                resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy) == null ?
+                  Lists.<String>newArrayList() :
+                  resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
+              );
+              Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+              createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
+              return currentResourcePromise;
             }
           }
           AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
@@ -110,6 +117,29 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
     } catch (Exception ex) {
       CreateStackWorkflowImpl.LOG.error(ex);
       CreateStackWorkflowImpl.LOG.debug(ex, ex);
+    }
+  }
+
+  Promise<String> getCreatePromise(String resourceId,
+                                   String stackId,
+                                   String accountId,
+                                   String effectiveUserId,
+                                   String reverseDependentResourcesJson) {
+    Promise<String> getResourceTypePromise = promiseFor(activities.getResourceType(stackId, accountId, resourceId));
+    waitFor(getResourceTypePromise) { String resourceType ->
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
+      Promise<String> initPromise = promiseFor(activities.initResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson));
+      waitFor(initPromise) { String result ->
+        if ("SKIP".equals(result)) {
+          return promiseFor("");
+        } else {
+          Promise<String> createPromise = resourceAction.getCreatePromise(this,
+            resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+          waitFor(createPromise) {
+            activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId);
+          }
+        }
+      }
     }
   }
 }

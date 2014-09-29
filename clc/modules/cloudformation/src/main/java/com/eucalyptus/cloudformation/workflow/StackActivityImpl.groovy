@@ -50,6 +50,7 @@ import com.netflix.glisten.impl.swf.SwfActivityOperations
 import org.apache.log4j.Logger
 
 public class StackActivityImpl implements StackActivity{
+
   @Delegate
   ActivityOperations activityOperations = new SwfActivityOperations();
 
@@ -173,6 +174,10 @@ public class StackActivityImpl implements StackActivity{
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     return "";
+  }
+  @Override
+  public String getResourceType(String stackId, String accountId, String resourceId) {
+    return StackResourceEntityManager.getStackResource(stackId, accountId, resourceId).getResourceType();
   }
 
   @Override
@@ -320,6 +325,7 @@ public class StackActivityImpl implements StackActivity{
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
@@ -373,6 +379,38 @@ public class StackActivityImpl implements StackActivity{
       throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
   }
+
+  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+    resourceAction.setStackEntity(stackEntity);
+    resourceInfo.setEffectiveUserId(effectiveUserId);
+    resourceAction.setResourceInfo(resourceInfo);
+    resourceInfo.setReady(Boolean.TRUE);
+    stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+    stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
+    stackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(stackResourceEntity);
+
+    StackEvent stackEvent = new StackEvent();
+    stackEvent.setStackId(stackId);
+    stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+    stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+    stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+    stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_COMPLETE.toString() + "-" + System.currentTimeMillis());
+    stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+    stackEvent.setResourceType(resourceInfo.getType());
+    stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
+    stackEvent.setResourceStatusReason("");
+    stackEvent.setTimestamp(new Date());
+    StackEventEntityManager.addStackEvent(stackEvent, accountId);
+
+    LOG.debug("Finished creating resource " + resourceId);
+  }
+
 
   @Override
   public String deleteAllStackRecords(String stackId, String accountId) {
