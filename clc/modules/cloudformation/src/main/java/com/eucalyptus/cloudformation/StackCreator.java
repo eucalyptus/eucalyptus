@@ -21,6 +21,8 @@ package com.eucalyptus.cloudformation;
 
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -45,7 +47,10 @@ public class StackCreator extends Thread {
   @Override
   public void run() {
     try {
-      CloudFormationBootstrapper.getWorkflowProvider().getCreateStackWorkflow().createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId, onFailure);
+      CreateStackWorkflow createStackWorkflow = CloudFormationBootstrapper.getWorkflowProvider().getCreateStackWorkflow();
+      createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId, onFailure);
+      LOG.info("CreateStackWorkflowImpl [SWF] = workflowId= " + ((CreateStackWorkflowClient) createStackWorkflow).getClient().getWorkflowExecution().getWorkflowId() + ",runId=" +
+          ((CreateStackWorkflowClient) createStackWorkflow).getClient().getWorkflowExecution().getRunId());
     } catch (Exception ex2) {
       LOG.error(ex2, ex2);
     }
