@@ -324,12 +324,12 @@ public class StackActivityImpl implements StackActivity{
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-    resourceAction.setStackEntity(stackEntity);
-    resourceInfo.setEffectiveUserId(effectiveUserId);
-    resourceAction.setResourceInfo(resourceInfo);
     try {
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
       CreateStep createStep = resourceAction.getCreateStep(stepId);
       resourceAction = createStep.perform(resourceAction);
       resourceInfo = resourceAction.getResourceInfo();
@@ -365,7 +365,7 @@ public class StackActivityImpl implements StackActivity{
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
       StackEvent stackEvent = new StackEvent();
       stackEvent.setStackId(stackId);
-      stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+      stackEvent.setStackName(stackEntity.getStackName());
       stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
       stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
       stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis());

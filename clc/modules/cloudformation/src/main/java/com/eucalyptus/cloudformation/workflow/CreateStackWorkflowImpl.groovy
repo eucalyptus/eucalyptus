@@ -33,6 +33,7 @@ import com.eucalyptus.cloudformation.workflow.create.ResourceFailureException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
@@ -100,8 +101,9 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         }.withCatch { Throwable t ->
           CreateStackWorkflowImpl.LOG.error(t);
           CreateStackWorkflowImpl.LOG.debug(t, t);
-          Promise<String> errorMessagePromise = Promise.asPromise((t != null) && (t.getMessage() != null) ? t.getMessage() : "");
-          if (t != null && t instanceof ResourceFailureException) {
+          Throwable cause = Throwables.getRootCause(t);
+          Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
+          if (cause != null && cause instanceof ResourceFailureException) {
             errorMessagePromise = promiseFor(activities.determineResourceFailures(stackId, accountId));
           }
           waitFor(errorMessagePromise) { String errorMessage ->
