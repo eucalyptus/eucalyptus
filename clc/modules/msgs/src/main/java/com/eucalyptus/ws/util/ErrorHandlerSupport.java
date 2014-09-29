@@ -61,7 +61,6 @@ public abstract class ErrorHandlerSupport {
   @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
   public void handle( final ExceptionMessage exMsg ) {
     EventRecord.here( getClass(), EventType.MSG_REPLY, exMsg.getPayload().getClass().getSimpleName() ).debug();
-    LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     final Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
       try {

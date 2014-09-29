@@ -64,10 +64,8 @@ package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
@@ -80,6 +78,8 @@ import com.google.common.base.Strings;
  * Support class for HMAC login modules
  */
 abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
+
+  protected static final Logger signatureLogger = Logger.getLogger( "com.eucalyptus.auth.login.HMAC" );
 
   private final int signatureVersion;
 
