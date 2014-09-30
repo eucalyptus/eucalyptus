@@ -20,12 +20,16 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Collection;
+
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.google.common.collect.ImmutableSet;
 
 public class MetricEntityFactory {
@@ -63,6 +67,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "metric_data")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class MetricEntitySingle extends MetricEntity {
@@ -353,6 +358,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity0 extends MetricEntity {
@@ -363,6 +369,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity1 extends MetricEntity {
@@ -373,6 +380,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity2 extends MetricEntity {
@@ -383,6 +391,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity3 extends MetricEntity {
@@ -393,6 +402,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity4 extends MetricEntity {
@@ -403,6 +413,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity5 extends MetricEntity {
@@ -413,6 +424,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity6 extends MetricEntity {
@@ -423,6 +435,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity7 extends MetricEntity {
@@ -433,6 +446,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity8 extends MetricEntity {
@@ -443,6 +457,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntity9 extends MetricEntity {
@@ -453,6 +468,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityA extends MetricEntity {
@@ -463,6 +479,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityB extends MetricEntity {
@@ -473,6 +490,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_c")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityC extends MetricEntity {
@@ -483,6 +501,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityD extends MetricEntity {
@@ -493,6 +512,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityE extends MetricEntity {
@@ -503,6 +523,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "custom_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityF extends MetricEntity {
@@ -513,6 +534,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity0 extends MetricEntity {
@@ -523,6 +545,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity1 extends MetricEntity {
@@ -533,6 +556,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity2 extends MetricEntity {
@@ -543,6 +567,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity3 extends MetricEntity {
@@ -553,6 +578,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity4 extends MetricEntity {
@@ -563,6 +589,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity5 extends MetricEntity {
@@ -573,6 +600,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity6 extends MetricEntity {
@@ -583,6 +611,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity7 extends MetricEntity {
@@ -593,6 +622,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity8 extends MetricEntity {
@@ -603,6 +633,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntity9 extends MetricEntity {
@@ -613,6 +644,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityA extends MetricEntity {
@@ -623,6 +655,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityB extends MetricEntity {
@@ -633,6 +666,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_c")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityC extends MetricEntity {
@@ -643,6 +677,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityD extends MetricEntity {
@@ -653,6 +688,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityE extends MetricEntity {
@@ -663,6 +699,7 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
+  @RemotablePersistence
   @Table(name = "System_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class SystemMetricEntityF extends MetricEntity {

@@ -20,13 +20,17 @@
 package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.component.annotation.RemotablePersistence;
+
 @Entity
 @PersistenceContext(name = "eucalyptus_reporting_backend")
+@RemotablePersistence
 @Table(name = "reporting_instance_create_events")
 public class ReportingInstanceCreateEvent extends ReportingEventSupport {
   private static final long serialVersionUID = 1L;
