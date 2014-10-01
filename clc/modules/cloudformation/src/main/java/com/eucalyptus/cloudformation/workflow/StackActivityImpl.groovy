@@ -36,6 +36,7 @@ import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
 import com.eucalyptus.cloudformation.workflow.create.CreateStep
+import com.eucalyptus.cloudformation.workflow.delete.DeleteStep
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -331,20 +332,21 @@ public class StackActivityImpl implements StackActivity{
       stackResourceEntity.setDescription(""); // deal later
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      if (createStep.createStackEventWhenDone()) {
-        StackEvent stackEvent = new StackEvent();
-        stackEvent.setStackId(stackId);
-        stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
-        stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
-        stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-        stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
-        stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
-        stackEvent.setResourceType(resourceInfo.getType());
-        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
-        stackEvent.setResourceStatusReason(null);
-        stackEvent.setTimestamp(new Date());
-        StackEventEntityManager.addStackEvent(stackEvent, accountId);
-      }
+
+      // Create a stack event after success
+      StackEvent stackEvent = new StackEvent();
+      stackEvent.setStackId(stackId);
+      stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+      stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
+      stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+      stackEvent.setResourceType(resourceInfo.getType());
+      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
+      stackEvent.setResourceStatusReason(null);
+      stackEvent.setTimestamp(new Date());
+      StackEventEntityManager.addStackEvent(stackEvent, accountId);
+
     } catch (NotAResourceFailureException ex) {
       LOG.error(ex);
       LOG.debug(ex, ex);
@@ -391,8 +393,8 @@ public class StackActivityImpl implements StackActivity{
         errorWithProperties = true;
       }
       if (!errorWithProperties) { // if we have errors with properties we had them on create too, so we didn't start (really)
-        CreateStep createStep = resourceAction.getCreateStep(stepId);
-        resourceAction = createStep.perform(resourceAction);
+        DeleteStep deleteStep = resourceAction.getDeleteStep(stepId);
+        resourceAction = deleteStep.perform(resourceAction);
         resourceInfo = resourceAction.getResourceInfo();
         stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);
         stackResourceEntity.setResourceStatusReason(null);

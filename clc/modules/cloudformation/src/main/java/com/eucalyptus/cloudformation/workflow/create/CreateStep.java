@@ -1,5 +1,6 @@
 package com.eucalyptus.cloudformation.workflow.create;
 
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 
 /**
@@ -7,5 +8,5 @@ import com.eucalyptus.cloudformation.resources.ResourceAction;
  */
 public interface CreateStep {
   public ResourceAction perform(ResourceAction resourceAction) throws Exception;
-  public boolean createStackEventWhenDone();
+  public RetryPolicy getRetryPolicy();
 }

@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -38,7 +39,7 @@ import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.create.CreateStep;
-import com.eucalyptus.cloudformation.workflow.create.MultiStepCreatePromise;
+import com.eucalyptus.cloudformation.workflow.create.MultiStepWithRetryCreatePromise;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
 import com.eucalyptus.cloudformation.workflow.delete.RetrySingleStepDeletePromise;
@@ -57,6 +58,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
@@ -81,8 +83,8 @@ import java.util.List;
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
-  @ConfigurableField(initial = "180", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
-  public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 180;
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
+  public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 300;
 
   private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
@@ -145,10 +147,6 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         return action;
       }
 
-      @Override
-      public boolean createStackEventWhenDone() {
-        return true;
-      }
     },
     CREATE_TAGS {
       @Override
@@ -168,10 +166,6 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         return action;
       }
 
-      @Override
-      public boolean createStackEventWhenDone() {
-        return true;
-      }
     },
     CREATE_INGRESS_RULES {
       @Override
@@ -221,10 +215,6 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         }
         return action;
       }
-      @Override
-      public boolean createStackEventWhenDone() {
-        return true;
-      }
     },
     CREATE_EGRESS_RULES {
       @Override
@@ -263,11 +253,15 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         }
         return action;
       }
-      @Override
-      public boolean createStackEventWhenDone() {
-        return true;
-      }
+    };
+
+    // None of these tasks require retry...
+
+    @Override
+    public RetryPolicy getRetryPolicy() {
+      return null;
     }
+
   }
 
   private enum DeleteSteps implements DeleteStep {
@@ -295,7 +289,8 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
           AsyncRequests.<DeleteSecurityGroupType, DeleteSecurityGroupResponseType>sendSync(configuration, deleteSecurityGroupType);
           return action;
         } catch (Exception ex) {
-          throw new ValidationFailedException("Security group " + groupId + " not yet deleted");
+          Throwable cause = Throwables.getRootCause(ex);
+          throw new ValidationFailedException(ex.getMessage());
         }
       }
     }
@@ -312,7 +307,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   @Override
   public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
-    return new MultiStepCreatePromise(createStackWorkflow, stepIds).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new MultiStepWithRetryCreatePromise(createStackWorkflow, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
@@ -321,7 +316,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     exceptionList.add(NotAResourceFailureException.class);
     ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
     if (SECURITY_GROUP_MAX_DELETE_RETRY_SECS != null && SECURITY_GROUP_MAX_DELETE_RETRY_SECS > 0) {
-      retryPolicy.setMaximumRetryIntervalSeconds(SECURITY_GROUP_MAX_DELETE_RETRY_SECS);
+      retryPolicy.setRetryExpirationIntervalSeconds(SECURITY_GROUP_MAX_DELETE_RETRY_SECS);
     }
     return new RetrySingleStepDeletePromise(deleteStackWorkflow, DeleteSteps.DELETE_GROUP.name(), retryPolicy).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
