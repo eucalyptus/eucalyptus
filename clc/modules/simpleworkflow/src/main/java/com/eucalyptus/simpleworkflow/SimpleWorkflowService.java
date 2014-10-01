@@ -36,6 +36,7 @@ import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.criterion.Conjunction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
@@ -71,6 +72,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -901,6 +903,10 @@ public class SimpleWorkflowService {
                     });
 
               } catch ( Exception e ) {
+                final StaleObjectStateException stale = Exceptions.findCause( e, StaleObjectStateException.class );
+                if ( stale != null ) try {
+                  Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+                } catch ( ClassNotFoundException ce ) { /* eviction failure */ }
                 if ( PersistenceExceptions.isStaleUpdate( e ) ) {
                   logger.info( "Activity task for domain " + domain + ", list " + taskList + " already taken"  );
                 } else if (  PersistenceExceptions.isLockError( e ) ) {
@@ -1229,6 +1235,10 @@ public class SimpleWorkflowService {
                   }
                 } );
           } catch ( Exception e ) {
+            final StaleObjectStateException stale = Exceptions.findCause( e, StaleObjectStateException.class );
+            if ( stale != null ) try {
+              Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+            } catch ( ClassNotFoundException ce ) { /* eviction failure */ }
             if ( PersistenceExceptions.isStaleUpdate( e ) ) {
               logger.info( "Decision task for workflow " + execution.getDisplayName() + " already taken." );
             } else if (  PersistenceExceptions.isLockError( e ) ) {
@@ -1280,6 +1290,9 @@ public class SimpleWorkflowService {
             @Override
             public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
               if ( accessible.apply( workflowExecution ) ) {
+                // clear pending notifications in case of retries
+                notificationTypeListPairs.clear( );
+
                 // verify token is valid
                 final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
                 final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
@@ -1300,6 +1313,22 @@ public class SimpleWorkflowService {
                   workflowExecution.setDecisionTimestamp( new Date( ) );
                   notificationTypeListPairs.add( Pair.pair( "decision", workflowExecution.getTaskList( ) ) );
                 }
+
+                // setup activity count supplier
+                int activityTaskScheduledCount = 0;
+                final Supplier<Long> activityTaskCounter = Suppliers.memoize( new Supplier<Long>( ) {
+                  @Override
+                  public Long get( ) {
+                    try {
+                      return activityTasks.countByWorkflowExecution(
+                          accountFullName,
+                          domain.getDisplayName( ),
+                          workflowExecution.getDisplayName( ) );
+                    } catch ( SwfMetadataException e ) {
+                      throw up( e );
+                    }
+                  }
+                } );
 
                 // process decision task response
                 workflowExecution.setLatestExecutionContext( request.getExecutionContext( ) );
@@ -1518,10 +1547,7 @@ public class SimpleWorkflowService {
                           throw new ScheduleActivityTaskException( DEFAULT_TASK_LIST_UNDEFINED );
                         }
 
-                        if ( activityTasks.countByWorkflowExecution(
-                            accountFullName,
-                            domain.getDisplayName( ),
-                            workflowExecution.getDisplayName( ) ) >=
+                        if ( activityTaskCounter.get( ) + activityTaskScheduledCount >=
                             SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
                           throw new ScheduleActivityTaskException( OPEN_ACTIVITIES_LIMIT_EXCEEDED );
                         }
@@ -1553,6 +1579,7 @@ public class SimpleWorkflowService {
                                 activityType.getDefaultTaskHeartbeatTimeout( ),
                                 DEFAULT_HEARTBEAT_TIMEOUT_UNDEFINED )
                         ) );
+                        activityTaskScheduledCount++;
 
                         notificationTypeListPairs.add( Pair.pair( "activity", list ) );
                       } catch ( final ScheduleActivityTaskException e ) {
