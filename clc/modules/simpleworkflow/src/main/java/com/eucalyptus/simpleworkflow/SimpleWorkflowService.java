@@ -902,7 +902,7 @@ public class SimpleWorkflowService {
 
               } catch ( Exception e ) {
                 if ( PersistenceExceptions.isStaleUpdate( e ) ) {
-                  logger.info( "Activity task for domain " + domain + ", list " + taskList + " already taken", e  );
+                  logger.info( "Activity task for domain " + domain + ", list " + taskList + " already taken"  );
                 } else if (  PersistenceExceptions.isLockError( e ) ) {
                   logger.info( "Activity task for domain " + domain + ", list " + taskList + " locking error, will retry." );
                   Thread.sleep( 10 );

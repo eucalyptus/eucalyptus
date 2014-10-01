@@ -63,7 +63,7 @@ class EucaS3ClientFactory {
  * Also provides methods for refreshing the endpoint in case of failure etc
  */
 @CompileStatic
-class EucaS3Client implements AmazonS3 {
+class EucaS3Client implements AmazonS3, AutoCloseable {
 
     @Delegate
     AmazonS3Client s3Client;
@@ -127,5 +127,9 @@ class EucaS3Client implements AmazonS3 {
         ByteArrayInputStream contentStream = new ByteArrayInputStream(contentBytes);
         PutObjectResult result = s3Client.putObject(bucket, key, contentStream, objMetadata);
         return result.getETag();
+    }
+
+    public void close( ) {
+      this.s3Client.shutdown( );
     }
 }
