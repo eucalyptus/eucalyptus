@@ -31,15 +31,18 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrati
 )
 @Activities(version="60.0")
 public interface StackActivity {
-  public String initResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
   public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String determineResourceFailures(String stackId, String accountId);
-  public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String determineCreateResourceFailures(String stackId, String accountId);
+  public String determineDeleteResourceFailures(String stackId, String accountId);
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String stackId, String accountId);
   public String logInfo(String message);
   public String deleteAllStackRecords(String stackId, String accountId);
   public String getResourceType(String stackId, String accountId, String resourceId);
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
 }

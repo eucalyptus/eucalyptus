@@ -23,7 +23,9 @@ package com.eucalyptus.cloudformation.resources;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.create.CreateStep;
+import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
 import com.eucalyptus.crypto.Crypto;
 import com.google.common.collect.Maps;
 
@@ -34,7 +36,6 @@ public abstract class ResourceAction {
   public abstract void setResourceProperties(ResourceProperties resourceProperties);
   public abstract ResourceInfo getResourceInfo();
   public abstract void setResourceInfo(ResourceInfo resourceInfo);
-  public abstract void delete() throws Exception;
   protected StackEntity stackEntity;
 
   public StackEntity getStackEntity() {
@@ -63,6 +64,14 @@ public abstract class ResourceAction {
     return createSteps.get(stepId);
   }
 
-  public abstract Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  protected Map<String, DeleteStep> deleteSteps = Maps.newLinkedHashMap();
+
+  public final DeleteStep getDeleteStep(String stepId) {
+    return deleteSteps.get(stepId);
+  }
+
+  public abstract Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  public abstract Promise<String> getDeletePromise(DeleteStackWorkflowImpl deleteStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId);
 
 }

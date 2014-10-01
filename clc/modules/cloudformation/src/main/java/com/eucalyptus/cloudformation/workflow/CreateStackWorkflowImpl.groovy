@@ -27,16 +27,11 @@ import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
-import com.eucalyptus.cloudformation.template.JsonHelper
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
-import com.eucalyptus.cloudformation.workflow.create.ResourceFailureException
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.google.common.collect.Sets
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
@@ -104,7 +99,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           Throwable cause = Throwables.getRootCause(t);
           Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
           if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = promiseFor(activities.determineResourceFailures(stackId, accountId));
+            errorMessagePromise = promiseFor(activities.determineCreateResourceFailures(stackId, accountId));
           }
           waitFor(errorMessagePromise) { String errorMessage ->
             promiseFor(activities.createGlobalStackEvent(
@@ -130,13 +125,13 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
     Promise<String> getResourceTypePromise = promiseFor(activities.getResourceType(stackId, accountId, resourceId));
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = promiseFor(activities.initResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson));
+      Promise<String> initPromise = promiseFor(activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson));
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("");
         } else {
           Promise<String> createPromise = resourceAction.getCreatePromise(this,
-            resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+            resourceId, stackId, accountId, effectiveUserId);
           waitFor(createPromise) {
             activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId);
           }

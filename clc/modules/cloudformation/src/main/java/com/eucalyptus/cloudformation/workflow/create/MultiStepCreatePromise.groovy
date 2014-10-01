@@ -19,7 +19,7 @@ public class MultiStepCreatePromise {
   private final CreateStackWorkflowImpl createStackWorkflow;
   private final List<String> stepIds;
 
-  public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+  public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId) {
     Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
     for (String stepId: stepIds) {
       String stepIdLocal = new String(stepId); // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration

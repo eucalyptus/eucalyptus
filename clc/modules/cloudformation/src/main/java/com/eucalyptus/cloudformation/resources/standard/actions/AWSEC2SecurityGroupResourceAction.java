@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -34,8 +35,13 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.create.CreateStep;
 import com.eucalyptus.cloudformation.workflow.create.MultiStepCreatePromise;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
+import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
+import com.eucalyptus.cloudformation.workflow.delete.RetrySingleStepDeletePromise;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
@@ -45,11 +51,12 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
@@ -66,12 +73,17 @@ import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
+  @ConfigurableField(initial = "180", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
+  public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 180;
+
   private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
@@ -80,6 +92,10 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     for (CreateSteps createStep: CreateSteps.values()) {
       createSteps.put(createStep.name(), createStep);
     }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
   }
 
   @Override
@@ -254,6 +270,38 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     }
   }
 
+  private enum DeleteSteps implements DeleteStep {
+    DELETE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // See if group was ever populated
+        if (action.info.getPhysicalResourceId() == null) return action;
+        // See if group exists now
+        String groupId = JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue();
+        DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
+        describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(groupId));
+        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+          AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+        ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+        if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+          return action;
+        }
+        // Delete the group (may fail)
+        DeleteSecurityGroupType deleteSecurityGroupType = MessageHelper.createMessage(DeleteSecurityGroupType.class, action.info.getEffectiveUserId());
+        deleteSecurityGroupType.setGroupId(groupId);
+        try {
+          AsyncRequests.<DeleteSecurityGroupType, DeleteSecurityGroupResponseType>sendSync(configuration, deleteSecurityGroupType);
+          return action;
+        } catch (Exception ex) {
+          throw new ValidationFailedException("Security group " + groupId + " not yet deleted");
+        }
+      }
+    }
+  }
+
+
   private static final IpPermissionType DEFAULT_EGRESS_RULE() {
     IpPermissionType ipPermissionType = new IpPermissionType();
     ipPermissionType.setIpProtocol("-1");
@@ -262,42 +310,20 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    Exception finalException = null;
-    // Need to retry this as we may have instances terminating from an autoscaling group...
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      String groupId = JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue();
-      DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-      describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-      describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(groupId));
-      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-        AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-      ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-      if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
-        return;
-      }
-
-      DeleteSecurityGroupType deleteSecurityGroupType = new DeleteSecurityGroupType();
-      deleteSecurityGroupType.setGroupId(groupId);
-      deleteSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-      try {
-        DeleteSecurityGroupResponseType deleteSecurityGroupResponseType = AsyncRequests.<DeleteSecurityGroupType,DeleteSecurityGroupResponseType> sendSync(configuration, deleteSecurityGroupType);
-        return;
-      } catch (Exception ex) {
-        LOG.debug("Error deleting security group.  Will retry");
-        finalException = ex;
-      }
-    }
-    throw finalException;
+  public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
+    return new MultiStepCreatePromise(createStackWorkflow, stepIds).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
-    return new MultiStepCreatePromise(createStackWorkflow, stepIds).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+  public Promise<String> getDeletePromise(DeleteStackWorkflowImpl deleteStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    Collection<Class<? extends Throwable>> exceptionList = Lists.newArrayList();
+    exceptionList.add(NotAResourceFailureException.class);
+    ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
+    if (SECURITY_GROUP_MAX_DELETE_RETRY_SECS != null && SECURITY_GROUP_MAX_DELETE_RETRY_SECS > 0) {
+      retryPolicy.setMaximumRetryIntervalSeconds(SECURITY_GROUP_MAX_DELETE_RETRY_SECS);
+    }
+    return new RetrySingleStepDeletePromise(deleteStackWorkflow, DeleteSteps.DELETE_GROUP.name(), retryPolicy).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   private enum CREATE_STEPS_TRANSFORM implements Function<CreateSteps, String> {
