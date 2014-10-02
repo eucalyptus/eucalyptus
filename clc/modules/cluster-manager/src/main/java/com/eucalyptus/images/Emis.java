@@ -311,13 +311,13 @@ public class Emis {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId, true);
-            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation, this.getKernel( ).getImageSizeBytes() );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId, true);
-            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation, this.getKernel( ).getImageSizeBytes() );
           }
         }
       
