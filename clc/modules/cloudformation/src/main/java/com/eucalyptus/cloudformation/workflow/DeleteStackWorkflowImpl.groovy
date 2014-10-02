@@ -84,28 +84,28 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
           waitFor(allResourcePromises) {
             // check if any failures...
             boolean resourceFailure = false;
-            String promises = String.valueOf(allResourcePromises.getValues().length) + " ";
-            int ctr = 0;
             for (Promise promise : allResourcePromises.getValues()) {
-              promises += String.valueOf(ctr++) + ":" + promise.get() + " ";
               if (promise.isReady() && "FAILURE".equals(promise.get())) {
                 resourceFailure = true;
+                break;
               }
             }
-            waitFor(promiseFor(activities.logInfo("PROMISES: " + promises))) {
-              if (resourceFailure) {
-                return waitFor(promiseFor(activities.determineDeleteResourceFailures(stackId, accountId))) { String errorMessage ->
-                  promiseFor(activities.createGlobalStackEvent(
-                    stackId,
-                    accountId,
-                    StackResourceEntity.Status.DELETE_FAILED.toString(),
-                    errorMessage)
-                  );
-                }
-              } else {
-                return promiseFor(activities.createGlobalStackEvent(stackId, accountId,
-                  StackResourceEntity.Status.DELETE_COMPLETE.toString(),
-                  "Complete!"));
+            if (resourceFailure) {
+              return waitFor(promiseFor(activities.determineDeleteResourceFailures(stackId, accountId))) { String errorMessage ->
+                promiseFor(activities.createGlobalStackEvent(
+                  stackId,
+                  accountId,
+                  StackResourceEntity.Status.DELETE_FAILED.toString(),
+                  errorMessage)
+                );
+              }
+            } else {
+              return waitFor(
+                promiseFor(activities.createGlobalStackEvent(stackId, accountId,
+                 StackResourceEntity.Status.DELETE_COMPLETE.toString(),
+                 "Complete!"))
+              ) {
+                promiseFor(activities.deleteAllStackRecords(stackId, accountId));
               }
             }
           }

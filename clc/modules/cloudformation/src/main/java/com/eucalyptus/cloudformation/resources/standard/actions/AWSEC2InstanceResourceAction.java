@@ -67,6 +67,7 @@ import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -85,6 +86,7 @@ import java.util.NoSuchElementException;
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2InstanceResourceAction extends ResourceAction {
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an instance to be running after creation)")
@@ -114,87 +116,89 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     RUN_INSTANCE {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        RunInstancesType runInstancesType = MessageHelper.createMessage(RunInstancesType.class, action.info.getEffectiveUserId());
-        runInstancesType.setImageId(action.properties.getImageId());
-        if (action.properties.getAvailabilityZone() != null && !action.properties.getAvailabilityZone().isEmpty()) {
-          runInstancesType.setAvailabilityZone(action.properties.getAvailabilityZone());
-        }
-        if (action.properties.getBlockDeviceMappings() != null && !action.properties.getBlockDeviceMappings().isEmpty()) {
-          runInstancesType.setBlockDeviceMapping(convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
-        }
-        if (action.properties.getBlockDeviceMappings() != null) {
-          runInstancesType.setDisableTerminate(action.properties.getDisableApiTermination());
-        }
-        if (action.properties.getEbsOptimized() != null) {
-          runInstancesType.setEbsOptimized(action.properties.getEbsOptimized());
-        }
-        if (action.properties.getIamInstanceProfile() != null && !action.properties.getIamInstanceProfile().isEmpty()) {
-          runInstancesType.setIamInstanceProfileName(action.properties.getIamInstanceProfile()); // TODO: DOCS claim this is for profile name, is ARN supported?
-        }
-        if (action.properties.getInstanceType() != null && !action.properties.getInstanceType().isEmpty()) {
-          runInstancesType.setInstanceType(action.properties.getInstanceType());
-        }
-        if (action.properties.getKernelId() != null && !action.properties.getKernelId().isEmpty()) {
-          runInstancesType.setKernelId(action.properties.getKernelId());
-        }
-        if (action.properties.getKeyName() != null && !action.properties.getKeyName().isEmpty()) {
-          runInstancesType.setKeyName(action.properties.getKeyName());
-        }
-        if (action.properties.getMonitoring() != null) {
-          runInstancesType.setMonitoring(action.properties.getMonitoring());
-        }
-        // Skipping mapping resourceaction.properties.getNetworkInterfaces() for now
-        if (action.properties.getPlacementGroupName() != null && !action.properties.getPlacementGroupName().isEmpty()) {
-          runInstancesType.setPlacementGroup(action.properties.getPlacementGroupName());
-        }
-        if (action.properties.getPrivateIpAddress() != null && !action.properties.getPrivateIpAddress().isEmpty()) {
-          runInstancesType.setPrivateIpAddress(action.properties.getPrivateIpAddress());
-        }
-        if (action.properties.getRamdiskId() != null && !action.properties.getRamdiskId().isEmpty()) {
-          runInstancesType.setRamdiskId(action.properties.getRamdiskId());
-        }
-        // Skipping mapping resourceaction.properties.getSecurityGroupIds() for now
-        if (action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty()) {
-          runInstancesType.setSecurityGroups(convertSecurityGroups(action.properties.getSecurityGroups(), configuration, action.info.getEffectiveUserId()));
-        }
-        // Skipping mapping resourceaction.properties.getSourceDestCheck() for now
-        if (action.properties.getSubnetId() != null && !action.properties.getSubnetId().isEmpty()) {
-          runInstancesType.setSubnetId(action.properties.getSubnetId());
-        }
-        // Skipping mapping resourceaction.properties.getTenancy() for now
-        if (action.properties.getUserData() != null && !action.properties.getUserData().isEmpty()) {
-          runInstancesType.setUserData(action.properties.getUserData());
-        }
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          RunInstancesType runInstancesType = MessageHelper.createMessage(RunInstancesType.class, action.info.getEffectiveUserId());
+          runInstancesType.setImageId(action.properties.getImageId());
+          if (action.properties.getAvailabilityZone() != null && !action.properties.getAvailabilityZone().isEmpty()) {
+            runInstancesType.setAvailabilityZone(action.properties.getAvailabilityZone());
+          }
+          if (action.properties.getBlockDeviceMappings() != null && !action.properties.getBlockDeviceMappings().isEmpty()) {
+            runInstancesType.setBlockDeviceMapping(convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
+          }
+          if (action.properties.getBlockDeviceMappings() != null) {
+            runInstancesType.setDisableTerminate(action.properties.getDisableApiTermination());
+          }
+          if (action.properties.getEbsOptimized() != null) {
+            runInstancesType.setEbsOptimized(action.properties.getEbsOptimized());
+          }
+          if (action.properties.getIamInstanceProfile() != null && !action.properties.getIamInstanceProfile().isEmpty()) {
+            runInstancesType.setIamInstanceProfileName(action.properties.getIamInstanceProfile()); // TODO: DOCS claim this is for profile name, is ARN supported?
+          }
+          if (action.properties.getInstanceType() != null && !action.properties.getInstanceType().isEmpty()) {
+            runInstancesType.setInstanceType(action.properties.getInstanceType());
+          }
+          if (action.properties.getKernelId() != null && !action.properties.getKernelId().isEmpty()) {
+            runInstancesType.setKernelId(action.properties.getKernelId());
+          }
+          if (action.properties.getKeyName() != null && !action.properties.getKeyName().isEmpty()) {
+            runInstancesType.setKeyName(action.properties.getKeyName());
+          }
+          if (action.properties.getMonitoring() != null) {
+            runInstancesType.setMonitoring(action.properties.getMonitoring());
+          }
+          // Skipping mapping resourceaction.properties.getNetworkInterfaces() for now
+          if (action.properties.getPlacementGroupName() != null && !action.properties.getPlacementGroupName().isEmpty()) {
+            runInstancesType.setPlacementGroup(action.properties.getPlacementGroupName());
+          }
+          if (action.properties.getPrivateIpAddress() != null && !action.properties.getPrivateIpAddress().isEmpty()) {
+            runInstancesType.setPrivateIpAddress(action.properties.getPrivateIpAddress());
+          }
+          if (action.properties.getRamdiskId() != null && !action.properties.getRamdiskId().isEmpty()) {
+            runInstancesType.setRamdiskId(action.properties.getRamdiskId());
+          }
+          // Skipping mapping resourceaction.properties.getSecurityGroupIds() for now
+          if (action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty()) {
+            runInstancesType.setSecurityGroups(convertSecurityGroups(action.properties.getSecurityGroups(), configuration, action.info.getEffectiveUserId()));
+          }
+          // Skipping mapping resourceaction.properties.getSourceDestCheck() for now
+          if (action.properties.getSubnetId() != null && !action.properties.getSubnetId().isEmpty()) {
+            runInstancesType.setSubnetId(action.properties.getSubnetId());
+          }
+          // Skipping mapping resourceaction.properties.getTenancy() for now
+          if (action.properties.getUserData() != null && !action.properties.getUserData().isEmpty()) {
+            runInstancesType.setUserData(action.properties.getUserData());
+          }
 
-        // make sure all volumes exist and are available
-        if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
-          DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-          ArrayList<String> volumeIds = Lists.newArrayList();
-          for (EC2MountPoint ec2MountPoint: action.properties.getVolumes()) {
-            volumeIds.add(ec2MountPoint.getVolumeId());
-          }
-          describeVolumesType.setVolumeSet(volumeIds);
-          DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
-          Map<String, String> volumeStatusMap = Maps.newHashMap();
-          for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
-            volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
-          }
-          for (String volumeId: volumeIds) {
-            if (!volumeStatusMap.containsKey(volumeId)) {
-              throw new ValidationErrorException("No such volume " + volumeId);
-            } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
-              throw new ValidationErrorException("Volume " + volumeId + " not available");
+          // make sure all volumes exist and are available
+          if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
+            DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
+            ArrayList<String> volumeIds = Lists.newArrayList();
+            for (EC2MountPoint ec2MountPoint: action.properties.getVolumes()) {
+              volumeIds.add(ec2MountPoint.getVolumeId());
+            }
+            describeVolumesType.setVolumeSet(volumeIds);
+            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+            Map<String, String> volumeStatusMap = Maps.newHashMap();
+            for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+              volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
+            }
+            for (String volumeId: volumeIds) {
+              if (!volumeStatusMap.containsKey(volumeId)) {
+                throw new ValidationErrorException("No such volume " + volumeId);
+              } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
+                throw new ValidationErrorException("Volume " + volumeId + " not available");
+              }
             }
           }
-        }
 
-        runInstancesType.setMinCount(1);
-        runInstancesType.setMaxCount(1);
-        RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
-        action.info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
-        return action;
+          runInstancesType.setMinCount(1);
+          runInstancesType.setMaxCount(1);
+          RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
+          action.info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
+          return action;
+        }
       }
 
       @Override
@@ -205,25 +209,27 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     WAIT_UNTIL_RUNNING {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-        if (describeInstancesResponseType.getReservationSet().size()==0) {
-          throw new ValidationFailedException("Instance " + action.info.getAccountId() + " does not yet exist");
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
+          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet().size()==0) {
+            throw new ValidationFailedException("Instance " + action.info.getAccountId() + " does not yet exist");
+          }
+          RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
+          if ("running".equals(runningInstancesItemType.getStateName())) {
+            action.info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
+            action.info.setPublicIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getIpAddress())));
+            action.info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPlacement())));
+            action.info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
+            action.info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
+            action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+            return action;
+          }
+          throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet running, currently " + runningInstancesItemType.getStateName()));
         }
-        RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
-        if ("running".equals(runningInstancesItemType.getStateName())) {
-          action.info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
-          action.info.setPublicIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getIpAddress())));
-          action.info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPlacement())));
-          action.info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
-          action.info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
-          action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
-          return action;
-        }
-        throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet running, currently " + runningInstancesItemType.getStateName()));
       }
 
       @Override
@@ -240,19 +246,21 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     CREATE_TAGS {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
-        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
-          tags.addAll(action.properties.getTags());
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+          if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+            TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+            tags.addAll(action.properties.getTags());
+          }
+          // due to stack aws: tags
+          CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+          return action;
         }
-        // due to stack aws: tags
-        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
-        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getPhysicalResourceId()).textValue()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        return action;
       }
 
       @Override
@@ -263,22 +271,24 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     ATTACH_VOLUMES {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
-          ArrayList<String> volumeIds = Lists.newArrayList();
-          Map<String, String> deviceMap = Maps.newHashMap();
-          for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
-            volumeIds.add(ec2MountPoint.getVolumeId());
-            deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
-            AttachVolumeType attachVolumeType = MessageHelper.createMessage(AttachVolumeType.class, action.info.getEffectiveUserId());
-            attachVolumeType.setInstanceId(action.info.getPhysicalResourceId());
-            attachVolumeType.setVolumeId(ec2MountPoint.getVolumeId());
-            attachVolumeType.setDevice(ec2MountPoint.getDevice());
-            AsyncRequests.<AttachVolumeType, AttachVolumeResponseType>sendSync(configuration, attachVolumeType);
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
+            ArrayList<String> volumeIds = Lists.newArrayList();
+            Map<String, String> deviceMap = Maps.newHashMap();
+            for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
+              volumeIds.add(ec2MountPoint.getVolumeId());
+              deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
+              AttachVolumeType attachVolumeType = MessageHelper.createMessage(AttachVolumeType.class, action.info.getEffectiveUserId());
+              attachVolumeType.setInstanceId(action.info.getPhysicalResourceId());
+              attachVolumeType.setVolumeId(ec2MountPoint.getVolumeId());
+              attachVolumeType.setDevice(ec2MountPoint.getDevice());
+              AsyncRequests.<AttachVolumeType, AttachVolumeResponseType>sendSync(configuration, attachVolumeType);
+            }
           }
+          return action;
         }
-        return action;
       }
 
       @Override
@@ -289,34 +299,36 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     WAIT_UNTIL_VOLUMES_ATTACHED {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
-          ArrayList<String> volumeIds = Lists.newArrayList();
-          Map<String, String> deviceMap = Maps.newHashMap();
-          for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
-            volumeIds.add(ec2MountPoint.getVolumeId());
-          }
-          DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-          describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
-          describeVolumesType.setEffectiveUserId(action.info.getEffectiveUserId());
-          DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
-          Map<String, String> volumeStatusMap = Maps.newHashMap();
-          for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
-            for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
-              if (attachedVolume.getInstanceId().equals(action.info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
-                volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
+            ArrayList<String> volumeIds = Lists.newArrayList();
+            Map<String, String> deviceMap = Maps.newHashMap();
+            for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
+              volumeIds.add(ec2MountPoint.getVolumeId());
+            }
+            DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
+            describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
+            describeVolumesType.setEffectiveUserId(action.info.getEffectiveUserId());
+            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+            Map<String, String> volumeStatusMap = Maps.newHashMap();
+            for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+              for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
+                if (attachedVolume.getInstanceId().equals(action.info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
+                  volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
+                }
+              }
+            }
+            boolean anyNonAttached = false;
+            for (String volumeId: volumeIds) {
+              if (!"attached".equals(volumeStatusMap.get(volumeId))) {
+                throw new ValidationFailedException("One or more volumes is not yet attached to the instance");
               }
             }
           }
-          boolean anyNonAttached = false;
-          for (String volumeId: volumeIds) {
-            if (!"attached".equals(volumeStatusMap.get(volumeId))) {
-              throw new ValidationFailedException("One or more volumes is not yet attached to the instance");
-            }
-          }
+          return action;
         }
-        return action;
       }
 
       @Override
@@ -336,40 +348,46 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     TERMINATE_INSTANCE {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        // See if instance was ever populated
-        if (action.info.getPhysicalResourceId() == null) return action;
-        // First see if instance exists or has been terminated
-        DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
-        if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
-        if ("terminated".equals(
-          describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
-          return action;
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          // See if instance was ever populated
+          if (action.info.getPhysicalResourceId() == null) return action;
+          // First see if instance exists or has been terminated
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
+          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
+          if ("terminated".equals(
+            describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
+            return action;
 
-        // Send terminate message (do not need to detatch volumes thankfully
-        TerminateInstancesType terminateInstancesType = MessageHelper.createMessage(TerminateInstancesType.class, action.info.getEffectiveUserId());
-        terminateInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        terminateInstancesType.setEffectiveUserId(action.info.getEffectiveUserId());
-        AsyncRequests.<TerminateInstancesType, TerminateInstancesResponseType>sendSync(configuration, terminateInstancesType);
-        return action;
+          // Send terminate message (do not need to detatch volumes thankfully
+          TerminateInstancesType terminateInstancesType = MessageHelper.createMessage(TerminateInstancesType.class, action.info.getEffectiveUserId());
+          terminateInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          terminateInstancesType.setEffectiveUserId(action.info.getEffectiveUserId());
+          AsyncRequests.<TerminateInstancesType, TerminateInstancesResponseType>sendSync(configuration, terminateInstancesType);
+          return action;
+        }
       }
     },
     VERIFY_TERMINATED {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
-        if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
-        if ("terminated".equals(
-          describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
-          return action;
-        throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet terminated, currently " + describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()));
+        synchronized (AWSEC2InstanceResourceAction.class) { // seems to have some issues with multiple running events...
+          AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          // See if instance was ever populated
+          if (action.info.getPhysicalResourceId() == null) return action;
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
+          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
+          if ("terminated".equals(
+            describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
+            return action;
+          throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet terminated, currently " + describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()));
+        }
       }
     }
   }
