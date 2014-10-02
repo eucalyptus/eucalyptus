@@ -317,7 +317,7 @@ public class Emis {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId, true);
-            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation, this.getKernel( ).getImageSizeBytes() );
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation, this.getRamdisk( ).getImageSizeBytes() );
           }
         }
       
