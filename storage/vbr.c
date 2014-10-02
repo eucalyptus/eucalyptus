@@ -2136,6 +2136,7 @@ w_out:
             // expired (see EUCA-9887). So we only pull the manifest on
             // the original run request, purely as a sanity check. The 
             // info we need (image size) should already be in the VBR.
+            long long bb_size_bytes = 0;
             if (!is_migration_dest) {
                 // get the manifest for size and signature
                 if ((manifest = http_get2str(vbr->preparedResourceLocation, bail_flag)) == NULL) {
@@ -2143,21 +2144,26 @@ w_out:
                     goto i_out;
                 }
                 // extract size from the manifest
-                long long bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
+                bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
                 if (bb_size_bytes < 1) {
                     LOGERROR("[%s] incorrect image manifest [no size] or error from object storage\n", current_instanceId);
                     goto i_out;
                 }
-                if (vbr->sizeBytes != bb_size_bytes) {
+                // the -1 is valid value during invocation from 'Downloads a file-system bundle, converting to a disk' work-flow
+                // and vbr->sizeBytes > bb_size_bytes case is possible in cases of image conversion where download manifest has
+                // size for converted image and VBR for original image
+                if (vbr->sizeBytes != -1 && vbr->sizeBytes > bb_size_bytes) {
                     LOGERROR("[%s] image size in manifest (%lld) and in VBR (%lld) do not match\n", current_instanceId, bb_size_bytes, vbr->sizeBytes);
                     goto i_out;
                 }
+            } else {
+                bb_size_bytes = vbr->sizeBytes;
             }
 
             //! @TODO add proper image checksum into download manifests and use that
             //!       instead of using the image size as the digest
             char blob_digest[128];
-            snprintf(blob_digest, sizeof(blob_digest), "%lld", vbr->sizeBytes);
+            snprintf(blob_digest, sizeof(blob_digest), "%lld", bb_size_bytes);
 
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
@@ -2166,7 +2172,7 @@ w_out:
                 goto i_out;
             }
             // allocate artifact struct
-            a = art_alloc(art_id, art_id, vbr->sizeBytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
 
 i_out:
             EUCA_FREE(manifest);
