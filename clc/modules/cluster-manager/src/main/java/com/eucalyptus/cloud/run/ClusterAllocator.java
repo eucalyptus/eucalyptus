@@ -374,14 +374,19 @@ public class ClusterAllocator implements Runnable {
       X509Certificate euareCert = SystemCredentials.lookup(Euare.class).getCertificate();
       final String b64EuarePubkey = B64.standard.encString( PEMFiles.getBytes( euareCert ) );
     
-      // EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED), SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
+      X509Certificate eucalyptusCert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
+      final String b64EucalyptusPubkey = B64.standard.encString( PEMFiles.getBytes( eucalyptusCert ) );
+
+      // EUCALYPTUS's pubkey, EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED),
+      // SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
       // each field all in B64
-      final String credential = String.format("%s\n%s\n%s\n%s\n%s",
+      final String credential = String.format("%s\n%s\n%s\n%s\n%s\n%s",
           b64EuarePubkey,
-          b64PubKey, 
+          b64PubKey,
           encToken, // iam token
           encSymmKey, 
-          encPrivKey);
+          encPrivKey,
+          b64EucalyptusPubkey);
       this.allocInfo.setCredential(credential);
     }catch(final Exception ex){
       LOG.error("failed to setup instance credential", ex);

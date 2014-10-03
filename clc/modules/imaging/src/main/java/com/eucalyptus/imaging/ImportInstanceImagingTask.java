@@ -40,6 +40,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
@@ -61,6 +62,7 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
+import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
  * @author Sang-Min Park
@@ -248,8 +250,12 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
-          EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
-        }catch(final Exception ex){
+          final List<Volume> eucaVolumes = 
+            EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
+          if (eucaVolumes.size() != 0) {
+            EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
+          }
+        } catch(final Exception ex) {
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
               volumeDetail.getVolume().getId(), this.getDisplayName()));
           cleanedAllVolumes = false;

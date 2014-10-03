@@ -430,7 +430,9 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
 
     snprintf(newpass, strlen(password) + 1, "%s", password);
     snprintf(newInstName, strlen(instName) + 1, "%s", instName);
-
+    // Modify floopy disk file in memory by reading it in a loop with one byte increments.
+    // On each step partion of floppy is comparing to a MAGIC tokens that should present
+    // somewhere in the floppy disk. All tokens must be the same length!
     while (count < rbytes) {
         memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER"));
         if (!strcmp(tmp, "MAGICEUCALYPTUSPASSWORDPLACEHOLDER")) {
@@ -499,6 +501,7 @@ typedef struct _instance_creds {
     char instancePubkey[KEY_STRING_SIZE];   //!<instance's public key
     char instanceToken[BIG_CHAR_BUFFER_SIZE];   //!< token from Euare service that proves the instances' authorization
     char instancePk[KEY_STRING_SIZE];  //!<instance's private key
+    char eucaKey[KEY_STRING_SIZE];    //!<public key of Eucalyptus service
 } instance_creds;
 
 static int decode_credential(char *credential, instance_creds * creds)
@@ -506,15 +509,15 @@ static int decode_credential(char *credential, instance_creds * creds)
     char symm_key[512];
     char enc_key[KEY_STRING_SIZE];
     char enc_tok[KEY_STRING_SIZE];
-    char *ptr[5];
+    char *ptr[6];
     int i = 0;
     char *pch = strtok(credential, "\n");
-    while (i < 5 && pch != NULL) {
+    while (i < 6 && pch != NULL) {
         ptr[i++] = pch;
         pch = strtok(NULL, "\n");
     }
 
-    if (i < 5) {
+    if (i < 6) {
         LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
         return 1;
     }
@@ -523,6 +526,7 @@ static int decode_credential(char *credential, instance_creds * creds)
     euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
     euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
     euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
+    euca_strncpy(creds->eucaKey, ptr[5], sizeof(creds->eucaKey));
 
     char *pk = NULL;
     int out_len = -1;
@@ -602,6 +606,9 @@ int make_credential_floppy(char *euca_home, char *rundir_path, char *credential)
 
     ptr = buf;
     count = 0;
+    // Modify floopy disk file in memory by reading it in a loop with one byte increments.
+    // On each step partion of floppy is comparing to a MAGIC tokens that should present
+    // somewhere in the floppy disk. All tokens must be the same length!
     while (count < rbytes) {
         memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER"));
         if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER")) {
@@ -612,6 +619,8 @@ int make_credential_floppy(char *euca_home, char *rundir_path, char *credential)
             memcpy(ptr, creds.instanceToken, strlen(creds.instanceToken));
         } else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
             memcpy(ptr, creds.instancePk, strlen(creds.instancePk));
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSEUCAPUBKEYPLACEHOLDER")) {
+            memcpy(ptr, creds.eucaKey, strlen(creds.eucaKey));
         }
 
         ptr++;
