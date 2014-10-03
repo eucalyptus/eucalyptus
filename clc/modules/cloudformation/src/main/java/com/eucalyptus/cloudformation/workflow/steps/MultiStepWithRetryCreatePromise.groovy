@@ -1,4 +1,4 @@
-package com.eucalyptus.cloudformation.workflow.create
+package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy
@@ -27,7 +27,7 @@ public class MultiStepWithRetryCreatePromise {
     Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
     for (String stepId: stepIds) {
       String stepIdLocal = new String(stepId); // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration
-      CreateStep createStep = resourceAction.getCreateStep(stepIdLocal);
+      Step createStep = resourceAction.getCreateStep(stepIdLocal);
       RetryPolicy retryPolicy = createStep.getRetryPolicy();
       if (retryPolicy != null) {
         previousPromise = waitFor(previousPromise) {

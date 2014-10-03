@@ -31,7 +31,6 @@ public class AWSAutoScalingAutoScalingGroupResourceInfo extends ResourceInfo {
   }
 }
 
-
 @ToString(includeNames=true)
 public class AWSAutoScalingLaunchConfigurationResourceInfo extends ResourceInfo {
   public AWSAutoScalingLaunchConfigurationResourceInfo() {
@@ -39,58 +38,12 @@ public class AWSAutoScalingLaunchConfigurationResourceInfo extends ResourceInfo 
   }
 }
 
-
 @ToString(includeNames=true)
 public class AWSAutoScalingScalingPolicyResourceInfo extends ResourceInfo {
   public AWSAutoScalingScalingPolicyResourceInfo() {
     setType("AWS::AutoScaling::ScalingPolicy");
   }
 }
-
-
-@ToString(includeNames=true)
-public class AWSAutoScalingScheduledActionResourceInfo extends ResourceInfo {
-  public AWSAutoScalingScheduledActionResourceInfo() {
-    setType("AWS::AutoScaling::ScheduledAction");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSAutoScalingTriggerResourceInfo extends ResourceInfo {
-  public AWSAutoScalingTriggerResourceInfo() {
-    setType("AWS::AutoScaling::Trigger");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSCloudFormationAuthenticationResourceInfo extends ResourceInfo {
-  public AWSCloudFormationAuthenticationResourceInfo() {
-    setType("AWS::CloudFormation::Authentication");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSCloudFormationCustomResourceResourceInfo extends ResourceInfo {
-  public AWSCloudFormationCustomResourceResourceInfo() {
-    setType("AWS::CloudFormation::CustomResource");
-  }
-  @Override
-  public boolean canCheckAttributes() {
-    return false;
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSCloudFormationInitResourceInfo extends ResourceInfo {
-  public AWSCloudFormationInitResourceInfo() {
-    setType("AWS::CloudFormation::Init");
-  }
-}
-
 
 @ToString(includeNames=true)
 public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
@@ -129,38 +82,12 @@ public class AWSCloudFormationWaitConditionHandleResourceInfo extends ResourceIn
   }
 }
 
-
-@ToString(includeNames=true)
-public class AWSCloudFrontDistributionResourceInfo extends ResourceInfo {
-  public AWSCloudFrontDistributionResourceInfo() {
-    setType("AWS::CloudFront::Distribution");
-  }
-}
-
-
 @ToString(includeNames=true)
 public class AWSCloudWatchAlarmResourceInfo extends ResourceInfo {
   public AWSCloudWatchAlarmResourceInfo() {
     setType("AWS::CloudWatch::Alarm");
   }
 }
-
-
-@ToString(includeNames=true)
-public class AWSDynamoDBTableResourceInfo extends ResourceInfo {
-  public AWSDynamoDBTableResourceInfo() {
-    setType("AWS::DynamoDB::Table");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSEC2CustomerGatewayResourceInfo extends ResourceInfo {
-  public AWSEC2CustomerGatewayResourceInfo() {
-    setType("AWS::EC2::CustomerGateway");
-  }
-}
-
 
 @ToString(includeNames=true)
 public class AWSEC2DHCPOptionsResourceInfo extends ResourceInfo {
@@ -302,7 +229,6 @@ public class AWSEC2SubnetResourceInfo extends ResourceInfo {
   }
 }
 
-
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationResourceInfo extends ResourceInfo {
   @AttributeJson
@@ -363,111 +289,6 @@ public class AWSEC2VPCGatewayAttachmentResourceInfo extends ResourceInfo {
     setType("AWS::EC2::VPCGatewayAttachment");
   }
 }
-
-
-@ToString(includeNames=true)
-public class AWSEC2VPNConnectionResourceInfo extends ResourceInfo {
-  public AWSEC2VPNConnectionResourceInfo() {
-    setType("AWS::EC2::VPNConnection");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSEC2VPNConnectionRouteResourceInfo extends ResourceInfo {
-  public AWSEC2VPNConnectionRouteResourceInfo() {
-    setType("AWS::EC2::VPNConnectionRoute");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSEC2VPNGatewayResourceInfo extends ResourceInfo {
-  public AWSEC2VPNGatewayResourceInfo() {
-    setType("AWS::EC2::VPNGateway");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSEC2VPNGatewayRoutePropagationResourceInfo extends ResourceInfo {
-  public AWSEC2VPNGatewayRoutePropagationResourceInfo() {
-    setType("AWS::EC2::VPNGatewayRoutePropagation");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElastiCacheCacheClusterResourceInfo extends ResourceInfo {
-  public AWSElastiCacheCacheClusterResourceInfo() {
-    setType("AWS::ElastiCache::CacheCluster");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElastiCacheParameterGroupResourceInfo extends ResourceInfo {
-  public AWSElastiCacheParameterGroupResourceInfo() {
-    setType("AWS::ElastiCache::ParameterGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSecurityGroupResourceInfo extends ResourceInfo {
-  public AWSElastiCacheSecurityGroupResourceInfo() {
-    setType("AWS::ElastiCache::SecurityGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSecurityGroupIngressResourceInfo extends ResourceInfo {
-  public AWSElastiCacheSecurityGroupIngressResourceInfo() {
-    setType("AWS::ElastiCache::SecurityGroupIngress");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSubnetGroupResourceInfo extends ResourceInfo {
-  public AWSElastiCacheSubnetGroupResourceInfo() {
-    setType("AWS::ElastiCache::SubnetGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkApplicationResourceInfo extends ResourceInfo {
-  public AWSElasticBeanstalkApplicationResourceInfo() {
-    setType("AWS::ElasticBeanstalk::Application");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkApplicationVersionResourceInfo extends ResourceInfo {
-  public AWSElasticBeanstalkApplicationVersionResourceInfo() {
-    setType("AWS::ElasticBeanstalk::ApplicationVersion");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkConfigurationTemplateResourceInfo extends ResourceInfo {
-  public AWSElasticBeanstalkConfigurationTemplateResourceInfo() {
-    setType("AWS::ElasticBeanstalk::ConfigurationTemplate");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkEnvironmentResourceInfo extends ResourceInfo {
-  public AWSElasticBeanstalkEnvironmentResourceInfo() {
-    setType("AWS::ElasticBeanstalk::Environment");
-  }
-}
-
 
 @ToString(includeNames=true)
 public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInfo {
@@ -595,111 +416,6 @@ public class AWSIAMUserToGroupAdditionResourceInfo extends ResourceInfo {
   }
 }
 
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterResourceInfo extends ResourceInfo {
-  public AWSRedshiftClusterResourceInfo() {
-    setType("AWS::Redshift::Cluster");
-  }
-  @Override
-  public boolean supportsSnapshot() {
-    return true;
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterParameterGroupResourceInfo extends ResourceInfo {
-  public AWSRedshiftClusterParameterGroupResourceInfo() {
-    setType("AWS::Redshift::ClusterParameterGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSecurityGroupResourceInfo extends ResourceInfo {
-  public AWSRedshiftClusterSecurityGroupResourceInfo() {
-    setType("AWS::Redshift::ClusterSecurityGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSecurityGroupIngressResourceInfo extends ResourceInfo {
-  public AWSRedshiftClusterSecurityGroupIngressResourceInfo() {
-    setType("AWS::Redshift::ClusterSecurityGroupIngress");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSubnetGroupResourceInfo extends ResourceInfo {
-  public AWSRedshiftClusterSubnetGroupResourceInfo() {
-    setType("AWS::Redshift::ClusterSubnetGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRDSDBInstanceResourceInfo extends ResourceInfo {
-  public AWSRDSDBInstanceResourceInfo() {
-    setType("AWS::RDS::DBInstance");
-  }
-  @Override
-  public boolean supportsSnapshot() {
-    return true;
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRDSDBParameterGroupResourceInfo extends ResourceInfo {
-  public AWSRDSDBParameterGroupResourceInfo() {
-    setType("AWS::RDS::DBParameterGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRDSDBSubnetGroupResourceInfo extends ResourceInfo {
-  public AWSRDSDBSubnetGroupResourceInfo() {
-    setType("AWS::RDS::DBSubnetGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRDSDBSecurityGroupResourceInfo extends ResourceInfo {
-  public AWSRDSDBSecurityGroupResourceInfo() {
-    setType("AWS::RDS::DBSecurityGroup");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRDSDBSecurityGroupIngressResourceInfo extends ResourceInfo {
-  public AWSRDSDBSecurityGroupIngressResourceInfo() {
-    setType("AWS::RDS::DBSecurityGroupIngress");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRoute53RecordSetResourceInfo extends ResourceInfo {
-  public AWSRoute53RecordSetResourceInfo() {
-    setType("AWS::Route53::RecordSet");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSRoute53RecordSetGroupResourceInfo extends ResourceInfo {
-  public AWSRoute53RecordSetGroupResourceInfo() {
-    setType("AWS::Route53::RecordSetGroup");
-  }
-}
-
-
 @ToString(includeNames=true)
 public class AWSS3BucketResourceInfo extends ResourceInfo {
   @AttributeJson
@@ -710,52 +426,3 @@ public class AWSS3BucketResourceInfo extends ResourceInfo {
     setType("AWS::S3::Bucket");
   }
 }
-
-
-@ToString(includeNames=true)
-public class AWSS3BucketPolicyResourceInfo extends ResourceInfo {
-  public AWSS3BucketPolicyResourceInfo() {
-    setType("AWS::S3::BucketPolicy");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSSDBDomainResourceInfo extends ResourceInfo {
-  public AWSSDBDomainResourceInfo() {
-    setType("AWS::SDB::Domain");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSSNSTopicPolicyResourceInfo extends ResourceInfo {
-  public AWSSNSTopicPolicyResourceInfo() {
-    setType("AWS::SNS::TopicPolicy");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSSNSTopicResourceInfo extends ResourceInfo {
-  public AWSSNSTopicResourceInfo() {
-    setType("AWS::SNS::Topic");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSSQSQueueResourceInfo extends ResourceInfo {
-  public AWSSQSQueueResourceInfo() {
-    setType("AWS::SQS::Queue");
-  }
-}
-
-
-@ToString(includeNames=true)
-public class AWSSQSQueuePolicyResourceInfo extends ResourceInfo {
-  public AWSSQSQueuePolicyResourceInfo() {
-    setType("AWS::SQS::QueuePolicy");
-  }
-}
-

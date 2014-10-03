@@ -35,8 +35,7 @@ import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
-import com.eucalyptus.cloudformation.workflow.create.CreateStep
-import com.eucalyptus.cloudformation.workflow.delete.DeleteStep
+import com.eucalyptus.cloudformation.workflow.steps.Step
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -324,7 +323,7 @@ public class StackActivityImpl implements StackActivity{
       resourceInfo.setEffectiveUserId(effectiveUserId);
       resourceAction.setResourceInfo(resourceInfo);
       ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      CreateStep createStep = resourceAction.getCreateStep(stepId);
+      Step createStep = resourceAction.getCreateStep(stepId);
       resourceAction = createStep.perform(resourceAction);
       resourceInfo = resourceAction.getResourceInfo();
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
@@ -393,7 +392,7 @@ public class StackActivityImpl implements StackActivity{
         errorWithProperties = true;
       }
       if (!errorWithProperties) { // if we have errors with properties we had them on create too, so we didn't start (really)
-        DeleteStep deleteStep = resourceAction.getDeleteStep(stepId);
+        Step deleteStep = resourceAction.getDeleteStep(stepId);
         resourceAction = deleteStep.perform(resourceAction);
         resourceInfo = resourceAction.getResourceInfo();
         stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);

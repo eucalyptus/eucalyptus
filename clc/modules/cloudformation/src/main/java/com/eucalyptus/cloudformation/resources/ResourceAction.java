@@ -24,9 +24,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.create.CreateStep;
-import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
@@ -58,15 +56,15 @@ public abstract class ResourceAction {
     return getDefaultPhysicalResourceId(Integer.MAX_VALUE);
   }
 
-  protected Map<String, CreateStep> createSteps = Maps.newLinkedHashMap();
+  protected Map<String, Step> createSteps = Maps.newLinkedHashMap();
 
-  public final CreateStep getCreateStep(String stepId) {
+  public final Step getCreateStep(String stepId) {
     return createSteps.get(stepId);
   }
 
-  protected Map<String, DeleteStep> deleteSteps = Maps.newLinkedHashMap();
+  protected Map<String, Step> deleteSteps = Maps.newLinkedHashMap();
 
-  public final DeleteStep getDeleteStep(String stepId) {
+  public final Step getDeleteStep(String stepId) {
     return deleteSteps.get(stepId);
   }
 

@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy;
 import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
@@ -38,12 +37,12 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
-import com.eucalyptus.cloudformation.workflow.create.CreateStep;
-import com.eucalyptus.cloudformation.workflow.create.MultiStepWithRetryCreatePromise;
-import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
-import com.eucalyptus.cloudformation.workflow.delete.SingleStepThenRetryVerifyDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttachVolumeResponseType;
@@ -71,14 +70,11 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -103,16 +99,16 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
   private AWSEC2InstanceResourceInfo info = new AWSEC2InstanceResourceInfo();
 
   public AWSEC2InstanceResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
+    for (CreateSteps createStep : CreateSteps.values()) {
       createSteps.put(createStep.name(), createStep);
     }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+    for (DeleteSteps deleteStep : DeleteSteps.values()) {
       deleteSteps.put(deleteStep.name(), deleteStep);
     }
 
   }
 
-  private enum CreateSteps implements CreateStep {
+  private enum CreateSteps implements Step {
     RUN_INSTANCE {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -125,7 +121,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             runInstancesType.setAvailabilityZone(action.properties.getAvailabilityZone());
           }
           if (action.properties.getBlockDeviceMappings() != null && !action.properties.getBlockDeviceMappings().isEmpty()) {
-            runInstancesType.setBlockDeviceMapping(convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
+            runInstancesType.setBlockDeviceMapping(action.convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
           }
           if (action.properties.getBlockDeviceMappings() != null) {
             runInstancesType.setDisableTerminate(action.properties.getDisableApiTermination());
@@ -160,7 +156,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           }
           // Skipping mapping resourceaction.properties.getSecurityGroupIds() for now
           if (action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty()) {
-            runInstancesType.setSecurityGroups(convertSecurityGroups(action.properties.getSecurityGroups(), configuration, action.info.getEffectiveUserId()));
+            runInstancesType.setSecurityGroups(action.convertSecurityGroups(action.properties.getSecurityGroups(), configuration, action.info.getEffectiveUserId()));
           }
           // Skipping mapping resourceaction.properties.getSourceDestCheck() for now
           if (action.properties.getSubnetId() != null && !action.properties.getSubnetId().isEmpty()) {
@@ -175,16 +171,16 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if (action.properties.getVolumes() != null && !action.properties.getVolumes().isEmpty()) {
             DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
             ArrayList<String> volumeIds = Lists.newArrayList();
-            for (EC2MountPoint ec2MountPoint: action.properties.getVolumes()) {
+            for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
               volumeIds.add(ec2MountPoint.getVolumeId());
             }
             describeVolumesType.setVolumeSet(volumeIds);
-            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync(configuration, describeVolumesType);
             Map<String, String> volumeStatusMap = Maps.newHashMap();
-            for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+            for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
               volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
             }
-            for (String volumeId: volumeIds) {
+            for (String volumeId : volumeIds) {
               if (!volumeStatusMap.containsKey(volumeId)) {
                 throw new ValidationErrorException("No such volume " + volumeId);
               } else if (!"available".equals(volumeStatusMap.get(volumeId))) {
@@ -195,7 +191,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
           runInstancesType.setMinCount(1);
           runInstancesType.setMaxCount(1);
-          RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
+          RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType, RunInstancesResponseType>sendSync(configuration, runInstancesType);
           action.info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
           return action;
         }
@@ -214,8 +210,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-          if (describeInstancesResponseType.getReservationSet().size()==0) {
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet().size() == 0) {
             throw new ValidationFailedException("Instance " + action.info.getAccountId() + " does not yet exist");
           }
           RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
@@ -234,13 +230,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
       @Override
       public RetryPolicy getRetryPolicy() {
-        Collection<Class<? extends Throwable>> exceptionList = Lists.newArrayList();
-        exceptionList.add(NotAResourceFailureException.class);
-        ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
-        if (INSTANCE_RUNNING_MAX_CREATE_RETRY_SECS != null && INSTANCE_RUNNING_MAX_CREATE_RETRY_SECS > 0) {
-          retryPolicy.setRetryExpirationIntervalSeconds(INSTANCE_RUNNING_MAX_CREATE_RETRY_SECS);
-        }
-        return retryPolicy;
+        return new StandardResourceRetryPolicy(INSTANCE_RUNNING_MAX_CREATE_RETRY_SECS).getPolicy();
       }
     },
     CREATE_TAGS {
@@ -258,7 +248,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
           createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
           createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-          AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
           return action;
         }
       }
@@ -310,18 +300,17 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             }
             DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
             describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
-            describeVolumesType.setEffectiveUserId(action.info.getEffectiveUserId());
-            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync(configuration, describeVolumesType);
             Map<String, String> volumeStatusMap = Maps.newHashMap();
-            for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
-              for (AttachedVolume attachedVolume: volume.getAttachmentSet()) {
+            for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
+              for (AttachedVolume attachedVolume : volume.getAttachmentSet()) {
                 if (attachedVolume.getInstanceId().equals(action.info.getPhysicalResourceId()) && attachedVolume.getDevice().equals(deviceMap.get(volume.getVolumeId()))) {
                   volumeStatusMap.put(volume.getVolumeId(), attachedVolume.getStatus());
                 }
               }
             }
             boolean anyNonAttached = false;
-            for (String volumeId: volumeIds) {
+            for (String volumeId : volumeIds) {
               if (!"attached".equals(volumeStatusMap.get(volumeId))) {
                 throw new ValidationFailedException("One or more volumes is not yet attached to the instance");
               }
@@ -333,18 +322,12 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
       @Override
       public RetryPolicy getRetryPolicy() {
-        Collection<Class<? extends Throwable>> exceptionList = Lists.newArrayList();
-        exceptionList.add(NotAResourceFailureException.class);
-        ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
-        if (INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS != null && INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS > 0) {
-          retryPolicy.setRetryExpirationIntervalSeconds(INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS);
-        }
-        return retryPolicy;
+        return new StandardResourceRetryPolicy(INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS).getPolicy();
       }
     }
   }
 
-  private enum DeleteSteps implements DeleteStep {
+  private enum DeleteSteps implements Step {
     TERMINATE_INSTANCE {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -365,10 +348,14 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           // Send terminate message (do not need to detatch volumes thankfully
           TerminateInstancesType terminateInstancesType = MessageHelper.createMessage(TerminateInstancesType.class, action.info.getEffectiveUserId());
           terminateInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          terminateInstancesType.setEffectiveUserId(action.info.getEffectiveUserId());
           AsyncRequests.<TerminateInstancesType, TerminateInstancesResponseType>sendSync(configuration, terminateInstancesType);
           return action;
         }
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
       }
     },
     VERIFY_TERMINATED {
@@ -388,6 +375,11 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             return action;
           throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet terminated, currently " + describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()));
         }
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(INSTANCE_TERMINATED_MAX_DELETE_RETRY_SECS).getPolicy();
       }
     }
   }
@@ -415,36 +407,31 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
   @Override
   public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
     return new MultiStepWithRetryCreatePromise(createStackWorkflow, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
   public Promise<String> getDeletePromise(DeleteStackWorkflowImpl deleteStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    Collection<Class<? extends Throwable>> exceptionList = Lists.newArrayList();
-    exceptionList.add(NotAResourceFailureException.class);
-    ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
-    if (INSTANCE_TERMINATED_MAX_DELETE_RETRY_SECS != null && INSTANCE_TERMINATED_MAX_DELETE_RETRY_SECS > 0) {
-      retryPolicy.setRetryExpirationIntervalSeconds(INSTANCE_TERMINATED_MAX_DELETE_RETRY_SECS);
-    }
-    return new SingleStepThenRetryVerifyDeletePromise(deleteStackWorkflow, DeleteSteps.TERMINATE_INSTANCE.name(), DeleteSteps.VERIFY_TERMINATED.name(), retryPolicy).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(deleteStackWorkflow, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
-  private static ArrayList<GroupItemType> convertSecurityGroups(List<String> securityGroups, ServiceConfiguration configuration, String effectiveUserId) throws Exception {
+  private ArrayList<GroupItemType> convertSecurityGroups(List<String> securityGroups, ServiceConfiguration configuration, String effectiveUserId) throws Exception {
     if (securityGroups == null) return null;
     // Is there a better way?
     DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
     DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-      AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
+      AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
     ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
     Map<String, String> nameToIdMap = Maps.newHashMap();
     if (securityGroupItemTypeArrayList != null) {
-      for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
+      for (SecurityGroupItemType securityGroupItemType : securityGroupItemTypeArrayList) {
         nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
       }
     }
     ArrayList<GroupItemType> groupItemTypes = Lists.newArrayList();
-    for (String securityGroup: securityGroups) {
+    for (String securityGroup : securityGroups) {
       GroupItemType groupItemType = new GroupItemType();
       groupItemType.setGroupName(securityGroup);
       String groupId = nameToIdMap.get(securityGroup);
@@ -455,10 +442,10 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     return groupItemTypes;
   }
 
-  private static ArrayList<BlockDeviceMappingItemType> convertBlockDeviceMappings(List<EC2BlockDeviceMapping> blockDeviceMappings) {
+  private ArrayList<BlockDeviceMappingItemType> convertBlockDeviceMappings(List<EC2BlockDeviceMapping> blockDeviceMappings) {
     if (blockDeviceMappings == null) return null;
     ArrayList<BlockDeviceMappingItemType> blockDeviceMappingItemTypes = Lists.newArrayList();
-    for (EC2BlockDeviceMapping ec2BlockDeviceMapping: blockDeviceMappings) {
+    for (EC2BlockDeviceMapping ec2BlockDeviceMapping : blockDeviceMappings) {
       BlockDeviceMappingItemType itemType = new BlockDeviceMappingItemType();
       itemType.setDeviceName(ec2BlockDeviceMapping.getDeviceName());
       itemType.setNoDevice(ec2BlockDeviceMapping.getNoDevice() != null ? Boolean.TRUE : null);
@@ -476,19 +463,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     }
     return blockDeviceMappingItemTypes;
   }
-
-
-  private enum CREATE_STEPS_TRANSFORM implements Function<CreateSteps, String> {
-    INSTANCE {
-      @Nullable
-      @Override
-      public String apply(@Nullable CreateSteps createSteps) {
-        return createSteps.name();
-      }
-    }
-  }
-
 }
+
 
 
 

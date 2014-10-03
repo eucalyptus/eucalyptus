@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy;
 import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
@@ -37,45 +36,42 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
-import com.eucalyptus.cloudformation.workflow.create.CreateStep;
-import com.eucalyptus.cloudformation.workflow.create.MultiStepWithRetryCreatePromise;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
-import com.eucalyptus.cloudformation.workflow.delete.DeleteStep;
-import com.eucalyptus.cloudformation.workflow.delete.RetrySingleStepDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.CreateTagsResponseType;
-import com.eucalyptus.compute.common.CreateTagsType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
 import com.eucalyptus.compute.common.CreateSecurityGroupType;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteSecurityGroupResponseType;
 import com.eucalyptus.compute.common.DeleteSecurityGroupType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -91,10 +87,10 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
 
   public AWSEC2SecurityGroupResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
+    for (Step createStep: CreateSteps.values()) {
       createSteps.put(createStep.name(), createStep);
     }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+    for (Step deleteStep: DeleteSteps.values()) {
       deleteSteps.put(deleteStep.name(), deleteStep);
     }
 
@@ -120,7 +116,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     info = (AWSEC2SecurityGroupResourceInfo) resourceInfo;
   }
 
-  private enum CreateSteps implements CreateStep {
+  private enum CreateSteps implements Step {
     CREATE_GROUP {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -264,7 +260,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
 
   }
 
-  private enum DeleteSteps implements DeleteStep {
+  private enum DeleteSteps implements Step {
     DELETE_GROUP {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -293,6 +289,11 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
           throw new ValidationFailedException(ex.getMessage());
         }
       }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(SECURITY_GROUP_MAX_DELETE_RETRY_SECS).getPolicy();
+      }
     }
   }
 
@@ -306,30 +307,16 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
 
   @Override
   public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), CREATE_STEPS_TRANSFORM.INSTANCE);
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
     return new MultiStepWithRetryCreatePromise(createStackWorkflow, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
   public Promise<String> getDeletePromise(DeleteStackWorkflowImpl deleteStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    Collection<Class<? extends Throwable>> exceptionList = Lists.newArrayList();
-    exceptionList.add(NotAResourceFailureException.class);
-    ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(1L).withExceptionsToRetry(exceptionList);
-    if (SECURITY_GROUP_MAX_DELETE_RETRY_SECS != null && SECURITY_GROUP_MAX_DELETE_RETRY_SECS > 0) {
-      retryPolicy.setRetryExpirationIntervalSeconds(SECURITY_GROUP_MAX_DELETE_RETRY_SECS);
-    }
-    return new RetrySingleStepDeletePromise(deleteStackWorkflow, DeleteSteps.DELETE_GROUP.name(), retryPolicy).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(deleteStackWorkflow, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
-  private enum CREATE_STEPS_TRANSFORM implements Function<CreateSteps, String> {
-    INSTANCE {
-      @Nullable
-      @Override
-      public String apply(@Nullable CreateSteps createSteps) {
-        return createSteps.name();
-      }
-    }
-  }
 }
 
 
