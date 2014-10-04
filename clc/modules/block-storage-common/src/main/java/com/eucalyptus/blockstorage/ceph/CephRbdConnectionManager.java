@@ -38,8 +38,8 @@ public class CephRbdConnectionManager {
 			rbd = new Rbd(ioContext);
 		} catch (RadosException e) {
 			disconnect();
-			LOG.warn("Unable to connect to Ceph cluster", e);
-			throw new EucalyptusCephException("Failed to connect to pool " + pool
+			LOG.warn("Unable to connect to Ceph cluster");
+			throw new EucalyptusCephException("Failed to connect to pool " + poolName
 					+ " in Ceph cluster. Verify Ceph cluster health, privileges of Ceph user assigned to Eucalyptus, Ceph parameters configured in Eucalyptus "
 					+ config.toString() + " and retry operation", e);
 		}
