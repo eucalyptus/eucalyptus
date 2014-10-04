@@ -63,13 +63,12 @@ package com.eucalyptus.blockstorage.ceph;
 
 import java.util.ArrayList;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.ceph.rbd.Rbd;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.san.common.SANManager;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
@@ -83,62 +82,51 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
  * 
  */
 @StorageManagerProperty(value = "ceph-rbd", manager = SANManager.class)
-public class CephProvider implements SANProvider {
+public class CephRbdProvider implements SANProvider {
 
-	private static final Logger LOG = Logger.getLogger(CephProvider.class);
+	private static final Logger LOG = Logger.getLogger(CephRbdProvider.class);
 
-	private EucaRbd rbdService;
-	private String configFile;
-	private String user;
-	private String volumePools;
-	private String snapshotPools;
+	private CephRbdAdapter rbdService;
+	private CephRbdInfo cachedConfig;
 
 	@Override
 	public void initialize() {
 		// Create and persist ceph info entity if its not already there
 		LOG.info("Initializing CephInfo entity");
-		CephInfo.getStorageInfo();
+		CephRbdInfo.getStorageInfo();
 	}
 
 	@Override
 	public void configure() throws EucalyptusCloudException {
-		CephInfo cephInfo = CephInfo.getStorageInfo();
-		initializeRbdProvider(cephInfo);
+		CephRbdInfo cephInfo = CephRbdInfo.getStorageInfo();
+		initializeRbdService(cephInfo);
 	}
 
-	private void initializeRbdProvider(CephInfo info) {
+	private void initializeRbdService(CephRbdInfo info) {
 		LOG.info("Initializing Ceph RBD service provider");
 
-		configFile = info.getCephConfigFile();
-		user = info.getCephUser();
-		volumePools = info.getCephVolumePools();
-		snapshotPools = info.getCephSnapshotPools();
+		cachedConfig = info;
 
 		if (rbdService == null) {
-			rbdService = new EucaRbdFormatTwoImpl(info);
+			rbdService = new CephRbdFormatTwoAdapter(cachedConfig);
 		} else {
 			// Changing the configuration in the existing reference rather than instantiating a new object as that might end up interrupting an already existing
 			// operation
-			rbdService.setCephConfig(info);
+			rbdService.setCephConfig(cachedConfig);
 		}
+		
+		// TODO Some way to check connectivity to ceph cluster
 	}
 
 	@Override
 	public void checkConnection() throws EucalyptusCloudException {
-		CephInfo localInfo = CephInfo.getStorageInfo();
-		if (localInfo != null && !isSame(localInfo)) {
+		CephRbdInfo info = CephRbdInfo.getStorageInfo();
+		if (info != null && !cachedConfig.isSame(info)) {
 			LOG.info("Detected a change in Ceph configuration");
-			initializeRbdProvider(localInfo);
+			initializeRbdService(info);
 		} else {
 			// Nothing to do here
 		}
-
-		// TODO Some way to check connectivity to ceph cluster
-	}
-
-	private boolean isSame(CephInfo info) {
-		return StringUtils.equals(configFile, info.getCephConfigFile()) && StringUtils.equals(user, info.getCephUser())
-				&& StringUtils.equals(volumePools, info.getCephVolumePools()) && StringUtils.equals(snapshotPools, info.getCephSnapshotPools());
 	}
 
 	@Override
@@ -164,15 +152,15 @@ public class CephProvider implements SANProvider {
 		// SANManager changes the ID, so dont bother setting the volume ID (first parameter) here
 		if (iqn.contains(",")) {
 			String[] parts = iqn.split(",");
-			return new CephImageResource(parts[0], parts[0]);
+			return new CephRbdResource(parts[0], parts[0]);
 		} else {
-			return new CephImageResource(iqn, iqn);
+			return new CephRbdResource(iqn, iqn);
 		}
 	}
 
 	@Override
 	public String getVolumeConnectionString(String volumeId) {
-		return CephInfo.getStorageInfo().getVirshSecret() + ","; // <virsh secret uuid>,<empty path>
+		return CephRbdInfo.getStorageInfo().getVirshSecret() + ","; // <virsh secret uuid>,<empty path>
 	}
 
 	@Override

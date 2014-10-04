@@ -62,98 +62,73 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
-import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
 
-import com.ceph.rbd.RbdException;
 import com.ceph.rbd.RbdImage;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.StorageResource;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
+import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
-public class CephOutputStream extends OutputStream {
+public class CephRbdResource extends StorageResource {
 
-	private static final Logger LOG = Logger.getLogger(CephOutputStream.class);
+	private static final Logger LOG = Logger.getLogger(CephRbdResource.class);
 
-	private CephConnectionManager conn;
-	private RbdImage rbdImage;
-	private long position;
-	private boolean isOpen;
+	private String imageName = null;
+	private String poolName = null;
+	private CephRbdInfo info = null;
 
-	public CephOutputStream(String imageName, String poolName, CephInfo info) throws IOException {
+	public CephRbdResource(String id, String path) {
+		super(id, path, StorageResource.Type.CEPH);
+		info = CephRbdInfo.getStorageInfo();
+		String[] poolImage = path.split(CephRbdInfo.POOL_IMAGE_DELIMITER);
+		if (poolImage == null || poolImage.length != 2) {
+			LOG.warn("Invalid format for path CephImageResource, expected pool/image but got " + path);
+			throw new EucalyptusCephException("Invalid format for path CephImageResource, expected pool/image but got " + path);
+		} else {
+			poolName = poolImage[0];
+			imageName = poolImage[1];
+		}
+	}
+
+	@Override
+	public Boolean isDownloadSynchronous() {
+		return Boolean.FALSE;
+	}
+
+	@Override
+	public Long getSize() throws UnknownSizeException {
+		CephRbdConnectionManager conn = null;
 		try {
-			conn = CephConnectionManager.getConnection(info, poolName);
-			rbdImage = conn.getRbd().open(imageName);
-			isOpen = true;
-			position = 0;
-		} catch (Exception e) {
-			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
-		}
-	}
-
-	@Override
-	public void write(int arg0) throws IOException {
-		if (isOpen) {
-			byte[] buffer = new byte[] { (byte) arg0 };
+			conn = CephRbdConnectionManager.getConnection(info, poolName);
+			RbdImage rbdImage = null;
 			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
-
-	@Override
-	public void write(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		if (off < 0 || len < 0 || len > (b.length - off)) {
-			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
-		}
-
-		if (isOpen) {
-			byte buffer[] = new byte[len];
-			for (int i = 0; i < len; i++) { // prepare the buffer to write
-				buffer[i] = b[off + i];
-			}
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
-
-	@Override
-	public void write(byte[] b) throws NullPointerException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		write(b, 0, b.length);
-	}
-
-	@Override
-	public void close() {
-		if (isOpen) {
-			try {
-				conn.getRbd().close(rbdImage);
-			} catch (Exception e) {
-
+				rbdImage = conn.getRbd().open(imageName);
+				return rbdImage.stat().size;
 			} finally {
-				isOpen = false;
-				conn.disconnect();
-				conn = null;
-				rbdImage = null;
+				if (rbdImage != null) {
+					conn.getRbd().close(rbdImage);
+				}
 			}
-		} else {
-			// nothing to do here, stream is not open/already closed
+		} catch (Exception e) {
+			throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
 		}
+	}
+
+	@Override
+	public InputStream getInputStream() throws Exception {
+		return new CephRbdInputStream(imageName, poolName, info);
+	}
+
+	@Override
+	public OutputStream getOutputStream() throws Exception {
+		return new CephRbdOutputStream(imageName, poolName, info);
 	}
 }

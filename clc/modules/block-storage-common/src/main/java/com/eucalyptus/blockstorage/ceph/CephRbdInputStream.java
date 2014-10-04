@@ -68,20 +68,20 @@ import java.io.InputStream;
 import org.apache.log4j.Logger;
 
 import com.ceph.rbd.RbdImage;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
-public class CephInputStream extends InputStream {
+public class CephRbdInputStream extends InputStream {
 
-	private static final Logger LOG = Logger.getLogger(CephInputStream.class);
+	private static final Logger LOG = Logger.getLogger(CephRbdInputStream.class);
 
-	private CephConnectionManager conn;
+	private CephRbdConnectionManager conn;
 	private RbdImage rbdImage;
 	private long position;
 	private boolean isOpen;
 
-	public CephInputStream(String imageName, String poolName, CephInfo info) throws IOException {
+	public CephRbdInputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
 		try {
-			conn = CephConnectionManager.getConnection(info, poolName);
+			conn = CephRbdConnectionManager.getConnection(info, poolName);
 			rbdImage = conn.getRbd().open(imageName);
 			isOpen = true;
 			position = 0;

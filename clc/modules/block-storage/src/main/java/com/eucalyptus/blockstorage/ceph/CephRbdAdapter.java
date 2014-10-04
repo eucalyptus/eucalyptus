@@ -62,16 +62,16 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
-public interface EucaRbd {
+public interface CephRbdAdapter {
 
 	/**
 	 * Use this to change the ceph configuration after the class is instantiated
 	 * 
 	 * @param cephInfo
 	 */
-	public void setCephConfig(CephInfo cephInfo);
+	public void setCephConfig(CephRbdInfo cephInfo);
 
 	/**
 	 * Create a new RBD image
