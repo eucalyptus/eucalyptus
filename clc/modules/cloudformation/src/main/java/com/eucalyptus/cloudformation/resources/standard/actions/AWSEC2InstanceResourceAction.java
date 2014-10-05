@@ -297,6 +297,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             Map<String, String> deviceMap = Maps.newHashMap();
             for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
               volumeIds.add(ec2MountPoint.getVolumeId());
+              deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
             }
             DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
             describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
@@ -309,7 +310,6 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
                 }
               }
             }
-            boolean anyNonAttached = false;
             for (String volumeId : volumeIds) {
               if (!"attached".equals(volumeStatusMap.get(volumeId))) {
                 throw new ValidationFailedException("One or more volumes is not yet attached to the instance");

@@ -23,6 +23,11 @@ import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
+import com.netflix.glisten.InterfaceBasedWorkflowClient;
+import com.netflix.glisten.WorkflowClientFactory;
+import com.netflix.glisten.WorkflowDescriptionTemplate;
+import com.netflix.glisten.WorkflowTags;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -47,7 +52,13 @@ public class StackCreator extends Thread {
   @Override
   public void run() {
     try {
-      CreateStackWorkflow createStackWorkflow = CloudFormationBootstrapper.getWorkflowProvider().getCreateStackWorkflow();
+      CreateStackWorkflow createStackWorkflow;
+      WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+      WorkflowDescriptionTemplate workflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
+      InterfaceBasedWorkflowClient<CreateStackWorkflow> client = workflowClientFactory
+        .getNewWorkflowClient(CreateStackWorkflow.class, workflowDescriptionTemplate, new WorkflowTags());
+
+      createStackWorkflow = new CreateStackWorkflowClient(client);
       createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId, onFailure);
       LOG.info("CreateStackWorkflowImpl [SWF] = workflowId= " + ((CreateStackWorkflowClient) createStackWorkflow).getClient().getWorkflowExecution().getWorkflowId() + ",runId=" +
           ((CreateStackWorkflowClient) createStackWorkflow).getClient().getWorkflowExecution().getRunId());

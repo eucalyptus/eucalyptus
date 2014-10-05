@@ -80,6 +80,7 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMAccessKeyResourceAction action = (AWSIAMAccessKeyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getStatus() == null) action.properties.setStatus("Active");
         if (!"Active".equals(action.properties.getStatus()) && !"Inactive".equals(action.properties.getStatus())) {
           throw new ValidationErrorException("Invalid status " + action.properties.getStatus());
         }
@@ -102,6 +103,7 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMAccessKeyResourceAction action = (AWSIAMAccessKeyResourceAction) resourceAction;
+        if (action.properties.getStatus() == null) action.properties.setStatus("Active");
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
         UpdateAccessKeyType updateAccessKeyType = MessageHelper.createMessage(UpdateAccessKeyType.class, action.info.getEffectiveUserId());
         updateAccessKeyType.setUserName(action.properties.getUserName());

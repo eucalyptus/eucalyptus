@@ -22,6 +22,13 @@ package com.eucalyptus.cloudformation;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.template.Template;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowDescriptionTemplate;
+import com.netflix.glisten.InterfaceBasedWorkflowClient;
+import com.netflix.glisten.WorkflowClientFactory;
+import com.netflix.glisten.WorkflowDescriptionTemplate;
+import com.netflix.glisten.WorkflowTags;
 import org.apache.log4j.Logger;
 
 /**
@@ -37,17 +44,18 @@ public class StackDeletor extends Thread {
     this.stackEntity = stackEntity;
     this.effectiveUserId = effectiveUserId;
   }
-  private Template template;
 
   @Override
   public void run() {
     try {
-      try {
-        CloudFormationBootstrapper.getWorkflowProvider().getDeleteStackWorkflow().deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
-      } catch (Exception ex2) {
-        LOG.error(ex2, ex2);
-      }
-    } catch (Throwable ex) {
+      DeleteStackWorkflow deleteStackWorkflow;
+      WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+      WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
+      InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
+        .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, new WorkflowTags());
+      deleteStackWorkflow = new DeleteStackWorkflowClient(client);
+      deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
+    } catch (Exception ex) {
       LOG.error(ex, ex);
     }
   }

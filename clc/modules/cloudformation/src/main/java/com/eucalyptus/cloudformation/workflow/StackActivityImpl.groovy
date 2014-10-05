@@ -355,7 +355,8 @@ public class StackActivityImpl implements StackActivity{
       LOG.error(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
-      stackResourceEntity.setResourceStatusReason("" + ex.getMessage());
+      Throwable rootCause = Throwables.getRootCause(ex);
+      stackResourceEntity.setResourceStatusReason("" + rootCause.getMessage());
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
       StackEvent stackEvent = new StackEvent();
       stackEvent.setStackId(stackId);
@@ -366,7 +367,6 @@ public class StackActivityImpl implements StackActivity{
       stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
       stackEvent.setResourceType(resourceInfo.getType());
       stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
-      Throwable rootCause = Throwables.getRootCause(ex);
       stackEvent.setResourceStatusReason("" + rootCause.getMessage());
       stackEvent.setTimestamp(new Date());
       StackEventEntityManager.addStackEvent(stackEvent, accountId);

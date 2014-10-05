@@ -92,7 +92,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
         }
         if (bucketName == null) {
           // TODO: check prefix length
-          bucketName = WAIT_CONDITION_BUCKET_PREFIX + "-" + Crypto.generateAlphanumericId(13, "");
+          bucketName = (WAIT_CONDITION_BUCKET_PREFIX + "-" + Crypto.generateAlphanumericId(13, "")).toLowerCase();
         }
         s3c.createBucket(bucketName);
         String keyName = action.getStackEntity().getStackId() + "/" + action.info.getLogicalResourceId() + "/WaitHandle";

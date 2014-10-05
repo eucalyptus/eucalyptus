@@ -386,10 +386,14 @@ public class TemplateParser {
         }
         switch (type) {
           case String:
-            parseStringParameter(parameterName, value, allowedPattern, minLength, maxLength, constraintDescription);
+            if (value != null) {
+              parseStringParameter(parameterName, value, allowedPattern, minLength, maxLength, constraintDescription);
+            }
             break;
           case Number:
-            parseNumberParameter(parameterName, value, minValue, maxValue, constraintDescription);
+            if (value != null) {
+              parseNumberParameter(parameterName, value, minValue, maxValue, constraintDescription);
+            }
             break;
           case CommaDelimitedList:
             break; // currently nothing to check here
