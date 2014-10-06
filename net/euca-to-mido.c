@@ -28,17 +28,286 @@
 #include "midonet-api.h"
 #include "euca-to-mido.h"
 
-int create_mido_veth(char *name, char *subnet, char *slashnet, char **tapiface) {
+int do_metaproxy_teardown(mido_config *mido) {
+  LOGDEBUG("RUNNING TEARDOWN\n");
+  return(do_metaproxy_maintain(mido, 1));
+}
+
+int do_metaproxy_setup(mido_config *mido) {
+  return(do_metaproxy_maintain(mido, 0));
+}
+
+int do_metaproxy_maintain(mido_config *mido, int mode) {
+  int ret=0, rc=0, i=0, dorun=0;
+  pid_t npid=0;
+  char rr[EUCA_MAX_PATH], cmd[EUCA_MAX_PATH], *pidstr=NULL, pidfile[EUCA_MAX_PATH];
+  sequence_executor cmds;
+
+  if (!mido || mode < 0 || mode > 1) {
+    LOGERROR("BUG: invalid input parameters\n");
+    return(1);
+  }
+
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+
+  rc = se_init(&cmds, rr, 2, 1);
+
+  dorun = 0;
+  snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_localproxy.pid", mido->eucahome);
+  pidstr = file2str(pidfile);
+  if (pidstr) {
+    npid = atoi(pidstr);
+  } else {
+    npid = 0;
+  }
+  EUCA_FREE(pidstr);
+  
+  if (mode == 0) {
+    if (npid > 1) {
+      if (check_process(npid, "nginx")) {
+	unlink(pidfile);
+	dorun=1;
+      }
+    } else {
+      dorun=1;
+    }
+  } else if (mode == 1) {
+    if (npid > 1 && !check_process(npid, "nginx")) {
+      dorun = 1;
+    }
+  }
+  
+  if (dorun) {
+    if (mode == 0) {
+      LOGDEBUG("core proxy not running, starting new core proxy\n");
+      snprintf(cmd, EUCA_MAX_PATH, "nginx -p . -c /root/internal/eucalyptus/net/nginx_localproxy.conf -g 'pid %s/var/run/eucalyptus/nginx_localproxy.pid;'", mido->eucahome);
+    } else if (mode == 1) {
+      LOGDEBUG("core proxy running, terminating core proxy\n");
+      snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+    }
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+  } else {
+    LOGDEBUG("not maintaining proxy, no action to take for pid (%d)\n", npid);
+  }
+
+  for (i=0; i<mido->max_vpcs; i++) {
+    dorun = 0;
+    snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
+    pidstr = file2str(pidfile);
+    if (pidstr) {
+      npid = atoi(pidstr);
+    } else {
+      npid = 0;
+    }
+    EUCA_FREE(pidstr);
+    
+    if (mode == 0) {
+      if (npid > 1) {
+	if (check_process(npid, "nginx")) {
+	  unlink(pidfile);
+	  dorun=1;
+	}
+      } else {
+	dorun=1;
+      }
+    } else if (mode == 1) {
+      if (npid > 1 && !check_process(npid, "nginx")) {
+	dorun = 1;
+      }
+    }
+    
+    if (dorun) {
+      if (mode == 0) {
+	LOGDEBUG("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
+	snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s nginx -p . -c /root/internal/eucalyptus/net/nginx_vpcproxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=8000; env EUCAHOME=%s;'", mido->vpcs[i].name, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
+      } else if (mode == 1) {
+	LOGDEBUG("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
+	snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+      }
+      rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    } else {
+      LOGDEBUG("not maintaining VPC (%s) proxy, no action to take on pid (%d)\n", mido->vpcs[i].name, npid);
+    }
+  }
+
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute meta core bridge setup/proxy commands: see above log entries for details\n");
+    ret = 1;
+  }
+  se_free(&cmds);
+
+  return(ret);
+}
+
+int delete_mido_meta_core(mido_config *mido) {
+  int ret=0, rc=0;
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH];
+  sequence_executor cmds;
+  
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+
+  rc = se_init(&cmds, rr, 2, 1);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip link set metabr down");
+  rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+    
+  snprintf(cmd, EUCA_MAX_PATH, "brctl delbr metabr");
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+  
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute meta core bridge setup/proxy commands: see above log entries for details\n");
+    ret = 1;
+  }
+  se_free(&cmds);
+  
+  return(ret);
+}
+
+int create_mido_meta_core(mido_config *mido) {
+  int ret=0, rc=0;
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH];
+  sequence_executor cmds;
+
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+
+  rc = se_init(&cmds, rr, 2, 1);
+
+  snprintf(cmd, EUCA_MAX_PATH, "brctl addbr metabr");
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+  
+  snprintf(cmd, EUCA_MAX_PATH, "ip addr add 169.254.0.1/16 dev metabr");
+  rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+  
+  snprintf(cmd, EUCA_MAX_PATH, "ip link set metabr up");
+  rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+  
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute meta core bridge setup/proxy commands: see above log entries for details\n");
+    ret = 1;
+  }
+  se_free(&cmds);
+  
+  return(ret);
+}
+
+int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
+  int ret=0, rc=0;
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], sid[16];
+  sequence_executor cmds;
+  
+  // create a meta tap namespace/devices
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+  sscanf(vpc->name, "vpc-%8s", sid);
+  
+  rc = se_init(&cmds, rr, 10, 1);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", vpc->name);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute netns for VPC or create/ip assign commands: see above log entries for details\n");
+    ret = 1;
+  }
+  se_free(&cmds);
+
+  return(ret);
+}
+
+int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
+  int ret=0, rc=0;
+  u32 nw, ip;
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], *ipstr=NULL, sid[16];
+  sequence_executor cmds;
+
+  // create a meta tap namespace/devices
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+  sscanf(vpc->name, "vpc-%8s", sid);
+  
+  rc = se_init(&cmds, rr, 2, 1);
+  
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", vpc->name);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip link add vn2_%s type veth peer name vn3_%s", sid, sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s up", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "brctl addif metabr vn2_%s", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip link set vn3_%s netns %s", sid, vpc->name);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  nw = dot2hex("169.254.0.0");
+  ip = nw + vpc->rtid;
+  ipstr = hex2dot(ip);
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip addr add %s/16 dev vn3_%s", vpc->name, ipstr, sid);
+  EUCA_FREE(ipstr);
+  se_add(&cmds, cmd, NULL, ignore_exit2);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip link set vn3_%s up", vpc->name, sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute netns for VPC or create/ip assign commands: see above log entries for details\n");
+    ret = 1;
+  }
+
+  se_free(&cmds);
+
+  return(ret);
+}
+
+int delete_mido_meta_subnet_veth(mido_config *mido, char *name) {
+  int ret=0, rc=0;
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], sid[16];
+  sequence_executor cmds;
+  
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
+  sscanf(name, "subnet-%8s", sid);
+  
+  rc = se_init(&cmds, rr, 2, 1);
+  
+  snprintf(cmd, EUCA_MAX_PATH, "ip link del vn0_%s", sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not delete subnet tap ifaces: see above log entries for details\n");
+    ret=1;
+  }
+  se_free(&cmds);
+
+  return(ret);
+}
+
+int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, char *subnet, char *slashnet, char **tapiface) {
   int ret=0, rc=0;
   u32 nw, gw;
-  char cmd[EUCA_MAX_PATH], *gateway=NULL, sid[16];
+  char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], *gateway=NULL, sid[16];
   sequence_executor cmds;
 
   // create a meta tap
-
+  snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
   sscanf(name, "subnet-%8s", sid);
   
-  rc = se_init(&cmds, "/opt/eucalyptus/usr/lib/eucalyptus/euca_rootwrap", 2, 1);
+  rc = se_init(&cmds, rr, 2, 1);
   
   //  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip link add vn0_%s type veth peer name vn1_%s", sid, sid);
   snprintf(cmd, EUCA_MAX_PATH, "ip link add vn0_%s type veth peer name vn1_%s", sid, sid);
@@ -48,17 +317,19 @@ int create_mido_veth(char *name, char *subnet, char *slashnet, char **tapiface) 
   snprintf(cmd, EUCA_MAX_PATH, "ip link set vn0_%s up", sid);
   rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-  //  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip link set vn1_%s up", sid);
-  snprintf(cmd, EUCA_MAX_PATH, "ip link set vn1_%s up", sid);
+  snprintf(cmd, EUCA_MAX_PATH, "ip link set vn1_%s netns %s", sid, vpc->name);
   rc = se_add(&cmds, cmd, NULL, ignore_exit);
-  
+
   nw = dot2hex(subnet);
   gw = nw+2;
   gateway = hex2dot(gw);
   //  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip addr add %s/%s dev vn1_%s", gateway, slashnet, sid);
-  snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%s dev vn1_%s", gateway, slashnet, sid);
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip addr add %s/%s dev vn1_%s", vpc->name, gateway, slashnet, sid);
   EUCA_FREE(gateway);
   se_add(&cmds, cmd, NULL, ignore_exit2);
+
+  snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip link set vn1_%s up", vpc->name, sid);
+  rc = se_add(&cmds, cmd, NULL, ignore_exit);
   
   se_print(&cmds);
   rc = se_execute(&cmds);
@@ -237,15 +508,20 @@ int do_midonet_teardown(mido_config *mido) {
     return(1);
   }
   
+  rc = do_metaproxy_teardown(mido);
+  if (rc) {
+    LOGERROR("cannot teardown meta proxies: see above log for details\n");
+  }
+
   for (i=0; i<mido->max_vpcs; i++) {
-    delete_mido_vpc(&(mido->vpcs[i]));
+    delete_mido_vpc(mido, &(mido->vpcs[i]));
   }
   
   for (i=0; i<mido->max_vpcsecgroups; i++) {
     delete_mido_vpc_secgroup(&(mido->vpcsecgroups[i]));
   }
   
-  delete_mido_core(mido->midocore);
+  delete_mido_core(mido, mido->midocore);
   
   free_mido_config(mido);
   
@@ -338,6 +614,12 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
   // should do sec. group populate/create loop
   
   // now do instance interface mappings
+  FILE *PFH=NULL;
+  char mapfile[EUCA_MAX_PATH];
+  snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
+  unlink(mapfile);
+  PFH = fopen(mapfile, "w");
+
   for (i=0; i<gni->max_instances; i++) {
     gni_instance *gniinstance = &(gni->instances[i]);
 
@@ -370,6 +652,12 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 	  }
 
 	  vpcinstance->gnipresent = 1;
+
+	  // add to proxy instance-map
+	  char *privIp=NULL;
+	  privIp = hex2dot(gniinstance->privateIp);
+	  fprintf(PFH, "%s %s %s\n", vpc->name, vpcinstance->name, privIp);
+	  EUCA_FREE(privIp);
 
 	  // do instance<->port connection and elip
 	  if (vpcinstance->midos[VMHOST].init) {
@@ -600,6 +888,7 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
       }
     }
   }
+  fclose(PFH);
   
   // temporary print
   for (i=0; i<mido->max_vpcs; i++) {
@@ -616,6 +905,7 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
   }
   
   // check and clear VPCs/subnets/instances
+
   // TODO clear sec. group chains
   LOGDEBUG("TOTAL VPCS: %d\n", mido->max_vpcs);
   for (i=0; i<mido->max_vpcs; i++) {
@@ -635,22 +925,36 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
       } 
       if (!vpc->gnipresent || !vpcsubnet->gnipresent) {
 	LOGINFO("tearing down VPC '%s' subnet '%s'\n", vpc->name, vpcsubnet->name);
-	rc = delete_mido_vpc_subnet(vpcsubnet);
+	rc = delete_mido_vpc_subnet(mido, vpcsubnet);
       }
     }
     if (!vpc->gnipresent) {
       LOGINFO("tearing down VPC '%s'\n", vpc->name);
-      rc = delete_mido_vpc(vpc);
+
+      rc = do_metaproxy_teardown(mido);
+      if (rc) {
+	// TODO
+	LOGERROR("cannot teardown metadata proxies: see above log for details\n");
+	// ret=1;
+      }
+
+      rc = delete_mido_vpc(mido, vpc);
     }
     
+  }
+
+  rc = do_metaproxy_setup(mido);
+  if (rc) {
+    LOGERROR("cannot set up metadata proxies: see above log for details\n");
+    //    ret = 1;
   }
 
   if (0) {
     // if debugging
     for (i=0; i<mido->max_vpcs; i++) {
-      delete_mido_vpc(&(mido->vpcs[i]));
+      delete_mido_vpc(mido, &(mido->vpcs[i]));
     }
-    delete_mido_core(mido->midocore);
+    delete_mido_core(mido, mido->midocore);
     
     gni_free(gni);
     free_mido_config(mido);
@@ -1144,13 +1448,14 @@ int delete_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
   return(ret);
 }
 
-int initialize_mido(mido_config *mido, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet) {
+int initialize_mido(mido_config *mido, char *eucahome, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet) {
   int ret=0;
   
   if (!mido || !ext_rthostname || !ext_rtaddr || !ext_rtiface || !int_rtnetwork || !int_rtslashnet || !strlen(ext_rthostname) || !strlen(ext_rtaddr) || !strlen(ext_rtiface)) return(1);
   
   bzero(mido, sizeof(mido_config));
 
+  mido->eucahome = strdup(eucahome);
   mido->ext_rthostname = strdup(ext_rthostname);
   mido->ext_rtaddr = strdup(ext_rtaddr);
   mido->ext_rtiface = strdup(ext_rtiface);
@@ -1266,7 +1571,7 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
 
   found=0;
   for (i=0; i<mido->max_hosts && !found; i++) {
-    if (strstr(mido->hosts[i].name, "h-41.qa1")) {
+    if (strstr(mido->hosts[i].name, "a-35.qa1")) {
       mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->hosts[i]));
       found=1;
     }
@@ -1410,8 +1715,8 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 	    mido_copy_midoname(&(vpc->midos[EUCABR_DOWNLINK]), &(midocore->brports[i]));
 	    mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK]), &(vpc->rtports[j]));
 	  }
-	  EUCA_FREE(url);
-	}      
+	}
+	EUCA_FREE(url);
       }
     }
   }
@@ -1596,12 +1901,13 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpc
   LOGDEBUG("adding host %s/%s to dhcp server\n", SP(macAddr), SP(ipAddr));
   //  bzero(&(vpcinstance->midos[VPCBR_DHCPHOST]), sizeof(midoname));
   rc = mido_create_dhcphost(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_DHCP]), vpcinstance->gniInst->name, macAddr, ipAddr, &(vpcinstance->midos[VPCBR_DHCPHOST]));
+  EUCA_FREE(ipAddr);
+  EUCA_FREE(macAddr);
   if (rc) {
     LOGERROR("cannot create midonet dhcp host entry: check midonet health\n");
     return(1);
   }
-  EUCA_FREE(ipAddr);
-  EUCA_FREE(macAddr);
+
 
   // apply the chains to the instance port
   rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, NULL);
@@ -1625,10 +1931,13 @@ int free_mido_config(mido_config *mido) {
 
   if (!mido) return(0);
   
+  EUCA_FREE(mido->eucahome);
 
   EUCA_FREE(mido->ext_rthostname);
   EUCA_FREE(mido->ext_rtaddr);
   EUCA_FREE(mido->ext_rtiface);
+  EUCA_FREE(mido->ext_pubnw);
+  EUCA_FREE(mido->ext_pubgwip);
 
   mido_free_midoname_list(mido->hosts, mido->max_hosts);
   EUCA_FREE(mido->hosts);
@@ -1760,7 +2069,7 @@ int free_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
   return(ret);
 }
 
-int delete_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet) {
+int delete_mido_vpc_subnet(mido_config *mido, mido_vpc_subnet *vpcsubnet) {
   int rc=0, ret=0, i=0;
 
   LOGDEBUG("DELETING SUBNET '%s'\n", vpcsubnet->name);
@@ -1778,12 +2087,14 @@ int delete_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet) {
 
   rc = mido_delete_bridge(&(vpcsubnet->midos[VPCBR]));
 
+  rc = delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
+
   free_mido_vpc_subnet(vpcsubnet);
 
   return(ret);
 }
 
-int delete_mido_vpc(mido_vpc *vpc) {
+int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
   int rc=0, ret=0, i=0;
 
   LOGDEBUG("DELETING VPC: %s, %s\n", vpc->name, vpc->midos[VPCRT].name);
@@ -1800,9 +2111,11 @@ int delete_mido_vpc(mido_vpc *vpc) {
   rc = mido_delete_chain(&(vpc->midos[VPCRT_POSTCHAIN]));
 
   for (i=0; i<vpc->max_subnets; i++) {
-    rc = delete_mido_vpc_subnet(&(vpc->subnets[i]));
+    rc = delete_mido_vpc_subnet(mido, &(vpc->subnets[i]));
   }
   
+  rc = delete_mido_meta_vpc_namespace(mido, vpc);
+
   free_mido_vpc(vpc);
 
   return(ret);
@@ -1856,14 +2169,14 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
   // find the interface mapping
   found=0;
   for (i=0; i<mido->max_hosts && !found; i++) {
-    if (strstr(mido->hosts[i].name, "h-41.qa1")) {
+    if (strstr(mido->hosts[i].name, "a-35.qa1")) {
       mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->hosts[i]));
       found=1;
     }
   }
   
   if (vpcsubnet->midos[VPCBR_METAHOST].init) {
-    rc = create_mido_veth(vpcsubnet->name, subnet, slashnet, &tapiface);
+    rc = create_mido_meta_subnet_veth(mido, vpc, vpcsubnet->name, subnet, slashnet, &tapiface);
     if (rc || !tapiface) {
       LOGERROR("cannot create metadata taps: check log output for details\n");
       ret = 1;
@@ -2028,11 +2341,17 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     LOGERROR("cannot attach midonet chain to midonet router: check midonet health\n");
     return(1);
   }
+
+  rc = create_mido_meta_vpc_namespace(mido, vpc);
+  if (rc) {
+    LOGERROR("cannot create netns for VPC %s: check above log for details\n", vpc->name);
+    return(1);
+  }
   
   return(0);
 }
 
-int delete_mido_core(mido_core *midocore) {
+int delete_mido_core(mido_config *mido, mido_core *midocore) {
   int rc;
   //  rc = mido_unlink_host_port(&(midocore->midos[GWHOST]), &(midocore->midos[EUCART_GWPORT]));
   rc = mido_unlink_host_port(&(midocore->midos[GWHOST]), &(midocore->midos[EUCART_GWPORT]));
@@ -2041,6 +2360,9 @@ int delete_mido_core(mido_core *midocore) {
   rc = mido_delete_bridge(&(midocore->midos[EUCABR]));
   sleep(1);
   rc = mido_delete_router(&(midocore->midos[EUCART]));
+
+  rc = delete_mido_meta_core(mido);
+
   return(0);
 }
 
@@ -2136,8 +2458,14 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
     // TODO
     ret=1;
   }
-  return(ret);
-  
+
+  rc = create_mido_meta_core(mido);
+  if (rc) {
+    LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
+    ret = 1;
+  }
+
+  return(ret);  
 }
   
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo) {

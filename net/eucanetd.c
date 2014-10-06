@@ -380,6 +380,10 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
+
+        // for testing 
+        //        update_globalnet = 1;
+
         // now, perform any updates that are required
         if (!strcmp(config->vnetMode, "VPCMIDO")) {
             LOGTRACE("IN VPCMIDO MODE\n");
@@ -388,7 +392,7 @@ int main(int argc, char **argv)
                     free_mido_config(mido);
                     bzero(mido, sizeof(mido_config));
                 }
-                rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
+                rc = initialize_mido(mido, config->eucahome, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
                 if (rc) {
                     LOGERROR("could not initialize mido config\n");
                     update_globalnet_failed = 1;
@@ -1708,7 +1712,7 @@ int read_config(void)
     } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
         // VPCMIDO mode init
         //        rc = initialize_mido(mido, "a-15.qa1.eucalyptus-systems.com", "10.111.5.57", "192.168.254.0", "24");
-        rc = initialize_mido(mido, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
+        rc = initialize_mido(mido, config->eucahome, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
         if (rc) {
             LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
             ret = 1;
