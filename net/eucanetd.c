@@ -388,10 +388,8 @@ int main(int argc, char **argv)
         if (!strcmp(config->vnetMode, "VPCMIDO")) {
             LOGTRACE("IN VPCMIDO MODE\n");
             if (update_globalnet) {
-                if (mido) {
-                    free_mido_config(mido);
-                    bzero(mido, sizeof(mido_config));
-                }
+                free_mido_config(mido);
+                bzero(mido, sizeof(mido_config));
                 rc = initialize_mido(mido, config->eucahome, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
                 if (rc) {
                     LOGERROR("could not initialize mido config\n");

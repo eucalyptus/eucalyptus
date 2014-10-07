@@ -80,7 +80,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
   if (dorun) {
     if (mode == 0) {
       LOGDEBUG("core proxy not running, starting new core proxy\n");
-      snprintf(cmd, EUCA_MAX_PATH, "nginx -p . -c /root/internal/eucalyptus/net/nginx_localproxy.conf -g 'pid %s/var/run/eucalyptus/nginx_localproxy.pid;'", mido->eucahome);
+      snprintf(cmd, EUCA_MAX_PATH, "nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_localproxy.pid; env NEXTHOP=127.0.0.1; env NEXTHOPPORT=8773; env EUCAHOME=%s;'", mido->eucahome, mido->eucahome, mido->eucahome);
     } else if (mode == 1) {
       LOGDEBUG("core proxy running, terminating core proxy\n");
       snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
@@ -119,7 +119,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
     if (dorun) {
       if (mode == 0) {
 	LOGDEBUG("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
-	snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s nginx -p . -c /root/internal/eucalyptus/net/nginx_vpcproxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=8000; env EUCAHOME=%s;'", mido->vpcs[i].name, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
+	snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'", mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
       } else if (mode == 1) {
 	LOGDEBUG("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
 	snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
@@ -439,7 +439,7 @@ int do_midonet_populate(mido_config *mido) {
     LOGDEBUG("inspecting chain '%s'\n", mido->chains[i].name);
     bzero(chainname, 16);
     
-    sscanf(mido->chains[i].name, "sg_%11s_ingress", chainname);
+    sscanf(mido->chains[i].name, "sg_ingress_%11s", chainname);
     if (strlen(chainname)) {
       LOGINFO("discovered VPC security group installed in midonet: %s\n", chainname);
       mido->vpcsecgroups = realloc(mido->vpcsecgroups, sizeof(mido_vpc_secgroup) * (mido->max_vpcsecgroups + 1));
@@ -547,6 +547,29 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
     LOGERROR("could not populate prior to update: see above log entries for details\n");
     return(1);
   }
+
+
+  // temporary print
+  LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
+  for (i=0; i<mido->max_vpcsecgroups; i++) {
+    vpcsecgroup = &(mido->vpcsecgroups[i]);
+    print_mido_vpc_secgroup(vpcsecgroup);
+  }
+  
+  LOGDEBUG("TOTAL VPCS: %d\n", mido->max_vpcs);
+  for (i=0; i<mido->max_vpcs; i++) {
+    vpc = &(mido->vpcs[i]);
+    print_mido_vpc(vpc);
+    for (j=0; j<vpc->max_subnets; j++) {
+      vpcsubnet = &(vpc->subnets[j]);
+      print_mido_vpc_subnet(vpcsubnet);
+      for (k=0; k<vpcsubnet->max_instances; k++) {
+	vpcinstance = &(vpcsubnet->instances[k]);
+	print_mido_vpc_instance(vpcinstance);
+      }
+    }
+  }
+
 
   // now, go through GNI and create new VPCs
   LOGINFO("initializing VPCs (%d)\n", gni->max_vpcs);
@@ -695,7 +718,7 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 	    //#if 0
 	    LOGTRACE("YELLO: %s: %s, %s, %s, %s\n", vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
 	    snprintf(tmp_name3, 32, "%d", rulepos);
-	    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst", mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80", "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf, "natTargets:addressFrom", pt_buf, "natTargets:portFrom", "8000", "natTargets:portTo", "8000", "natTargets:END", "END", NULL);
+	    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst", mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80", "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf, "natTargets:addressFrom", pt_buf, "natTargets:portFrom", "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
 	    if (rc) {
 	    } else {
 	      rulepos++;
@@ -729,7 +752,7 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 
 	    //#if 0
 	    snprintf(tmp_name3, 32, "%d", rulepos);
-	    rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "8000", "tpSrc:end", "8000", "tpSrc:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254", "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80", "natTargets:portTo", "80", "natTargets:END", "END", NULL);
+	    rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254", "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80", "natTargets:portTo", "80", "natTargets:END", "END", NULL);
 	    if (rc) {
 	    } else {
 	      rulepos++;
@@ -753,8 +776,10 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 	      rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
 	      if (vpcsecgroup) {
 		// found one
+		LOGTRACE("MEH: found secgroup %s\n", vpcsecgroup->name);
 		vpcsecgroup->gniSecgroup = gnisecgroup;
 	      } else {
+		LOGTRACE("MEH: did not find secgroup %s, creating it\n", gnisecgroup->name);
 		mido->vpcsecgroups = realloc(mido->vpcsecgroups, sizeof(mido_vpc_secgroup) * (mido->max_vpcsecgroups + 1));
 		vpcsecgroup = &(mido->vpcsecgroups[mido->max_vpcsecgroups]);
 		bzero(vpcsecgroup, sizeof(mido_vpc_secgroup));
@@ -823,7 +848,7 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
 		  int found=0;
 		  rc = mido_get_ipaddrgroups("euca_tenant_1", &midos, &max_midos);
 		  for (r=0; r<max_midos && !found; r++) {
-		    snprintf(name, 32, "sg_%11s_all", vpcsecgroup->name);
+		    snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
 		    rc = mido_getel_midoname(&(midos[r]), "name", &mname);
 		    if (mname && !strcmp(name, mname)) {
 		      LOGTRACE("FOUND: %s/%s\n", mname, midos[r].uuid);
@@ -907,6 +932,16 @@ int do_midonet_update(globalNetworkInfo *gni, mido_config *mido) {
   // check and clear VPCs/subnets/instances
 
   // TODO clear sec. group chains
+  LOGDEBUG("TOTAL SECGROUPS: %d\n", mido->max_vpcsecgroups);
+  for (i=0; i<mido->max_vpcsecgroups; i++) {
+    vpcsecgroup = &(mido->vpcsecgroups[i]);
+    LOGDEBUG("CHECK: %s/%d\n", vpcsecgroup->name, vpcsecgroup->gnipresent);
+    if (!vpcsecgroup->gnipresent) {
+      LOGINFO("tearing down VPC sec. group %s\n", vpcsecgroup->name);
+      rc = delete_mido_vpc_secgroup(vpcsecgroup);
+    }
+  }
+
   LOGDEBUG("TOTAL VPCS: %d\n", mido->max_vpcs);
   for (i=0; i<mido->max_vpcs; i++) {
     vpc = &(mido->vpcs[i]);
@@ -1005,6 +1040,13 @@ void print_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
   mido_print_midoname(&(vpcinstance->midos[VPCBR_DHCPHOST]));
   mido_print_midoname(&(vpcinstance->midos[VMHOST]));
 }
+void print_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
+  int i;
+  LOGDEBUG("PRINT VPCSECGROUP: name=%s gnipresent=%d\n", vpcsecgroup->name, vpcsecgroup->gnipresent);
+  for (i=0; i<VPCSG_END; i++) {
+    mido_print_midoname(&(vpcsecgroup->midos[i]));
+  }
+}
 
 
 
@@ -1074,7 +1116,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
   foundcount=found=0;
   rc = mido_get_chains("euca_tenant_1", &midos, &max_midos);
   for (i=0; i<max_midos && !found; i++) {
-    snprintf(name, 64, "sg_%11s_ingress", vpcsecgroup->name);
+    snprintf(name, 64, "sg_ingress_%11s", vpcsecgroup->name);
     tmpstr = NULL;
     rc = mido_getel_midoname(&(midos[i]), "name", &tmpstr);
     if (tmpstr && !strcmp(name, tmpstr)) {
@@ -1084,7 +1126,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
     }
     EUCA_FREE(tmpstr);
     
-    snprintf(name, 64, "sg_%11s_egress", vpcsecgroup->name);
+    snprintf(name, 64, "sg_egress_%11s", vpcsecgroup->name);
     tmpstr = NULL;
     rc = mido_getel_midoname(&(midos[i]), "name", &tmpstr);
     if (tmpstr && !strcmp(name, tmpstr)) {
@@ -1104,7 +1146,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
   foundcount=found=0;
   rc = mido_get_ipaddrgroups("euca_tenant_1", &midos, &max_midos);
   for (i=0; i<max_midos && !found; i++) {
-    snprintf(name, 64, "sg_%11s_priv", vpcsecgroup->name);
+    snprintf(name, 64, "sg_priv_%11s", vpcsecgroup->name);
     tmpstr = NULL;
     rc = mido_getel_midoname(&(midos[i]), "name", &tmpstr);
     if (tmpstr && !strcmp(name, tmpstr)) {
@@ -1114,7 +1156,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
     }
     EUCA_FREE(tmpstr);
 
-    snprintf(name, 64, "sg_%11s_pub", vpcsecgroup->name);
+    snprintf(name, 64, "sg_pub_%11s", vpcsecgroup->name);
     tmpstr = NULL;
     rc = mido_getel_midoname(&(midos[i]), "name", &tmpstr);
     if (tmpstr && !strcmp(name, tmpstr)) {
@@ -1124,7 +1166,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
     }
     EUCA_FREE(tmpstr);
 
-    snprintf(name, 64, "sg_%11s_all", vpcsecgroup->name);
+    snprintf(name, 64, "sg_all_%11s", vpcsecgroup->name);
     tmpstr = NULL;
     rc = mido_getel_midoname(&(midos[i]), "name", &tmpstr);
     if (tmpstr && !strcmp(name, tmpstr)) {
@@ -1152,35 +1194,35 @@ int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) 
     return(1);
   }
   
-  snprintf(name, 32, "sg_%11s_ingress", vpcsecgroup->name);
+  snprintf(name, 32, "sg_ingress_%11s", vpcsecgroup->name);
   rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_INGRESS]));
   if (rc) {
     // TODO
     ret=1;
   }
 
-  snprintf(name, 32, "sg_%11s_egress", vpcsecgroup->name);
+  snprintf(name, 32, "sg_egress_%11s", vpcsecgroup->name);
   rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_EGRESS]));
   if (rc) {
     // TODO
     ret=1;
   }
 
-  snprintf(name, 32, "sg_%11s_priv", vpcsecgroup->name);
+  snprintf(name, 32, "sg_priv_%11s", vpcsecgroup->name);
   rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
   if (rc) {
     // TODO
     ret = 1;
   }
 
-  snprintf(name, 32, "sg_%11s_pub", vpcsecgroup->name);
+  snprintf(name, 32, "sg_pub_%11s", vpcsecgroup->name);
   rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
   if (rc) {
     // TODO
     ret = 1;
   }
 
-  snprintf(name, 32, "sg_%11s_all", vpcsecgroup->name);
+  snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
   rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGALL]));
   if (rc) {
     // TODO
@@ -1214,12 +1256,15 @@ int delete_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
 int find_mido_vpc_secgroup(mido_config *mido, char *secgroupname, mido_vpc_secgroup **outvpcsecgroup) {
   int i=0;
 
+  LOGTRACE("MEH: %s\n", SP(secgroupname));
+  
   if (!mido || !secgroupname || !outvpcsecgroup) {
     return(1);
   }
-
+  
   *outvpcsecgroup = NULL;
   for (i=0; i<mido->max_vpcsecgroups; i++) {
+    LOGTRACE("MEH: %s - %s\n", SP(mido->vpcsecgroups[i].name), SP(secgroupname));
     if (mido->vpcsecgroups[i].name && !strcmp(mido->vpcsecgroups[i].name, secgroupname)) {
       *outvpcsecgroup = &(mido->vpcsecgroups[i]);
       return(0);
@@ -1399,6 +1444,11 @@ int create_mido_vpc_instance(mido_config *mido, mido_vpc_instance *vpcinstance, 
 
 int delete_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
   int ret=0, rc=0;
+
+  if (!vpcinstance || !strlen(vpcinstance->name)) {
+    LOGFATAL("BUG: invalid input params\n");
+    return(1);
+  }
 
   rc = disconnect_mido_vpc_instance_elip(vpcinstance);
   if (rc) {
@@ -2033,13 +2083,6 @@ int free_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet) {
 
   mido_free_midoname_list(vpcsubnet->midos, VPCSUBNETEND);
 
-  /*
-  mido_free_midoname(&(vpcsubnet->midos[VPCBR]));
-  mido_free_midoname(&(vpcsubnet->midos[VPCBR_RTPORT]));
-  mido_free_midoname(&(vpcsubnet->midos[VPCRT_BRPORT]));
-  mido_free_midoname(&(vpcsubnet->midos[VPCBR_DHCP]));
-  */
-
   mido_free_midoname_list(vpcsubnet->brports, vpcsubnet->max_brports);
   EUCA_FREE(vpcsubnet->brports);
 
@@ -2072,11 +2115,18 @@ int free_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
 int delete_mido_vpc_subnet(mido_config *mido, mido_vpc_subnet *vpcsubnet) {
   int rc=0, ret=0, i=0;
 
+  if (!mido || !vpcsubnet || !strlen(vpcsubnet->name)) {
+    LOGFATAL("BUG: invalid input parameters\n");
+    return(1);
+  }
+
   LOGDEBUG("DELETING SUBNET '%s'\n", vpcsubnet->name);
 
   // delete all instances on this subnet
   for (i=0; i<vpcsubnet->max_instances; i++) {
-    rc = delete_mido_vpc_instance(&(vpcsubnet->instances[i]));
+    if (strlen(vpcsubnet->instances[i].name)) {
+      rc = delete_mido_vpc_instance(&(vpcsubnet->instances[i]));
+    }
   }
 
   //  rc = mido_delete_route(&(vpcsubnet->vpcrt_route));
@@ -2097,6 +2147,11 @@ int delete_mido_vpc_subnet(mido_config *mido, mido_vpc_subnet *vpcsubnet) {
 int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
   int rc=0, ret=0, i=0;
 
+  if (!mido || !vpc || !vpc->name) {
+    LOGFATAL("BUG: invalid input parameters\n");
+    return(1);
+  }
+
   LOGDEBUG("DELETING VPC: %s, %s\n", vpc->name, vpc->midos[VPCRT].name);
 
   rc = mido_delete_port(&(vpc->midos[EUCABR_DOWNLINK]));
@@ -2111,7 +2166,9 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
   rc = mido_delete_chain(&(vpc->midos[VPCRT_POSTCHAIN]));
 
   for (i=0; i<vpc->max_subnets; i++) {
-    rc = delete_mido_vpc_subnet(mido, &(vpc->subnets[i]));
+    if (strlen(vpc->subnets[i].name)) {
+      rc = delete_mido_vpc_subnet(mido, &(vpc->subnets[i]));
+    }
   }
   
   rc = delete_mido_meta_vpc_namespace(mido, vpc);

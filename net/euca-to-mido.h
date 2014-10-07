@@ -110,6 +110,7 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup);
 void print_mido_vpc(mido_vpc *vpc);
 void print_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet);
 void print_mido_vpc_instance(mido_vpc_instance *vpcinstance);
+void print_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup);
 
 int do_midonet_update(globalNetworkInfo *gni, mido_config *mido);
 int do_midonet_teardown(mido_config *mido);
