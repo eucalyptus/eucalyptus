@@ -31,8 +31,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -53,6 +52,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -200,15 +200,15 @@ public class AWSCloudWatchAlarmResourceAction extends ResourceAction {
   }
 
   @Override
-  public Promise<String> getCreatePromise(CreateStackWorkflowImpl createStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryCreatePromise(createStackWorkflow, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public Promise<String> getDeletePromise(DeleteStackWorkflowImpl deleteStackWorkflow, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryDeletePromise(deleteStackWorkflow, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 

@@ -20,14 +20,23 @@
 
 package com.eucalyptus.cloudformation.workflow
 
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
+import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest
+import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecution
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
+import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.StackEvent
 import com.eucalyptus.cloudformation.ValidationErrorException
+import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
+import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
+import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
@@ -47,12 +56,13 @@ import com.netflix.glisten.ActivityOperations
 import com.netflix.glisten.impl.swf.SwfActivityOperations
 import org.apache.log4j.Logger
 
-public class StackActivityImpl implements StackActivity{
+public class StackActivityImpl implements StackActivity {
 
   @Delegate
   ActivityOperations activityOperations = new SwfActivityOperations();
 
   private static final Logger LOG = Logger.getLogger(StackActivityImpl.class);
+
   @Override
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason) {
     LOG.info("Creating global stack event: " + resourceStatus);
@@ -65,7 +75,7 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setPhysicalResourceId(stackId);
     stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: AWS has a value related to stack id. (I think)
     ObjectNode properties = new ObjectMapper().createObjectNode();
-    for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
+    for (StackEntity.Parameter parameter : StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
       properties.put(parameter.getKey(), parameter.getStringValue());
     }
     stackEvent.setResourceProperties(JsonHelper.getStringFromJsonNode(properties));
@@ -173,6 +183,7 @@ public class StackActivityImpl implements StackActivity{
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     return "";
   }
+
   @Override
   public String getResourceType(String stackId, String accountId, String resourceId) {
     return StackResourceEntityManager.getStackResource(stackId, accountId, resourceId).getResourceType();
@@ -251,7 +262,7 @@ public class StackActivityImpl implements StackActivity{
         failedResources.add(stackResourceEntity.getLogicalResourceId());
       }
     }
-    for (StackResourceEntity stackResourceEntity: cancelledResources) {
+    for (StackResourceEntity stackResourceEntity : cancelledResources) {
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
       stackResourceEntity.setResourceStatusReason("Resource creation cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
@@ -271,7 +282,7 @@ public class StackActivityImpl implements StackActivity{
         failedResources.add(stackResourceEntity.getLogicalResourceId());
       }
     }
-    for (StackResourceEntity stackResourceEntity: cancelledResources) {
+    for (StackResourceEntity stackResourceEntity : cancelledResources) {
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_FAILED);
       stackResourceEntity.setResourceStatusReason("Resource deletion cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
@@ -285,12 +296,12 @@ public class StackActivityImpl implements StackActivity{
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
       Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stackId, accountId)) {
+      for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
         resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
       }
       List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
 
-      for (StackEntity.Output output: outputs) {
+      for (StackEntity.Output output : outputs) {
         output.setReady(true);
         output.setReady(true);
         JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap);
@@ -304,7 +315,7 @@ public class StackActivityImpl implements StackActivity{
       stackEntity.setStackStatus(StackEntity.Status.CREATE_COMPLETE);
       StackEntityManager.updateStack(stackEntity);
     } catch (Exception e) {
-      LOG.error(e,e);
+      LOG.error(e, e);
       throw e;
     }
     LOG.info("Done finalizing create stack");
@@ -391,7 +402,8 @@ public class StackActivityImpl implements StackActivity{
       } catch (Exception ex) {
         errorWithProperties = true;
       }
-      if (!errorWithProperties) { // if we have errors with properties we had them on create too, so we didn't start (really)
+      if (!errorWithProperties) {
+        // if we have errors with properties we had them on create too, so we didn't start (really)
         Step deleteStep = resourceAction.getDeleteStep(stepId);
         resourceAction = deleteStep.perform(resourceAction);
         resourceInfo = resourceAction.getResourceInfo();
@@ -414,6 +426,7 @@ public class StackActivityImpl implements StackActivity{
     }
     return "";
   }
+
   @Override
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
@@ -478,6 +491,7 @@ public class StackActivityImpl implements StackActivity{
     LOG.debug("Finished deleting resource " + resourceId);
     return "SUCCESS";
   }
+
   @Override
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage) {
     LOG.debug("Error deleting resource " + resourceId);
@@ -518,4 +532,113 @@ public class StackActivityImpl implements StackActivity{
     LOG.info("Finished deleting all stack records");
     return ""; // promiseFor() doesn't work on void return types
   }
+
+  public String checkCreateStackWorkflowClosed(String stackId) {
+    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    List<StackWorkflowEntity> createStackWorkflowEntities = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW);
+    // TODO: is it really appropriate to fail if no workflows exist
+    if (createStackWorkflowEntities == null || createStackWorkflowEntities.isEmpty()) {
+      throw new InternalFailureException("There is no create stack workflow for stack id " + stackId);
+    }
+    if (createStackWorkflowEntities.size() > 1) {
+      throw new InternalFailureException("More than one create stack workflow was found for stack id " + stackId);
+    }
+    StackWorkflowEntity createStackWorkflowEntity = createStackWorkflowEntities.get(0);
+    DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+    describeWorkflowExecutionRequest.setDomain(createStackWorkflowEntity.getDomain());
+    WorkflowExecution execution = new WorkflowExecution();
+    execution.setRunId(createStackWorkflowEntity.getRunId());
+    execution.setWorkflowId(createStackWorkflowEntity.getWorkflowId());
+    describeWorkflowExecutionRequest.setExecution(execution);
+    WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+    if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+      throw new ValidationFailedException("Create workflow is not yet closed");
+    } else {
+      return workflowExecutionDetail.getExecutionInfo().getCloseStatus();
+    }
+  }
+
+  @Override
+  public String getStackStatus(String stackId, String accountId) {
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    if (stackEntity == null) {
+      throw new ValidationErrorException("No stack found with id " + stackId);
+    }
+    return stackEntity.getStackStatus().toString();
+  }
+
+  public String setStackStatus(String stackId, String accountId, String status, String statusReason) {
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    if (stackEntity == null) {
+      throw new ValidationErrorException("No stack found with id " + stackId);
+    }
+    stackEntity.setStackStatus(StackEntity.Status.valueOf(status));
+    stackEntity.setStackStatusReason(statusReason);
+    StackEntityManager.updateStack(stackEntity);
+    return "";
+  }
+
+  @Override
+  public String cancelCreateAndMonitorWorkflows(String stackId) {
+    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW));
+    cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW));
+    return "";
+  }
+
+  private boolean isWorkflowOpen(AmazonSimpleWorkflowClient simpleWorkflowClient, StackWorkflowEntity stackWorkflowEntity) {
+    boolean isOpen = false;
+    try {
+      DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+      describeWorkflowExecutionRequest.setDomain(stackWorkflowEntity.getDomain());
+      WorkflowExecution execution = new WorkflowExecution();
+      execution.setRunId(stackWorkflowEntity.getRunId());
+      execution.setWorkflowId(stackWorkflowEntity.getWorkflowId());
+      describeWorkflowExecutionRequest.setExecution(execution);
+      WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+      if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+        isOpen = true;
+      }
+    } catch (Exception ex) {
+      // not open
+    }
+    return isOpen;
+  }
+  private void cancelOpenWorkflows(AmazonSimpleWorkflowClient simpleWorkflowClient, List<StackWorkflowEntity> workflows) {
+    if (workflows != null) {
+      // Should only be one here, but that is checked for elsewhere, cancel everything
+      for (StackWorkflowEntity workflow : workflows) {
+        if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
+          RequestCancelWorkflowExecutionRequest requestCancelWorkflowRequest = new RequestCancelWorkflowExecutionRequest();
+          requestCancelWorkflowRequest.setDomain(workflow.getDomain());
+          requestCancelWorkflowRequest.setWorkflowId(workflow.getWorkflowId());
+          requestCancelWorkflowRequest.setRunId(workflow.getRunId());
+          simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowRequest);
+        }
+      }
+    }
+  }
+  @Override
+  public String verifyCreateAndMonitorWorkflowsClosed(String stackId) {
+    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    List<StackWorkflowEntity> monitorWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW);
+    if (monitorWorkflows != null) {
+      for (StackWorkflowEntity workflow : monitorWorkflows) {
+        if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
+          throw new ValidationFailedException("A monitoring workflow for " + stackId + " has not yet been canceled");
+        }
+      }
+    }
+    List<StackWorkflowEntity> createWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW);
+    if (createWorkflows != null) {
+      for (StackWorkflowEntity workflow : createWorkflows) {
+        if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
+          throw new ValidationFailedException("A create workflow for " + stackId + " has not yet been canceled");
+        }
+      }
+    }
+    return "";
+  }
+
+
 }

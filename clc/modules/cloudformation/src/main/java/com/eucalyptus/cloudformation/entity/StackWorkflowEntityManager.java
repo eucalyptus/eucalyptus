@@ -1,5 +1,7 @@
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
@@ -13,7 +15,7 @@ import java.util.List;
  */
 public class StackWorkflowEntityManager {
 
-  public StackWorkflowEntity createStackWorkflow(String stackId, StackWorkflowEntity.WorkflowType workflowType, String domain, String workflowId, String runId) {
+  public static StackWorkflowEntity addOrUpdateStackWorkflowEntity(String stackId, StackWorkflowEntity.WorkflowType workflowType, String domain, String workflowId, String runId) throws CloudFormationException {
     StackWorkflowEntity stackWorkflowEntity = new StackWorkflowEntity();
     stackWorkflowEntity.setDomain(domain);
     stackWorkflowEntity.setStackId(stackId);
@@ -22,18 +24,27 @@ public class StackWorkflowEntityManager {
     stackWorkflowEntity.setWorkflowType(workflowType);
     try ( TransactionResource db =
             Entities.transactionFor(StackWorkflowEntity.class) ) {
-      Entities.persist(stackWorkflowEntity);
+      // Make sure one is not there yet.
+      Criteria criteria = Entities.createCriteria(StackWorkflowEntity.class)
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("workflowType", workflowType));
+      List<StackWorkflowEntity> match = criteria.list();
+      if (match != null && !match.isEmpty()) {
+        throw new InternalFailureException("Stack workflow entity of type " + workflowType + " already exists for stack id " + stackId);
+      } else {
+        Entities.persist(stackWorkflowEntity);
+      }
       // do something
       db.commit( );
     }
     return stackWorkflowEntity;
   }
 
-  public List<StackWorkflowEntity> getStackWorkflowEntities(String stackId, StackWorkflowEntity.WorkflowType workflowType) {
+  public static List<StackWorkflowEntity> getStackWorkflowEntities(String stackId, StackWorkflowEntity.WorkflowType workflowType) {
     List<StackWorkflowEntity> workflows = Lists.newArrayList();
     try (TransactionResource db =
            Entities.transactionFor(StackWorkflowEntity.class)) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+      Criteria criteria = Entities.createCriteria(StackWorkflowEntity.class)
         .add(Restrictions.eq("stackId", stackId))
         .add(Restrictions.eq("workflowType", workflowType));
       List<StackWorkflowEntity> match = criteria.list();
@@ -44,11 +55,11 @@ public class StackWorkflowEntityManager {
     return workflows;
   }
 
-  public List<StackWorkflowEntity> getStackWorkflowEntities(String stackId) {
+  public static List<StackWorkflowEntity> getStackWorkflowEntities(String stackId) {
     List<StackWorkflowEntity> workflows = Lists.newArrayList();
     try (TransactionResource db =
            Entities.transactionFor(StackWorkflowEntity.class)) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+      Criteria criteria = Entities.createCriteria(StackWorkflowEntity.class)
         .add(Restrictions.eq("stackId", stackId));
       List<StackWorkflowEntity> match = criteria.list();
       if (match != null) {
@@ -59,10 +70,10 @@ public class StackWorkflowEntityManager {
   }
 
   // this one is not soft delete
-  public void deleteStackWorkflowEntities(String stackId) {
+  public static void deleteStackWorkflowEntities(String stackId) {
     try (TransactionResource db =
            Entities.transactionFor(StackWorkflowEntity.class)) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+      Criteria criteria = Entities.createCriteria(StackWorkflowEntity.class)
         .add(Restrictions.eq("stackId", stackId));
       List<StackWorkflowEntity> match = criteria.list();
       if (match != null) {

@@ -852,12 +852,12 @@ public class TemplateParser {
       String deletionPolicy = JsonHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
       if (deletionPolicy != null) {
         if (!DeletionPolicyValues.Delete.toString().equals(deletionPolicy)
-          && !DeletionPolicyValues.Retain.equals(deletionPolicy)
-          && !DeletionPolicyValues.Snapshot.equals(deletionPolicy)) {
+          && !DeletionPolicyValues.Retain.toString().equals(deletionPolicy)
+          && !DeletionPolicyValues.Snapshot.toString().equals(deletionPolicy)) {
           throw new ValidationErrorException("Template format error: Unrecognized DeletionPolicy " + deletionPolicy +
             " for resource " + resourceKey);
         }
-        if (DeletionPolicyValues.Snapshot.equals(deletionPolicy) && !resourceInfo.supportsSnapshot()) {
+        if (DeletionPolicyValues.Snapshot.toString().equals(deletionPolicy) && !resourceInfo.supportsSnapshot()) {
           throw new ValidationErrorException("Template error: resource type " + resourceInfo.getType() + " does not support deletion policy Snapshot");
         }
         resourceInfo.setDeletionPolicy(deletionPolicy);

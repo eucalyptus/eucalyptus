@@ -130,8 +130,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         if ("SKIP".equals(result)) {
           return promiseFor("");
         } else {
-          Promise<String> createPromise = resourceAction.getCreatePromise(this,
-            resourceId, stackId, accountId, effectiveUserId);
+          Promise<String> createPromise = resourceAction.getCreatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
           waitFor(createPromise) {
             activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId);
           }

@@ -16,6 +16,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.StackActivityImpl;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -86,6 +87,7 @@ public class CloudFormationBootstrapper extends Bootstrapper.Simple {
 
       stackWorkflowWorker = new WorkflowWorker(simpleWorkflowClient, SWF_DOMAIN, SWF_TASKLIST);
       stackWorkflowWorker.addWorkflowImplementationType(CreateStackWorkflowImpl.class);
+      stackWorkflowWorker.addWorkflowImplementationType(MonitorCreateStackWorkflowImpl.class);
       stackWorkflowWorker.addWorkflowImplementationType(DeleteStackWorkflowImpl.class);
       stackWorkflowWorker.start( );
 

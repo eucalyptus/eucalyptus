@@ -24,12 +24,12 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
 
 @ActivityRegistrationOptions(
-  defaultTaskScheduleToStartTimeoutSeconds = 1200,
-  defaultTaskStartToCloseTimeoutSeconds = 600,
-  defaultTaskHeartbeatTimeoutSeconds = 600,
-  defaultTaskScheduleToCloseTimeoutSeconds = 1800
+  defaultTaskScheduleToStartTimeoutSeconds = 900,
+  defaultTaskStartToCloseTimeoutSeconds = 450,
+  defaultTaskHeartbeatTimeoutSeconds = 450,
+  defaultTaskScheduleToCloseTimeoutSeconds = 1350
 )
-@Activities(version="60.0")
+@Activities(version="1.0")
 public interface StackActivity {
   public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
   public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
@@ -45,4 +45,9 @@ public interface StackActivity {
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
+  public String checkCreateStackWorkflowClosed(String stackId);
+  public String getStackStatus(String stackId, String accountId);
+  public String setStackStatus(String stackId, String accountId, String status, String statusReason);
+  public String cancelCreateAndMonitorWorkflows(String stackId);
+  public String verifyCreateAndMonitorWorkflowsClosed(String stackId);
 }
