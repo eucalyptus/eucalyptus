@@ -63,13 +63,12 @@ package com.eucalyptus.blockstorage.ceph;
 
 import java.util.ArrayList;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.ceph.rbd.Rbd;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.san.common.SANManager;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
@@ -79,63 +78,55 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 /**
- * CephProvider implements the plungin in Eucalyptus Storage Controller for interacting with a Ceph cluster 
+ * CephProvider implements the Eucalyptus Storage Controller plug-in for interacting with a Ceph cluster
  * 
- * Created by wesw on 7/13/14.
  */
-@StorageManagerProperty(value = "ceph", manager = SANManager.class)
-public class CephProvider implements SANProvider {
+@StorageManagerProperty(value = "ceph-rbd", manager = SANManager.class)
+public class CephRbdProvider implements SANProvider {
 
-	private static final Logger LOG = Logger.getLogger(CephProvider.class);
+	private static final Logger LOG = Logger.getLogger(CephRbdProvider.class);
 
-	private EucaRbd rbdService;
-	private String configFile;
-	private String user;
-	private String pool;
+	private CephRbdAdapter rbdService;
+	private CephRbdInfo cachedConfig;
 
 	@Override
 	public void initialize() {
 		// Create and persist ceph info entity if its not already there
 		LOG.info("Initializing CephInfo entity");
-		CephInfo.getStorageInfo();
+		CephRbdInfo.getStorageInfo();
 	}
 
 	@Override
 	public void configure() throws EucalyptusCloudException {
-		CephInfo cephInfo = CephInfo.getStorageInfo();
-		initializeRbdProvider(cephInfo);
+		CephRbdInfo cephInfo = CephRbdInfo.getStorageInfo();
+		initializeRbdService(cephInfo);
 	}
 
-	private void initializeRbdProvider(CephInfo info) {
-		configFile = info.getCephConfigFile();
-		user = info.getCephUser();
-		pool = info.getCephPools();
+	private void initializeRbdService(CephRbdInfo info) {
+		LOG.info("Initializing Ceph RBD service provider");
+
+		cachedConfig = info;
 
 		if (rbdService == null) {
-			rbdService = new EucaRbdFormatTwoImpl(info);
+			rbdService = new CephRbdFormatTwoAdapter(cachedConfig);
 		} else {
 			// Changing the configuration in the existing reference rather than instantiating a new object as that might end up interrupting an already existing
 			// operation
-			rbdService.setCephConfig(info);
+			rbdService.setCephConfig(cachedConfig);
 		}
+		
+		// TODO Some way to check connectivity to ceph cluster
 	}
 
 	@Override
 	public void checkConnection() throws EucalyptusCloudException {
-		CephInfo localInfo = CephInfo.getStorageInfo();
-		if (localInfo != null && !isSame(localInfo)) {
+		CephRbdInfo info = CephRbdInfo.getStorageInfo();
+		if (info != null && !cachedConfig.isSame(info)) {
 			LOG.info("Detected a change in Ceph configuration");
-			initializeRbdProvider(localInfo);
+			initializeRbdService(info);
 		} else {
 			// Nothing to do here
 		}
-
-		// TODO Some way to check connectivity to ceph cluster
-	}
-
-	private boolean isSame(CephInfo info) {
-		return StringUtils.equals(configFile, info.getCephConfigFile()) && StringUtils.equals(user, info.getCephUser())
-				&& StringUtils.equals(pool, info.getCephPools());
 	}
 
 	@Override
@@ -157,14 +148,19 @@ public class CephProvider implements SANProvider {
 
 	@Override
 	public StorageResource connectTarget(String iqn) throws EucalyptusCloudException {
-		// iqn here is in the format pool/image
+		// iqn here is in the format pool/image or pool/image,pool/image
 		// SANManager changes the ID, so dont bother setting the volume ID (first parameter) here
-		return new CephImageResource(iqn, iqn);
+		if (iqn.contains(",")) {
+			String[] parts = iqn.split(",");
+			return new CephRbdResource(parts[0], parts[0]);
+		} else {
+			return new CephRbdResource(iqn, iqn);
+		}
 	}
 
 	@Override
 	public String getVolumeConnectionString(String volumeId) {
-		return ","; // HACK Changing it to <empty password>,<empty path> format to not error out in SANManager
+		return CephRbdInfo.getStorageInfo().getVirshSecret() + ","; // <virsh secret uuid>,<empty path>
 	}
 
 	@Override
@@ -228,13 +224,25 @@ public class CephProvider implements SANProvider {
 			}
 		} catch (Exception e) {
 			LOG.warn("librbd version not found, librbd may not be installed!");
+			throw new EucalyptusCloudException("librbd version not found, librbd may not be installed!", e);
 		}
 	}
 
+	// TODO post-nc-changes replace this with the commented method below after changing the method signature in SANProvider interface
 	@Override
 	public Integer addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
-		return -1; // HACK Changing it to -1 as the SANManager complains if LUN ID is null
+		return -1;
 	}
+
+	// @Override
+	// public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
+	// try {
+	// String pool = rbdService.getImagePool(volumeId);
+	// return pool + '/' + volumeId;
+	// } catch (Exception e) {
+	// throw new EucalyptusCloudException("Unable to export " + volumeId, e);
+	// }
+	// }
 
 	@Override
 	public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
@@ -280,7 +288,7 @@ public class CephProvider implements SANProvider {
 
 	@Override
 	public boolean snapshotExists(String snapshotId) throws EucalyptusCloudException {
-		return rbdService.imageExists(snapshotId);
+		return volumeExists(snapshotId);
 	}
 
 	@Override
@@ -302,6 +310,26 @@ public class CephProvider implements SANProvider {
 
 	@Override
 	public boolean volumeExists(String volumeId) throws EucalyptusCloudException {
-		return rbdService.imageExists(volumeId);
+		try {
+			if (null != rbdService.getImagePool(volumeId)) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			LOG.debug("Caught error in check for " + volumeId, e);
+			return false;
+		}
 	}
+
+	// TODO post-nc-changes uncomment these methods after making changes in SAN Provider
+	// @Override
+	// public String getProtocol() {
+	// return "rbd";
+	// }
+	//
+	// @Override
+	// public String getProviderName() {
+	// return "ceph";
+	// }
 }

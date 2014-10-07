@@ -37,7 +37,7 @@ import hashlib
 import binascii
 from M2Crypto import RSA
 
-GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
+GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&force=%s&code=%s'
 
 EucaP12File = '%s/var/lib/eucalyptus/keys/euca.p12'
 CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
@@ -60,7 +60,12 @@ class GetCredentials(AWSQueryRequest):
                     short_name='u', long_name='user',
                     ptype='string', optional=True, default='admin',
                     doc=('user name for which to get credentials '
-                         '(default: admin)'))]
+                         '(default: admin)')),
+              Param(name='force',
+                    short_name='f', long_name='force',
+                    ptype='boolean', optional=True, default=False,
+                    doc='Create new access key credentials even if limit '
+                    'exceeded')]
     Args = [Param(name='zipfile', long_name='zipfile',
                   ptype='string', optional=False,
                   doc='The path to the resulting zip file with credentials')]
@@ -85,6 +90,7 @@ class GetCredentials(AWSQueryRequest):
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
                                                   self.user,
+                                                  self.force,
                                                   self.token),
                                     num_retries=1)
         if not data:
@@ -121,6 +127,7 @@ class GetCredentials(AWSQueryRequest):
                     raise ValueError('Unable to find EUCALYPTUS home')
         self.account = self.request_params['account']
         self.user = self.request_params['user']
+        self.force = self.request_params['force']
         self.zipfile = self.request_params['zipfile']
         self.eucap12_file = EucaP12File % self.euca_home
         self.cloudpk_file = CloudPKFile % self.euca_home

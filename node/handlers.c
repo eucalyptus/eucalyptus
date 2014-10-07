@@ -1790,7 +1790,7 @@ shutoff:                              // escape point for error conditions
 free:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
-    unset_corrid(get_corrid());    
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1809,7 +1809,7 @@ void *terminating_thread(void *arg)
 
     int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        goto free; 
+        goto free;
     }
 
     {
@@ -1833,7 +1833,7 @@ void *terminating_thread(void *arg)
     }
 free:
     EUCA_FREE(arg);
-    unset_corrid(get_corrid());    
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -3053,12 +3053,12 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective,
-                                        outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
+                                        rootDirective, outInst);
     } else {
         ret = nc_state.D->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective,
-                                        outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
+                                        rootDirective, outInst);
     }
 
     return ret;
@@ -3279,7 +3279,8 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBundleInstance() handler call.
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
+                     char *architecture)
 {
     int ret = EUCA_OK;
 

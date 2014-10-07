@@ -39,6 +39,9 @@ public class SimpleWorkflowConfiguration {
 
   private static final Logger logger = Logger.getLogger( SimpleWorkflowConfiguration.class );
 
+  @ConfigurableField( initial = "true", description = "Service available for internal/administrator use only." )
+  public static volatile boolean systemOnly = true;
+
   @ConfigurableField( initial = "10000", description = "Maximum number of activity types for each domain." )
   public static volatile int activityTypesPerDomain = 10000;
 
@@ -101,6 +104,10 @@ public class SimpleWorkflowConfiguration {
 
   private static AtomicLong deprecatedDomainRetentionDurationMillis =
       new AtomicLong( Intervals.parse( deprecatedDomainRetentionDuration, TimeUnit.DAYS.toMillis( 1 ) ) );
+
+  public static boolean isSystemOnly() {
+    return systemOnly;
+  }
 
   public static int getActivityTypesPerDomain() {
     return activityTypesPerDomain;

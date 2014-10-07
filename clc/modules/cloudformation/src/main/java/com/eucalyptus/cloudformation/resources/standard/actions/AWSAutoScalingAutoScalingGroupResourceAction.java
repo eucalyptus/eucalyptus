@@ -34,6 +34,8 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.TagType;
+import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
@@ -41,17 +43,19 @@ import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingAutoScalingGroupProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -120,7 +124,14 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         } else if (properties.getVpcZoneIdentifier() != null && properties.getVpcZoneIdentifier().size() == 1) {
             createAutoScalingGroupType.setVpcZoneIdentifier(properties.getVpcZoneIdentifier().get(0));
         }
-        createAutoScalingGroupType.setEffectiveUserId(info.getEffectiveUserId());
+        List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(info, getStackEntity());
+        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
+          TagHelper.checkReservedAutoScalingTemplateTags(properties.getTags());
+          tags.addAll(properties.getTags());
+        }
+        createAutoScalingGroupType.setTags(convertTags(tags));
+        createAutoScalingGroupType.setUserId(info.getEffectiveUserId());
+        createAutoScalingGroupType.markPrivileged(); // due to stack aws: tags
         AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
         info.setPhysicalResourceId(autoScalingGroupName);
         info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
@@ -143,6 +154,20 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
       default:
         throw new IllegalStateException("Invalid step " + stepNum);
     }
+  }
+
+  private Tags convertTags(List<AutoScalingTag> autoScalingTags) {
+    Tags tags = new Tags();
+    ArrayList<TagType> member = Lists.newArrayList();
+    for (AutoScalingTag autoScalingTag: autoScalingTags) {
+      TagType tagType = new TagType();
+      tagType.setKey(autoScalingTag.getKey());
+      tagType.setValue(autoScalingTag.getValue());
+      tagType.setPropagateAtLaunch(autoScalingTag.getPropagateAtLaunch());
+      member.add(tagType);
+    }
+    tags.setMember(member);
+    return tags;
   }
 
   @Override

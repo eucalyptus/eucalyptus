@@ -64,7 +64,6 @@
 package com.eucalyptus.blockstorage.san.common.entities;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 import javax.persistence.Column;
@@ -75,8 +74,6 @@ import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -93,7 +90,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -314,23 +311,27 @@ public class SANInfo extends AbstractPersistent {
 	}
 
 	public static SANInfo getStorageInfo() {
-		TransactionResource tran = Entities.transactionFor(SANInfo.class);
-        SANInfo conf = null;
+		SANInfo conf = null;
+
 		try {
-			conf = Entities.uniqueResult(new SANInfo(StorageProperties.NAME));
-			tran.commit();
+			conf = Transactions.find(new SANInfo());
+		} catch (Exception e) {
+			LOG.warn("Storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(newDefault());
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new SANInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve SANInfo entity");
+				}
+			}
 		}
-		catch ( NoSuchElementException e ) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+
+		if (conf == null) {
 			conf = newDefault();
-			Entities.persist(conf);
-			tran.commit();
 		}
-		catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			tran.rollback();
-			conf = newDefault();
-		}
+
 		return conf;
 	}
 

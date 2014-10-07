@@ -24,8 +24,25 @@ package com.eucalyptus.compute.common.network;
  */
 public enum NetworkingFeature {
 
+  /**
+   * EC2-Classic platform
+   */
+  Classic,
+
+  /**
+   * Consistent (e.g. view based)
+   */
+  Consistent,
+
+  /**
+   * Elastic IP addresses
+   */
   ElasticIPs,
-  Vpc
+
+  /**
+   * EC2-VPC platform
+   */
+  Vpc,
   ;
 
 }

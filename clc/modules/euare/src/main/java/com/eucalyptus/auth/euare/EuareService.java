@@ -86,7 +86,6 @@ import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.ServerCertificates;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.euare.events.AccountCreatedEvent;
 import com.eucalyptus.auth.euare.events.AccountEventUtils;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -106,9 +105,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.event.EventFailedException;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -117,6 +113,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 
+@SuppressWarnings( "UnusedDeclaration" )
 public class EuareService {
   
   private static final Logger LOG = Logger.getLogger( EuareService.class );
@@ -211,7 +208,6 @@ public class EuareService {
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTGROUPS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list groups" );
     }
-    // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
@@ -267,7 +263,6 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListSigningCertificatesResultType result = reply.getListSigningCertificatesResult( );
     result.setIsTruncated( false );
     ArrayList<SigningCertificateType> certs = result.getCertificates( ).getMemberList( );
@@ -315,6 +310,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );          
         } else if ( AuthException.INVALID_CERT.equals( e.getMessage( ) ) ) {
@@ -384,7 +381,6 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    //TODO: pagination support
     String pathPrefix = request.getPathPrefix();
     if(pathPrefix == null || pathPrefix.isEmpty())
       pathPrefix = "/";
@@ -393,7 +389,7 @@ public class EuareService {
       final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
       final ServerCertificateMetadataListTypeType lists = new ServerCertificateMetadataListTypeType();
-      lists.setMemberList(new ArrayList<ServerCertificateMetadataType>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
+      lists.setMemberList(new ArrayList<>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
         @Override
         public ServerCertificateMetadataType apply(ServerCertificate cert) {
           return getServerCertificateMetadata(cert);
@@ -632,7 +628,6 @@ public class EuareService {
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTUSERS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list users" );
     }
-    // TODO(Ye Wen, 01/16/2011): support pagination
     ListUsersResultType result = reply.getListUsersResult( );
     result.setIsTruncated( false );
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
@@ -811,7 +806,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -841,7 +835,6 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
-    // TODO(Ye Wen, 01/26/2011): add pagination support
     ListAccessKeysResultType result = reply.getListAccessKeysResult( );
     try {
       result.setIsTruncated( false );
@@ -897,7 +890,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsForUserResult( ).getGroups( ).getMemberList( );
     try {
@@ -1122,7 +1114,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListGroupPoliciesResultType result = reply.getListGroupPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1191,6 +1182,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create access key for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Access key limit exceeded" );
         }
       }
       LOG.error( e, e );
@@ -1299,7 +1292,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
-    // TODO(Ye Wen, 01/26/2011): Consider pagination
     try {
       if ( !Privileged.allowReadGroup( requestUser, account, groupFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1464,6 +1456,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         }
       }
       LOG.error( e, e );
@@ -1567,7 +1561,6 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
-    // TODO(Ye Wen, 04/02/2011): support pagination
     ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1755,7 +1748,6 @@ public class EuareService {
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTROLES, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list roles" );
     }
-    // TODO support pagination
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
     try {
@@ -1862,7 +1854,6 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    // TODO support pagination
     final ListRolePoliciesResult result = reply.getListRolePoliciesResult( );
     result.setIsTruncated( false );
     final ArrayList<String> policies = result.getPolicyNames().getMemberList( );
@@ -1986,7 +1977,6 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    // TODO support pagination
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
     try {
@@ -2171,9 +2161,6 @@ public class EuareService {
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);
-    }catch(final AuthException ex){
-      LOG.error("failed to prepare server certificate", ex);
-      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }catch(final Exception ex){
       LOG.error("failed to prepare server certificate", ex);
       throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -2255,6 +2242,8 @@ public class EuareService {
   private static String sanitizePath( String path ) {
     if ( path == null || "".equals( path ) ) {
       return "/";
+    } else if ( path.length( ) > 1 && !path.endsWith( "/" ) ) {
+      return path.concat( "/" );
     }
     return path;
   }

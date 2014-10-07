@@ -116,7 +116,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( skipPath ? "/" : canonicalizePath( credentials.getServicePath() ) ); // AWS Java SDK always uses "/"
     sb.append( "\n" );
     boolean addedParam = false;
-    for ( final String parameter : Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( credentials.getParameters().keySet() ) ) {
+    for ( final String parameter : Ordering.natural( ).sortedCopy( credentials.getParameters().keySet() ) ) {
       if ( credentials.getVariant() == HmacUtils.SignatureVariant.SignatureV4Query && SecurityParameter.X_Amz_Signature.parameter().equals( parameter ) ) {
         continue;
       }

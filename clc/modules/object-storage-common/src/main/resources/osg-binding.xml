@@ -731,5 +731,45 @@
              class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType">
     </mapping>
 
+    <!-- BUCKET TAGGING -->
+    <mapping name="SetBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure field="taggingConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.TaggingConfiguration"/>
+    </mapping>
+
+    <mapping name="SetBucketTaggingResponse"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType">
+    </mapping>
+
+    <mapping name="GetBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.GetBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping
+            class="com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType"
+            abstract="true">
+        <structure field="taggingConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.TaggingConfiguration"/>
+    </mapping>
+
+    <mapping name="DeleteBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="DeleteBucketTaggingResponse"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType">
+    </mapping>
+
+
 </binding>
         

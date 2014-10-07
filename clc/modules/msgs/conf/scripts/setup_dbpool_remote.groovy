@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,81 +60,90 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.ceph;
 
-import java.util.List;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy
+import org.apache.log4j.Logger
+import org.logicalcobwebs.proxool.ProxoolException
+import org.logicalcobwebs.proxool.ProxoolFacade
+import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.bootstrap.DatabaseInfo;
+import com.eucalyptus.bootstrap.Host
+import com.eucalyptus.bootstrap.Hosts
+import com.eucalyptus.component.ServiceUris
+import com.eucalyptus.component.id.Database
+import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.LogUtil
 
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool_remote' );
 
-/**
- * Created by wesw on 7/14/14.
- */
-public interface EucaRbd {
+ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
+String pool_db_driver = 'org.postgresql.Driver';
+final DatabaseInfo dbInfo = DatabaseInfo.getDatabaseInfo();
+String db_host = dbInfo.getAppendOnlyHost();
+String db_port = dbInfo.getAppendOnlyPort();
+String pool_db_url = String.format("jdbc:postgresql://%s:%s", db_host, db_port );
 
-	/**
-	 * Use this to change the ceph configuration after the class is instantiated
-	 * 
-	 * @param cephInfo
-	 */
-	public void setCephConfig(CephInfo cephInfo);
 
-	/**
-	 * Create a new RBD image
-	 * 
-	 * @param imageName Name of the image to be created
-	 * @param imageSize Size of the image in bytes
-	 * @return Returns a representation of the newly created image
-	 */
-	public String createImage(String imageName, long imageSize);
+String db_user = null; 
+String db_pass = null;
+if ("localhost".equals(db_host)) {
+  db_user = Databases.userName;
+  db_pass = Databases.password;
+}else {
+  db_user = dbInfo.getAppendOnlyUser();
+  db_pass = dbInfo.getAppendOnlyPassword();
+}
 
-	/**
-	 * Delete RBD image
-	 * 
-	 * @param imageName Name of the image to be deleted
-	 */
-	public void deleteImage(String imageName);
+default_pool_props = [
+      'proxool.simultaneous-build-throttle': '32',
+      'proxool.minimum-connection-count': '8',
+      'proxool.maximum-connection-count': '512',
+      'proxool.prototype-count': '8',
+      'proxool.house-keeping-test-sql': 'SELECT 1=1;',
+      'proxool.house-keeping-sleep-time': '5000',
+      'proxool.test-before-use': 'false',
+      'proxool.test-after-use': 'false',
+      'proxool.trace': 'false',
+      'user': db_user,
+      'password': db_pass,
+    ]
 
-	/**
-	 * Check if the image exists
-	 * 
-	 * @param imageName Name of the image to be checked on
-	 * @return Returns true if the image exists and false otherwise
-	 */
-	public boolean imageExists(String imageName);
+def cleanDbPool = { String db_name ->
+  ProxoolFacade.removeConnectionPool(db_name);
+  LOG.info( "${db_name} Cleaned up remote jdbc pool");
+}
 
-	/**
-	 * List all RBD images in the pool
-	 * 
-	 * @return Returns a list of image names
-	 */
-	public List<String> listImages();
+def setupDbPool = { String db_name ->
+  LOG.info( "${db_name} Preparing remote jdbc pool" );
+    // Setup proxool
+  proxool_config = new Properties();
+  proxool_config.putAll(default_pool_props);
+  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}";
+  LOG.info( "${db_name} Preparing connection pool:     ${url}" )
+  
+  // Register proxool
+  LOG.trace( proxool_config )
+  ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.disableShutdownHook();
+}
 
-	/**
-	 * Create an RBD snapshot
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot
-	 * @return Returns a representation of the newly created snapshot
-	 */
-	public String createSnapshot(String parentName, String snapName);
+if ("localhost".equals(db_host)){
+  LOG.info("The exising local db pool will be used for append-only data");
+  return
+}
 
-	/**
-	 * Delete the RBD snapshot
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot
-	 */
-	public void deleteSnapshot(String parentName, String snapName);
+if ((db_user == null || db_user.length() <= 0) ||
+(db_host == null || db_host.length() <= 0) ||
+(db_pass == null || db_pass.length() <= 0)) {
+  LOG.info("Cannot setup remote db pool due to missing parameters");
+  return;
+}
 
-	/**
-	 * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for cloning.
-	 * Resize the cloned image if size is passed in
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot on parent image to be used for cloning
-	 * @param cloneName Name of the image to be cloned
-	 * @param size Size of the cloned image if it needs to resized
-	 * @return Returns a representation of the cloned image
-	 */
-	public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
+Databases.remoteDatabases().each { db_name ->
+  try{
+    cleanDbPool( db_name );
+  }catch(final ProxoolException ex){
+    ;
+  }
+  setupDbPool( db_name );
 }

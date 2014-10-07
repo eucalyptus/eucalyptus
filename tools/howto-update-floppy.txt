@@ -1,0 +1,6 @@
+If you need to change something in the floopy disk template use those steps:
+
+1. mkdir /tmp/floppy/	
+2. mount -o loop floppy /tmp/floppy/
+3. change content of fils(e) in the /tmp/floppy/
+4. umount floppy

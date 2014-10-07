@@ -372,9 +372,10 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
     LOGTRACE("Got volume lock\n");
 
     LOGTRACE("Calling ExportVolume on SC at %s\n", sc_url);
-    threadCorrelationId* corr_id = get_corrid();
-    if (scClientCall(corr_id!=NULL ? corr_id->correlation_id: NULL, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "ExportVolume", (*vol_data)->volumeId, reencrypted_token, local_ip, local_iqn,
-                     &connect_string) != EUCA_OK) {
+    threadCorrelationId *corr_id = get_corrid();
+    if (scClientCall
+        (corr_id != NULL ? corr_id->correlation_id : NULL, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "ExportVolume", (*vol_data)->volumeId,
+         reencrypted_token, local_ip, local_iqn, &connect_string) != EUCA_OK) {
         LOGERROR("Failed to get connection information for volume %s from storage controller at: %s\n", (*vol_data)->volumeId, sc_url);
         ret = EUCA_ERROR;
         goto release;
@@ -567,10 +568,11 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
         LOGTRACE("Re-encrypted token for %s is %s\n", vol_data->volumeId, reencrypted_token);
     }
 
-    threadCorrelationId* corr_id = get_corrid();
+    threadCorrelationId *corr_id = get_corrid();
     LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-    if (scClientCall( corr_id == NULL ? NULL : corr_id->correlation_id, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "UnexportVolume", vol_data->volumeId, reencrypted_token, local_ip, local_iqn) !=
-        EUCA_OK) {
+    if (scClientCall
+        (corr_id == NULL ? NULL : corr_id->correlation_id, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "UnexportVolume", vol_data->volumeId,
+         reencrypted_token, local_ip, local_iqn) != EUCA_OK) {
         EUCA_FREE(reencrypted_token);
         LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
         return EUCA_ERROR;

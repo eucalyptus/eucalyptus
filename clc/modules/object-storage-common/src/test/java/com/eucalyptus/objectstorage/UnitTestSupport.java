@@ -26,6 +26,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
@@ -71,6 +72,7 @@ public class UnitTestSupport {
                         .addAnnotatedClass(ObjectEntity.class)
                         .addAnnotatedClass(PartEntity.class)
                         .addAnnotatedClass(TorrentInfo.class)
+                        .addAnnotatedClass(BucketTags.class)
                         .addAnnotatedClass(LifecycleRule.class)
                         .addAnnotatedClass(ScheduledJob.class)
                         .addAnnotatedClass(ObjectStorageGlobalConfiguration.class)

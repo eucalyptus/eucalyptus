@@ -63,6 +63,7 @@
 package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -87,12 +88,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.InstanceNotFoundException;
 import javax.management.ObjectName;
 import javax.persistence.LockTimeoutException;
+
 import org.apache.log4j.Logger;
 import org.logicalcobwebs.proxool.ProxoolFacade;
+
 import com.eucalyptus.bootstrap.Hosts.DbFilter;
 import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
 import com.eucalyptus.component.Faults;
@@ -309,6 +313,10 @@ public class Databases {
   public static Iterable<String> databases( ) {
     return Sets.newTreeSet( Iterables.transform( PersistenceContexts.list( ), PersistenceContexts.toDatabaseName( ) ) );
   }
+  
+  public static Iterable<String> remoteDatabases( ) {
+    return Sets.newTreeSet( PersistenceContexts.listRemotable() );
+  }
 
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
@@ -381,6 +389,21 @@ public class Databases {
     }
   }
 
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.RemoteDbPoolInit )
+  public static class DatabaseRemotePoolBootstrapper extends Bootstrapper.Simple {
+    @Override
+    public boolean load( ) throws Exception {
+      try{
+        Groovyness.run( "setup_dbpool_remote.groovy" );
+      }catch(final Exception ex){
+        ;
+      }
+      
+      return true;
+    }
+  }
+    
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
     Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {

@@ -62,12 +62,7 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -75,37 +70,37 @@ import org.apache.log4j.Logger;
 import com.ceph.rbd.RbdException;
 import com.ceph.rbd.RbdImage;
 import com.ceph.rbd.jna.RbdSnapInfo;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.google.common.base.Function;
 
 /**
- * Created by wesw on 7/14/14.
+ * Eucalyptus RBD adapter for managing Ceph RBD images of type Format 2
  */
-public class EucaRbdFormatTwoImpl implements EucaRbd {
+public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
-	private static final Logger LOG = Logger.getLogger(EucaRbdFormatTwoImpl.class);
+	private static final Logger LOG = Logger.getLogger(CephRbdFormatTwoAdapter.class);
 
-	private CephInfo config;
+	private CephRbdInfo config;
 
-	public EucaRbdFormatTwoImpl(CephInfo cephInfo) {
+	public CephRbdFormatTwoAdapter(CephRbdInfo cephInfo) {
 		this.config = cephInfo;
 	}
 
 	// Added this method so that a running operation using an older configuration does not get impacted.
 	@Override
-	public void setCephConfig(CephInfo cephInfo) {
+	public void setCephConfig(CephRbdInfo cephInfo) {
 		this.config = cephInfo;
 	}
 
 	@Override
 	public void deleteImage(final String imageName) {
-		executeRbdOp(new Function<CephConnectionManager, String>() {
+		findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public String apply(@Nonnull CephConnectionManager arg0) {
+			public String apply(@Nonnull CephRbdConnectionManager arg0) {
 				try {
-					LOG.debug("Deleting image " + imageName);
+					LOG.debug("Deleting image " + imageName + " from pool " + arg0.getPool());
 					arg0.getRbd().remove(imageName);
 					return null;
 				} catch (RbdException e) {
@@ -113,7 +108,7 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 					throw new EucalyptusCephException("Failed to delete image " + imageName, e);
 				}
 			}
-		});
+		}, imageName);
 	}
 
 	/**
@@ -121,19 +116,19 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 	 */
 	@Override
 	public String createImage(final String imageName, final long imageSize) {
-		return executeRbdOp(new Function<CephConnectionManager, String>() {
+		return executeRbdOpInRandomPool(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public String apply(@Nonnull CephConnectionManager arg0) {
+			public String apply(@Nonnull CephRbdConnectionManager arg0) {
 				RbdImage image = null;
 				try {
-					LOG.debug("Creating image " + imageName + " of size " + imageSize + " bytes");
+					LOG.debug("Creating image " + imageName + " of size " + imageSize + " bytes in pool " + arg0.getPool());
 					// We only want layering and format 2
 					int features = (1 << 0);
 					arg0.getRbd().create(imageName, imageSize, features, 0);
 					LOG.debug("Opening image " + imageName + " in read-only mode");
 					image = arg0.getRbd().openReadOnly(imageName);
-					return arg0.getPool() + CephInfo.POOL_IMAGE_DELIMITER + imageName;
+					return arg0.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + imageName;
 				} catch (RbdException e) {
 					LOG.warn("Caught error while creating image " + imageName + ": " + e.getMessage());
 					throw new EucalyptusCephException("Failed to create image " + imageName, e);
@@ -147,57 +142,18 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 					}
 				}
 			}
-		});
+		}, imageName);
 	}
 
 	@Override
-	public List<String> listImages() {
-		return executeRbdOp(new Function<CephConnectionManager, List<String>>() {
+	public String getImagePool(final String imageName) {
+		return findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public List<String> apply(@Nullable CephConnectionManager arg0) {
-				String[] imageNames;
-				try {
-					LOG.debug("Listing images");
-					imageNames = arg0.getRbd().list();
-				} catch (RbdException e) {
-					LOG.warn("Caught error while listing images: " + e.getMessage());
-					throw new EucalyptusCephException("Failed to list images", e);
-				}
-				if (imageNames != null) {
-					return Arrays.asList(imageNames);
-				} else {
-					return new ArrayList<String>();
-				}
+			public String apply(@Nonnull CephRbdConnectionManager arg0) {
+				return arg0.getPool();
 			}
-		});
-	}
-
-	@Override
-	public boolean imageExists(final String imageName) {
-		return executeRbdOp(new Function<CephConnectionManager, Boolean>() {
-
-			@Override
-			public Boolean apply(@Nonnull CephConnectionManager arg0) {
-				RbdImage image = null;
-				try {
-					LOG.debug("Opening image " + imageName + " in read-only mode");
-					arg0.getRbd().openReadOnly(imageName);
-					return Boolean.TRUE;
-				} catch (RbdException e) {
-					LOG.warn("Caught error while opening image " + imageName + " in read only mode: " + e.getMessage());
-					return Boolean.FALSE;
-				} finally {
-					if (image != null) {
-						try {
-							arg0.getRbd().close(image);
-						} catch (Exception e) {
-							LOG.debug("Caught exception closing image " + imageName, e);
-						}
-					}
-				}
-			}
-		});
+		}, imageName);
 	}
 
 	/**
@@ -205,19 +161,19 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 	 */
 	@Override
 	public String createSnapshot(final String parentName, final String snapName) {
-		return executeRbdOp(new Function<CephConnectionManager, String>() {
+		return findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public String apply(@Nonnull CephConnectionManager arg0) {
+			public String apply(@Nonnull CephRbdConnectionManager arg0) {
 				RbdImage image = null;
 				try {
 					LOG.debug("Opening image " + parentName);
 					image = arg0.getRbd().open(parentName);
-					LOG.debug("Creating snapshot " + snapName + " on parent " + parentName);
+					LOG.debug("Creating snapshot " + snapName + " on parent " + parentName + " in pool " + arg0.getPool());
 					image.snapCreate(snapName);
 					for (RbdSnapInfo snap : image.snapList()) {
 						if (snap.name.equals(snapName)) {
-							return arg0.getPool() + CephInfo.POOL_IMAGE_DELIMITER + parentName + CephInfo.POOL_IMAGE_DELIMITER + snapName;
+							return arg0.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + parentName + CephRbdInfo.POOL_IMAGE_DELIMITER + snapName;
 						}
 					}
 				} catch (Exception e) {
@@ -235,23 +191,23 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 				LOG.warn("Unable to find snapshot " + snapName + " on parent " + parentName);
 				throw new EucalyptusCephException("Failed to find snapshot " + snapName + " on parent " + parentName);
 			}
-		});
+		}, parentName);
 	}
 
 	@Override
 	public void deleteSnapshot(final String parentName, final String snapName) {
-		executeRbdOp(new Function<CephConnectionManager, String>() {
+		findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public String apply(@Nonnull CephConnectionManager arg0) {
+			public String apply(@Nonnull CephRbdConnectionManager arg0) {
 				RbdImage image = null;
 				try {
 					image = arg0.getRbd().open(parentName);
 					if (image.snapIsProtected(snapName)) {
-						LOG.debug("Unprotecting snapshot " + snapName);
+						LOG.debug("Unprotecting snapshot " + snapName + " on parent " + parentName + " in pool " + arg0.getPool());
 						image.snapUnprotect(snapName);
 					}
-					LOG.debug("Removing snapshot " + snapName);
+					LOG.debug("Removing snapshot " + snapName + " on parent " + parentName);
 					image.snapRemove(snapName);
 					return null;
 				} catch (Exception e) {
@@ -267,42 +223,33 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 					}
 				}
 			}
-		});
+		}, parentName);
 	}
 
 	/**
-	 * <p>
-	 * In its current state, following is the order of steps. Please document if any of the steps change
-	 * </p>
+	 * <p> In its current state, following is the order of steps. Please document if any of the steps change </p>
 	 * 
-	 * <ol>
-	 * <li>Create a snpahsot on the parent if one was not provided</li>
-	 * <li>Protect the snapshot</li>
-	 * <li>Clone the parent using the snapshot</li>
-	 * <li>Flatten the clone (copies the blocks over, time taking operation</li>
-	 * <li>Resize the clone if necessary</li>
-	 * <li>Unprotect the snapshot</li>
-	 * <li>Delete the snapshot</li>
-	 * </ol>
+	 * <ol> <li>Create a snpahsot on the parent if one was not provided</li> <li>Protect the snapshot</li> <li>Clone the parent using the snapshot</li>
+	 * <li>Flatten the clone (copies the blocks over, time taking operation</li> <li>Resize the clone if necessary</li> <li>Unprotect the snapshot</li>
+	 * <li>Delete the snapshot</li> </ol>
 	 * 
 	 * @return Returns Ceph representation of the image in the form: <b><code>pool/image</code></b>
 	 */
 	@Override
 	public String cloneAndResizeImage(final String parentName, final String snapName, final String cloneName, final Long size) {
-		return executeRbdOp(new Function<CephConnectionManager, String>() {
+		return findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
 			@Override
-			public String apply(@Nonnull CephConnectionManager arg0) {
+			public String apply(final CephRbdConnectionManager parentConn) {
 				RbdImage source = null;
-				RbdImage clone = null;
-				String snapshot = null;
+				final String snapshot;
 
 				try {
-					source = arg0.getRbd().open(parentName);
+					source = parentConn.getRbd().open(parentName);
 
 					if (StringUtils.isBlank(snapName)) { // If a valid snapshot is not provided, create one
 						snapshot = "sp-" + cloneName;
-						LOG.debug("Creating snapshot " + snapshot + " on parent " + parentName);
+						LOG.debug("Creating snapshot " + snapshot + " on parent " + parentName + " in pool " + parentConn.getPool());
 						source.snapCreate(snapshot);
 					} else {
 						snapshot = snapName;
@@ -313,71 +260,137 @@ public class EucaRbdFormatTwoImpl implements EucaRbd {
 						source.snapProtect(snapshot);
 
 						if (source.snapIsProtected(snapshot)) {
-							// We only want layering and format 2
-							int features = (1 << 0);
 
-							LOG.debug("Cloning snapshot " + snapshot + " to " + cloneName);
-							arg0.getRbd().clone(parentName, snapshot, arg0.getIoContext(), cloneName, features, 0);
+							return executeRbdOpInRandomPool(new Function<CephRbdConnectionManager, String>() {
 
-							LOG.debug("Flattening cloned image " + cloneName);
-							clone = arg0.getRbd().open(cloneName);
-							clone.flatten();
+								@Override
+								public String apply(CephRbdConnectionManager cloneConn) {
+									RbdImage clone = null;
 
-							if (size != null) {
-								LOG.debug("Resizing image " + cloneName + " to " + size + " bytes");
-								clone.resize(size.longValue());
-							} else {
-								// nothing to do here
-							}
+									try {
+										// We only want layering and format 2
+										int features = (1 << 0);
 
-							return arg0.getPool() + CephInfo.POOL_IMAGE_DELIMITER + cloneName;
+										LOG.debug("Cloning snapshot " + snapshot + " to " + cloneName + " in pool " + cloneConn.getPool());
+										parentConn.getRbd().clone(parentName, snapshot, cloneConn.getIoContext(), cloneName, features, 0);
+
+										LOG.debug("Flattening cloned image " + cloneName);
+										clone = cloneConn.getRbd().open(cloneName);
+										clone.flatten();
+
+										if (size != null) {
+											LOG.debug("Resizing image " + cloneName + " to " + size + " bytes");
+											clone.resize(size.longValue());
+										} else {
+											// nothing to do here
+										}
+
+										return cloneConn.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + cloneName;
+									} catch (RbdException e) {
+										LOG.warn("Caught error while cloning/resizing image " + cloneName + " from source image " + parentName + ": "
+												+ e.getMessage());
+										throw new EucalyptusCephException("Failed to clone/resize image " + cloneName + " from source image " + parentName, e);
+									} finally {
+										if (clone != null) {
+											try {
+												cloneConn.getRbd().close(clone);
+											} catch (Exception e) {
+												LOG.debug("Caught exception closing image " + cloneName, e);
+											}
+										}
+									}
+								}
+							}, cloneName);
 						} else {
 							throw new EucalyptusCephException("Failed to protect snapshot before creating a clone");
 						}
 					} finally {
 						try {
-							LOG.debug("Unprotecting snapshot " + snapshot);
+							LOG.debug("Unprotecting snapshot " + snapshot + " on parent " + parentName);
 							source.snapUnprotect(snapshot);
 						} catch (Exception e) {
 							LOG.debug("Caught exception unprotecting snapshot " + snapshot, e);
 						}
 
 						try {
-							LOG.debug("Removing snapshot " + snapshot);
+							LOG.debug("Removing snapshot " + snapshot + " on parent " + parentName);
 							source.snapRemove(snapshot);
 						} catch (Exception e) {
 							LOG.debug("Caught exception removing snapshot " + snapshot, e);
 						}
 					}
+				} catch (EucalyptusCephException e) {
+					throw e;
 				} catch (Exception e) {
 					LOG.warn("Caught error while cloning/resizing image " + cloneName + " from source image " + parentName + ": " + e.getMessage());
 					throw new EucalyptusCephException("Failed to clone/resize image " + cloneName + " from source image " + parentName, e);
 				} finally {
 					if (source != null) {
 						try {
-							arg0.getRbd().close(source);
+							parentConn.getRbd().close(source);
 						} catch (Exception e) {
 							LOG.debug("Caught exception closing image " + parentName, e);
 						}
 					}
-					if (clone != null) {
-						try {
-							arg0.getRbd().close(clone);
-						} catch (Exception e) {
-							LOG.debug("Caught exception closing image " + cloneName, e);
-						}
-					}
 				}
 			}
-		});
+		}, parentName);
 	}
 
-	private <T> T executeRbdOp(Function<CephConnectionManager, T> function) {
+	private <T> T executeRbdOpInRandomPool(Function<CephRbdConnectionManager, T> function, String imageName) {
 		T output = null;
-		CephConnectionManager conn = null;
+		CephRbdConnectionManager conn = null;
 
 		try {
-			conn = CephConnectionManager.getConnection(config);
+			if (imageName.contains("vol-")) {
+				conn = CephRbdConnectionManager.getRandomVolumePoolConnection(config);
+			} else {
+				conn = CephRbdConnectionManager.getRandomSnapshotPoolConnection(config);
+			}
+
+			output = function.apply(conn);
+		} catch (EucalyptusCephException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new EucalyptusCephException("Caught error during ceph operation" + e);
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
+
+		return output;
+	}
+
+	private <T> T findAndExecuteRbdOp(Function<CephRbdConnectionManager, T> function, String imageName) {
+		T output = null;
+		CephRbdConnectionManager conn = null;
+
+		try {
+			String[] allPools = null;
+			if (imageName.contains("vol-")) {
+				allPools = CephRbdConnectionManager.getAllVolumePools(config);
+			} else {
+				allPools = CephRbdConnectionManager.getAllSnapshotPools(config);
+			}
+
+			for (int i = 0; i < allPools.length; i++) {
+				conn = CephRbdConnectionManager.getConnection(config, allPools[i]);
+				try {
+					LOG.debug("Searching for image " + imageName + " in pool " + allPools[i]);
+					RbdImage image = conn.getRbd().openReadOnly(imageName);
+					conn.getRbd().close(image);
+					break;
+				} catch (Exception e) {
+					LOG.trace("Image " + imageName + " not found in pool " + allPools[i] + ". Reason: " + e.getMessage());
+					conn.disconnect();
+					conn = null;
+				}
+			}
+
+			if (conn == null) {
+				throw new EucalyptusCephException("Unable to find image " + imageName + " in configured pools: " + allPools);
+			}
 			output = function.apply(conn);
 		} catch (EucalyptusCephException e) {
 			throw e;

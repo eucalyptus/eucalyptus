@@ -62,104 +62,67 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
-import org.apache.log4j.Logger;
+public interface CephRbdAdapter {
 
-import com.ceph.rbd.RbdException;
-import com.ceph.rbd.RbdImage;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
-import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
+	/**
+	 * Use this to change the ceph configuration after the class is instantiated
+	 * 
+	 * @param cephInfo
+	 */
+	public void setCephConfig(CephRbdInfo cephInfo);
 
-public class CephOutputStream extends OutputStream {
+	/**
+	 * Create a new RBD image
+	 * 
+	 * @param imageName Name of the image to be created
+	 * @param imageSize Size of the image in bytes
+	 * @return Returns a representation of the newly created image
+	 */
+	public String createImage(String imageName, long imageSize);
 
-	private static final Logger LOG = Logger.getLogger(CephOutputStream.class);
+	/**
+	 * Delete RBD image
+	 * 
+	 * @param imageName Name of the image to be deleted
+	 */
+	public void deleteImage(String imageName);
 
-	private CephConnectionManager conn;
-	private RbdImage rbdImage;
-	private long position;
-	private boolean isOpen;
+	/**
+	 * Check if the image exists in any of the configured pools and return the pool name
+	 * 
+	 * @param imageName Name of the image to be checked on
+	 * @return Returns true if the image exists and false otherwise
+	 */
+	public String getImagePool(String imageName);
 
-	public CephOutputStream(String poolImage, CephInfo info) throws IOException {
-		try {
-			String[] imageDetails = poolImage.split(CephInfo.POOL_IMAGE_DELIMITER);
-			if (imageDetails == null || imageDetails.length != 2) {
-				LOG.warn("Invalid format, expected pool/image but got " + poolImage);
-				throw new EucalyptusCephException("Invalid format, expected pool/image but got " + poolImage);
-			}
-			conn = CephConnectionManager.getConnection(info, imageDetails[0]);
-			rbdImage = conn.getRbd().open(imageDetails[1]);
-			isOpen = true;
-			position = 0;
-		} catch (Exception e) {
-			throw new IOException("Failed to open CephOutputStream for " + poolImage, e);
-		}
-	}
+	/**
+	 * Create an RBD snapshot
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot
+	 * @return Returns a representation of the newly created snapshot
+	 */
+	public String createSnapshot(String parentName, String snapName);
 
-	@Override
-	public void write(int arg0) throws IOException {
-		if (isOpen) {
-			byte[] buffer = new byte[] { (byte) arg0 };
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+	/**
+	 * Delete the RBD snapshot
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot
+	 */
+	public void deleteSnapshot(String parentName, String snapName);
 
-	@Override
-	public void write(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		if (off < 0 || len < 0 || len > (b.length - off)) {
-			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
-		}
-
-		if (isOpen) {
-			byte buffer[] = new byte[len];
-			for (int i = 0; i < len; i++) { // prepare the buffer to write
-				buffer[i] = b[off + i];
-			}
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
-
-	@Override
-	public void write(byte[] b) throws NullPointerException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		write(b, 0, b.length);
-	}
-
-	@Override
-	public void close() {
-		if (isOpen) {
-			try {
-				conn.getRbd().close(rbdImage);
-			} catch (Exception e) {
-
-			} finally {
-				isOpen = false;
-				conn.disconnect();
-				conn = null;
-				rbdImage = null;
-			}
-		} else {
-			// nothing to do here, stream is not open/already closed
-		}
-	}
+	/**
+	 * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for cloning.
+	 * Resize the cloned image if size is passed in
+	 * 
+	 * @param parentName Name of the parent image
+	 * @param snapName Name of the snapshot on parent image to be used for cloning
+	 * @param cloneName Name of the image to be cloned
+	 * @param size Size of the cloned image if it needs to resized
+	 * @return Returns a representation of the cloned image
+	 */
+	public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
 }

@@ -17,17 +17,23 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.tags;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+package com.eucalyptus.objectstorage.metadata;
 
-/**
- * This exception should have the error code: TagLimitExceeded
- */
-public class TagLimitExceededException extends EucalyptusCloudException {
-  private static final long serialVersionUID = 1L;
 
-  public TagLimitExceededException( ) {
-    super( "The maximum number of Tags for a resource has been reached" );
-  }
+import com.eucalyptus.objectstorage.entities.BucketTags;
+import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.storage.msgs.s3.BucketTag;
+
+import java.util.List;
+
+public interface BucketTaggingManager {
+
+  public void addBucketTagging( List<BucketTag> bucketTags, String bucketUuid ) throws ObjectStorageException;
+
+  public void deleteBucketTagging( String bucketUuid ) throws ObjectStorageException;
+
+  public List<BucketTags> getBucketTagging( String bucketUuid ) throws NoSuchEntityException, ObjectStorageException;
+
 }

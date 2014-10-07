@@ -29,6 +29,8 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateVpcResponseType;
 import com.eucalyptus.compute.common.CreateVpcType;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.Internets;
@@ -51,7 +53,7 @@ public class VpcNewAccountEventListener implements EventListener<AccountCreatedE
 
   @Override
   public void fireEvent( final AccountCreatedEvent event ) {
-    if ( VpcConfiguration.getDefaultVpc( ) ) try {
+    if ( VpcConfiguration.getDefaultVpc( ) && Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) try {
       final ServiceConfiguration config = Topology.lookup( Compute.class );
       final CreateVpcType createVpc = new CreateVpcType( );
       createVpc.setCidrBlock( event.getMessage( ) );

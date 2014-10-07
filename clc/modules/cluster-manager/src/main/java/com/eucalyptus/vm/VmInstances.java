@@ -413,9 +413,9 @@ public class VmInstances {
       initial = "5" )
   public static Integer INSTANCE_REACHABILITY_TIMEOUT   = 5;
 
-  @ConfigurableField( description = "Comma separate list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate')",
+  @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate')",
       initial = "restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
-  public static String UNKNOWN_INSTANCE_HANDLERS        = "restore-failed";
+  public static String UNKNOWN_INSTANCE_HANDLERS        = "restore-failed, restore";
 
   @ConfigurableField( description = "Instance metadata user data cache configuration.",
       initial = "maximumSize=50, expireAfterWrite=5s, softValues",

@@ -195,15 +195,15 @@ void euca_srand(void);
 typedef struct threadCorrelationId_t {
     char correlation_id[128];
     pid_t pid;
-    pthread_t tid; 
+    pthread_t tid;
     boolean pthread;
     struct threadCorrelationId_t *next;
 } threadCorrelationId;
-char *create_corrid(const char*);
-threadCorrelationId* set_corrid(const char* corr_id);
-threadCorrelationId* set_corrid_pthread(const char* corr_id, pthread_t);
-threadCorrelationId* set_corrid_fork(const char* corr_id, pid_t);
-void unset_corrid( threadCorrelationId* );
+char *create_corrid(const char *);
+threadCorrelationId *set_corrid(const char *corr_id);
+threadCorrelationId *set_corrid_pthread(const char *corr_id, pthread_t);
+threadCorrelationId *set_corrid_fork(const char *corr_id, pid_t);
+void unset_corrid(threadCorrelationId *);
 threadCorrelationId *get_corrid();
 /*----------------------------------------------------------------------------*\
  |                                                                            |

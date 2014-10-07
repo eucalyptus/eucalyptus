@@ -136,7 +136,7 @@ public class TagManager {
       try {
         reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
       } catch ( TagLimitException e ) {
-        throw new TagLimitExceededException( );
+        throw new ClientComputeException( "TagLimitExceeded", "The maximum number of Tags for a resource has been reached." );
       } catch ( RuntimeException e ) {
         handleException( e );
       }

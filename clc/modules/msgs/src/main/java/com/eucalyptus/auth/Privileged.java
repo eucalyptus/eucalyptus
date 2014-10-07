@@ -638,6 +638,9 @@ public class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_ACCESS_KEY, Accounts.getUserFullName( user ), IAM_CREATEACCESSKEY, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
     return user.createKey( );
   }
 
@@ -677,6 +680,9 @@ public class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) )  ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_SIGNING_CERTIFICATE, Accounts.getUserFullName( user ), IAM_UPLOADSIGNINGCERTIFICATE, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName() );
     try {
       x509.checkValidity( );
@@ -690,6 +696,9 @@ public class Privileged {
     if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) &&
         accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_SIGNING_CERTIFICATE, Accounts.getUserFullName( user ), IAM_UPLOADSIGNINGCERTIFICATE, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     if ( Strings.isNullOrEmpty( certBody ) ) {
       throw new AuthException( AuthException.EMPTY_CERT );

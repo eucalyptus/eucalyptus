@@ -242,7 +242,6 @@ public class GetInstanceImportTaskResponseType extends ImagingMessage {
 
 public class VolumeTask extends EucalyptusData {
   String volumeId
-  String ec2Cert
 
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ImageManifest")

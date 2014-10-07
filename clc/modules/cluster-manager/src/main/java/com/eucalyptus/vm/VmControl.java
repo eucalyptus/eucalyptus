@@ -82,6 +82,7 @@ import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
@@ -90,6 +91,7 @@ import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
+import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
@@ -266,6 +268,9 @@ public class VmControl {
       final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
       if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
       final InvalidMetadataException e4 = Exceptions.findCause( ex, InvalidMetadataException.class );
+      if ( e4 instanceof VpcRequiredMetadataException ) {
+        throw new ClientComputeException( "VPCIdNotSpecified", "Default VPC not found, please specify a subnet." );
+      }
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
       final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
       if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
@@ -273,6 +278,8 @@ public class VmControl {
       if ( e6 != null ) throw new ClientComputeException( "InvalidSubnetID.NotFound", e6.getMessage( ) );
       final IllegalMetadataAccessException e7 = Exceptions.findCause( ex, IllegalMetadataAccessException.class );
       if ( e7 != null ) throw new ClientUnauthorizedComputeException( e7.getMessage( ) );
+      final SecurityGroupLimitMetadataException e8 = Exceptions.findCause( ex, SecurityGroupLimitMetadataException.class );
+      if ( e8 != null ) throw new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded" );
       LOG.error( ex, ex );
       throw ex;
     } finally {

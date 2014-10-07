@@ -40,6 +40,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
@@ -48,6 +49,7 @@ import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -60,6 +62,7 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
+import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
  * @author Sang-Min Park
@@ -188,7 +191,23 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   public String getLaunchSpecKeyName(){
     return this.keyName;
   }
-  
+
+  public String getLaunchSpecSubnetId() {
+    return subnetId;
+  }
+
+  public void setLaunchSpecSubnetId( final String subnetId ) {
+    this.subnetId = subnetId;
+  }
+
+  public String getLaunchSpecPrivateIpAddress() {
+    return privateIpAddress;
+  }
+
+  public void setLaunchSpecPrivateIpAddress( final String privateIpAddress ) {
+    this.privateIpAddress = privateIpAddress;
+  }
+
   public List<ImportInstanceVolumeDetail> getVolumes(){
     final ImportInstanceTaskDetails importTask = this.getTask().getImportInstance();
     return importTask.getVolumes();
@@ -231,8 +250,12 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
-          EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
-        }catch(final Exception ex){
+          final List<Volume> eucaVolumes = 
+            EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
+          if (eucaVolumes.size() != 0) {
+            EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
+          }
+        } catch(final Exception ex) {
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
               volumeDetail.getVolume().getId(), this.getDisplayName()));
           cleanedAllVolumes = false;
@@ -301,9 +324,9 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
         newTask.setLaunchSpecUserData(launchSpec.getUserData().getData());
       newTask.setLaunchSpecInstanceType(launchSpec.getInstanceType());
       if(launchSpec.getPlacement()!=null)
-        newTask.setLaunchSpecAvailabilityZone(launchSpec.getPlacement().getAvailabilityZone());
+        newTask.setLaunchSpecAvailabilityZone( launchSpec.getPlacement().getAvailabilityZone() );
       if(launchSpec.getMonitoring()!=null)
-        newTask.setLaunchSpecMonitoringEnabled(launchSpec.getMonitoring().getEnabled());
+        newTask.setLaunchSpecMonitoringEnabled( launchSpec.getMonitoring().getEnabled() );
       if(launchSpec.getGroupName()!=null){
         for(final String groupName : launchSpec.getGroupName()){
           newTask.addLaunchSpecGroupName(groupName);
@@ -312,13 +335,13 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
       if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length()>0){
         newTask.setLaunchSpecKeyName(launchSpec.getKeyName());
       }
-      if(launchSpec.getSubnetId()!=null)
-        LOG.warn("SubnetId is not supported for import-instance");
+      if ( !Strings.isNullOrEmpty( launchSpec.getSubnetId( ) ) ) {
+        newTask.setLaunchSpecSubnetId( launchSpec.getSubnetId( ) );
+        newTask.setLaunchSpecPrivateIpAddress( launchSpec.getPrivateIpAddress( ) );
+      }
       if(launchSpec.getInstanceInitiatedShutdownBehavior()!=null)
         LOG.warn("InitiatedShutdownBehavior is not supported for import-instance");
-      if(launchSpec.getPrivateIpAddress()!=null)
-        LOG.warn("Private Ip address is not supported for import-instance");
-      
+
       return newTask;
     }  
   }

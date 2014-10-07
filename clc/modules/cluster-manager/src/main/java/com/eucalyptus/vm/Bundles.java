@@ -72,14 +72,13 @@ import org.apache.log4j.Logger;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
@@ -233,8 +232,8 @@ public class Bundles {
   }
   
   static void checkAndCreateBucket( final User user, final String bucketName ) throws ComputeException {
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( user );
-    try {
+    try ( final EucaS3Client s3c =
+              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ).getCredentials( ) ) ) {
       boolean foundBucket = false;
       final List<Bucket> buckets = s3c.listBuckets( );
       for( final Bucket bucket : buckets ){

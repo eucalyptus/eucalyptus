@@ -108,6 +108,9 @@ public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Seria
   //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
   public static final String CLOUDFORMATION_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "cloudformation";
 
+  //EUCA-9533 - System account for pre-signed urls in download manifests
+  public static final String AWS_EXEC_READ_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "aws-exec-read";
+
   public void setName( String name ) throws AuthException;
   
   public List<User> getUsers( ) throws AuthException;

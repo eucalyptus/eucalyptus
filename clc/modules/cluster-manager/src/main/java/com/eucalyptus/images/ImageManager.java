@@ -223,8 +223,8 @@ public class ImageManager {
       // Verify all the device mappings first.
     	bdmInstanceStoreImageVerifier( ).apply( request );
     	
-    	//When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
-    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) , ctx.getUser());
+        // download manifest with AwsExecRead account
+        final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) , ctx.getUser());
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
     	
       final ImageMetadata.Platform imagePlatform = request.getPlatform()!=null ? ImageMetadata.Platform.valueOf(request.getPlatform())

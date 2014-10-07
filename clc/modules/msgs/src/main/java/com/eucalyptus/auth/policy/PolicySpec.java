@@ -367,6 +367,7 @@ public class PolicySpec {
   public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
   public static final String S3_GETBUCKETVERSIONING = "getbucketversioning";
   public static final String S3_GETBUCKETWEBSITE = "getbucketwebsite";
+  public static final String S3_GETBUCKETTAGGING = "getbuckettagging";
   public static final String S3_GETLIFECYCLECONFIGURATION = "getlifecycleconfiguration";
   public static final String S3_GETOBJECT = "getobject";
   public static final String S3_GETOBJECTACL = "getobjectacl";
@@ -388,6 +389,7 @@ public class PolicySpec {
   public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
   public static final String S3_PUTBUCKETVERSIONING = "putbucketversioning";
   public static final String S3_PUTBUCKETWEBSITE = "putbucketwebsite";
+  public static final String S3_PUTBUCKETTAGGING = "putbuckettagging";
   public static final String S3_PUTLIFECYCLECONFIGURATION = "putlifecycleconfiguration";
   public static final String S3_PUTOBJECT = "putobject";
   public static final String S3_PUTOBJECTACL = "putobjectacl";
@@ -528,6 +530,8 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_ROLE = "role";
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
   public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
+  public static final String IAM_RESOURCE_ACCESS_KEY = "access-key";
+  public static final String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";

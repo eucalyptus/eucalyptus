@@ -101,6 +101,7 @@ import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
 import com.google.common.base.Predicate
 import com.google.common.base.Predicates
+import com.google.common.base.Suppliers
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -141,7 +142,7 @@ class AutoScalingServiceTest {
     discovery.processClass(Tags.TagToTagDescription )
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
-    Permissions.setPolicyEngine( new PolicyEngineImpl( ) )
+    Permissions.setPolicyEngine( new PolicyEngineImpl( Suppliers.ofInstance( Boolean.FALSE ) ) )
   }
 
   @Test

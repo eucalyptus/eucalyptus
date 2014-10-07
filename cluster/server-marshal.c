@@ -199,7 +199,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId * corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doAttachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev);
         unset_corrid(corr_id);
         if (rc) {
@@ -269,7 +269,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doDetachVolume(&ccMeta, volumeId, instanceId, attachmentToken, localDev, force);
         unset_corrid(corr_id);
         if (rc) {
@@ -339,7 +339,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
         unset_corrid(corr_id);
         if (rc) {
@@ -397,7 +397,7 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     instanceId = adb_bundleRestartInstanceType_get_instanceId(bit, env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         if ((rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
             LOGERROR("doBundleRestartInstance() failed\n");
             status = AXIS2_FALSE;
@@ -450,7 +450,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doCancelBundleTask(&ccMeta, instanceId);
         if (rc) {
             LOGERROR("doCancelBundleTask() failed\n");
@@ -534,7 +534,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         sensorResource **outResources = NULL;
         int outResourcesLen = 0;
 
-        threadCorrelationId* corr_id = set_corrid(meta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(meta.correlationId);
         int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
         unset_corrid(corr_id);
         if (error) {
@@ -623,7 +623,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doStopNetwork(&ccMeta, accountId, netName, vlan);
         unset_corrid(corr_id);
         if (rc) {
@@ -698,7 +698,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     snrt = adb_describeNetworksResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doDescribeNetworks(&ccMeta, vmsubdomain, nameservers, clusterControllers, clusterControllersLen, outvnetConfig);
         unset_corrid(corr_id);
         if (rc) {
@@ -799,7 +799,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
 
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doDescribePublicAddresses(&ccMeta, &outAddresses, &outAddressesLen);
         unset_corrid(corr_id);
     }
@@ -883,7 +883,7 @@ adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNet
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doBroadcastNetworkInfo(&ccMeta, networkInfo);
         unset_corrid(corr_id);
         if (rc) {
@@ -943,7 +943,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doAssignAddress(&ccMeta, uuid, src, dst);
         unset_corrid(corr_id);
         if (rc) {
@@ -1000,7 +1000,7 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doUnassignAddress(&ccMeta, src, dst);
         unset_corrid(corr_id);
         if (rc) {
@@ -1143,7 +1143,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
-            threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+            threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
             rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
             unset_corrid(corr_id);
         }
@@ -1213,7 +1213,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     status = AXIS2_TRUE;
     output = NULL;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doGetConsoleOutput(&ccMeta, instId, &output);
         unset_corrid(corr_id);
         if (rc) {
@@ -1294,7 +1294,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     snrt = adb_startNetworkResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, vmsubdomain, nameservers, clusterControllers, clusterControllersLen);
         unset_corrid(corr_id);
         if (rc) {
@@ -1371,7 +1371,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 
     rc = 1;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outNodes, &outNodesLen);
         unset_corrid(corr_id);
     }
@@ -1465,7 +1465,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
 
     rc = 1;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doDescribeInstances(&ccMeta, instIds, instIdsLen, &outInsts, &outInstsLen);
         unset_corrid(corr_id);
     }
@@ -1772,7 +1772,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     rirt = adb_runInstancesResponseType_create(env);
     rc = 1;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
                             reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective, &outInsts, &outInstsLen);
@@ -1852,7 +1852,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
 
     rc = 1;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doRebootInstances(&ccMeta, instIds, instIdsLen);
         unset_corrid(corr_id);
     }
@@ -1929,7 +1929,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
     rc = 1;
     if (!DONOTHING) {
         outStatus = EUCA_ZALLOC(instIdsLen, sizeof(int));
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, force, &outStatus);
         unset_corrid(corr_id);
     }
@@ -1999,7 +1999,7 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
     remoteDev = adb_createImageType_get_remoteDev(cit, env);
 
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doCreateImage(&ccMeta, instanceId, volumeId, remoteDev);
         unset_corrid(corr_id);
     }
@@ -2076,7 +2076,7 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doModifyNode(&ccMeta, nodeName, stateName);
         unset_corrid(corr_id);
         if (rc) {
@@ -2145,7 +2145,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare");
         unset_corrid(corr_id);
         if (rc) {
@@ -2207,7 +2207,7 @@ adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startIns
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doStartInstance(&ccMeta, instanceId);
         unset_corrid(corr_id);
         if (rc) {
@@ -2269,7 +2269,7 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId* corr_id = set_corrid(ccMeta.correlationId);
+        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doStopInstance(&ccMeta, instanceId);
         unset_corrid(corr_id);
         if (rc) {

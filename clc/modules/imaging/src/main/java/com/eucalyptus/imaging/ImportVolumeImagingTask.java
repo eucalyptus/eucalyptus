@@ -21,6 +21,7 @@
 package com.eucalyptus.imaging;
 
 import java.util.Date;
+import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.DiscriminatorValue;
@@ -31,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -40,6 +42,7 @@ import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
@@ -48,6 +51,7 @@ import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
+import edu.ucsb.eucalyptus.msgs.Volume;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
@@ -175,9 +179,14 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
     if(volumeDetails.getVolume()!=null &&
         volumeDetails.getVolume().getId()!=null){
       try{
-        EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+        // verify that volume actually exist
+        final List<Volume> eucaVolumes =
+        EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetails.getVolume().getId()));
+        if (eucaVolumes.size() != 0) {
+          EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+        }
         setCleanUpDone(true);
-      }catch(final Exception ex){
+      } catch(final Exception ex){
         LOG.warn(String.format("Failed to delete the volume %s for import task %s", volumeDetails.getVolume().getId(), this.getDisplayName()));
       }
     }

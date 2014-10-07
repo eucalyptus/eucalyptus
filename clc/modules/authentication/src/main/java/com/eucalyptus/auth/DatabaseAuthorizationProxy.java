@@ -71,6 +71,7 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Principal;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
@@ -177,7 +178,6 @@ public class DatabaseAuthorizationProxy implements Authorization {
     return results;
   }
 
-  @Override
   public Group getGroup( ) {
     final List<Group> results = Lists.newArrayList( );
     try {
@@ -190,6 +190,36 @@ public class DatabaseAuthorizationProxy implements Authorization {
       Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
     }
     return results.get( 0 );
+  }
+
+  @Override
+  public Scope getScope() throws AuthException {
+    Group group = getGroup( );
+    if ( !group.isUserGroup( ) ) {
+      return Authorization.Scope.GROUP;
+    }
+    User user = group.getUsers( ).get( 0 );
+    if ( user == null ) {
+      throw new RuntimeException( "Empty user group " + group.getName( ) );
+    }
+    if ( user.isAccountAdmin( ) ) {
+      return Authorization.Scope.ACCOUNT;
+    }
+    return Authorization.Scope.USER;
+  }
+
+  @Override
+  public String getScopeId() throws AuthException {
+    Group group = getGroup( );
+    switch ( getScope( ) ) {
+      case ACCOUNT:
+        return group.getAccount( ).getAccountNumber( );
+      case GROUP:
+        return group.getGroupId( );
+      case USER:
+        return group.getUsers( ).get( 0 ).getUserId( );
+    }
+    throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }
 
   @Override

@@ -125,9 +125,15 @@ public class AclUtils {
             LOG.debug("Got auth exception trying to lookup system admin user for group membership check in ec2-bundle-read", e);
         }
 
+        boolean isAWSExecReadUser = false;
+        try {
+            isAWSExecReadUser = Accounts.lookupAwsExecReadAdmin(false).getUserId().equals(userId);
+        } catch(AuthException e) {
+            //Fall through
+            LOG.debug("Got auth exception trying to lookup aws-exec-read admin user for group membership check in ec2-bundle-read", e);
+        }
 
-        //System only (or euca/admin) in the aws-exec-read group (zateam)
-        if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group) && isSystemAdmin) {
+        if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group) && isAWSExecReadUser) {
             return true;
         }
 

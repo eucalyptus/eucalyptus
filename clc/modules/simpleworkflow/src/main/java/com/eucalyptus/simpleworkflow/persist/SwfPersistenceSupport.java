@@ -36,6 +36,11 @@ public abstract class SwfPersistenceSupport<RT extends RestrictedType, AP extend
   }
 
   @Override
+  public AbstractPersistentSupport<RT, AP, SwfMetadataException> withRetries( ) {
+    return super.withRetries( 50 );
+  }
+
+  @Override
   protected SwfMetadataException notFoundException( final String message, final Throwable cause ) {
     return new SwfMetadataNotFoundException( message, cause );
   }

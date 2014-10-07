@@ -66,9 +66,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -122,7 +124,8 @@ public class X509Download extends HttpServlet {
   public static String  PARAMETER_ACCOUNTNAME = "account";
   public static String  PARAMETER_KEYNAME     = "keyName";
   public static String  PARAMETER_CODE        = "code";
-  
+  public static String  PARAMETER_FORCE       = "force";
+
   public void doGet( HttpServletRequest request, HttpServletResponse response ) {
     String code = request.getParameter( PARAMETER_CODE );
     String userName = request.getParameter( PARAMETER_USERNAME );
@@ -171,7 +174,7 @@ public class X509Download extends HttpServlet {
     
     byte[] x509zip = null;
     try {
-      x509zip = getX509Zip( user );
+      x509zip = getX509Zip( user, "true".equals( request.getParameter( PARAMETER_FORCE ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to return user credentials", response );
@@ -201,120 +204,131 @@ public class X509Download extends HttpServlet {
     }
   }
   
-  private static byte[] getX509Zip( User u ) throws Exception {
+  private static byte[] getX509Zip( User u, boolean force ) throws Exception {
     X509Certificate cloudCert = null;
-    final X509Certificate x509;
+    X509Certificate x509 = null;
     String userAccessKey = null;
     String userSecretKey = null;
     KeyPair keyPair = null;
     try {
-      for ( AccessKey k : u.getKeys() ) {
+      final List<AccessKey> accessKeys = u.getKeys( );
+      for ( final AccessKey k : accessKeys ) {
         if ( k.isActive( ) ) {
           userAccessKey = k.getAccessKey( );
           userSecretKey = k.getSecretKey( );
         }
       }
-      if ( userAccessKey == null ) {
-        AccessKey k = u.createKey( );
+      if ( userAccessKey == null &&
+          ( accessKeys.isEmpty( ) || (u.isSystemAdmin( ) && force) || accessKeys.size( ) < AuthenticationProperties.ACCESS_KEYS_LIMIT ) ) {
+        final AccessKey k = u.createKey( );
         userAccessKey = k.getAccessKey( );
         userSecretKey = k.getSecretKey( );
       }
-      keyPair = Certs.generateKeyPair( );
-      x509 = Certs.generateCertificate( keyPair, u.getName( ) );
-      x509.checkValidity( );
-      u.addCertificate( x509 );
+      if ( userAccessKey == null ) {
+        throw new IllegalStateException( "Access key limit exceeded" );
+      }
+      if ( u.getCertificates( ).isEmpty( ) || u.isSystemAdmin( ) ) {
+        keyPair = Certs.generateKeyPair( );
+        x509 = Certs.generateCertificate( keyPair, u.getName( ) );
+        x509.checkValidity( );
+        u.addCertificate( x509 );
+      }
       cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
     }
-    ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-    ZipArchiveOutputStream zipOut = new ZipArchiveOutputStream( byteOut );
+    final ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+    final ZipArchiveOutputStream zipOut = new ZipArchiveOutputStream( byteOut );
     ZipArchiveEntry entry = null;
-    String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
-    if ( fingerPrint != null ) {
-      String baseName = X509Download.NAME_SHORT + "-" + u.getName( ) + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
-      
-      zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
-      StringBuilder sb = new StringBuilder( );
-      //TODO:GRZE:FIXME velocity
-      String userNumber = u.getAccount( ).getAccountNumber( );
-      sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
-      final Optional<String> computeUrl = remotePublicify( Compute.class );
-      if ( computeUrl.isPresent( ) ) {
-        sb.append( entryFor( "EC2_URL", null, computeUrl ) );
-      } else {
-        sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
-        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Compute.class );
-        ServiceConfiguration localConfig = builder.newInstance( Internets.localHostAddress( ), 
-                                                                Internets.localHostAddress( ), 
-                                                                Internets.localHostAddress( ), 
-                                                                Eucalyptus.INSTANCE.getPort( ) );
-        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
+    zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
+    StringBuilder sb = new StringBuilder( );
+    //TODO:GRZE:FIXME velocity
+    final String userNumber = u.getAccount( ).getAccountNumber( );
+    sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
+    final Optional<String> computeUrl = remotePublicify( Compute.class );
+    if ( computeUrl.isPresent( ) ) {
+      sb.append( entryFor( "EC2_URL", null, computeUrl ) );
+    } else {
+      sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
+      ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Compute.class );
+      ServiceConfiguration localConfig = builder.newInstance( Internets.localHostAddress( ),
+                                                              Internets.localHostAddress( ),
+                                                              Internets.localHostAddress( ),
+                                                              Eucalyptus.INSTANCE.getPort( ) );
+      sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
+    }
+
+    sb.append( entryFor( "S3_URL", "An OSG is either not registered or not configured. S3_URL is not set. " +
+        "Please register an OSG and/or set a valid s3 endpoint and download credentials again. " +
+        "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
+        remotePublicify( ObjectStorage.class ) ) );
+    sb.append( entryFor( "AWS_IAM_URL", "IAM service URL is not configured.",
+        remotePublicify( Euare.class ) ) );
+    sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
+        remotePublicify( Euare.class ) ) );
+    sb.append( entryFor( "TOKEN_URL", "TOKEN URL is not configured.",
+        remotePublicify( Tokens.class ) ) );
+    sb.append( entryFor( "AWS_AUTO_SCALING_URL", "Auto Scaling service URL is not configured.",
+        remotePublicify( AutoScaling.class ) ) );
+    sb.append( entryFor( "AWS_CLOUDFORMATION_URL", "CloudFormation service URL is not configured.",
+        remotePublicify( CloudFormation.class ) ) );
+    sb.append( entryFor( "AWS_CLOUDWATCH_URL", "CloudWatch service URL is not configured.",
+        remotePublicify( CloudWatch.class ) ) );
+    sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
+        remotePublicify( LoadBalancing.class ) ) );
+    sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
+    String baseName = null;
+    if ( x509 != null && keyPair != null ) {
+      String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
+      if ( fingerPrint != null ) {
+        baseName = X509Download.NAME_SHORT + "-" + u.getName() + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase().substring( 0, 8 );
+        sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
+        sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       }
-      
-      sb.append( entryFor( "S3_URL", "An OSG is either not registered or not configured. S3_URL is not set. " +
-          "Please register an OSG and/or set a valid s3 endpoint and download credentials again. " +
-          "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage",
-          remotePublicify( ObjectStorage.class ) ) );
-      sb.append( entryFor( "AWS_IAM_URL", "IAM service URL is not configured.",
-          remotePublicify( Euare.class ) ) );
-      sb.append( entryFor( "EUARE_URL", "EUARE URL is not configured.",
-          remotePublicify( Euare.class ) ) );
-      sb.append( entryFor( "TOKEN_URL", "TOKEN URL is not configured.",
-          remotePublicify( Tokens.class ) ) );
-      sb.append( entryFor( "AWS_AUTO_SCALING_URL", "Auto Scaling service URL is not configured.",
-          remotePublicify( AutoScaling.class ) ) );
-      sb.append( entryFor( "AWS_CLOUDFORMATION_URL", "CloudFormation service URL is not configured.",
-          remotePublicify( CloudFormation.class ) ) );
-      sb.append( entryFor( "AWS_CLOUDWATCH_URL", "CloudWatch service URL is not configured.",
-          remotePublicify( CloudWatch.class ) ) );
-      sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
-          remotePublicify( LoadBalancing.class ) ) );
-      sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
-      sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
-      sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
-      sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
-      sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
-      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
-      sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
-      sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
-      sb.append( "\nexport AWS_ACCESS_KEY='" + userAccessKey + "'" );
-      sb.append( "\nexport AWS_SECRET_KEY='" + userSecretKey + "'" );
-      sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
-      sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
-      sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
-      sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL}\"" );
-      sb.append( "\n" );
-      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "eucarc" ) );
-      entry.setUnixMode( 0600 );
-      zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
-      zipOut.closeArchiveEntry( );
-      
-      sb = new StringBuilder( );
-      sb.append( "AWSAccessKeyId=" ).append( userAccessKey ).append( '\n' );
-      sb.append( "AWSSecretKey=" ).append( userSecretKey );
-      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "iamrc" ) );
-      entry.setUnixMode( 0600 );
-      zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
-      zipOut.closeArchiveEntry( );
-      
-      /** write the private key to the zip stream **/
-      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "cloud-cert.pem" ) );
-      entry.setUnixMode( 0600 );
-      zipOut.write( PEMFiles.getBytes( cloudCert ) );
-      zipOut.closeArchiveEntry( );
-      
-      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "jssecacerts" ) );
-      entry.setUnixMode( 0600 );
-      KeyStore tempKs = KeyStore.getInstance( "jks" );
-      tempKs.load( null );
-      tempKs.setCertificateEntry( "eucalyptus", cloudCert );
-      ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-      tempKs.store( bos, "changeit".toCharArray( ) );
-      zipOut.write( bos.toByteArray( ) );
-      zipOut.closeArchiveEntry( );
-      
+    }
+    sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
+    sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
+    sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
+    sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
+    sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
+    sb.append( "\nexport AWS_ACCESS_KEY='" + userAccessKey + "'" );
+    sb.append( "\nexport AWS_SECRET_KEY='" + userSecretKey + "'" );
+    sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
+    sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
+    sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
+    sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL}\"" );
+    sb.append( "\n" );
+    zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "eucarc" ) );
+    entry.setUnixMode( 0600 );
+    zipOut.write( sb.toString( ).getBytes( StandardCharsets.UTF_8 ) );
+    zipOut.closeArchiveEntry();
+
+    sb = new StringBuilder( );
+    sb.append( "AWSAccessKeyId=" ).append( userAccessKey ).append( '\n' );
+    sb.append( "AWSSecretKey=" ).append( userSecretKey );
+    zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "iamrc" ) );
+    entry.setUnixMode( 0600 );
+    zipOut.write( sb.toString( ).getBytes( StandardCharsets.UTF_8 ) );
+    zipOut.closeArchiveEntry( );
+
+    /** write the private key to the zip stream **/
+    zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "cloud-cert.pem" ) );
+    entry.setUnixMode( 0600 );
+    zipOut.write( PEMFiles.getBytes( cloudCert ) );
+    zipOut.closeArchiveEntry( );
+
+    zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "jssecacerts" ) );
+    entry.setUnixMode( 0600 );
+    KeyStore tempKs = KeyStore.getInstance( "jks" );
+    tempKs.load( null );
+    tempKs.setCertificateEntry( "eucalyptus", cloudCert );
+    ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+    tempKs.store( bos, "changeit".toCharArray( ) );
+    zipOut.write( bos.toByteArray( ) );
+    zipOut.closeArchiveEntry( );
+
+    if ( x509 != null && keyPair != null && baseName != null ) {
       /** write the private key to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-pk.pem" ) );
       entry.setUnixMode( 0600 );
@@ -322,13 +336,13 @@ public class X509Download extends HttpServlet {
           "RSA PRIVATE KEY",
           Crypto.getCertificateProvider().getEncoded( keyPair.getPrivate() )
       ) );
-      zipOut.closeArchiveEntry( );
-      
+      zipOut.closeArchiveEntry();
+
       /** write the X509 certificate to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-cert.pem" ) );
       entry.setUnixMode( 0600 );
       zipOut.write( PEMFiles.getBytes( x509 ) );
-      zipOut.closeArchiveEntry( );
+      zipOut.closeArchiveEntry();
     }
     /** close the zip output stream and return the bytes **/
     zipOut.close( );

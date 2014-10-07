@@ -424,7 +424,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] failed to spawn a reboot thread\n", instanceId);
         return (EUCA_FATAL_ERROR);
     }
-    set_corrid_pthread( get_corrid() != NULL ? get_corrid()->correlation_id : NULL , tcb); 
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
     if (pthread_detach(tcb)) {
         LOGERROR("[%s] failed to detach the rebooting thread\n", instanceId);
         return (EUCA_FATAL_ERROR);
@@ -759,7 +759,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
                     return (EUCA_THREAD_ERROR);
                 }
-                set_corrid_pthread( get_corrid()!=NULL ? get_corrid()->correlation_id : NULL , tcb); 
+                set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
                 if (pthread_detach(tcb)) {
                     LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
                     return (EUCA_THREAD_ERROR);

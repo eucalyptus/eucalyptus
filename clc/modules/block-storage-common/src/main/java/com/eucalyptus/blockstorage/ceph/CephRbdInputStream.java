@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,34 +60,101 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.network;
+package com.eucalyptus.blockstorage.ceph;
 
-import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.event.StatefulNamedRegistry;
+import java.io.IOException;
+import java.io.InputStream;
 
+import org.apache.log4j.Logger;
 
-public class Networks extends StatefulNamedRegistry<NetworkGroup, Networks.State>{
+import com.ceph.rbd.RbdImage;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
-  public enum State {
-    DISABLED,
-    AWAITING_PEER,
-    PENDING,
-    ACTIVE,
-  }
-  private static Networks singleton = getInstance();
+public class CephRbdInputStream extends InputStream {
 
-  private Networks( State... states ) {
-    super( State.values( ) );
-  }
+	private static final Logger LOG = Logger.getLogger(CephRbdInputStream.class);
 
-  public static Networks getInstance()
-  {
-    synchronized ( Networks.class )
-    {
-      if ( singleton == null )
-        singleton = new Networks();
-    }
-    return singleton;
-  }
+	private CephRbdConnectionManager conn;
+	private RbdImage rbdImage;
+	private long position;
+	private boolean isOpen;
 
+	public CephRbdInputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
+		try {
+			conn = CephRbdConnectionManager.getConnection(info, poolName);
+			rbdImage = conn.getRbd().open(imageName);
+			isOpen = true;
+			position = 0;
+		} catch (Exception e) {
+			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
+		}
+	}
+
+	@Override
+	public int read() throws IOException {
+		if (isOpen) {
+			byte[] buffer = new byte[1];
+			int bytesRead = 0;
+			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+				position += bytesRead;
+				return buffer[0];
+			} else { // nothing was read
+				return -1;
+			}
+		} else {
+			throw new IOException("Stream is not open/initialized");
+		}
+	}
+
+	@Override
+	public int read(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
+		if (null == b) {
+			throw new NullPointerException("Input byte buffer cannot be null");
+		}
+		if (off < 0 || len < 0 || len > (b.length - off)) {
+			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
+		}
+
+		if (isOpen) {
+			byte[] buffer = new byte[len];
+			int bytesRead = 0;
+			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+				position += bytesRead;
+				for (int i = 0; i < bytesRead; i++) {
+					b[off + i] = buffer[i];
+				}
+				return bytesRead;
+			} else { // nothing was read
+				return -1;
+			}
+		} else {
+			throw new IOException("Stream is not open/initialized");
+		}
+	}
+
+	@Override
+	public int read(byte[] b) throws NullPointerException, IOException {
+		if (null == b) {
+			throw new NullPointerException("Input byte buffer cannot be null");
+		}
+		return read(b, 0, b.length);
+	}
+
+	@Override
+	public void close() {
+		if (isOpen) {
+			try {
+				conn.getRbd().close(rbdImage);
+			} catch (Exception e) {
+
+			} finally {
+				isOpen = false;
+				conn.disconnect();
+				conn = null;
+				rbdImage = null;
+			}
+		} else {
+			// nothing to do here, stream is not open/already closed
+		}
+	}
 }

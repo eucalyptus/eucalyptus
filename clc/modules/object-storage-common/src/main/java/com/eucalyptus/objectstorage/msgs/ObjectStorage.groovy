@@ -44,6 +44,7 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -732,6 +733,39 @@ public class SetBucketLifecycleResponseType extends ObjectStorageResponseType {}
 public class DeleteBucketLifecycleType extends ObjectStorageRequestType {}
 
 public class DeleteBucketLifecycleResponseType extends ObjectStorageResponseType {}
+
+// Bucket Tagging //
+
+/* PUT /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class SetBucketTaggingType extends ObjectStorageRequestType {
+  TaggingConfiguration taggingConfiguration;
+}
+
+public class SetBucketTaggingResponseType extends ObjectStorageResponseType {}
+
+/* GET /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class GetBucketTaggingType extends ObjectStorageRequestType {}
+
+public class GetBucketTaggingResponseType extends ObjectStorageResponseType {
+  TaggingConfiguration taggingConfiguration;
+}
+
+/* DELETE /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class DeleteBucketTaggingType extends ObjectStorageRequestType {}
+
+public class DeleteBucketTaggingResponseType extends ObjectStorageResponseType {}
 
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 

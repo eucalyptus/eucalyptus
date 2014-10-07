@@ -65,7 +65,9 @@ package com.eucalyptus.util.async;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.empyrean.Empyrean;
@@ -108,6 +110,10 @@ public class AsyncRequests {
       } );
       return req.dispatch( config );
     }
+  }
+
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSync( Class<? extends ComponentId> target, final A msg ) throws Exception {
+    return sendSync( Topology.lookup( target ), Optional.<CallerContext>absent( ), msg );
   }
 
   public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {

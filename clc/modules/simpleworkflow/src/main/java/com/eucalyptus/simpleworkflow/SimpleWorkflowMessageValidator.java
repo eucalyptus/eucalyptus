@@ -20,6 +20,8 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.util.Map;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 
 /**
@@ -27,7 +29,15 @@ import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
  */
 public class SimpleWorkflowMessageValidator {
 
-  public Object validate( final Object object ) throws SimpleWorkflowClientException {
+  public Object validate( final Object object ) throws SimpleWorkflowException {
+
+    // check system-only mode
+    final Context context = Contexts.lookup( );
+    if ( SimpleWorkflowConfiguration.isSystemOnly( ) && !context.hasAdministrativePrivileges( ) ) {
+      throw new SimpleWorkflowUnavailableException( );
+    }
+
+    // validate message
     if ( object instanceof SimpleWorkflowMessage ) {
       final SimpleWorkflowMessage simpleWorkflowRequest = (SimpleWorkflowMessage) object;
       final Map<String,String> validationErrorsByField = simpleWorkflowRequest.validate( );
@@ -35,6 +45,7 @@ public class SimpleWorkflowMessageValidator {
         throw new SimpleWorkflowClientException( "ValidationError", validationErrorsByField.values().iterator().next() );
       }
     }
+
     return object;
   }
 }

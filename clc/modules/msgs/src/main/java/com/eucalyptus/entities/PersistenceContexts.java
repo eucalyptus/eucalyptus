@@ -67,27 +67,33 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicStampedReference;
+
 import javax.annotation.Nullable;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
+
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.DatabaseInfo;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
+import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -110,6 +116,7 @@ public class PersistenceContexts {
   private static final int                              MAX_EMF_RETRIES  = 20;
   private static AtomicStampedReference<Long>           failCount        = new AtomicStampedReference<Long>( 0L, 0 );
   private static final ArrayListMultimap<String, Class> entities         = ArrayListMultimap.create( );
+  private static final ArrayListMultimap<String, Class> remotableEntities = ArrayListMultimap.create( );
   private static final List<Class>                      sharedEntities   = Lists.newArrayList( );
   private static Map<String, EntityManagerFactoryImpl>  emf              = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
   private static Multimap<String, Exception>            illegalAccesses  = ArrayListMultimap.create( );
@@ -121,6 +128,23 @@ public class PersistenceContexts {
     @Override
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
+      return true;
+    }
+  }
+  
+  @Provides( Empyrean.class)
+  @RunDuring( Bootstrap.Stage.RemotePersistenceInit)
+  public static class RemotePersistenceContextBootstrapper extends Bootstrapper.Simple {
+    
+    @Override
+    public boolean load( ) throws Exception {
+      // load the properties
+      try {
+        Groovyness.run( "setup_persistence_remote.groovy" );
+      } catch(final Exception ex){
+        ;
+      }
+      
       return true;
     }
   }
@@ -175,11 +199,15 @@ public class PersistenceContexts {
   }
   
   public static boolean isPersistentClass( Class candidate ) {
-    return isSharedEntityClass( candidate ) || isEntityClass( candidate );
+    return isSharedEntityClass( candidate ) || isEntityClass( candidate ) ;
   }
   
   public static boolean isSharedEntityClass( Class candidate ) {
     return Ats.from( candidate ).has( MappedSuperclass.class ) || Ats.from( candidate ).has( Embeddable.class );
+  }
+  
+  private static boolean isRemotable (Class entity) {
+    return Ats.from( entity ).has( RemotablePersistence.class);
   }
   
   public static boolean isEntityClass( Class candidate ) {
@@ -206,7 +234,7 @@ public class PersistenceContexts {
 
     return DatabaseNamingStrategy.overrideStrategy( strategy );
   }
-
+  
   public static Function<String,String> toDatabaseName( ) {
     return PersistenceContextStringFunctions.CONTEXT_TO_DATABASE;
   }
@@ -219,7 +247,10 @@ public class PersistenceContexts {
     if ( !isDuplicate( entity ) ) {
       String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
       EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, ctxName, entity.getCanonicalName( ) ).trace( );
-      entities.put( ctxName, entity );
+      if(isRemotable(entity))
+        remotableEntities.put( ctxName,  entity);
+      else
+        entities.put( ctxName, entity );
     }
   }
   
@@ -280,12 +311,54 @@ public class PersistenceContexts {
     emf.get( ctx ).getCache( ).evictAll( );
   }
   
+  public static void deregisterPersistenceContext( final String persistenceContext ) {
+    final EntityManagerFactoryImpl emfactory = emf.remove(persistenceContext);
+    if (emfactory != null && emfactory.isOpen()) {
+      try{
+        if(emfactory.getCache()!=null)
+          emfactory.getCache().evictAll();
+        emfactory.close();
+        LOG.info("Closed entity manager factory for "+persistenceContext);
+      }catch(final Exception ex){
+        LOG.warn("Failed to close entity manager factory", ex); 
+      }
+    }
+  }
+  
   public static List<String> list( ) {
-    return Lists.newArrayList( entities.keySet( ) );
+    final List<String> persistences = Lists.newArrayList(entities.keySet());
+    return persistences;
+  }
+  
+  public static List<String> listRemotable( ) {
+    return Lists.newArrayList( remotableEntities.keySet( ) );
+  }
+  
+  public static String toRemoteDatabaseName ( final String persistenceContext ) {
+    if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost())) {
+      return PersistenceContexts.toDatabaseName( ).apply( persistenceContext );
+    }else {
+      return persistenceContext;
+    }
+  }
+  
+  public static String toRemoteSchemaName ( final String persistenceContext ) {
+    if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost())) {
+      return  PersistenceContexts.toSchemaName().apply( persistenceContext );
+    }else {
+      return null;
+    }
   }
   
   public static List<Class> listEntities( String persistenceContext ) {
-    List<Class> ctxEntities = Lists.newArrayList( entities.get( persistenceContext ) );
+    final List<Class> ctxEntities = Lists.newArrayList();
+    if(entities.containsKey(persistenceContext)){
+      ctxEntities.addAll(Lists.newArrayList( entities.get( persistenceContext ) ));
+    }
+    if (remotableEntities.containsKey(persistenceContext) ){
+      ctxEntities.addAll(Lists.newArrayList( remotableEntities.get( persistenceContext ) ));
+    }
+    
     Collections.sort( ctxEntities, Ordering.usingToString( ) );
     return ctxEntities;
   }

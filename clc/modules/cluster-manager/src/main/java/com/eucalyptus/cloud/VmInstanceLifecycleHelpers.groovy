@@ -28,8 +28,10 @@ import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator
 import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException
+import com.eucalyptus.cloud.util.InvalidMetadataException
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.cloud.util.ResourceAllocationException
+import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException
 import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
@@ -37,6 +39,7 @@ import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.compute.common.CloudMetadatas
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
+import com.eucalyptus.compute.common.network.NetworkingFeature
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PrivateIPResource
 import com.eucalyptus.compute.common.network.PrivateNetworkIndexResource
@@ -54,6 +57,7 @@ import com.eucalyptus.compute.vpc.Subnet
 import com.eucalyptus.compute.vpc.Subnets
 import com.eucalyptus.compute.vpc.VpcConfiguration
 import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException
+import com.eucalyptus.compute.vpc.VpcRequiredMetadataException
 import com.eucalyptus.compute.vpc.Vpcs
 import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces
 import com.eucalyptus.compute.vpc.persist.PersistenceSubnets
@@ -732,12 +736,16 @@ class VmInstanceLifecycleHelpers {
       final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
       final String subnetId = ResourceIdentifiers.tryNormalize( ).apply( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
+      final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
       if ( !Strings.isNullOrEmpty( subnetId ) || instanceNetworkInterface != null ) {
+        if ( !networkingFeatures.contains( NetworkingFeature.Vpc ) ) {
+          throw new InvalidMetadataException( "EC2-VPC not supported, for EC2-Classic do not specify subnet or network interface" )
+        }
         String networkInterfaceSubnetId = null
         String networkInterfaceAvailabilityZone = null
         if ( instanceNetworkInterface?.networkInterfaceId != null ) {
           if ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) {
-            throw new MetadataException( "Network interface can only be specified for a single instance" )
+            throw new InvalidMetadataException( "Network interface can only be specified for a single instance" )
           }
 
           Entities.transaction( VpcNetworkInterface ){
@@ -750,15 +758,15 @@ class VmInstanceLifecycleHelpers {
         }
 
         final String resolveSubnetId = subnetId?:networkInterfaceSubnetId
-        if ( !resolveSubnetId ) throw new MetadataException( "SubnetId required" )
+        if ( !resolveSubnetId ) throw new InvalidMetadataException( "SubnetId required" )
 
         final Subnet subnet = lookup( "subnet", resolveSubnetId, Subnet ) as Subnet;
         if ( privateIp && !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
-          throw new MetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
+          throw new InvalidMetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
         }
 
         if ( networkInterfaceAvailabilityZone && networkInterfaceAvailabilityZone != subnet.availabilityZone ) {
-          throw new MetadataException( "Network interface availability zone (${networkInterfaceAvailabilityZone}) not valid for subnet ${subnetId} zone ${subnet.availabilityZone}" )
+          throw new InvalidMetadataException( "Network interface availability zone (${networkInterfaceAvailabilityZone}) not valid for subnet ${subnetId} zone ${subnet.availabilityZone}" )
         }
 
         final Set<NetworkGroup> groups = Sets.newHashSet( )
@@ -768,13 +776,22 @@ class VmInstanceLifecycleHelpers {
           }
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
-          throw Exceptions.toUndeclared( new MetadataException( "Security group limit exceeded" ) );
+          throw new SecurityGroupLimitMetadataException( );
         }
 
         allocation.subnet = subnet
 
         final Partition partition = Partitions.lookupByName( subnet.availabilityZone );
         allocation.setPartition( partition );
+      } else {
+        // Default VPC, lookup subnet for user specified or system selected partition
+        final AccountFullName accountFullName = allocation.ownerFullName.asAccountFullName( )
+        final String defaultVpcId = getDefaultVpcId( accountFullName, allocation )
+        if ( defaultVpcId != null && !networkingFeatures.contains( NetworkingFeature.Vpc ) ) {
+          throw new InvalidMetadataException( "EC2-VPC not supported, delete default VPC to run in EC2-Classic" )
+        } else if ( defaultVpcId == null && !networkingFeatures.contains( NetworkingFeature.Classic ) ) {
+          throw new VpcRequiredMetadataException( );
+        }
       }
     }
 

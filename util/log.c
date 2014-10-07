@@ -224,12 +224,12 @@ static int syslog_facility = -1;       //!< if not -1 then we are logging to a s
  |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-static FILE *get_file(const char* log_file, boolean do_reopen);
-static FILE *get_file_impl(const char* log_file, FILE* fp, ino_t* log_inop, boolean do_reopen);
-static void release_file(const char* log_file);
+static FILE *get_file(const char *log_file, boolean do_reopen);
+static FILE *get_file_impl(const char *log_file, FILE * fp, ino_t * log_inop, boolean do_reopen);
+static void release_file(const char *log_file);
 
 static int fill_timestamp(char *buf, int buf_size);
-static int log_line(const char* log_file, const char *line);
+static int log_line(const char *log_file, const char *line);
 static int print_field_truncated(const char **log_spec, char *buf, int left, const char *field);
 
 /*----------------------------------------------------------------------------*\
@@ -263,7 +263,7 @@ int log_level_int(const char *level)
     return (-1);
 }
 
-static FILE *get_file(const char* log_file, boolean do_reopen) 
+static FILE *get_file(const char *log_file, boolean do_reopen)
 {
     // if max size is 0, there will be no logging except syslog, if configured
     if (log_max_size_bytes == 0)
@@ -277,16 +277,17 @@ static FILE *get_file(const char* log_file, boolean do_reopen)
             return LOGFH_DEFAULT;
         }
     }
-    if (log_file_path!=NULL && strcmp(log_file, log_file_path)==0){
+    if (log_file_path != NULL && strcmp(log_file, log_file_path) == 0) {
         gLogFh = get_file_impl(log_file, gLogFh, &log_ino, do_reopen);
         return gLogFh;
-    }else if (log_file_path_req_track!=NULL && strcmp(log_file, log_file_path_req_track)==0){
+    } else if (log_file_path_req_track != NULL && strcmp(log_file, log_file_path_req_track) == 0) {
         gLogFhReq = get_file_impl(log_file, gLogFhReq, &log_ino_req, do_reopen);
         return gLogFhReq;
-    }else {
+    } else {
         return NULL;
     }
 }
+
 //!
 //! Log FILE pointer getter, which implements log rotation logic and tries to recover from log
 //! file being moved away, perhaps by an external log rotation tool.
@@ -301,7 +302,7 @@ static FILE *get_file(const char* log_file, boolean do_reopen)
 //!
 //! @return a pointer to the lof file or NULL if any error occured
 //!
-static FILE *get_file_impl(const char* log_file, FILE* fp, ino_t* log_inop, boolean do_reopen)
+static FILE *get_file_impl(const char *log_file, FILE * fp, ino_t * log_inop, boolean do_reopen)
 {
     int fd = -1;
     int err = -1;
@@ -378,20 +379,20 @@ retry:
 //! @post If do_close_fd is set to TRUE and our log file is opened, the file will be closed
 //!       and our global gLogFh will be set to NULL. Otherwise nothing happened.
 //!
-static void release_file(const char* log_file)
+static void release_file(const char *log_file)
 {
     if (log_file == NULL)
         return;
 
-    if (log_file_path!=NULL && strcmp(log_file, log_file_path) == 0) {
+    if (log_file_path != NULL && strcmp(log_file, log_file_path) == 0) {
         if (do_close_fd && gLogFh != NULL) {
-          fclose(gLogFh);
-          gLogFh = NULL;
+            fclose(gLogFh);
+            gLogFh = NULL;
         }
-    }else if (log_file_path_req_track!=NULL && strcmp(log_file, log_file_path_req_track)==0) {
+    } else if (log_file_path_req_track != NULL && strcmp(log_file, log_file_path_req_track) == 0) {
         if (do_close_fd && gLogFhReq != NULL) {
-          fclose(gLogFhReq);
-          gLogFhReq = NULL;
+            fclose(gLogFhReq);
+            gLogFhReq = NULL;
         }
     }
 }
@@ -431,9 +432,9 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     // update the max size for any file
     if (log_max_size_bytes_in >= 0 && log_max_size_bytes != log_max_size_bytes_in) {
         log_max_size_bytes = log_max_size_bytes_in;
-        if (get_file(log_file_path, FALSE))           // that will rotate log files if needed
+        if (get_file(log_file_path, FALSE)) // that will rotate log files if needed
             release_file(log_file_path);
-        if (get_file(log_file_path_req_track, FALSE))           // that will rotate log files if needed
+        if (get_file(log_file_path_req_track, FALSE))   // that will rotate log files if needed
             release_file(log_file_path_req_track);
     }
 }
@@ -509,14 +510,14 @@ int log_file_set(const char *file, const char *req_track_file)
         release_file(log_file_path);
     }
 
-    if (req_track_file == NULL || strlen(req_track_file)==0){
+    if (req_track_file == NULL || strlen(req_track_file) == 0) {
         log_file_path_req_track[0] = '\0';
         return (EUCA_OK);
     }
 
     if (strcmp(log_file_path_req_track, req_track_file) == 0) {
-        return (EUCA_OK); 
-    }else {
+        return (EUCA_OK);
+    } else {
         euca_strncpy(log_file_path_req_track, req_track_file, EUCA_MAX_PATH);
         if (get_file(log_file_path_req_track, TRUE) == NULL) {
             return (EUCA_ERROR);
@@ -690,7 +691,7 @@ static int fill_timestamp(char *buf, int buf_size)
 //!
 //! @post The given line is written into the log file
 //!
-static int log_line(const char* log_file, const char *line)
+static int log_line(const char *log_file, const char *line)
 {
     int rc = EUCA_ERROR;
     FILE *pFh = NULL;
@@ -717,6 +718,7 @@ static int log_line(const char* log_file, const char *line)
 
     return (rc);
 }
+
 //!
 //! Log-printing function without a specific log level. It is essentially printf() that will go verbatim,
 //! with just timestamp as prefix and at any log level, into the current log or stdout, if no log was open.
@@ -868,8 +870,8 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
     }
 
     threadCorrelationId *corr_id = get_corrid();
-    if (corr_id != NULL && corr_id->correlation_id!=NULL && strlen(corr_id->correlation_id) >= 74) {
-        is_corrid=TRUE;
+    if (corr_id != NULL && corr_id->correlation_id != NULL && strlen(corr_id->correlation_id) >= 74) {
+        is_corrid = TRUE;
     }
 
     if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
@@ -984,19 +986,18 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
         offset += size;
     }
 
-    if ( is_corrid && log_file_path_req_track != NULL ) {
+    if (is_corrid && log_file_path_req_track != NULL) {
         buf[offset++] = ' ';
         buf[offset++] = '[';
-        for(int i=0; i<8; i++) {
+        for (int i = 0; i < 8; i++) {
             buf[offset++] = corr_id->correlation_id[i];
         }
         buf[offset++] = '-';
-        for(int i=0; i<4; i++) {
-            buf[offset++] = corr_id->correlation_id[i+47];
+        for (int i = 0; i < 4; i++) {
+            buf[offset++] = corr_id->correlation_id[i + 47];
         }
         buf[offset++] = ']';
     }
-
     // add a space between the prefix and the message proper
     if ((offset > 0) && ((sizeof(buf) - offset - 1) > 0)) {
         buf[offset++] = ' ';
@@ -1027,21 +1028,21 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
             syslog(l, buf + offset);
     }
 
-    if ( is_corrid && log_file_path_req_track != NULL ) {
+    if (is_corrid && log_file_path_req_track != NULL) {
         log_line(log_file_path_req_track, buf);
-        sprintf(buf_corrid, "[%.8s-%.4s] ", corr_id->correlation_id, corr_id->correlation_id+47);
-        if ((s=strstr(buf, buf_corrid))!=NULL) {  
-            offset = 16;         
+        sprintf(buf_corrid, "[%.8s-%.4s] ", corr_id->correlation_id, corr_id->correlation_id + 47);
+        if ((s = strstr(buf, buf_corrid)) != NULL) {
+            offset = 16;
             while (TRUE) {
-                s[offset-16] = s[offset];
-                c=s[offset++];
-                if(c == '\n' || c == '\0' || offset>=LOGLINEBUF)
+                s[offset - 16] = s[offset];
+                c = s[offset++];
+                if (c == '\n' || c == '\0' || offset >= LOGLINEBUF)
                     break;
             }
-            s[offset-16] = '\0';
+            s[offset - 16] = '\0';
         }
     }
-    if ( (rc=log_line(log_file_path, buf)) != EUCA_OK ) 
+    if ((rc = log_line(log_file_path, buf)) != EUCA_OK)
         return (rc);
 
     return EUCA_OK;

@@ -21,6 +21,8 @@ package com.eucalyptus.auth.policy
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
+import com.google.common.base.Suppliers
+
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch.All
 import com.eucalyptus.auth.entities.AuthorizationEntity
 import com.eucalyptus.auth.entities.PolicyEntity
@@ -124,7 +126,7 @@ class PolicyEngineTest {
                                       String resourceAccountNumber,
                                       String resourceName ) {
     List<Authorization> authorizations = authorizations( PolicyParser.instance.parse( policy ) )
-    PolicyEngine engine = new PolicyEngineImpl( accountResolver( ) )
+    PolicyEngine engine = new PolicyEngineImpl( accountResolver( ), Suppliers.ofInstance( Boolean.FALSE ) )
     PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( requestType, requestAction, user(), [:] as Map<String,String> ){
       @Override boolean isSystemUser() { true }
       @Override List<Authorization> lookupGlobalAuthorizations() { [] }
@@ -152,7 +154,8 @@ class PolicyEngineTest {
   @TupleConstructor private static class AuthorizationEntityAsAuthorization implements Authorization {
     @Delegate AuthorizationEntity entity
     @Override List<Condition> getConditions() { [] } //TODO:Conditions from statement
-    @Override Group getGroup() { null }
+    @Override Authorization.Scope getScope( ) throws AuthException { Authorization.Scope.USER}
+    @Override String getScopeId( ) throws AuthException { null }
     @Override Principal getPrincipal() { null }
   }
 }

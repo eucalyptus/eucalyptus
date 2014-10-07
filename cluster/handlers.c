@@ -262,7 +262,8 @@ void doInitCC(void)
 //!
 //! @note
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
+                     char *architecture)
 {
     int i, j, rc, start = 0, stop = 0, ret = 0, timeout, done;
     char internalObjectStorageURL[EUCA_MAX_PATH], theObjectStorageURL[EUCA_MAX_PATH];
@@ -281,7 +282,8 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
 
     LOGINFO("[%s] bundling requested\n", instanceId);
     LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s, architecture=%s\n",
-       SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig), SP(architecture));
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig),
+             SP(architecture));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
@@ -3841,9 +3843,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     LOGINFO("running instances\n");
     LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s, rootDirective=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL),
-             SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId), SP(reservationId),
-             SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode), SP(rootDirective));
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s, rootDirective=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId),
+             SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId),
+             SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode), SP(rootDirective));
 
     if (config->use_proxy) {
         char objectStorageURL[EUCA_MAX_PATH], *strptr = NULL, newURL[EUCA_MAX_PATH];
