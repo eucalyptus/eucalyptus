@@ -345,13 +345,12 @@ int main(int argc, char **argv)
         exit(0);
     }
 
-
     // got all config, enter main loop
     //    while(counter<3) {
     while (1) {
         // temporary
         system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
-        
+
         update_globalnet = 0;
 
         counter++;
@@ -380,7 +379,6 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-
         // for testing 
         //        update_globalnet = 1;
 
@@ -390,7 +388,8 @@ int main(int argc, char **argv)
             if (update_globalnet) {
                 free_mido_config(mido);
                 bzero(mido, sizeof(mido_config));
-                rc = initialize_mido(mido, config->eucahome, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0", "24");
+                rc = initialize_mido(mido, config->eucahome, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "192.168.254.0",
+                                     "24");
                 if (rc) {
                     LOGERROR("could not initialize mido config\n");
                     update_globalnet_failed = 1;
@@ -428,7 +427,7 @@ int main(int argc, char **argv)
                 } else {
                     LOGINFO("new networking state (VM private network addresses): updated successfully\n");
                 }
-                
+
                 // update public IP assignment and NAT table entries
                 rc = update_public_ips();
                 if (rc) {
@@ -437,7 +436,7 @@ int main(int argc, char **argv)
                 } else {
                     LOGINFO("new networking state (VM public network addresses): updated successfully\n");
                 }
-                
+
                 // install ebtables rules for isolation
                 rc = update_isolation_rules();
                 if (rc) {
@@ -1650,11 +1649,16 @@ int read_config(void)
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
     snprintf(config->vnetMode, sizeof(config->vnetMode), "%s", cvals[EUCANETD_CVAL_MODE]);
-    if (cvals[EUCANETD_CVAL_MIDOGWHOST]) snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
-    if (cvals[EUCANETD_CVAL_MIDOGWIP]) snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOGWIFACE]) snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBNW]) snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP]) snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
+    if (cvals[EUCANETD_CVAL_MIDOGWHOST])
+        snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIP])
+        snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIFACE])
+        snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBNW])
+        snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
+        snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
 
     LOGDEBUG
         ("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n",
@@ -1666,7 +1670,7 @@ int read_config(void)
         LOGERROR("unable to initialize logging subsystem: check permissions and log config options\n");
         ret = 1;
     }
-    
+
     if (!strcmp(config->vnetMode, "EDGE")) {
         // EDGE only
         rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
@@ -1674,7 +1678,7 @@ int read_config(void)
             LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
             ret = 1;
         }
-        
+
         config->ipt = malloc(sizeof(ipt_handler));
         if (!config->ipt) {
             LOGFATAL("out of memory!\n");
@@ -1685,7 +1689,7 @@ int read_config(void)
             LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
             ret = 1;
         }
-        
+
         config->ips = malloc(sizeof(ips_handler));
         if (!config->ips) {
             LOGFATAL("out of memory!\n");
@@ -1696,7 +1700,7 @@ int read_config(void)
             LOGERROR("could not initialize ips_handler: check above log errors for details\n");
             ret = 1;
         }
-        
+
         config->ebt = malloc(sizeof(ebt_handler));
         if (!config->ebt) {
             LOGFATAL("out of memory!\n");
@@ -1716,7 +1720,7 @@ int read_config(void)
             ret = 1;
         }
     }
-    
+
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
         EUCA_FREE(cvals[i]);
     }
@@ -2062,7 +2066,7 @@ int flush_all(void)
         ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
         ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
         ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
-        
+
         if (!ipt || !ebt || !ips) {
             LOGFATAL("out of memory!\n");
             exit(1);
@@ -2079,7 +2083,7 @@ int flush_all(void)
         rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
         rc = ipt_handler_print(ipt);
         rc = ipt_handler_deploy(ipt);
-        
+
         // ipsets
         rc = ips_handler_init(ips, config->cmdprefix);
         rc = ips_handler_repopulate(ips);
@@ -2087,7 +2091,7 @@ int flush_all(void)
         rc = ips_handler_deletesetmatch(ips, "EUCA_");
         rc = ips_handler_print(ips);
         rc = ips_handler_deploy(ips, 1);
-        
+
         // ebtables
         rc = ebt_handler_init(ebt, config->cmdprefix);
         rc = ebt_handler_repopulate(ebt);
@@ -2095,7 +2099,7 @@ int flush_all(void)
         rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
         rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
         rc = ebt_handler_deploy(ebt);
-        
+
         EUCA_FREE(ipt);
         EUCA_FREE(ebt);
         EUCA_FREE(ips);
@@ -2110,4 +2114,3 @@ int flush_all(void)
 
     return (ret);
 }
-
