@@ -120,6 +120,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
@@ -596,6 +597,15 @@ public class NetworkGroups {
   }
 
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
+    try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
+      if ( Iterables.tryFind(
+          Entities.query( Vpc.exampleDefault( ownerFullName.getAccountNumber( ) ) ),
+          Predicates.alwaysTrue()
+      ).isPresent( ) ) {
+        return; // skip default security group creation when there is a default VPC
+      }
+    }
+
     try {
       try {
         NetworkGroup net = Transactions.find( NetworkGroup.named( AccountFullName.getInstance( ownerFullName.getAccountNumber() ), DEFAULT_NETWORK_NAME ) );
@@ -691,12 +701,13 @@ public class NetworkGroups {
           }
         } else if ( Strings.isNullOrEmpty( groupInfo.getSourceGroupName( ) ) ) {
           throw new MetadataException( "Group ID or Group Name required." );
-        } else { //TODO:STEVE: Group lookup by name for default VPC
+        } else {
           try{
-            final NetworkGroup networkGroup = NetworkGroups.lookup(
-                AccountFullName.getInstance(
-                    Objects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) ),
-                groupInfo.getSourceGroupName( ) );
+            final AccountFullName accountFullName = AccountFullName.getInstance(
+                Objects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) );
+            final NetworkGroup networkGroup = vpcId == null ?
+                NetworkGroups.lookup( accountFullName, groupInfo.getSourceGroupName( ) ) :
+                NetworkGroups.lookup( accountFullName, vpcId, groupInfo.getSourceGroupName( ) );
             groupInfo.setSourceGroupId( networkGroup.getGroupId( ) );
           }catch(final NoSuchMetadataException ex){
             if(!revoke)

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.activities;
+package com.eucalyptus.loadbalancing.backend;
+
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
- * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public boolean skipRemaining();
-	public EventHandlerChain<? extends T> getChain();
+@QueryBindingInfo( statusCode = 400 )
+public class LoadBalancingBackendClientException extends LoadBalancingException {
+  private static final long serialVersionUID = 1L;
+
+  public LoadBalancingBackendClientException( final String code, final String message ) {
+    super( code, Role.Sender, message );
+  }
 }

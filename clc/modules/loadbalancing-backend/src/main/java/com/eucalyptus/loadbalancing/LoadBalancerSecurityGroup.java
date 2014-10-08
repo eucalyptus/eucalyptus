@@ -20,10 +20,9 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -33,18 +32,18 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -59,17 +58,16 @@ import com.google.common.collect.ImmutableList;
 @Table( name = "metadata_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerSecurityGroup extends AbstractPersistent {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerSecurityGroup.class );
 
 	public enum STATE { InService, OutOfService }
 	@Transient
 	private static final long serialVersionUID = 1L;
 
 	private LoadBalancerSecurityGroup(){}
-	
+
 	@Transient
 	private LoadBalancerSecurityGroupRelationView view = null;
-	
+
 	@PostLoad
 	private void onLoad(){
 		if(this.view==null)
@@ -83,8 +81,10 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		this.state= STATE.InService.name();
 	}
 	
-	public static LoadBalancerSecurityGroup named(){
-		return new LoadBalancerSecurityGroup(); // query all
+	public static LoadBalancerSecurityGroup create(LoadBalancer lb, String ownerAccountId, String groupName){
+		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
+		instance.uniqueName = instance.createUniqueName();
+		return instance;
 	}
 
 	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName){
@@ -92,7 +92,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
-	
+
 	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName, STATE state){
 		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
 		instance.state = state.name();
@@ -106,13 +106,13 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		return instance;
 	}
 	
-    @OneToOne
-    @JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
-    private LoadBalancer loadbalancer = null;
+	@OneToOne
+	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
+	private LoadBalancer loadbalancer = null;
 
 	@Column(name="group_name", nullable=false)
-    private String groupName = null;
-	
+	private String groupName = null;
+
 	@Column(name="group_owner_account_id", nullable=false)
 	private String ownerAccountId = null;
 	
@@ -120,7 +120,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	private String state = null;
     
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "security_group")
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 
 	@Column(name="metadata_unique_name", nullable=false, unique=true)
@@ -141,7 +141,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public LoadBalancerCoreView getLoadBalancer(){
 		return this.view.getLoadBalancer();
 	}
-	
+
 	public void setLoadBalancer(final LoadBalancer lb){
 		this.loadbalancer = lb;
 	}
@@ -187,7 +187,7 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 			return this.group.getState();
 		}
 	}
-	
+
 
 	@TypeMapper
 	public enum LoadBalancerSecurityGroupCoreViewTransform implements Function<LoadBalancerSecurityGroup, LoadBalancerSecurityGroupCoreView> {
@@ -198,43 +198,37 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 			return new LoadBalancerSecurityGroupCoreView( group );
 		}
 	}
-	
-	public enum LoadBalancerSecurityGroupEntityTransform implements Function<LoadBalancerSecurityGroupCoreView, LoadBalancerSecurityGroup> {
+
+	public enum LoadBalancerSecurityGroupEntityTransform implements NonNullFunction<LoadBalancerSecurityGroupCoreView, LoadBalancerSecurityGroup> {
 		INSTANCE;
 
+		@Nonnull
 		@Override
-		@Nullable
-		public LoadBalancerSecurityGroup apply(
-				@Nullable LoadBalancerSecurityGroupCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerSecurityGroup.class);
-			try{
-				final LoadBalancerSecurityGroup group = Entities.uniqueResult(arg0.group);
-				db.commit();
-				return group;
+		public LoadBalancerSecurityGroup apply( LoadBalancerSecurityGroupCoreView arg0 ) {
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
+				return Entities.uniqueResult(arg0.group);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	public static class LoadBalancerSecurityGroupRelationView  {
-		private LoadBalancerCoreView lbView = null;
+		private LoadBalancer loadBalancer = null;
 		private ImmutableList<LoadBalancerServoInstanceCoreView> servoViews = null;
 
 		LoadBalancerSecurityGroupRelationView(LoadBalancerSecurityGroup group) {
-			if(group.loadbalancer!=null)
-				lbView = TypeMappers.transform( group.loadbalancer, LoadBalancerCoreView.class );
+			if(group.loadbalancer!=null) {
+				Entities.initialize( group.loadbalancer );
+				this.loadBalancer = group.loadbalancer;
+			}
 			if(group.servoInstances!=null)
 				servoViews = ImmutableList.copyOf( Collections2.transform(group.servoInstances, 
 					LoadBalancerServoInstanceCoreViewTransform.INSTANCE));
 		}
 	
 		LoadBalancerCoreView getLoadBalancer(){
-			return this.lbView;
+			return this.loadBalancer.getCoreView();
 		}
 	
 		public ImmutableList<LoadBalancerServoInstanceCoreView> getServoInstances(){

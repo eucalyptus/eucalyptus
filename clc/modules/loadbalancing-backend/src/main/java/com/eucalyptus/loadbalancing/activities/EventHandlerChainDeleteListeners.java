@@ -53,11 +53,11 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
     @Override
     public void apply(DeleteListenerEvent evt) throws EventHandlerException {
       final Collection<Integer> portsToDelete = evt.getPorts();
-      LoadBalancer lb = null;
+      LoadBalancer lb;
       try{
         lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
       }catch(Exception ex){
-        LOG.warn("could not find the loadbalancer", ex);
+        throw new EventHandlerException("could not find the loadbalancer", ex);
       }
       
       final Set<String> allArns = Sets.newHashSet();
@@ -99,8 +99,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
     }
 
     @Override
-    public void rollback() throws EventHandlerException {
-      ;
+    public void rollback() {
     }
 	}
 
@@ -113,7 +112,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 		@Override
 		public void apply(DeleteListenerEvent evt) throws EventHandlerException {
 			final Collection<Integer> ports = evt.getPorts();
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
@@ -125,7 +124,6 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			}
 			
 			if(groupName == null){
-				LOG.warn("Group name is not found in the db");
 				return;
 			}
 			
@@ -133,7 +131,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			for(String protocol : protocols){
 				for(Integer port : ports){
 					try{
-						EucalyptusActivityTasks.getInstance().revokeSecurityGroup(groupName, protocol, port);
+						EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port );
 						LOG.debug(String.format("rule revoked (%s-%d)", groupName, port));
 					}catch(Exception ex){
 						LOG.warn("Unable to revoke the security group", ex);
@@ -143,8 +141,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 		}
 
 		@Override
-		public void rollback() throws EventHandlerException {
-			;
+		public void rollback() {
 		}
 	}
 }
