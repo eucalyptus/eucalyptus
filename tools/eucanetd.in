@@ -127,7 +127,7 @@ do_start() {
 	# fixes #469984 (was against NC but CC/eucanetd may have similar issue)
 	IPTABLES="`which iptables 2> /dev/null`"
 	if [ -n "$IPTABLES" ]; then
-		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null && $IPTABLES -L -n -t nat > /dev/null 2> /dev/null
 	fi
 
         # logic to detect if required proc parameters will be reset by

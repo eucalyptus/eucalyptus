@@ -520,7 +520,7 @@ public class ImagingServiceActions {
         return userData;
       }
     }
-
+    
     public static class CreateLaunchConfiguration extends AbstractAction {
       private String emi = null;
       private String instanceType = null;

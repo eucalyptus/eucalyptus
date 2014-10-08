@@ -413,8 +413,10 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-    public void logicallyDeleteVersion(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
-        if(entity.getBucket() == null) {
+    public ObjectEntity logicallyDeleteVersion(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    	ObjectEntity toBeReturned = null;
+    	
+    	if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
         try {
@@ -435,27 +437,31 @@ public class ObjectFactoryImpl implements ObjectFactory {
             LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
         }
         if(!entity.getIsDeleteMarker()) {
-            ObjectEntity deletingObject = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+        	toBeReturned = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
 
             //Optimistically try to actually delete the object, failure here is okay
             try {
-                actuallyDeleteObject(provider, deletingObject, requestUser);
+                actuallyDeleteObject(provider, toBeReturned, requestUser);
             } catch(Exception e) {
                 LOG.trace("Could not delete the object in the sync path, will retry later asynchronosly. Object now in state 'deleting'.", e);
             }
-
         } else {
-            //Delete the delete marker.
+            //Delete the delete marker and return it
+        	toBeReturned = entity;
             ObjectMetadataManagers.getInstance().delete(entity);
         }
+        
+        return toBeReturned;
     }
 
     @Override
-    public void logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
-        if(entity.getBucket() == null) {
+    public ObjectEntity logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    	ObjectEntity toBeReturned = null;
+    	
+    	if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
-
+        
         switch(entity.getBucket().getVersioning()) {
             case Suspended:
             case Enabled:
@@ -464,24 +470,28 @@ public class ObjectFactoryImpl implements ObjectFactory {
                         //Create a "private" acp for the delete marker
                         AccessControlPolicy acp = AclUtils.processNewResourcePolicy(requestUser, null, entity.getBucket().getOwnerCanonicalId());
                         //Create new deleteMarker
-                        ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
+                        toBeReturned = ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
                     } catch(Exception e) {
                         LOG.warn("Failure configuring and persisting the delete marker for object " + entity.getResourceFullName());
                         throw new InternalErrorException(e);
                     }
                 } else {
-                    //Do nothing, already a delete marker found.
+                    //Do nothing, already a delete marker found. Just return it here
                     //TODO: zhill - should this replace the delete marker with a new one?
+                	//TODO: swathi - a new delete marker should be created if the versioning state is enabled or suspended
+                	toBeReturned = entity;
                 }
                 break;
             case Disabled:
-                //Cannot be a delete marker, so this is proper.
+                //Cannot be a delete marker, so this is proper. Return a null object entity, version/delete don't exist in this case
                 logicallyDeleteVersion(provider, entity, requestUser);
                 break;
             default:
                 LOG.error("Cannot logically delete object due to unexpected bucket state found: " + entity.getBucket().getVersioning());
                 throw new InternalErrorException(entity.getBucket().getName());
         }
+        
+        return toBeReturned;
     }
 
     @Override

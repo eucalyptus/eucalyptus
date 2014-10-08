@@ -72,6 +72,7 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -152,6 +153,7 @@ public class Allocations {
 
     /** */
     private final TypedContext allocationContext = TypedContext.newTypedContext( );
+    private final AtomicBoolean committed = new AtomicBoolean( false );
 
     private Allocation(final RunInstancesType request) {
       this.context = Contexts.lookup();
@@ -317,14 +319,19 @@ public class Allocations {
     }
 
     public void commit() throws Exception {
-      try {
+      if ( !committed.get( ) ) try {
         for (final ResourceToken t : this.getAllocationTokens()) {
           VmInstance.Create.INSTANCE.apply(t);
         }
+        committed.set( true );
       } catch (final Exception ex) {
         this.abort();
         throw ex;
       }
+    }
+
+    public boolean isCommitted() {
+      return committed.get( );
     }
 
     public void abort() {

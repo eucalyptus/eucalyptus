@@ -82,8 +82,8 @@ public class DownloadManifestFactory {
 	private static int DEFAULT_EXPIRE_TIME_HR = 3;
 
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-      final String manifestName) throws DownloadManifestException {
-	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
+      final String manifestName, boolean urlForNc) throws DownloadManifestException {
+	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR, urlForNc);
 	}
 
     public static User getDownloadManifestS3User() throws AuthException {
@@ -92,19 +92,22 @@ public class DownloadManifestFactory {
 
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
-	 * @param baseManifestLocation location of the base manifest file
 	 * @param keyToUse public key that used for encryption
 	 * @param manifestName name for generated manifest file
 	 * @param expirationHours expiration policy in hours for pre-signed URLs
+	 * @param urlForNc indicates if urs are constructed for NC use
+	 * @param baseManifestLocation location of the base manifest file
 	 * @param manifestType what kind of manifest 
 	 * @return pre-signed URL that can be used to download generated manifest
 	 * @throws DownloadManifestException
 	 */
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-			final String manifestName, int expirationHours) throws DownloadManifestException {
+			final String manifestName, int expirationHours, boolean urlForNc) throws DownloadManifestException {
 		try {
-			//prepare to do pre-signed urls
+	  //prepare to do pre-signed urls
       EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+      if (!urlForNc)
+          s3Client.refreshEndpoint(true);
 
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;

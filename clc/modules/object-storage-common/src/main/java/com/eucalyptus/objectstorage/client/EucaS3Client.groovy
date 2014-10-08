@@ -81,7 +81,11 @@ class EucaS3Client implements AmazonS3 {
      * in case of failure due to an OSG failing and becoming unavailable.
      */
     public void refreshEndpoint() throws NoSuchElementException {
-        this.s3Client.setEndpoint(GenericS3ClientFactory.getRandomOSGUri().toASCIIString());
+        refreshEndpoint(false);
+    }
+
+    public void refreshEndpoint(boolean usePublicDns) throws NoSuchElementException {
+        this.s3Client.setEndpoint(GenericS3ClientFactory.getRandomOSGUri(usePublicDns).toASCIIString());
     }
 
     public String getObjectContent(String bucket, String key) {

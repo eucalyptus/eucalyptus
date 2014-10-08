@@ -41,6 +41,7 @@ import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
 import com.eucalyptus.imaging.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -146,7 +147,7 @@ public abstract class AbstractTaskScheduler {
                   image.getFormat());
               final String downloadManifest = 
                   DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
-                      manifestName, 5);
+                      manifestName, 5, false);
               image.setDownloadManifestUrl(downloadManifest);
             }
           }catch(final Exception ex){
@@ -167,7 +168,10 @@ public abstract class AbstractTaskScheduler {
           ist.setServiceCertArn(this.imagingServiceCertArn);
           final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
           final URI osgUri = osg.getUri();
-          ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath()));
+          if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.DOMAIN) )
+            ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath())); 
+          else
+            ist.setS3Url(String.format("%s://objectstorage.%s:%d", osgUri.getScheme(), DNSProperties.DOMAIN, osgUri.getPort()));
           newTask.setInstanceStoreTask(ist);
         }else if(nextTask instanceof ImportVolumeImagingTask){
           final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;
@@ -177,7 +181,7 @@ public abstract class AbstractTaskScheduler {
               manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                   new ImageManifestFile(volumeTask.getImportManifestUrl(),
                       ImportImageManifest.INSTANCE ),
-                      null, volumeTask.getDisplayName(), 1);
+                      null, volumeTask.getDisplayName(), 1, false);
             }catch(final InvalidBaseManifestException ex){
               ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
               throw new EucalyptusCloudException("Failed to generate download manifest", ex);
@@ -209,7 +213,7 @@ public abstract class AbstractTaskScheduler {
                   manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                       new ImageManifestFile(importManifestUrl,
                           ImportImageManifest.INSTANCE ),
-                          null, manifestName, 1);
+                          null, manifestName, 1, false);
                   ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
                 }catch(final InvalidBaseManifestException ex){
                   ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);

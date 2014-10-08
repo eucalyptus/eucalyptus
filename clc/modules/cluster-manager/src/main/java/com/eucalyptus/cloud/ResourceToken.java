@@ -273,7 +273,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public String getDisplayName( ) {
     return this.getInstanceId( );
   }
-  
+
+  public boolean isCommitted( ) {
+    return this.allocation.isCommitted( );
+  }
+
   @Override
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );

@@ -232,6 +232,7 @@
 
     <mapping name="SetObjectAccessControlPolicyTypeResponse"
              class="com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType">
+        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="CreateBucket"
@@ -460,6 +461,12 @@
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType"/>
     </mapping>
 
+    <mapping class="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+             abstract="true">
+        <value name="VersionId" field="versionId" usage="optional"/>
+        <value name="IsDeleteMarker" field="isDeleteMarker" usage="optional"/>
+    </mapping>
+    
     <mapping name="DeleteObject"
              class="com.eucalyptus.objectstorage.msgs.DeleteObjectType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -469,7 +476,11 @@
     </mapping>
 
     <mapping name="DeleteObjectResponse"
-             class="com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType">
+             class="com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType"
+             extends="com.eucalyptus.objectstorage.msgs.DeleteResponseType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+                usage="optional"/>
     </mapping>
 
     <mapping name="DeleteVersion"
@@ -482,9 +493,13 @@
     </mapping>
 
     <mapping name="DeleteVersionResponse"
-             class="com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType">
+             class="com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType"
+             extends="com.eucalyptus.objectstorage.msgs.DeleteResponseType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+                usage="optional"/>
     </mapping>
-
+    
     <mapping name="GetBucketLocation"
              class="com.eucalyptus.objectstorage.msgs.GetBucketLocationType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">

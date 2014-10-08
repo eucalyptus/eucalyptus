@@ -310,14 +310,14 @@ public class Emis {
           if ( this.hasKernel( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId);
-            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
+                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId, true);
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation, this.getKernel( ).getImageSizeBytes() );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId);
-            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId, true);
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation, this.getRamdisk( ).getImageSizeBytes() );
           }
         }
       
@@ -333,7 +333,7 @@ public class Emis {
           }else{
             manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), reservationId);
+                partition.getNodeCertificate().getPublicKey(), reservationId, true);
           }
           vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
         }
