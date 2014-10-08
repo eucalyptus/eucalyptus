@@ -9,35 +9,40 @@ import com.ceph.rados.IoCTX;
 import com.ceph.rados.Rados;
 import com.ceph.rados.RadosException;
 import com.ceph.rbd.Rbd;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 
 /**
  * Utility class for creating and managing connection to a pool in a Ceph cluster. Encapsulates all elements (Rados, IoCTX, Rbd, pool) of a ceph connection if
  * the caller needs access to a specific element.
  */
-public class CephConnectionManager {
+public class CephRbdConnectionManager {
 
-	private static Logger LOG = Logger.getLogger(CephConnectionManager.class);
+	private static Logger LOG = Logger.getLogger(CephRbdConnectionManager.class);
 	private static Random randomGenerator = new Random();
+	private static final String KEYRING = "keyring";
 
 	private Rados rados;
 	private IoCTX ioContext;
 	private Rbd rbd;
 	private String pool;
 
-	private CephConnectionManager(CephInfo config, String poolName) {
-		rados = new Rados(config.getCephUser());
+	private CephRbdConnectionManager(CephRbdInfo config, String poolName) {
 		try {
+			rados = new Rados(config.getCephUser());
+			rados.confSet(KEYRING, config.getCephKeyringFile());
 			rados.confReadFile(new File(config.getCephConfigFile()));
 			rados.connect();
 			pool = poolName;
 			ioContext = rados.ioCtxCreate(pool);
+			rbd = new Rbd(ioContext);
 		} catch (RadosException e) {
-			LOG.error("Caught error while establishing connection to ceph cluster", e);
-			throw new EucalyptusCephException("Failed to establish connection to ceph cluster", e);
+			disconnect();
+			LOG.warn("Unable to connect to Ceph cluster");
+			throw new EucalyptusCephException("Failed to connect to pool " + poolName
+					+ " in Ceph cluster. Verify Ceph cluster health, privileges of Ceph user assigned to Eucalyptus, Ceph parameters configured in Eucalyptus "
+					+ config.toString() + " and retry operation", e);
 		}
-		rbd = new Rbd(ioContext);
 	}
 
 	public Rados getRados() {
@@ -66,23 +71,23 @@ public class CephConnectionManager {
 		}
 	}
 
-	public static CephConnectionManager getConnection(CephInfo config, String poolName) {
-		return new CephConnectionManager(config, poolName);
+	public static CephRbdConnectionManager getConnection(CephRbdInfo config, String poolName) {
+		return new CephRbdConnectionManager(config, poolName);
 	}
 
-	public static CephConnectionManager getRandomVolumePoolConnection(CephInfo config) {
+	public static CephRbdConnectionManager getRandomVolumePoolConnection(CephRbdInfo config) {
 		String[] allPools = getAllVolumePools(config);
 		// TODO Implement evaluating strategy to pick a pool. Using a random pool for now
-		return new CephConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
+		return new CephRbdConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
 	}
 
-	public static CephConnectionManager getRandomSnapshotPoolConnection(CephInfo config) {
+	public static CephRbdConnectionManager getRandomSnapshotPoolConnection(CephRbdInfo config) {
 		String[] allPools = getAllSnapshotPools(config);
 		// TODO Implement evaluating strategy to pick a pool. Using a random pool for now
-		return new CephConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
+		return new CephRbdConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
 	}
 
-	public static String[] getAllVolumePools(CephInfo config) {
+	public static String[] getAllVolumePools(CephRbdInfo config) {
 		String[] allPools = config.getCephVolumePools().split(",");
 		if (allPools != null && allPools.length > 0) {
 			return allPools;
@@ -93,7 +98,7 @@ public class CephConnectionManager {
 		}
 	}
 
-	public static String[] getAllSnapshotPools(CephInfo config) {
+	public static String[] getAllSnapshotPools(CephRbdInfo config) {
 		String[] allPools = config.getCephSnapshotPools().split(",");
 		if (allPools != null && allPools.length > 0) {
 			return allPools;

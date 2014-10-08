@@ -181,6 +181,18 @@ public interface WorkflowExecutions {
     }
   }
 
+  public enum WorkflowExecutionStringFunctions implements Function<WorkflowExecution,String> {
+    DOMAIN_UUID {
+      @Nullable
+      @Override
+      public String apply( @Nullable final WorkflowExecution workflowExecution ) {
+        return workflowExecution == null ?
+            null :
+            workflowExecution.getDomainUuid( );
+      }
+    }
+  }
+
   public enum WorkflowExecutionInfoDateFunctions implements Function<WorkflowExecutionInfo,Date> {
     START_TIMESTAMP {
       @Nullable

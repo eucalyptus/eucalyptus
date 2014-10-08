@@ -227,6 +227,8 @@ public class Bootstrap {
     UpgradeDatabase,
     PoolInit,
     PersistenceInit,
+    RemoteDbPoolInit,
+    RemotePersistenceInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,

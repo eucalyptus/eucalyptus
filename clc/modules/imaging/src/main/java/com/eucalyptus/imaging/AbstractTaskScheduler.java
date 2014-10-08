@@ -109,7 +109,6 @@ public abstract class AbstractTaskScheduler {
     }
   }
 
-  static X509Certificate cloudCert =  null;
   private static Object taskLock = new Object();
   public WorkerTask getTask(final String availabilityZone) throws Exception{
     synchronized(taskLock){
@@ -124,8 +123,6 @@ public abstract class AbstractTaskScheduler {
         throw new Exception("Failed to load public key of the imaging service");
 
       WorkerTask newTask = null;
-      if(cloudCert == null)
-        cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
 
       try{
         if (nextTask instanceof DiskImagingTask){
@@ -163,7 +160,6 @@ public abstract class AbstractTaskScheduler {
           ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
           ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
           ist.setUploadPolicySignature(conversionTask.getImportDisk().getUploadPolicySignature());
-          ist.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
           ist.setServiceCertArn(this.imagingServiceCertArn);
           final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
           final URI osgUri = osg.getUri();
@@ -192,7 +188,6 @@ public abstract class AbstractTaskScheduler {
           im.setFormat(volumeTask.getFormat());
           vt.setImageManifestSet(Lists.newArrayList(im));
           vt.setVolumeId(volumeTask.getVolumeId());
-          vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
           newTask.setVoumeTask(vt);
         }else if (nextTask instanceof ImportInstanceImagingTask){
           final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
@@ -223,7 +218,6 @@ public abstract class AbstractTaskScheduler {
               im.setFormat(volume.getImage().getFormat());
               vt.setImageManifestSet(Lists.newArrayList(im));
               vt.setVolumeId(volume.getVolume().getId());
-              vt.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
               newTask.setVoumeTask(vt);
               break;
             }

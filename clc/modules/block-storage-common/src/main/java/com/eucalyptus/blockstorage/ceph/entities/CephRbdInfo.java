@@ -77,7 +77,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
@@ -85,42 +84,46 @@ import com.google.common.base.Strings;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
-@Table(name = "ceph_info")
+@Table(name = "ceph_rbd_info")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
-@ConfigurableClass(root = "storage", alias = "ceph", description = "Basic Ceph configuration", singleton = false, deferred = true)
-public class CephInfo extends AbstractPersistent {
+@ConfigurableClass(root = "storage", alias = "cephrbd", description = "Configuration for Ceph as an EBS backend", singleton = false, deferred = true)
+public class CephRbdInfo extends AbstractPersistent {
 
 	private static final long serialVersionUID = 1L;
-	private static Logger LOG = Logger.getLogger(CephInfo.class);
+	private static Logger LOG = Logger.getLogger(CephRbdInfo.class);
 
 	public static final String POOL_IMAGE_DELIMITER = "/";
 	public static final String IMAGE_SNAPSHOT_DELIMITER = "@";
 
+	private static final String DEFAULT_CEPH_USER = "eucalyptus";
+	private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";
 	private static final String DEFAULT_CEPH_CONFIG_FILE = "/etc/ceph/ceph.conf";
-	private static final String DEFAULT_CEPH_USER = "admin";
 	private static final String DEFAULT_POOL = "rbd";
 
 	@ConfigurableIdentifier
 	@Column(name = "cluster_name", unique = true)
 	private String clusterName;
-	@ConfigurableField(description = "Absolute path to Ceph config file. If no path is configured, Eucalyptus will default to /etc/ceph/ceph.conf", displayName = "Ceph Configuration File", initial = "/etc/ceph/ceph.conf")
-	@Column(name = "ceph_config_file")
-	private String cephConfigFile;
-	@ConfigurableField(description = "Ceph username to be employed Eucalyptus operations. If no user is configured, Eucalyptus will default to admin", displayName = "Ceph Username", initial = "admin")
+	@ConfigurableField(description = "Ceph username employed by Eucalyptus operations. Default value is 'eucalyptus'", displayName = "Ceph Username", initial = "eucalyptus")
 	@Column(name = "ceph_user")
 	private String cephUser;
-	@ConfigurableField(description = "Ceph storage pools made available to Eucalyptus for EBS volumes. Use a CSV list for configuring multiple pools. "
-			+ "If no pools is configured, Eucalyptus will default to rbd pool", displayName = "Ceph Volume Pools", initial = "rbd", type = ConfigurableFieldType.KEYVALUE)
+	@ConfigurableField(description = "Absolute path to Ceph keyring (ceph.client.eucalyptus.keyring) file. Default value is '/etc/ceph/ceph.client.eucalyptus.keyring'", displayName = "Ceph Keyring File", initial = "/etc/ceph/ceph.client.eucalyptus.keyring")
+	@Column(name = "ceph_keyring_file")
+	private String cephKeyringFile;
+	@ConfigurableField(description = "Absolute path to Ceph configuration (ceph.conf) file. Default value is '/etc/ceph/ceph.conf'", displayName = "Ceph Configuration File", initial = "/etc/ceph/ceph.conf")
+	@Column(name = "ceph_config_file")
+	private String cephConfigFile;
+	@ConfigurableField(description = "Ceph storage pool(s) made available to Eucalyptus for EBS volumes. Use a comma separated list for configuring multiple pools. "
+			+ "Default value is 'rbd'", displayName = "Ceph Volume Pools", initial = "rbd")
 	@Column(name = "ceph_volume_pools")
 	private String cephVolumePools;
-	@ConfigurableField(description = "Ceph storage pools made available to Eucalyptus for EBS snapshots. Use a CSV list for configuring multiple pools. "
-			+ "If no pools is configured, Eucalyptus will default to rbd pool", displayName = "Ceph Snapshot Pools", initial = "rbd", type = ConfigurableFieldType.KEYVALUE)
+	@ConfigurableField(description = "Ceph storage pool(s) made available to Eucalyptus for EBS snapshots. Use a comma separated list for configuring multiple pools. "
+			+ "Default value is 'rbd'", displayName = "Ceph Snapshot Pools", initial = "rbd")
 	@Column(name = "ceph_snapshot_pools")
 	private String cephSnapshotPools;
 	@Column(name = "virsh_secret")
 	private String virshSecret;
 
-	public CephInfo() {
+	public CephRbdInfo() {
 		this.clusterName = StorageProperties.NAME;
 	}
 
@@ -132,20 +135,28 @@ public class CephInfo extends AbstractPersistent {
 		this.clusterName = clusterName;
 	}
 
-	public String getCephConfigFile() {
-		return cephConfigFile;
-	}
-
-	public void setCephConfigFile(String cephConfigFile) {
-		this.cephConfigFile = cephConfigFile;
-	}
-
 	public String getCephUser() {
 		return cephUser;
 	}
 
 	public void setCephUser(String cephUser) {
 		this.cephUser = cephUser;
+	}
+
+	public String getCephKeyringFile() {
+		return cephKeyringFile;
+	}
+
+	public void setCephKeyringFile(String cephKeyringFile) {
+		this.cephKeyringFile = cephKeyringFile;
+	}
+
+	public String getCephConfigFile() {
+		return cephConfigFile;
+	}
+
+	public void setCephConfigFile(String cephConfigFile) {
+		this.cephConfigFile = cephConfigFile;
 	}
 
 	public String getCephVolumePools() {
@@ -188,13 +199,19 @@ public class CephInfo extends AbstractPersistent {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		CephInfo other = (CephInfo) obj;
+		CephRbdInfo other = (CephRbdInfo) obj;
 		if (clusterName == null) {
 			if (other.clusterName != null)
 				return false;
 		} else if (!clusterName.equals(other.clusterName))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "[cephuser=" + cephUser + ", cephkeyringfile=" + cephKeyringFile + ", cephconfigfile=" + cephConfigFile + ", cephvolumepools=" + cephVolumePools
+				+ ", cephsnapshotPools=" + cephSnapshotPools + "]";
 	}
 
 	@PrePersist
@@ -204,27 +221,66 @@ public class CephInfo extends AbstractPersistent {
 		}
 	}
 
-	private static CephInfo generateDefault() {
-		CephInfo info = new CephInfo();
-		info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
+	public boolean isSame(CephRbdInfo other) {
+		if (other == null)
+			return false;
+		if (this == other)
+			return true;
+		if (clusterName == null) {
+			if (other.clusterName != null)
+				return false;
+		} else if (!clusterName.equals(other.clusterName))
+			return false;
+		if (cephUser == null) {
+			if (other.cephUser != null)
+				return false;
+		} else if (!cephUser.equals(other.cephUser))
+			return false;
+		if (cephKeyringFile == null) {
+			if (other.cephKeyringFile != null)
+				return false;
+		} else if (!cephKeyringFile.equals(other.cephKeyringFile))
+			return false;
+		if (cephConfigFile == null) {
+			if (other.cephConfigFile != null)
+				return false;
+		} else if (!cephConfigFile.equals(other.cephConfigFile))
+			return false;
+		if (cephVolumePools == null) {
+			if (other.cephVolumePools != null)
+				return false;
+		} else if (!cephVolumePools.equals(other.cephVolumePools))
+			return false;
+		if (cephSnapshotPools == null) {
+			if (other.getCephSnapshotPools() != null)
+				return false;
+		} else if (!cephSnapshotPools.equals(other.cephSnapshotPools))
+			return false;
+		return true;
+	}
+
+	private static CephRbdInfo generateDefault() {
+		CephRbdInfo info = new CephRbdInfo();
 		info.setCephUser(DEFAULT_CEPH_USER);
+		info.setCephKeyringFile(DEFAULT_CEPH_KEYRING_FILE);
+		info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
 		info.setCephVolumePools(DEFAULT_POOL);
 		info.setCephSnapshotPools(DEFAULT_POOL);
 		return info;
 	}
 
-	public static CephInfo getStorageInfo() {
-		CephInfo info = null;
+	public static CephRbdInfo getStorageInfo() {
+		CephRbdInfo info = null;
 
 		try {
-			info = Transactions.find(new CephInfo());
+			info = Transactions.find(new CephRbdInfo());
 		} catch (Exception e) {
 			LOG.warn("Ceph-RBD information for " + StorageProperties.NAME + " not found. Loading defaults.");
 			try {
 				info = Transactions.saveDirect(generateDefault());
 			} catch (Exception e1) {
 				try {
-					info = Transactions.find(new CephInfo());
+					info = Transactions.find(new CephRbdInfo());
 				} catch (Exception e2) {
 					LOG.warn("Failed to persist and retrieve CephInfo entity");
 				}

@@ -125,7 +125,6 @@
 
   <mapping class="com.eucalyptus.imaging.VolumeTask"  abstract="true">
     <value name="volumeId" field="volumeId"/>
-    <value name="ec2Cert" field="ec2Cert"/>
     <collection name="imageManifestSet" field="imageManifestSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" type="com.eucalyptus.imaging.ImageManifest" />
     </collection>
@@ -137,7 +136,6 @@
     <value name="uploadPolicy" field="uploadPolicy"/>
     <value name="uploadPolicySignature" field="uploadPolicySignature"/>
     <value name="s3Url" field="s3Url"/>
-    <value name="ec2Cert" field="ec2Cert"/>
     <value name="serviceCertArn" field="serviceCertArn"/>
     <collection name="importImageSet" field="importImageSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" type="com.eucalyptus.imaging.ImportDiskImageDetail"/>

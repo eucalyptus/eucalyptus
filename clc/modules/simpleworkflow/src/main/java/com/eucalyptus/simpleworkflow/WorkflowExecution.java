@@ -126,6 +126,9 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domainName;
 
+  @Column( name = "domain_uuid", nullable = false, updatable = false )
+  private String domainUuid;
+
   @Column( name = "task_list", length = 256, nullable = false, updatable = false )
   private String taskList;
 
@@ -204,6 +207,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     final WorkflowExecution workflowExecution = new WorkflowExecution( owner, name );
     workflowExecution.setDomain( domain );
     workflowExecution.setDomainName( domain.getDisplayName( ) );
+    workflowExecution.setDomainUuid( domain.getNaturalId( ) );
     workflowExecution.setWorkflowType( workflowType );
     workflowExecution.setWorkflowId( workflowId );
     workflowExecution.setState( ExecutionStatus.Open );
@@ -407,6 +411,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   public void setDomainName( final String domainName ) {
     this.domainName = domainName;
+  }
+
+  public String getDomainUuid( ) {
+    return domainUuid;
+  }
+
+  public void setDomainUuid( final String domainUuid ) {
+    this.domainUuid = domainUuid;
   }
 
   public String getTaskList( ) {

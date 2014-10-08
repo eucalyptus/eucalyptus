@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,100 +60,90 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.ceph;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy
+import org.apache.log4j.Logger
+import org.logicalcobwebs.proxool.ProxoolException
+import org.logicalcobwebs.proxool.ProxoolFacade
+import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.bootstrap.DatabaseInfo;
+import com.eucalyptus.bootstrap.Host
+import com.eucalyptus.bootstrap.Hosts
+import com.eucalyptus.component.ServiceUris
+import com.eucalyptus.component.id.Database
+import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.LogUtil
 
-import org.apache.log4j.Logger;
+Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool_remote' );
 
-import com.ceph.rbd.RbdException;
-import com.ceph.rbd.RbdImage;
-import com.eucalyptus.blockstorage.ceph.entities.CephInfo;
+ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
+String pool_db_driver = 'org.postgresql.Driver';
+final DatabaseInfo dbInfo = DatabaseInfo.getDatabaseInfo();
+String db_host = dbInfo.getAppendOnlyHost();
+String db_port = dbInfo.getAppendOnlyPort();
+String pool_db_url = String.format("jdbc:postgresql://%s:%s", db_host, db_port );
 
-public class CephOutputStream extends OutputStream {
 
-	private static final Logger LOG = Logger.getLogger(CephOutputStream.class);
+String db_user = null; 
+String db_pass = null;
+if ("localhost".equals(db_host)) {
+  db_user = Databases.userName;
+  db_pass = Databases.password;
+}else {
+  db_user = dbInfo.getAppendOnlyUser();
+  db_pass = dbInfo.getAppendOnlyPassword();
+}
 
-	private CephConnectionManager conn;
-	private RbdImage rbdImage;
-	private long position;
-	private boolean isOpen;
+default_pool_props = [
+      'proxool.simultaneous-build-throttle': '32',
+      'proxool.minimum-connection-count': '8',
+      'proxool.maximum-connection-count': '512',
+      'proxool.prototype-count': '8',
+      'proxool.house-keeping-test-sql': 'SELECT 1=1;',
+      'proxool.house-keeping-sleep-time': '5000',
+      'proxool.test-before-use': 'false',
+      'proxool.test-after-use': 'false',
+      'proxool.trace': 'false',
+      'user': db_user,
+      'password': db_pass,
+    ]
 
-	public CephOutputStream(String imageName, String poolName, CephInfo info) throws IOException {
-		try {
-			conn = CephConnectionManager.getConnection(info, poolName);
-			rbdImage = conn.getRbd().open(imageName);
-			isOpen = true;
-			position = 0;
-		} catch (Exception e) {
-			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
-		}
-	}
+def cleanDbPool = { String db_name ->
+  ProxoolFacade.removeConnectionPool(db_name);
+  LOG.info( "${db_name} Cleaned up remote jdbc pool");
+}
 
-	@Override
-	public void write(int arg0) throws IOException {
-		if (isOpen) {
-			byte[] buffer = new byte[] { (byte) arg0 };
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+def setupDbPool = { String db_name ->
+  LOG.info( "${db_name} Preparing remote jdbc pool" );
+    // Setup proxool
+  proxool_config = new Properties();
+  proxool_config.putAll(default_pool_props);
+  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}";
+  LOG.info( "${db_name} Preparing connection pool:     ${url}" )
+  
+  // Register proxool
+  LOG.trace( proxool_config )
+  ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.disableShutdownHook();
+}
 
-	@Override
-	public void write(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		if (off < 0 || len < 0 || len > (b.length - off)) {
-			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
-		}
+if ("localhost".equals(db_host)){
+  LOG.info("The exising local db pool will be used for append-only data");
+  return
+}
 
-		if (isOpen) {
-			byte buffer[] = new byte[len];
-			for (int i = 0; i < len; i++) { // prepare the buffer to write
-				buffer[i] = b[off + i];
-			}
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+if ((db_user == null || db_user.length() <= 0) ||
+(db_host == null || db_host.length() <= 0) ||
+(db_pass == null || db_pass.length() <= 0)) {
+  LOG.info("Cannot setup remote db pool due to missing parameters");
+  return;
+}
 
-	@Override
-	public void write(byte[] b) throws NullPointerException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		write(b, 0, b.length);
-	}
-
-	@Override
-	public void close() {
-		if (isOpen) {
-			try {
-				conn.getRbd().close(rbdImage);
-			} catch (Exception e) {
-
-			} finally {
-				isOpen = false;
-				conn.disconnect();
-				conn = null;
-				rbdImage = null;
-			}
-		} else {
-			// nothing to do here, stream is not open/already closed
-		}
-	}
+Databases.remoteDatabases().each { db_name ->
+  try{
+    cleanDbPool( db_name );
+  }catch(final ProxoolException ex){
+    ;
+  }
+  setupDbPool( db_name );
 }
