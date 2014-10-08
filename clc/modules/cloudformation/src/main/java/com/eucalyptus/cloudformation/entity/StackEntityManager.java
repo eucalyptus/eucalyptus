@@ -57,11 +57,6 @@ public class StackEntityManager {
         .add(Restrictions.eq("accountId", stackEntity.getAccountId()))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> EntityList = criteria.list();
-      try {
-        throw new Exception();
-      } catch (Exception e) {
-        LOG.error(e,e);
-      }
       if (!EntityList.isEmpty()) {
         throw new AlreadyExistsException("Stack already exists");
       }
