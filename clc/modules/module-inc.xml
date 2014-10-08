@@ -117,9 +117,12 @@
 		</fileset>
 	</path>
 	<path id="test-classpath">
-                <dirset dir="${modules.dir}">
-                        <include name="**/build-test" />
-                </dirset>
+		<fileset dir="${lib.dir}/tests">
+		    <include name="**/*.jar" />
+		</fileset>
+        <dirset dir="${modules.dir}">
+            <include name="**/build-test" />
+        </dirset>
 		<path refid="classpath"/>
  	</path>
 	<path id="runtimeclasspath">
