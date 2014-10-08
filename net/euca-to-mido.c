@@ -96,44 +96,46 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
     }
 
     for (i = 0; i < mido->max_vpcs; i++) {
-        dorun = 0;
-        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
-        pidstr = file2str(pidfile);
-        if (pidstr) {
-            npid = atoi(pidstr);
-        } else {
-            npid = 0;
-        }
-        EUCA_FREE(pidstr);
+        if (strlen(mido->vpcs[i].name)) {
+            dorun = 0;
+            snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
+            pidstr = file2str(pidfile);
+            if (pidstr) {
+                npid = atoi(pidstr);
+            } else {
+                npid = 0;
+            }
+            EUCA_FREE(pidstr);
 
-        if (mode == 0) {
-            if (npid > 1) {
-                if (check_process(npid, "nginx")) {
-                    unlink(pidfile);
+            if (mode == 0) {
+                if (npid > 1) {
+                    if (check_process(npid, "nginx")) {
+                        unlink(pidfile);
+                        dorun = 1;
+                    }
+                } else {
                     dorun = 1;
                 }
-            } else {
-                dorun = 1;
-            }
-        } else if (mode == 1) {
-            if (npid > 1 && !check_process(npid, "nginx")) {
-                dorun = 1;
-            }
-        }
-
-        if (dorun) {
-            if (mode == 0) {
-                LOGDEBUG("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
-                snprintf(cmd, EUCA_MAX_PATH,
-                         "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
-                         mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
             } else if (mode == 1) {
-                LOGDEBUG("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
-                snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+                if (npid > 1 && !check_process(npid, "nginx")) {
+                    dorun = 1;
+                }
             }
-            rc = se_add(&cmds, cmd, NULL, ignore_exit);
-        } else {
-            LOGDEBUG("not maintaining VPC (%s) proxy, no action to take on pid (%d)\n", mido->vpcs[i].name, npid);
+
+            if (dorun) {
+                if (mode == 0) {
+                    LOGDEBUG("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                             "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
+                             mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
+                } else if (mode == 1) {
+                    LOGDEBUG("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
+                    snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+                }
+                rc = se_add(&cmds, cmd, NULL, ignore_exit);
+            } else {
+                LOGDEBUG("not maintaining VPC (%s) proxy, no action to take on pid (%d)\n", mido->vpcs[i].name, npid);
+            }
         }
     }
 
@@ -560,7 +562,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         LOGERROR("could not populate prior to update: see above log entries for details\n");
         return (1);
     }
-
     // temporary print
     LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -2009,7 +2010,6 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
         LOGERROR("cannot create midonet dhcp host entry: check midonet health\n");
         return (1);
     }
-
     // apply the chains to the instance port
     rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, NULL);
     if (rc) {

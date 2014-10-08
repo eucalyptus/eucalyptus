@@ -32,7 +32,8 @@ typedef struct mido_vpc_subnet_t {
 } mido_vpc_subnet;
 
 enum { VPCRT, EUCABR_DOWNLINK, VPCRT_UPLINK, VPCRT_PRECHAIN, VPCRT_POSTCHAIN, VPCRT_PREETHERCHAIN, VPCRT_PREMETACHAIN, VPCRT_PREVPCINTERNALCHAIN, VPCRT_PREELIPCHAIN,
-        VPCRT_PREFWCHAIN, VPCEND };
+    VPCRT_PREFWCHAIN, VPCEND
+};
 typedef struct mido_vpc_t {
     char name[16];
     int rtid;

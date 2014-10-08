@@ -344,7 +344,6 @@ int main(int argc, char **argv)
         }
         exit(0);
     }
-
     // got all config, enter main loop
     //    while(counter<3) {
     while (1) {
