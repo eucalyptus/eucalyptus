@@ -314,7 +314,7 @@ int se_execute(sequence_executor * se)
             failed = 1;
             break;
         } else {
-            LOGDEBUG("COMMAND SUCCESS: command='%s'\n", se->commands[i]);
+            LOGDEBUG("COMMAND SUCCESS: command='%s' stdout='%s' stderr='%s'\n", se->commands[i], out, err);
         }
     }
 

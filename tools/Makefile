@@ -131,6 +131,7 @@ install: build
 	@$(INSTALL) -m 755 conntrack_kernel_params $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
+	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
 	@make -C imaging install
 
 uninstall:
@@ -161,4 +162,5 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/conntrack_kernel_params
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca-upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
 	@make -C imaging uninstall
