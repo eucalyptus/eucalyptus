@@ -36,6 +36,8 @@ import com.amazonaws.services.s3.model.SetBucketLoggingConfigurationRequest;
 import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.TagSet;
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
@@ -57,6 +59,11 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3Versioni
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3WebsiteConfiguration;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3WebsiteConfigurationRoutingRule;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.objectstorage.ObjectStorage;
@@ -64,6 +71,7 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.net.URI;
 import java.util.Collection;
@@ -76,6 +84,114 @@ public class AWSS3BucketResourceAction extends ResourceAction {
 
   private AWSS3BucketProperties properties = new AWSS3BucketProperties();
   private AWSS3BucketResourceInfo info = new AWSS3BucketResourceInfo();
+
+  public AWSS3BucketResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_BUCKET {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
+        URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
+        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+        String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
+        if (s3c.doesBucketExist(bucketName)) {
+          throw new Exception("Bucket " + bucketName + " exists");
+        }
+        s3c.createBucket(bucketName);
+        action.info.setPhysicalResourceId(bucketName);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    ADD_BUCKET_STUFF {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
+        URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
+        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+        String bucketName = action.info.getPhysicalResourceId();
+        if (action.properties.getAccessControl() != null) {
+          s3c.setBucketAcl(bucketName, CannedAccessControlList.valueOf(action.properties.getAccessControl()));
+        }
+        if (action.properties.getCorsConfiguration() != null) {
+          s3c.setBucketCrossOriginConfiguration(bucketName, action.convertCrossOriginConfiguration(action.properties.getCorsConfiguration()));
+        }
+        if (action.properties.getLifecycleConfiguration() != null) {
+          s3c.setBucketLifecycleConfiguration(bucketName, action.convertLifecycleConfiguration(action.properties.getLifecycleConfiguration()));
+        }
+        if (action.properties.getLoggingConfiguration() != null) {
+          s3c.setBucketLoggingConfiguration(action.convertLoggingConfiguration(bucketName, action.properties.getLoggingConfiguration()));
+        }
+        if (action.properties.getNotificationConfiguration() != null) {
+          s3c.setBucketNotificationConfiguration(bucketName, action.convertNotificationConfiguration(action.properties.getNotificationConfiguration()));
+        }
+        List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedCloudFormationResourceTemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags()); // TODO: can we do aws: tags?
+        }
+        s3c.setBucketTaggingConfiguration(bucketName, action.convertTags(tags));
+
+        if (action.properties.getVersioningConfiguration() != null) {
+          s3c.setBucketVersioningConfiguration(action.convertVersioningConfiguration(bucketName, action.properties.getVersioningConfiguration()));
+        }
+        // TODO: website configuration throws an error if called (currently)
+        if (action.properties.getWebsiteConfiguration() != null) {
+          s3c.setBucketWebsiteConfiguration(bucketName, action.convertWebsiteConfiguration(action.properties.getWebsiteConfiguration()));
+        }
+        String domainName = null;
+        if ((serviceURI.getPath() == null || serviceURI.getPath().replace("/","").isEmpty())) {
+          domainName = bucketName + "." + serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "");
+        } else {
+          domainName = serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "") + serviceURI.getPath() + "/" + bucketName;
+        }
+        action.info.setDomainName(JsonHelper.getStringFromJsonNode(new TextNode(domainName)));
+        action.info.setWebsiteURL(JsonHelper.getStringFromJsonNode(new TextNode("http://" + domainName)));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+
+  }
+
+  private enum DeleteSteps implements Step {
+    KICK_BUCKET {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
+        if (action.info.getPhysicalResourceId() == null) return action;
+        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+        s3c.deleteBucket(action.info.getPhysicalResourceId());
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -94,72 +210,6 @@ public class AWSS3BucketResourceAction extends ResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSS3BucketResourceInfo) resourceInfo;
-  }
-
-  @Override
-  public int getNumCreateSteps() {
-    return 2;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
-    User user = Accounts.lookupUserById(getResourceInfo().getEffectiveUserId());
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    String bucketName;
-    switch (stepNum) {
-      case 0:
-        bucketName = properties.getBucketName() != null ? properties.getBucketName() : getDefaultPhysicalResourceId(63).toLowerCase();
-        if (s3c.doesBucketExist(bucketName)) {
-          throw new Exception("Bucket " + bucketName + " exists");
-        }
-        s3c.createBucket(bucketName);
-        info.setPhysicalResourceId(bucketName);
-        break;
-      case 1:
-        bucketName = info.getPhysicalResourceId();
-        if (properties.getAccessControl() != null) {
-          s3c.setBucketAcl(bucketName, CannedAccessControlList.valueOf(properties.getAccessControl()));
-        }
-        if (properties.getCorsConfiguration() != null) {
-          s3c.setBucketCrossOriginConfiguration(bucketName, convertCrossOriginConfiguration(properties.getCorsConfiguration()));
-        }
-        if (properties.getLifecycleConfiguration() != null) {
-          s3c.setBucketLifecycleConfiguration(bucketName, convertLifecycleConfiguration(properties.getLifecycleConfiguration()));
-        }
-        if (properties.getLoggingConfiguration() != null) {
-          s3c.setBucketLoggingConfiguration(convertLoggingConfiguration(bucketName, properties.getLoggingConfiguration()));
-        }
-        if (properties.getNotificationConfiguration() != null) {
-          s3c.setBucketNotificationConfiguration(bucketName, convertNotificationConfiguration(properties.getNotificationConfiguration()));
-        }
-        List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedCloudFormationResourceTemplateTags(properties.getTags());
-          tags.addAll(properties.getTags()); // TODO: can we do aws: tags?
-        }
-        s3c.setBucketTaggingConfiguration(bucketName, convertTags(tags));
-
-        if (properties.getVersioningConfiguration() != null) {
-          s3c.setBucketVersioningConfiguration(convertVersioningConfiguration(bucketName, properties.getVersioningConfiguration()));
-        }
-        // TODO: website configuration throws an error if called (currently)
-        if (properties.getWebsiteConfiguration() != null) {
-          s3c.setBucketWebsiteConfiguration(bucketName, convertWebsiteConfiguration(properties.getWebsiteConfiguration()));
-        }
-        String domainName = null;
-        if ((serviceURI.getPath() == null || serviceURI.getPath().replace("/","").isEmpty())) {
-          domainName = bucketName + "." + serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "");
-        } else {
-          domainName = serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "") + serviceURI.getPath() + "/" + bucketName;
-        }
-        info.setDomainName(JsonHelper.getStringFromJsonNode(new TextNode(domainName)));
-        info.setWebsiteURL(JsonHelper.getStringFromJsonNode(new TextNode("http://" + domainName)));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
   }
 
   private BucketWebsiteConfiguration convertWebsiteConfiguration(S3WebsiteConfiguration websiteConfiguration) {
@@ -296,25 +346,15 @@ public class AWSS3BucketResourceAction extends ResourceAction {
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    User user = Accounts.lookupUserById(getResourceInfo().getEffectiveUserId());
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    s3c.deleteBucket(info.getPhysicalResourceId());
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

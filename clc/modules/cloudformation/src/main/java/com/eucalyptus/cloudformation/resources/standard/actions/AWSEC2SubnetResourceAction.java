@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,6 +31,12 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2SubnetResourc
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2SubnetProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -42,7 +50,6 @@ import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.SubnetIdSetItemType;
 import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.compute.common.VpcIdSetItemType;
@@ -50,6 +57,7 @@ import com.eucalyptus.compute.common.VpcIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +69,99 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
 
   private AWSEC2SubnetProperties properties = new AWSEC2SubnetProperties();
   private AWSEC2SubnetResourceInfo info = new AWSEC2SubnetResourceInfo();
+
+  public AWSEC2SubnetResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_ROUTE_TABLE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        CreateSubnetType createSubnetType = MessageHelper.createMessage(CreateSubnetType.class, action.info.getEffectiveUserId());
+        createSubnetType.setVpcId(action.properties.getVpcId());
+        if (action.properties.getAvailabilityZone() != null) {
+          createSubnetType.setAvailabilityZone(action.properties.getAvailabilityZone());
+        }
+        createSubnetType.setCidrBlock(action.properties.getCidrBlock());
+        CreateSubnetResponseType createSubnetResponseType = AsyncRequests.<CreateSubnetType,CreateSubnetResponseType> sendSync(configuration, createSubnetType);
+        action.info.setPhysicalResourceId(createSubnetResponseType.getSubnet().getSubnetId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        action.info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(createSubnetResponseType.getSubnet().getAvailabilityZone())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        return action;
+      }
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_ROUTE_TABLE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // Check vpc (return if gone)
+        DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+        action.setVpcId(describeVpcsType, action.properties.getVpcId());
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+          return action; // already deleted
+        }
+        // check subnet (return if gone)
+        DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, action.info.getEffectiveUserId());
+        action.setSubnetId(describeSubnetsType, action.info.getPhysicalResourceId());
+        DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType,DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+        if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null || describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
+          return action; // already deleted
+        }
+        DeleteSubnetType deleteSubnetType = MessageHelper.createMessage(DeleteSubnetType.class, action.info.getEffectiveUserId());
+        deleteSubnetType.setSubnetId(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -81,80 +182,6 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
     info = (AWSEC2SubnetResourceInfo) resourceInfo;
   }
 
-  @Override
-  public int getNumCreateSteps() {
-    return 2;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create subnet
-        CreateSubnetType createSubnetType = new CreateSubnetType();
-        createSubnetType.setEffectiveUserId(info.getEffectiveUserId());
-        createSubnetType.setVpcId(properties.getVpcId());
-        if (properties.getAvailabilityZone() != null) {
-          createSubnetType.setAvailabilityZone(properties.getAvailabilityZone());
-        }
-        createSubnetType.setCidrBlock(properties.getCidrBlock());
-        CreateSubnetResponseType createSubnetResponseType = AsyncRequests.<CreateSubnetType,CreateSubnetResponseType> sendSync(configuration, createSubnetType);
-        info.setPhysicalResourceId(createSubnetResponseType.getSubnet().getSubnetId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(createSubnetResponseType.getSubnet().getAvailabilityZone())));
-        break;
-      case 1: // tags
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
-        }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // Check vpc (return if gone)
-    DescribeVpcsType describeVpcsType = new DescribeVpcsType();
-    describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
-    setVpcId(describeVpcsType, properties.getVpcId());
-    DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-    if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
-      return; // already deleted
-    }
-    // check subnet (return if gone)
-    DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType();
-    describeSubnetsType.setEffectiveUserId(info.getEffectiveUserId());
-    setSubnetId(describeSubnetsType, info.getPhysicalResourceId());
-    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType,DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
-    if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null || describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
-      return; // already deleted
-    }
-    DeleteSubnetType deleteSubnetType = new DeleteSubnetType();
-    deleteSubnetType.setEffectiveUserId(info.getEffectiveUserId());
-    deleteSubnetType.setSubnetId(info.getPhysicalResourceId());
-    AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
-  }
 
   private void setSubnetId(DescribeSubnetsType describeSubnetsType, String subnetId) {
     SubnetIdSetType subnetSet = new SubnetIdSetType();
@@ -183,8 +210,15 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

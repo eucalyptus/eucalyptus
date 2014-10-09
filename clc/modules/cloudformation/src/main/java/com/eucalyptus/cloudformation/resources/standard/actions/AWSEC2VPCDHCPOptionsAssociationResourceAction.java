@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -27,13 +29,17 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VPCDHCPOptionsAssociationResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VPCDHCPOptionsAssociationProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.AssociateDhcpOptionsType;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DeleteDhcpOptionsResponseType;
-import com.eucalyptus.compute.common.DeleteDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
@@ -45,8 +51,10 @@ import com.eucalyptus.compute.common.VpcIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -55,6 +63,93 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
 
   private AWSEC2VPCDHCPOptionsAssociationProperties properties = new AWSEC2VPCDHCPOptionsAssociationProperties();
   private AWSEC2VPCDHCPOptionsAssociationResourceInfo info = new AWSEC2VPCDHCPOptionsAssociationResourceInfo();
+
+  public AWSEC2VPCDHCPOptionsAssociationResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_ASSOCIATION {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCDHCPOptionsAssociationResourceAction action = (AWSEC2VPCDHCPOptionsAssociationResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // Check dhcp options (if not "default")
+        if (!"default".equals(action.properties.getDhcpOptionsId())) {
+          DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
+          action.setDhcpOptionsId(describeDhcpOptionsType, action.properties.getDhcpOptionsId());
+          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
+          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+            throw new ValidationErrorException("No such dhcp options: " + action.properties.getDhcpOptionsId());
+          }
+        }
+        // check vpc
+        DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+        action.setVpcId(describeVpcsType, action.properties.getVpcId());
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+          throw new ValidationErrorException("No such vpc: " + action.properties.getVpcId());
+        }
+        AssociateDhcpOptionsType associateDhcpOptionsType = MessageHelper.createMessage(AssociateDhcpOptionsType.class, action.info.getEffectiveUserId());
+        associateDhcpOptionsType.setDhcpOptionsId(action.properties.getDhcpOptionsId());
+        associateDhcpOptionsType.setVpcId(action.properties.getVpcId());
+        AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
+        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_ASSOCIATION {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCDHCPOptionsAssociationResourceAction action = (AWSEC2VPCDHCPOptionsAssociationResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // Check dhcp options (if not "default")
+        if (!"default".equals(action.properties.getDhcpOptionsId())) {
+          DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
+          action.setDhcpOptionsId(describeDhcpOptionsType, action.properties.getDhcpOptionsId());
+          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
+          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+            return action;
+          }
+        }
+        // check vpc
+        DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+        action.setVpcId(describeVpcsType, action.properties.getVpcId());
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+          return action;
+        }
+        AssociateDhcpOptionsType associateDhcpOptionsType = MessageHelper.createMessage(AssociateDhcpOptionsType.class, action.info.getEffectiveUserId());
+        associateDhcpOptionsType.setDhcpOptionsId("default");
+        associateDhcpOptionsType.setVpcId(action.properties.getVpcId());
+        AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -75,41 +170,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
     info = (AWSEC2VPCDHCPOptionsAssociationResourceInfo) resourceInfo;
   }
 
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create dhcp options
-        // Check dhcp options (if not "default")
-        if (!"default".equals(properties.getDhcpOptionsId())) {
-          DescribeDhcpOptionsType describeDhcpOptionsType = new DescribeDhcpOptionsType();
-          describeDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-          setDhcpOptionsId(describeDhcpOptionsType, properties.getDhcpOptionsId());
-          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
-            throw new ValidationErrorException("No such dhcp options: " + properties.getDhcpOptionsId());
-          }
-        }
-        // check vpc
-        DescribeVpcsType describeVpcsType = new DescribeVpcsType();
-        describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
-        setVpcId(describeVpcsType, properties.getVpcId());
-        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
-          throw new ValidationErrorException("No such vpc: " + properties.getVpcId());
-        }
-        AssociateDhcpOptionsType associateDhcpOptionsType = new AssociateDhcpOptionsType();
-        associateDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-        associateDhcpOptionsType.setDhcpOptionsId(properties.getDhcpOptionsId());
-        associateDhcpOptionsType.setVpcId(properties.getVpcId());
-        AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
-        info.setPhysicalResourceId(getDefaultPhysicalResourceId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
   private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
     VpcIdSetType vpcSet = new VpcIdSetType();
     describeVpcsType.setVpcSet(vpcSet);
@@ -135,46 +195,15 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // Check dhcp options (if not "default")
-    if (!"default".equals(properties.getDhcpOptionsId())) {
-      DescribeDhcpOptionsType describeDhcpOptionsType = new DescribeDhcpOptionsType();
-      describeDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-      setDhcpOptionsId(describeDhcpOptionsType, properties.getDhcpOptionsId());
-      DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-      if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
-        return;
-      }
-    }
-    // check vpc
-    DescribeVpcsType describeVpcsType = new DescribeVpcsType();
-    describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
-    setVpcId(describeVpcsType, properties.getVpcId());
-    DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-    if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
-      return;
-    }
-    AssociateDhcpOptionsType associateDhcpOptionsType = new AssociateDhcpOptionsType();
-    associateDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-    associateDhcpOptionsType.setDhcpOptionsId("default");
-    associateDhcpOptionsType.setVpcId(properties.getVpcId());
-    AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

@@ -20,11 +20,22 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSCloudFormationStackResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationStackProperties;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
+
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -33,6 +44,44 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
 
   private AWSCloudFormationStackProperties properties = new AWSCloudFormationStackProperties();
   private AWSCloudFormationStackResourceInfo info = new AWSCloudFormationStackResourceInfo();
+
+  public AWSCloudFormationStackResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+
+  private enum CreateSteps implements Step {
+    NOT_SUPPORTED {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        throw new UnsupportedOperationException();
+      }
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DO_NOTHING {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        return resourceAction; // delete should do nothing because create can't succeed.
+      }
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -54,27 +103,15 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    // can't create so delete should be a NOOP
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    // can't create so rollbackCreate should be a NOOP
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

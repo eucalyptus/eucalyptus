@@ -21,37 +21,151 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
 import com.amazonaws.services.s3.model.S3VersionSummary;
 import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.VersionListing;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
+import com.eucalyptus.cloudformation.bootstrap.CloudFormationAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSCloudFormationWaitConditionHandleResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionHandleProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
-import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
-import java.net.URI;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSCloudFormationWaitConditionHandleResourceAction extends ResourceAction {
 
+  @ConfigurableField(initial = "cf-waitcondition", description = "The prefix of the bucket used for wait condition handles")
+  public static volatile String WAIT_CONDITION_BUCKET_PREFIX = "cf-waitcondition";
   private AWSCloudFormationWaitConditionHandleProperties properties = new AWSCloudFormationWaitConditionHandleProperties();
   private AWSCloudFormationWaitConditionHandleResourceInfo info = new AWSCloudFormationWaitConditionHandleResourceInfo();
+
+  public AWSCloudFormationWaitConditionHandleResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+  }
+
+  private enum CreateSteps implements Step {
+    GET_BUCKET_AND_CREATE_OBJECT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
+        // look for an existing bucket...
+        String bucketName = null;
+        ObjectNode objectNode = null;
+        List<Bucket> buckets = s3c.listBuckets();
+        for (Bucket bucket: buckets) {
+          if (bucket.getName().toLowerCase().startsWith(WAIT_CONDITION_BUCKET_PREFIX.toLowerCase())) {
+            // TODO: what happens if versioning is off?
+            bucketName = bucket.getName();
+          }
+        }
+        if (bucketName == null) {
+          // TODO: check prefix length
+          bucketName = (WAIT_CONDITION_BUCKET_PREFIX + "-" + Crypto.generateAlphanumericId(13, "")).toLowerCase();
+        }
+        s3c.createBucket(bucketName);
+        String keyName = action.getStackEntity().getStackId() + "/" + action.info.getLogicalResourceId() + "/WaitHandle";
+        ObjectMapper mapper = new ObjectMapper();
+        objectNode = mapper.createObjectNode();
+        objectNode.put("version","1.0");
+        objectNode.put("bucket", bucketName);
+        objectNode.put("key", keyName);
+        action.info.setEucaParts(JsonHelper.getStringFromJsonNode(objectNode));
+        String url = s3c.generatePresignedUrl(bucketName, keyName, action.in12Hours(), HttpMethod.PUT).toString();
+        action.info.setPhysicalResourceId(url);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    VERSION_BUCKET {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
+        ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
+        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
+        String bucketName = objectNode.get("bucket").textValue();
+        s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_VERSIONS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
+        if (action.info.getPhysicalResourceId() == null) return action;
+        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
+        ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
+        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
+        String bucketName = objectNode.get("bucket").textValue();
+        String keyName = objectNode.get("key").textValue();
+        if (!s3c.doesBucketExist(bucketName)) {
+          return action;
+        }
+        VersionListing versionListing = s3c.listVersions(bucketName,"");
+        // delete all items under the buckey/key
+        for (S3VersionSummary versionSummary: versionListing.getVersionSummaries()) {
+          if (versionSummary.getKey().equals(keyName)) {
+            s3c.deleteVersion(versionSummary.getBucketName(), versionSummary.getKey(), versionSummary.getVersionId());
+          }
+        }
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -72,87 +186,20 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
     info = (AWSCloudFormationWaitConditionHandleResourceInfo) resourceInfo;
   }
 
-
-  @Override
-  public int getNumCreateSteps() {
-    return 2;
-  }
-  private static final int NUM_ATTEMPTS = 1000;
-  @Override
-  public void create(int stepNum) throws Exception {
-    URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
-    User user = Accounts.lookupUserById(getResourceInfo().getEffectiveUserId());
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    String bucketName = null;
-    ObjectNode objectNode = null;
-    switch (stepNum) {
-      case 0:
-        for (int i=0;i<NUM_ATTEMPTS;i++) {
-          bucketName = "cf-waitcondition-" + user.getUserId() + "-" + Crypto.generateAlphanumericId(13, "");
-          bucketName = bucketName.toLowerCase();
-          if (!s3c.doesBucketExist(bucketName)) {
-            break;
-          }
-        }
-        s3c.createBucket(bucketName);
-        String keyName = getStackEntity().getStackId() + "/" + info.getLogicalResourceId() + "/WaitHandle";
-        ObjectMapper mapper = new ObjectMapper();
-        objectNode = mapper.createObjectNode();
-        objectNode.put("version","1.0");
-        objectNode.put("bucket", bucketName);
-        objectNode.put("key", keyName);
-        info.setEucaParts(JsonHelper.getStringFromJsonNode(objectNode));
-        String url = s3c.generatePresignedUrl(bucketName, keyName, in12Hours(), HttpMethod.PUT).toString();
-        info.setPhysicalResourceId(url);
-        break;
-      case 1:
-        objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(info.getEucaParts());
-        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-        bucketName = objectNode.get("bucket").textValue();
-        s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private Date in12Hours() {
     return new Date(System.currentTimeMillis() + 12 * 60 * 60 * 1000L); // max timeout for handle
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
-    User user = Accounts.lookupUserById(getResourceInfo().getEffectiveUserId());
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(info.getEucaParts());
-    if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-    String bucketName = objectNode.get("bucket").textValue();
-    if (!s3c.doesBucketExist(bucketName)) {
-      return;
-    }
-    VersionListing versionListing = s3c.listVersions(bucketName,"");
-    for (S3VersionSummary versionSummary: versionListing.getVersionSummaries()) {
-      System.out.println(versionSummary.getBucketName() + " " + versionSummary.getKey() + " " + versionSummary.getVersionId());
-      s3c.deleteVersion(versionSummary.getBucketName(), versionSummary.getKey(), versionSummary.getVersionId());
-    }
-    s3c.deleteBucket(bucketName);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

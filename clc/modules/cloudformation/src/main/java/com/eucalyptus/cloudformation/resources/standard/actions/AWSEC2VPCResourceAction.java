@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -30,6 +32,12 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VPCResourceIn
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VPCProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
@@ -44,12 +52,12 @@ import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.VpcIdSetItemType;
 import com.eucalyptus.compute.common.VpcIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +69,121 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
 
   private AWSEC2VPCProperties properties = new AWSEC2VPCProperties();
   private AWSEC2VPCResourceInfo info = new AWSEC2VPCResourceInfo();
+
+  public AWSEC2VPCResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_VPC {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        CreateVpcType createVpcType = MessageHelper.createMessage(CreateVpcType.class, action.info.getEffectiveUserId());
+        createVpcType.setCidrBlock(action.properties.getCidrBlock());
+        if (action.properties.getInstanceTenancy() == null) {
+          createVpcType.setInstanceTenancy("default");
+        } else if (!"default".equals(action.properties.getInstanceTenancy()) && !"dedicated".equals(action.properties.getInstanceTenancy())) {
+          throw new ValidationErrorException("InstanceTenancy must be 'dedicated' or 'default");
+        } else {
+          createVpcType.setInstanceTenancy(action.properties.getInstanceTenancy());
+        }
+        CreateVpcResponseType createVpcResponseType = AsyncRequests.<CreateVpcType,CreateVpcResponseType> sendSync(configuration, createVpcType);
+        action.info.setPhysicalResourceId(createVpcResponseType.getVpc().getVpcId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    SET_DNS_ENTRIES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        ModifyVpcAttributeType modifyVpcAttributeType = MessageHelper.createMessage(ModifyVpcAttributeType.class, action.info.getEffectiveUserId());
+        boolean enableDnsSupport = true; // default value
+        boolean enableDnsHostnames = false; // default value
+        if (action.properties.getEnableDnsSupport() != null) {
+          enableDnsSupport = action.properties.getEnableDnsSupport();
+        }
+        if (action.properties.getEnableDnsHostnames() != null) {
+          enableDnsHostnames = action.properties.getEnableDnsHostnames();
+        }
+        modifyVpcAttributeType.setVpcId(action.info.getPhysicalResourceId());
+        modifyVpcAttributeType.setEnableDnsSupport(action.createAttributeBooleanValueType(enableDnsSupport));
+        modifyVpcAttributeType.setEnableDnsHostnames(action.createAttributeBooleanValueType(enableDnsHostnames));
+        // TODO: does the below return any errors?
+        AsyncRequests.<ModifyVpcAttributeType,ModifyVpcAttributeResponseType> sendSync(configuration, modifyVpcAttributeType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        return action;
+      }
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_VPC {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+        action.setVpcId(describeVpcsType, action.info.getPhysicalResourceId());
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+          return action; // already deleted
+        }
+        DeleteVpcType deleteVpcType = MessageHelper.createMessage(DeleteVpcType.class, action.info.getEffectiveUserId());
+        deleteVpcType.setVpcId(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteVpcType,DeleteVpcResponseType> sendSync(configuration, deleteVpcType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -81,96 +204,10 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
     info = (AWSEC2VPCResourceInfo) resourceInfo;
   }
 
-  @Override
-  public int getNumCreateSteps() {
-    return 3;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create vpc
-        CreateVpcType createVpcType = new CreateVpcType();
-        createVpcType.setCidrBlock(properties.getCidrBlock());
-        createVpcType.setEffectiveUserId(info.getEffectiveUserId());
-        if (properties.getInstanceTenancy() == null) {
-          createVpcType.setInstanceTenancy("default");
-        } else if (!"default".equals(properties.getInstanceTenancy()) && !"dedicated".equals(properties.getInstanceTenancy())) {
-          throw new ValidationErrorException("InstanceTenancy must be 'dedicated' or 'default");
-        } else {
-          createVpcType.setInstanceTenancy(properties.getInstanceTenancy());
-        }
-        CreateVpcResponseType createVpcResponseType = AsyncRequests.<CreateVpcType,CreateVpcResponseType> sendSync(configuration, createVpcType);
-        info.setPhysicalResourceId(createVpcResponseType.getVpc().getVpcId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // set dns entries
-        ModifyVpcAttributeType modifyVpcAttributeType = new ModifyVpcAttributeType();
-        boolean enableDnsSupport = true; // default value
-        boolean enableDnsHostnames = false; // default value
-        if (properties.getEnableDnsSupport() != null) {
-          enableDnsSupport = properties.getEnableDnsSupport();
-        }
-        if (properties.getEnableDnsHostnames() != null) {
-          enableDnsHostnames = properties.getEnableDnsHostnames();
-        }
-        modifyVpcAttributeType.setVpcId(info.getPhysicalResourceId());
-        modifyVpcAttributeType.setEnableDnsSupport(createAttributeBooleanValueType(enableDnsSupport));
-        modifyVpcAttributeType.setEnableDnsHostnames(createAttributeBooleanValueType(enableDnsHostnames));
-        modifyVpcAttributeType.setEffectiveUserId(info.getEffectiveUserId());
-        // TODO: does the below return any errors?
-        AsyncRequests.<ModifyVpcAttributeType,ModifyVpcAttributeResponseType> sendSync(configuration, modifyVpcAttributeType);
-        break;
-      case 2: // tags
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
-        }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private AttributeBooleanValueType createAttributeBooleanValueType(boolean value) {
     AttributeBooleanValueType attributeBooleanValueType = new AttributeBooleanValueType();
     attributeBooleanValueType.setValue(value);
     return attributeBooleanValueType;
-  }
-
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    DescribeVpcsType describeVpcsType = new DescribeVpcsType();
-    describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
-    setVpcId(describeVpcsType, info.getPhysicalResourceId());
-    DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-    if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
-      return; // already deleted
-    }
-    DeleteVpcType deleteVpcType = new DeleteVpcType();
-    deleteVpcType.setEffectiveUserId(info.getEffectiveUserId());
-    deleteVpcType.setVpcId(info.getPhysicalResourceId());
-    AsyncRequests.<DeleteVpcType,DeleteVpcResponseType> sendSync(configuration, deleteVpcType);
   }
 
   private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
@@ -187,8 +224,15 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }
