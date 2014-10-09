@@ -20,8 +20,12 @@
 
 package com.eucalyptus.cloudformation.resources.standard.info
 
+import com.eucalyptus.cloudformation.CloudFormationException
+import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.annotations.AttributeJson
+import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import groovy.transform.ToString
 
 @ToString(includeNames=true)
@@ -50,15 +54,43 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
   public AWSCloudFormationStackResourceInfo() {
     setType("AWS::CloudFormation::Stack");
   }
-  @Override
-  public boolean canCheckAttributes() {
-    return false;
-  }
+
   @Override
   public Collection<String> getRequiredCapabilities() {
     ArrayList<String> capabilities = new ArrayList<String>();
     capabilities.add("CAPABILITY_IAM");
     return capabilities;
+  }
+
+  Map<String, String> outputAttributes = Maps.newLinkedHashMap();
+
+  @Override
+  boolean isAttributeAllowed(String attributeName) {
+    return attributeName != null && attributeName.startsWith("Outputs.");
+  }
+
+  @Override
+  String getResourceAttributeJson(String attributeName) throws CloudFormationException {
+    if (!outputAttributes.containsKey(attributeName)) {
+      throw new ValidationErrorException("Stack does not have an attribute named " + attributeName);
+    } else {
+      return outputAttributes.get(attributeName);
+    }
+  }
+
+  @Override
+  void setResourceAttributeJson(String attributeName, String attributeValueJson) throws CloudFormationException {
+    if (attributeName == null || !attributeName.startsWith("Outputs.")) {
+      throw new ValidationErrorException("Stack can not have an attribute named " + attributeName);
+    } else {
+      outputAttributes.put(attributeName, attributeValueJson);
+    }
+  }
+
+  @Override
+  Collection<String> getAttributeNames() throws CloudFormationException {
+    Collection<String> copy = Lists.newArrayList(outputAttributes.keySet());
+    return copy;
   }
 }
 

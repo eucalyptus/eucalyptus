@@ -29,7 +29,6 @@ import com.eucalyptus.cloudformation.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
-import com.eucalyptus.cloudformation.resources.ResourceAttributeResolver;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.dependencies.CyclicDependencyException;
@@ -727,7 +726,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
-        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+        if (resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -948,7 +947,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
-        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+        if (resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -1078,7 +1077,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (resourceInfoMap.containsKey(refName)) {
         ResourceInfo resourceInfo = resourceInfoMap.get(refName);
-        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+        if (resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         }

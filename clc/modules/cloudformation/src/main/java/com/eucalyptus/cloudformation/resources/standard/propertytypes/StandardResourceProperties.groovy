@@ -113,6 +113,15 @@ public class AWSAutoScalingScalingPolicyProperties implements ResourceProperties
 
 @ToString(includeNames=true)
 public class AWSCloudFormationStackProperties implements ResourceProperties {
+  @Property
+  List<String> notificationARNs = Lists.newArrayList();
+  @Property
+  JsonNode parameters;
+  @Required
+  @Property
+  String templateURL;
+  @Property
+  Integer timeoutInMinutes;
 }
 
 @ToString(includeNames=true)
