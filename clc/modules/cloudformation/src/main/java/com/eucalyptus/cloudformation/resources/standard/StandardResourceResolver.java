@@ -23,7 +23,7 @@ package com.eucalyptus.cloudformation.resources.standard;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolver;
-import com.eucalyptus.cloudformation.resources.standard.actions.AWSAutoScalingAutoScalingGroupResourceAction;
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSEC2SecurityGroupResourceAction;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import org.apache.log4j.Logger;
 
@@ -47,7 +47,7 @@ public class StandardResourceResolver implements ResourceResolver {
 
   @Override
   public ResourceAction resolveResourceAction(String resourceType) {
-    String defaultClassLocation = AWSAutoScalingAutoScalingGroupResourceAction.class.getPackage().getName() + "." + resourceType.replace(":","") + "ResourceAction";
+    String defaultClassLocation = AWSEC2SecurityGroupResourceAction.class.getPackage().getName() + "." + resourceType.replace(":","") + "ResourceAction";
     try {
       return (ResourceAction) Class.forName(defaultClassLocation).newInstance();
     } catch (ClassNotFoundException ex) {

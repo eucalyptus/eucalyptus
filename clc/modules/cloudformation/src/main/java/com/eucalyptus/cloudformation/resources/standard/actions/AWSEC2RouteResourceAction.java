@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -27,6 +29,12 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2RouteResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2RouteProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -44,6 +52,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.List;
 
@@ -54,6 +63,116 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
 
   private AWSEC2RouteProperties properties = new AWSEC2RouteProperties();
   private AWSEC2RouteResourceInfo info = new AWSEC2RouteResourceInfo();
+
+  public AWSEC2RouteResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_ROUTE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2RouteResourceAction action = (AWSEC2RouteResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // property validation
+        action.validateProperties();
+        // Make sure route table exists.
+        if (action.properties.getRouteTableId().isEmpty()) {
+          throw new ValidationErrorException("RouteTableId is a required field");
+        }
+        DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
+        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
+        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
+        routeTableIdSetItem.setRouteTableId(action.properties.getRouteTableId());
+        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
+        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
+        if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
+          describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
+          throw new ValidationErrorException("No such route table with id '" + action.properties.getRouteTableId());
+        }
+        CreateRouteType createRouteType = MessageHelper.createMessage(CreateRouteType.class, action.info.getEffectiveUserId());
+        createRouteType.setRouteTableId(action.properties.getRouteTableId());
+        if (!Strings.isNullOrEmpty(action.properties.getGatewayId())) {
+          createRouteType.setGatewayId(action.properties.getGatewayId());
+        }
+        if (!Strings.isNullOrEmpty(action.properties.getInstanceId())) {
+          createRouteType.setInstanceId(action.properties.getInstanceId());
+        }
+        if (!Strings.isNullOrEmpty(action.properties.getVpcPeeringConnectionId())) {
+          createRouteType.setVpcPeeringConnectionId(action.properties.getVpcPeeringConnectionId());
+        }
+        if (!Strings.isNullOrEmpty(action.properties.getNetworkInterfaceId())) {
+          createRouteType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
+        }
+        createRouteType.setDestinationCidrBlock(action.properties.getDestinationCidrBlock());
+        CreateRouteResponseType createRouteResponseType = AsyncRequests.<CreateRouteType, CreateRouteResponseType>sendSync(configuration, createRouteType);
+        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_ROUTE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2RouteResourceAction action = (AWSEC2RouteResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
+        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
+        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
+        routeTableIdSetItem.setRouteTableId(action.properties.getRouteTableId());
+        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
+        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
+        if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
+          describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
+          return action;
+        }
+        // see if the route is there...
+        boolean foundRoute = false;
+        for (RouteTableType routeTableType: describeRouteTablesResponseType.getRouteTableSet().getItem()) {
+          if (!action.properties.getRouteTableId().equals(routeTableType.getRouteTableId())) continue;
+          if (routeTableType.getRouteSet() == null || routeTableType.getRouteSet().getItem() == null ||
+            routeTableType.getRouteSet().getItem().isEmpty()) {
+            continue; // no routes
+          }
+          for (RouteType routeType : routeTableType.getRouteSet().getItem()) {
+            if (action.equalRoutes(action.properties, routeType)) {
+              foundRoute = true;
+              break;
+            }
+          }
+        }
+        if (!foundRoute) return action;
+        DeleteRouteType deleteRouteType = MessageHelper.createMessage(DeleteRouteType.class, action.info.getEffectiveUserId());
+        deleteRouteType.setRouteTableId(action.properties.getRouteTableId());
+        deleteRouteType.setDestinationCidrBlock(action.properties.getDestinationCidrBlock());
+        DeleteRouteResponseType deleteRouteResponseType = AsyncRequests.<DeleteRouteType, DeleteRouteResponseType>sendSync(configuration, deleteRouteType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -74,54 +193,6 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
     info = (AWSEC2RouteResourceInfo) resourceInfo;
   }
 
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0:
-        // property validation
-        validateProperties();
-        // Make sure route table exists.
-        if (properties.getRouteTableId().isEmpty()) {
-          throw new ValidationErrorException("RouteTableId is a required field");
-        }
-        DescribeRouteTablesType describeRouteTablesType = new DescribeRouteTablesType();
-        describeRouteTablesType.setEffectiveUserId(info.getEffectiveUserId());
-        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-        routeTableIdSetItem.setRouteTableId(properties.getRouteTableId());
-        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
-        if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
-          describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
-          throw new ValidationErrorException("No such route table with id '" + properties.getRouteTableId());
-        }
-        CreateRouteType createRouteType = new CreateRouteType();
-        createRouteType.setEffectiveUserId(info.getEffectiveUserId());
-        createRouteType.setRouteTableId(properties.getRouteTableId());
-        if (!Strings.isNullOrEmpty(properties.getGatewayId())) {
-          createRouteType.setGatewayId(properties.getGatewayId());
-        }
-        if (!Strings.isNullOrEmpty(properties.getInstanceId())) {
-          createRouteType.setInstanceId(properties.getInstanceId());
-        }
-        if (!Strings.isNullOrEmpty(properties.getVpcPeeringConnectionId())) {
-          createRouteType.setVpcPeeringConnectionId(properties.getVpcPeeringConnectionId());
-        }
-        if (!Strings.isNullOrEmpty(properties.getNetworkInterfaceId())) {
-          createRouteType.setNetworkInterfaceId(properties.getNetworkInterfaceId());
-        }
-        createRouteType.setDestinationCidrBlock(properties.getDestinationCidrBlock());
-        CreateRouteResponseType createRouteResponseType = AsyncRequests.<CreateRouteType, CreateRouteResponseType>sendSync(configuration, createRouteType);
-        info.setPhysicalResourceId(getDefaultPhysicalResourceId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private void validateProperties() throws ValidationErrorException {
     // You must provide only one of the following: a GatewayID, InstanceID, NetworkInterfaceId, or VpcPeeringConnectionId.
     List<String> oneOfTheseParams = Lists.newArrayList(properties.getGatewayId(), properties.getInstanceId(),
@@ -133,56 +204,6 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
     if (numNonNullOrEmpty != 1) {
       throw new ValidationErrorException("Exactly one of GatewayID, InstanceID, NetworkInterfaceId, or VpcPeeringConnectionId must be specified");
     }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-
-    DescribeRouteTablesType describeRouteTablesType = new DescribeRouteTablesType();
-    describeRouteTablesType.setEffectiveUserId(info.getEffectiveUserId());
-    RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-    RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-    routeTableIdSetItem.setRouteTableId(properties.getRouteTableId());
-    routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-    describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
-    if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
-      describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
-      return;
-    }
-    // see if the route is there...
-    boolean foundRoute = false;
-    for (RouteTableType routeTableType: describeRouteTablesResponseType.getRouteTableSet().getItem()) {
-      if (!properties.getRouteTableId().equals(routeTableType.getRouteTableId())) continue;
-      if (routeTableType.getRouteSet() == null || routeTableType.getRouteSet().getItem() == null ||
-        routeTableType.getRouteSet().getItem().isEmpty()) {
-        continue; // no routes
-      }
-      for (RouteType routeType : routeTableType.getRouteSet().getItem()) {
-        if (equalRoutes(properties, routeType)) {
-          foundRoute = true;
-          break;
-        }
-      }
-    }
-    if (!foundRoute) return;
-    DeleteRouteType deleteRouteType = new DeleteRouteType();
-    deleteRouteType.setEffectiveUserId(info.getEffectiveUserId());
-    deleteRouteType.setRouteTableId(properties.getRouteTableId());
-    deleteRouteType.setDestinationCidrBlock(properties.getDestinationCidrBlock());
-    DeleteRouteResponseType deleteRouteResponseType = AsyncRequests.<DeleteRouteType, DeleteRouteResponseType>sendSync(configuration, deleteRouteType);
   }
 
   private boolean equalRoutes(AWSEC2RouteProperties properties, RouteType routeType) {
@@ -201,8 +222,15 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

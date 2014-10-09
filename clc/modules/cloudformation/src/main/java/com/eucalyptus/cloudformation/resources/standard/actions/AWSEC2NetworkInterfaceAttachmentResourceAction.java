@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -27,15 +29,17 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2NetworkInterfaceAttachmentResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2NetworkInterfaceAttachmentProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
-import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.AttachNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.AttachNetworkInterfaceType;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeAddressesResponseType;
-import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
@@ -44,14 +48,14 @@ import com.eucalyptus.compute.common.DetachNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.DetachNetworkInterfaceType;
 import com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType;
 import com.eucalyptus.compute.common.NetworkInterfaceIdSetType;
-import com.eucalyptus.compute.common.NetworkInterfaceSetType;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -60,6 +64,102 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends ResourceActi
 
   private AWSEC2NetworkInterfaceAttachmentProperties properties = new AWSEC2NetworkInterfaceAttachmentProperties();
   private AWSEC2NetworkInterfaceAttachmentResourceInfo info = new AWSEC2NetworkInterfaceAttachmentResourceInfo();
+
+  public AWSEC2NetworkInterfaceAttachmentResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_NETWORK_INTERFACE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkInterfaceAttachmentResourceAction action = (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        AttachNetworkInterfaceType attachNetworkInterfaceType = MessageHelper.createMessage(AttachNetworkInterfaceType.class, action.info.getEffectiveUserId());
+        if (action.properties.getInstanceId() != null) {
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
+          describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+            throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
+          }
+          attachNetworkInterfaceType.setInstanceId(action.properties.getInstanceId());
+        }
+        if (action.properties.getNetworkInterfaceId() != null) {
+          DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
+          describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.properties.getNetworkInterfaceId()));
+          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
+          if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+            throw new ValidationErrorException("No such network interface " + action.properties.getNetworkInterfaceId());
+          }
+          attachNetworkInterfaceType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
+        }
+        attachNetworkInterfaceType.setDeviceIndex(action.properties.getDeviceIndex());
+
+        // TODO: figure out to do with delete on terminate...
+        AttachNetworkInterfaceResponseType attachNetworkInterfaceResponseType = AsyncRequests.<AttachNetworkInterfaceType, AttachNetworkInterfaceResponseType> sendSync(configuration, attachNetworkInterfaceType);
+        action.info.setPhysicalResourceId(attachNetworkInterfaceResponseType.getAttachmentId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        // TODO: wait until attached
+
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_NETWORK_INTERFACE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkInterfaceAttachmentResourceAction action = (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // check if network interface still exists (return otherwise)
+        DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
+        describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.properties.getNetworkInterfaceId()));
+        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
+        if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+          describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+          return action;
+        }
+        // TODO: looks like this object has state, deal with attaching, etc.
+        // see if my attachment still exists
+        boolean foundAttachment = false;
+        for (NetworkInterfaceType networkInterfaceType : describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem()) {
+          if (networkInterfaceType.getAttachment() != null && networkInterfaceType.getAttachment().getAttachmentId() != null
+            && networkInterfaceType.getAttachment().getAttachmentId().equals(action.info.getPhysicalResourceId())) {
+            foundAttachment = true;
+            break;
+          }
+        }
+        if (!foundAttachment) return action;
+        DetachNetworkInterfaceType detachNetworkInterfaceType = MessageHelper.createMessage(DetachNetworkInterfaceType.class, action.info.getEffectiveUserId());
+        detachNetworkInterfaceType.setAttachmentId(action.info.getPhysicalResourceId());
+        AsyncRequests.<DetachNetworkInterfaceType, DetachNetworkInterfaceResponseType> sendSync(configuration, detachNetworkInterfaceType);
+        // TODO: wait until detached
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -80,47 +180,6 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends ResourceActi
     info = (AWSEC2NetworkInterfaceAttachmentResourceInfo) resourceInfo;
   }
 
-  @Override
-  public void create(int stepNum) throws Exception {
-    switch (stepNum) {
-      case 0:
-        ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        AttachNetworkInterfaceType attachNetworkInterfaceType = new AttachNetworkInterfaceType();
-        attachNetworkInterfaceType.setEffectiveUserId(info.getEffectiveUserId());
-        if (properties.getInstanceId() != null) {
-          DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-          describeInstancesType.setInstancesSet(Lists.newArrayList(properties.getInstanceId()));
-          describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
-            throw new ValidationErrorException("No such instance " + properties.getInstanceId());
-          }
-          attachNetworkInterfaceType.setInstanceId(properties.getInstanceId());
-        }
-        if (properties.getNetworkInterfaceId() != null) {
-          DescribeNetworkInterfacesType describeNetworkInterfacesType = new DescribeNetworkInterfacesType();
-          describeNetworkInterfacesType.setEffectiveUserId(info.getEffectiveUserId());
-          describeNetworkInterfacesType.setNetworkInterfaceIdSet(convertNetworkInterfaceIdSet(properties.getNetworkInterfaceId()));
-          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-          if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
-            throw new ValidationErrorException("No such network interface " + properties.getNetworkInterfaceId());
-          }
-          attachNetworkInterfaceType.setNetworkInterfaceId(properties.getNetworkInterfaceId());
-        }
-        attachNetworkInterfaceType.setDeviceIndex(properties.getDeviceIndex());
-
-        // TODO: figure out to do with delete on terminate...
-        AttachNetworkInterfaceResponseType attachNetworkInterfaceResponseType = AsyncRequests.<AttachNetworkInterfaceType, AttachNetworkInterfaceResponseType> sendSync(configuration, attachNetworkInterfaceType);
-        info.setPhysicalResourceId(attachNetworkInterfaceResponseType.getAttachmentId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        // TODO: wait until attached
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private NetworkInterfaceIdSetType convertNetworkInterfaceIdSet(String networkInterfaceId) {
     NetworkInterfaceIdSetType networkInterfaceIdSetType = new NetworkInterfaceIdSetType();
     ArrayList<NetworkInterfaceIdSetItemType> item = Lists.newArrayList();
@@ -132,50 +191,15 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends ResourceActi
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-
-    // check if network interface still exists (return otherwise)
-    DescribeNetworkInterfacesType describeNetworkInterfacesType = new DescribeNetworkInterfacesType();
-    describeNetworkInterfacesType.setEffectiveUserId(info.getEffectiveUserId());
-    describeNetworkInterfacesType.setNetworkInterfaceIdSet(convertNetworkInterfaceIdSet(properties.getNetworkInterfaceId()));
-    DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-    if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-      describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
-      return;
-    }
-    // TODO: looks like this object has state, deal with attaching, etc.
-    // see if my attachment still exists
-    boolean foundAttachment = false;
-    for (NetworkInterfaceType networkInterfaceType : describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem()) {
-      if (networkInterfaceType.getAttachment() != null && networkInterfaceType.getAttachment().getAttachmentId() != null
-        && networkInterfaceType.getAttachment().getAttachmentId().equals(info.getPhysicalResourceId())) {
-        foundAttachment = true;
-        break;
-      }
-    }
-    if (!foundAttachment) return;
-    DetachNetworkInterfaceType detachNetworkInterfaceType = new DetachNetworkInterfaceType();
-    detachNetworkInterfaceType.setEffectiveUserId(info.getEffectiveUserId());
-    detachNetworkInterfaceType.setAttachmentId(info.getPhysicalResourceId());
-    AsyncRequests.<DetachNetworkInterfaceType, DetachNetworkInterfaceResponseType> sendSync(configuration, detachNetworkInterfaceType);
-    // TODO: wait until detached
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -27,6 +29,12 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VPCGatewayAttachmentResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VPCGatewayAttachmentProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttachInternetGatewayResponseType;
@@ -53,8 +61,10 @@ import com.eucalyptus.compute.common.VpnGatewayIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -63,6 +73,101 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
 
   private AWSEC2VPCGatewayAttachmentProperties properties = new AWSEC2VPCGatewayAttachmentProperties();
   private AWSEC2VPCGatewayAttachmentResourceInfo info = new AWSEC2VPCGatewayAttachmentResourceInfo();
+
+  public AWSEC2VPCGatewayAttachmentResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCGatewayAttachmentResourceAction action = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getVpcId() != null && action.properties.getVpnGatewayId() != null) {
+          throw new ValidationErrorException("Both VpcId and VpnGatewayId can not be set.");
+        }
+        if (action.properties.getVpcId() == null && action.properties.getVpnGatewayId() == null) {
+          throw new ValidationErrorException("One of VpcId or VpnGatewayId must be set.");
+        }
+        if (action.properties.getVpcId() != null) {
+          AttachInternetGatewayType attachInternetGatewayType = MessageHelper.createMessage(AttachInternetGatewayType.class, action.info.getEffectiveUserId());
+          attachInternetGatewayType.setInternetGatewayId(action.properties.getInternetGatewayId());
+          attachInternetGatewayType.setVpcId(action.properties.getVpcId());
+          AsyncRequests.<AttachInternetGatewayType,AttachInternetGatewayResponseType> sendSync(configuration, attachInternetGatewayType);
+        } else {
+          // TODO: we don't support this right now so maybe log an error if they try to go this way.
+          AttachVpnGatewayType attachVpnGatewayType = MessageHelper.createMessage(AttachVpnGatewayType.class, action.info.getEffectiveUserId());
+          attachVpnGatewayType.setVpnGatewayId(action.properties.getVpnGatewayId());
+          AsyncRequests.<AttachVpnGatewayType,AttachVpnGatewayResponseType> sendSync(configuration, attachVpnGatewayType);
+        }
+        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VPCGatewayAttachmentResourceAction action = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // Check gateway (return if gone)
+        DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
+        action.setInternetGatewayId(describeInternetGatewaysType, action.properties.getInternetGatewayId());
+        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.<DescribeInternetGatewaysType, DescribeInternetGatewaysResponseType>sendSync(configuration, describeInternetGatewaysType);
+        if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
+          return action; // already deleted
+        }
+        if (action.properties.getVpcId() != null) {
+          // Check vpc (return if gone)
+          DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+          action.setVpcId(describeVpcsType, action.properties.getVpcId());
+          DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType, DescribeVpcsResponseType>sendSync(configuration, describeVpcsType);
+          if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+            return action; // already deleted
+          }
+          DetachInternetGatewayType detachInternetGatewayType = MessageHelper.createMessage(DetachInternetGatewayType.class, action.info.getEffectiveUserId());
+          detachInternetGatewayType.setVpcId(action.properties.getVpcId());
+          detachInternetGatewayType.setInternetGatewayId(action.properties.getInternetGatewayId());
+          AsyncRequests.<DetachInternetGatewayType, DetachInternetGatewayResponseType>sendSync(configuration, detachInternetGatewayType);
+        } else {
+          // Check vpn gateway (return if gone)
+          DescribeVpnGatewaysType describeVpnGatewaysType = MessageHelper.createMessage(DescribeVpnGatewaysType.class, action.info.getEffectiveUserId());
+          action.setVpnGatewayId(describeVpnGatewaysType, action.properties.getVpnGatewayId());
+          DescribeVpnGatewaysResponseType describeVpnGatewaysResponseType = AsyncRequests.<DescribeVpnGatewaysType, DescribeVpnGatewaysResponseType>sendSync(configuration, describeVpnGatewaysType);
+          if (describeVpnGatewaysResponseType.getVpnGatewaySet() == null || describeVpnGatewaysResponseType.getVpnGatewaySet().getItem() == null || describeVpnGatewaysResponseType.getVpnGatewaySet().getItem().isEmpty()) {
+            return action; // already deleted
+          }
+          DetachVpnGatewayType detachVpnGatewayType = MessageHelper.createMessage(DetachVpnGatewayType.class, action.info.getEffectiveUserId());
+          detachVpnGatewayType.setVpcId(action.properties.getVpcId());
+          detachVpnGatewayType.setVpnGatewayId(action.properties.getVpnGatewayId());
+          AsyncRequests.<DetachVpnGatewayType, DetachVpnGatewayResponseType>sendSync(configuration, detachVpnGatewayType);
+        }
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy () {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -81,90 +186,6 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2VPCGatewayAttachmentResourceInfo) resourceInfo;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create subnet
-        if (properties.getVpcId() != null && properties.getVpnGatewayId() != null) {
-          throw new ValidationErrorException("Both VpcId and VpnGatewayId can not be set.");
-        }
-        if (properties.getVpcId() == null && properties.getVpnGatewayId() == null) {
-          throw new ValidationErrorException("One of VpcId or VpnGatewayId must be set.");
-        }
-        if (properties.getVpcId() != null) {
-          AttachInternetGatewayType attachInternetGatewayType = new AttachInternetGatewayType();
-          attachInternetGatewayType.setEffectiveUserId(info.getEffectiveUserId());
-          attachInternetGatewayType.setInternetGatewayId(properties.getInternetGatewayId());
-          attachInternetGatewayType.setVpcId(properties.getVpcId());
-          AsyncRequests.<AttachInternetGatewayType,AttachInternetGatewayResponseType> sendSync(configuration, attachInternetGatewayType);
-        } else {
-          // TODO: we don't support this right now so maybe log an error if they try to go this way.
-          AttachVpnGatewayType attachVpnGatewayType = new AttachVpnGatewayType();
-          attachVpnGatewayType.setEffectiveUserId(info.getEffectiveUserId());
-          attachVpnGatewayType.setVpnGatewayId(properties.getVpnGatewayId());
-          AsyncRequests.<AttachVpnGatewayType,AttachVpnGatewayResponseType> sendSync(configuration, attachVpnGatewayType);
-        }
-        info.setPhysicalResourceId(getDefaultPhysicalResourceId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // Check gateway (return if gone)
-    DescribeInternetGatewaysType describeInternetGatewaysType = new DescribeInternetGatewaysType();
-    describeInternetGatewaysType.setEffectiveUserId(info.getEffectiveUserId());
-    setInternetGatewayId(describeInternetGatewaysType, properties.getInternetGatewayId());
-    DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.<DescribeInternetGatewaysType,DescribeInternetGatewaysResponseType> sendSync(configuration, describeInternetGatewaysType);
-    if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
-      return; // already deleted
-    }
-    if (properties.getVpcId() != null) {
-      // Check vpc (return if gone)
-      DescribeVpcsType describeVpcsType = new DescribeVpcsType();
-      describeVpcsType.setEffectiveUserId(info.getEffectiveUserId());
-      setVpcId(describeVpcsType, properties.getVpcId());
-      DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-      if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
-        return; // already deleted
-      }
-      DetachInternetGatewayType detachInternetGatewayType = new DetachInternetGatewayType();
-      detachInternetGatewayType.setEffectiveUserId(info.getEffectiveUserId());
-      detachInternetGatewayType.setVpcId(properties.getVpcId());
-      detachInternetGatewayType.setInternetGatewayId(properties.getInternetGatewayId());
-      AsyncRequests.<DetachInternetGatewayType,DetachInternetGatewayResponseType> sendSync(configuration, detachInternetGatewayType);
-    } else {
-      // Check vpn gateway (return if gone)
-      DescribeVpnGatewaysType describeVpnGatewaysType = new DescribeVpnGatewaysType();
-      describeVpnGatewaysType.setEffectiveUserId(info.getEffectiveUserId());
-      setVpnGatewayId(describeVpnGatewaysType, properties.getVpnGatewayId());
-      DescribeVpnGatewaysResponseType describeVpnGatewaysResponseType = AsyncRequests.<DescribeVpnGatewaysType,DescribeVpnGatewaysResponseType> sendSync(configuration, describeVpnGatewaysType);
-      if (describeVpnGatewaysResponseType.getVpnGatewaySet() == null || describeVpnGatewaysResponseType.getVpnGatewaySet().getItem() == null || describeVpnGatewaysResponseType.getVpnGatewaySet().getItem().isEmpty()) {
-        return; // already deleted
-      }
-      DetachVpnGatewayType detachVpnGatewayType = new DetachVpnGatewayType();
-      detachVpnGatewayType.setEffectiveUserId(info.getEffectiveUserId());
-      detachVpnGatewayType.setVpcId(properties.getVpcId());
-      detachVpnGatewayType.setVpnGatewayId(properties.getVpnGatewayId());
-      AsyncRequests.<DetachVpnGatewayType,DetachVpnGatewayResponseType> sendSync(configuration, detachVpnGatewayType);
-    }
   }
 
   private void setVpnGatewayId(DescribeVpnGatewaysType describeVpnGatewaysType, String vpnGatewayId) {
@@ -208,8 +229,15 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

@@ -85,6 +85,7 @@ import org.hibernate.Criteria;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.Transaction;
 import org.hibernate.collection.internal.AbstractPersistentCollection;
 import org.hibernate.criterion.Criterion;
@@ -92,6 +93,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
@@ -542,8 +544,9 @@ public class Entities {
   }
 
   public static void evictCache( final Object obj ) {
-    final org.hibernate.Cache cache =
-        getTransaction( obj ).getTxState( ).getSession( ).getSessionFactory( ).getCache( );
+    final String ctx = lookatPersistenceContext( obj );
+    final EntityManagerFactoryImpl emf = PersistenceContexts.getEntityManagerFactory( ctx );
+    final org.hibernate.Cache cache = emf.getSessionFactory( ).getCache( );
     cache.evictQueryRegions( );
     cache.evictDefaultQueryRegion( );
     cache.evictCollectionRegions( );
@@ -1265,6 +1268,10 @@ public class Entities {
             Logs.extreme( ).error( ex, ex );
             throw ex;
           }
+          final StaleObjectStateException stale = Exceptions.findCause( ex, StaleObjectStateException.class );
+          if ( stale != null ) try {
+            Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+          } catch ( ClassNotFoundException e ) { /* eviction failure */ }
           try {
             TimeUnit.MILLISECONDS.sleep( 20 );
           } catch ( InterruptedException ex1 ) {

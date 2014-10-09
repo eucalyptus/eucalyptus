@@ -1407,6 +1407,8 @@ int midonet_http_get(char *url, char **out_payload)
     struct mem_params_t mem_writer_params = { 0, 0 };
     int ret = 0;
     long httpcode = 0L;
+    //    struct curl_slist *headers = NULL;
+    //    char hbuf[EUCA_MAX_PATH];
 
     *out_payload = NULL;
 
@@ -1415,6 +1417,15 @@ int midonet_http_get(char *url, char **out_payload)
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mem_writer);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&mem_writer_params);
+
+    /*
+       snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-v1+json", resource_type);
+       headers = curl_slist_append(headers, hbuf);
+       snprintf(hbuf, EUCA_MAX_PATH, "Expect:");
+       headers = curl_slist_append(headers, hbuf);
+       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+     */
+
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         printf("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -1463,6 +1474,7 @@ int midonet_http_put(char *url, char *resource_type, char *payload)
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, mem_reader);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&mem_reader_params);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (long)mem_reader_params.size);
+
     snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-v1+json", resource_type);
     headers = curl_slist_append(headers, hbuf);
     snprintf(hbuf, EUCA_MAX_PATH, "Expect:");
@@ -1720,7 +1732,6 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
 
         dstjobj = json_tokener_parse(name->jsonbuf);
         srcjobj = json_tokener_parse(jsonbuf);
-        EUCA_FREE(jsonbuf);
 
         // special case el removal
         if (!strcmp(name->resource_type, "rules")) {
@@ -1746,6 +1757,7 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
         json_object_put(dstjobj);
 
     //    LOGTRACE("RETURNING %d\n", ret);
+    EUCA_FREE(jsonbuf);
     return (ret);
 }
 

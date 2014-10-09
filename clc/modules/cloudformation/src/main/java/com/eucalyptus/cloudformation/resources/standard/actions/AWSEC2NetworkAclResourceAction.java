@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,6 +31,12 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2NetworkAclRes
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2NetworkAclProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -42,12 +50,11 @@ import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
 import com.eucalyptus.compute.common.NetworkAclIdSetItemType;
 import com.eucalyptus.compute.common.NetworkAclIdSetType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,6 +64,93 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
 
   private AWSEC2NetworkAclProperties properties = new AWSEC2NetworkAclProperties();
   private AWSEC2NetworkAclResourceInfo info = new AWSEC2NetworkAclResourceInfo();
+
+  public AWSEC2NetworkAclResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_NETWORK_ACL {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkAclResourceAction action = (AWSEC2NetworkAclResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        CreateNetworkAclType createNetworkAclType = MessageHelper.createMessage(CreateNetworkAclType.class, action.info.getEffectiveUserId());
+        createNetworkAclType.setVpcId(action.properties.getVpcId());
+        CreateNetworkAclResponseType createNetworkAclResponseType = AsyncRequests.<CreateNetworkAclType, CreateNetworkAclResponseType> sendSync(configuration, createNetworkAclType);
+        action.info.setPhysicalResourceId(createNetworkAclResponseType.getNetworkAcl().getNetworkAclId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkAclResourceAction action = (AWSEC2NetworkAclResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_NETWORK_ACL {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkAclResourceAction action = (AWSEC2NetworkAclResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // See if network ACL is there
+        DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
+        NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
+        NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
+        networkAclIdSetItem.setNetworkAclId(action.info.getPhysicalResourceId());
+        networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
+        describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
+        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+        if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
+          describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
+          return action; // no network acl
+        }
+        DeleteNetworkAclType DeleteNetworkAclType = MessageHelper.createMessage(DeleteNetworkAclType.class, action.info.getEffectiveUserId());
+        DeleteNetworkAclType.setNetworkAclId(action.info.getPhysicalResourceId());
+        DeleteNetworkAclResponseType DeleteNetworkAclResponseType = AsyncRequests.<DeleteNetworkAclType, DeleteNetworkAclResponseType> sendSync(configuration, DeleteNetworkAclType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -78,76 +172,16 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
   }
 
   @Override
-  public int getNumCreateSteps() {
-    return 2;
-  }
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create network acl
-        CreateNetworkAclType createNetworkAclType = new CreateNetworkAclType();
-        createNetworkAclType.setEffectiveUserId(info.getEffectiveUserId());
-        createNetworkAclType.setVpcId(properties.getVpcId());
-        CreateNetworkAclResponseType createNetworkAclResponseType = AsyncRequests.<CreateNetworkAclType, CreateNetworkAclResponseType> sendSync(configuration, createNetworkAclType);
-        info.setPhysicalResourceId(createNetworkAclResponseType.getNetworkAcl().getNetworkAclId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // tag network acl
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
-        }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // See if network acl is there
-    DescribeNetworkAclsType describeNetworkAclsType = new DescribeNetworkAclsType();
-    describeNetworkAclsType.setEffectiveUserId(info.getEffectiveUserId());
-    NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-    NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-    networkAclIdSetItem.setNetworkAclId(info.getPhysicalResourceId());
-    networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-    describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
-    if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
-      describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
-      return; // no network acl
-    }
-    DeleteNetworkAclType DeleteNetworkAclType = new DeleteNetworkAclType();
-    DeleteNetworkAclType.setEffectiveUserId(info.getEffectiveUserId());
-    DeleteNetworkAclType.setNetworkAclId(info.getPhysicalResourceId());
-    DeleteNetworkAclResponseType DeleteNetworkAclResponseType = AsyncRequests.<DeleteNetworkAclType, DeleteNetworkAclResponseType> sendSync(configuration, DeleteNetworkAclType);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
-  }
-
 }
 
 

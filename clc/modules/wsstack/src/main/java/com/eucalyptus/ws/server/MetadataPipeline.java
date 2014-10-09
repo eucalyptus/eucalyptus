@@ -132,17 +132,20 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest request = ( MappingHttpRequest ) ( ( MessageEvent ) e ).getMessage( );
-      String newUri = null;
-      String uri = request.getUri( );
-      InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
-      String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
+      final MappingHttpRequest request = ( MappingHttpRequest ) ( ( MessageEvent ) e ).getMessage( );
+      final String uri = request.getUri( );
+      final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
+      String remoteHostOrInstanceId = remoteAddr.getAddress( ).getHostAddress( );
+      if ( "127.0.0.1".equals( remoteHostOrInstanceId ) && request.containsHeader( "Euca-Instance-Id" ) ) {
+        remoteHostOrInstanceId = request.getHeader( "Euca-Instance-Id"  );
+      }
+      final String newUri;
       if ( uri.startsWith( "/latest/" ) ) {
-        newUri = uri.replaceAll( "/latest[/]+", remoteHost + ":" );
+        newUri = uri.replaceAll( "/latest[/]+", remoteHostOrInstanceId + ":" );
       } else if ( uri.startsWith( "/1.0/" ) ) {
-        newUri = uri.replaceAll( "/1.0[/]+", remoteHost + ":" );
+        newUri = uri.replaceAll( "/1.0[/]+", remoteHostOrInstanceId + ":" );
       } else {
-        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHostOrInstanceId + ":" );
       } 
 
       LOG.trace( "Trying to get metadata: " + newUri );

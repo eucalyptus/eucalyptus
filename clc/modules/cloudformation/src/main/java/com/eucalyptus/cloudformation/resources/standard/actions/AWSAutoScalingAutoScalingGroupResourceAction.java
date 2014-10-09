@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
@@ -48,11 +50,22 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoS
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingAutoScalingGroupProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,10 +73,204 @@ import java.util.List;
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction {
+
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an autoscaling group to have zero instances during delete")
+  public static volatile Integer AUTOSCALING_GROUP_ZERO_INSTANCES_MAX_DELETE_RETRY_SECS = 300;
+
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an autoscaling group to be deleted after deletion)")
+  public static volatile Integer AUTOSCALING_GROUP_DELETED_MAX_DELETE_RETRY_SECS = 300;
 
   private AWSAutoScalingAutoScalingGroupProperties properties = new AWSAutoScalingAutoScalingGroupProperties();
   private AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
+
+  public AWSAutoScalingAutoScalingGroupResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        String autoScalingGroupName = action.getDefaultPhysicalResourceId();
+        // privileged due to tags...
+        CreateAutoScalingGroupType createAutoScalingGroupType = MessageHelper.createPrivilegedMessage(CreateAutoScalingGroupType.class, action.info.getEffectiveUserId());
+        createAutoScalingGroupType.setAutoScalingGroupName(autoScalingGroupName);
+        if (action.properties.getInstanceId() != null) {
+          throw new ValidationErrorException("InstanceId not supported");
+        }
+        if (action.properties.getLaunchConfigurationName() == null) {
+          throw new ValidationErrorException("LaunchConfiguration required (as InstanceId not supported)");
+        }
+        if (action.properties.getAvailabilityZones() != null) {
+          createAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(action.properties.getAvailabilityZones()));
+        }
+        createAutoScalingGroupType.setDefaultCooldown(action.properties.getCooldown());
+        createAutoScalingGroupType.setDesiredCapacity(action.properties.getDesiredCapacity());
+        createAutoScalingGroupType.setHealthCheckGracePeriod(action.properties.getHealthCheckGracePeriod());
+        createAutoScalingGroupType.setLaunchConfigurationName(action.properties.getLaunchConfigurationName());
+        if (action.properties.getLoadBalancerNames() != null) {
+          createAutoScalingGroupType.setLoadBalancerNames(new LoadBalancerNames(action.properties.getLoadBalancerNames()));
+        }
+        createAutoScalingGroupType.setMaxSize(action.properties.getMaxSize());
+        createAutoScalingGroupType.setMinSize(action.properties.getMinSize());
+        if (action.properties.getTerminationPolicies() != null) {
+          createAutoScalingGroupType.setTerminationPolicies(new TerminationPolicies(action.properties.getTerminationPolicies()));
+        }
+        if (action.properties.getVpcZoneIdentifier() != null && action.properties.getVpcZoneIdentifier().size() > 1) {
+//        createAutoScalingGroupType.setVpcZoneIdentifier(Joiner.on(",").join(action.properties.getVpcZoneIdentifier()));
+          throw new Exception("Multiple values for vpc zone identifier not supported");
+        } else if (action.properties.getVpcZoneIdentifier() != null && action.properties.getVpcZoneIdentifier().size() == 1) {
+          createAutoScalingGroupType.setVpcZoneIdentifier(action.properties.getVpcZoneIdentifier().get(0));
+        }
+        List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedAutoScalingTemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        createAutoScalingGroupType.setTags(action.convertTags(tags));
+        AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
+        action.info.setPhysicalResourceId(autoScalingGroupName);
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    ADD_NOTIFICATION_CONFIGURATIONS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (action.properties.getNotificationConfiguration() != null) {
+          PutNotificationConfigurationType putNotificationConfigurationType = MessageHelper.createMessage(PutNotificationConfigurationType.class, action.info.getEffectiveUserId());
+          putNotificationConfigurationType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
+          putNotificationConfigurationType.setTopicARN(action.properties.getNotificationConfiguration().getTopicARN());
+          AutoScalingNotificationTypes autoScalingNotificationTypes = new AutoScalingNotificationTypes();
+          ArrayList<String> member = Lists.newArrayList(action.properties.getNotificationConfiguration().getNotificationTypes());
+          autoScalingNotificationTypes.setMember(member);
+          putNotificationConfigurationType.setNotificationTypes(autoScalingNotificationTypes);
+          AsyncRequests.<PutNotificationConfigurationType,PutNotificationConfigurationResponseType> sendSync(configuration, putNotificationConfigurationType);
+        }
+        return action;
+      }
+    };
+
+    // no retries on these steps
+    @Override
+    public RetryPolicy getRetryPolicy() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    SET_ZERO_CAPACITY {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (groupDoesNotExist(configuration, action)) return action;
+        UpdateAutoScalingGroupType updateAutoScalingGroupType = MessageHelper.createMessage(UpdateAutoScalingGroupType.class, action.info.getEffectiveUserId());
+        updateAutoScalingGroupType.setMinSize(0);
+        updateAutoScalingGroupType.setMaxSize(0);
+        updateAutoScalingGroupType.setDesiredCapacity(0);
+        updateAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
+        updateAutoScalingGroupType.setEffectiveUserId(action.info.getEffectiveUserId());
+        AsyncRequests.<UpdateAutoScalingGroupType, UpdateAutoScalingGroupResponseType>sendSync(configuration, updateAutoScalingGroupType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+
+    VERIFY_ZERO_INSTANCES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (groupDoesNotExist(configuration, action)) return action;
+        DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+        AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+        ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());
+        autoScalingGroupNames.setMember(member);
+        describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+        DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
+        if (action.doesGroupNotExist(describeAutoScalingGroupsResponseType)) {
+          return action; // group is gone...
+        } else {
+          AutoScalingGroupType firstGroup = describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+          if (firstGroup.getInstances() == null || firstGroup.getInstances().getMember() == null || firstGroup.getInstances().getMember().isEmpty()) {
+            return action; // Group has zero instances
+          }
+        }
+        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " still has instances");
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(AUTOSCALING_GROUP_ZERO_INSTANCES_MAX_DELETE_RETRY_SECS).getPolicy();
+      }
+    },
+    DELETE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (groupDoesNotExist(configuration, action)) return action;
+        DeleteAutoScalingGroupType deleteAutoScalingGroupType = MessageHelper.createMessage(DeleteAutoScalingGroupType.class, action.info.getEffectiveUserId());
+        deleteAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteAutoScalingGroupType,DeleteAutoScalingGroupResponseType> sendSync(configuration, deleteAutoScalingGroupType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    VERIFY_GROUP_DELETED {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (groupDoesNotExist(configuration, action)) return action;
+        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " is not yet deleted");
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(AUTOSCALING_GROUP_DELETED_MAX_DELETE_RETRY_SECS).getPolicy();
+      }
+    };
+
+    private static boolean groupDoesNotExist(ServiceConfiguration configuration, AWSAutoScalingAutoScalingGroupResourceAction action) throws Exception {
+      // See if resource was ever populated...
+      if (action.info.getPhysicalResourceId() == null) return true;
+      // See if group still exists
+      DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+      AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+      ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());
+      autoScalingGroupNames.setMember(member);
+      describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+      DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.<DescribeAutoScalingGroupsType, DescribeAutoScalingGroupsResponseType>sendSync(configuration, describeAutoScalingGroupsType);
+      if (action.doesGroupNotExist(describeAutoScalingGroupsResponseType)) {
+        return true;
+      }
+      return false;
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -84,78 +291,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
     info = (AWSAutoScalingAutoScalingGroupResourceInfo) resourceInfo;
   }
 
-  @Override
-  public int getNumCreateSteps() {
-    return 3;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-    switch (stepNum) {
-      case 0:
-        String autoScalingGroupName = getDefaultPhysicalResourceId();
-        CreateAutoScalingGroupType createAutoScalingGroupType = new CreateAutoScalingGroupType();
-        createAutoScalingGroupType.setAutoScalingGroupName(autoScalingGroupName);
-        if (properties.getInstanceId() != null) {
-          throw new ValidationErrorException("InstanceId not supported");
-        }
-        if (properties.getLaunchConfigurationName() == null) {
-          throw new ValidationErrorException("LaunchConfiguration required (as InstanceId not supported)");
-        }
-        if (properties.getAvailabilityZones() != null) {
-          createAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(properties.getAvailabilityZones()));
-        }
-        createAutoScalingGroupType.setDefaultCooldown(properties.getCooldown());
-        createAutoScalingGroupType.setDesiredCapacity(properties.getDesiredCapacity());
-        createAutoScalingGroupType.setHealthCheckGracePeriod(properties.getHealthCheckGracePeriod());
-        createAutoScalingGroupType.setLaunchConfigurationName(properties.getLaunchConfigurationName());
-        if (properties.getLoadBalancerNames() != null) {
-          createAutoScalingGroupType.setLoadBalancerNames(new LoadBalancerNames(properties.getLoadBalancerNames()));
-        }
-        createAutoScalingGroupType.setMaxSize(properties.getMaxSize());
-        createAutoScalingGroupType.setMinSize(properties.getMinSize());
-        if (properties.getTerminationPolicies() != null) {
-          createAutoScalingGroupType.setTerminationPolicies(new TerminationPolicies(properties.getTerminationPolicies()));
-        }
-        if (properties.getVpcZoneIdentifier() != null && properties.getVpcZoneIdentifier().size() > 1) {
-//          createAutoScalingGroupType.setVpcZoneIdentifier(Joiner.on(",").join(properties.getVpcZoneIdentifier()));
-          throw new Exception("Multiple values for vpc zone identifier not supported");
-        } else if (properties.getVpcZoneIdentifier() != null && properties.getVpcZoneIdentifier().size() == 1) {
-            createAutoScalingGroupType.setVpcZoneIdentifier(properties.getVpcZoneIdentifier().get(0));
-        }
-        List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedAutoScalingTemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
-        }
-        createAutoScalingGroupType.setTags(convertTags(tags));
-        createAutoScalingGroupType.setUserId(info.getEffectiveUserId());
-        createAutoScalingGroupType.markPrivileged(); // due to stack aws: tags
-        AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
-        info.setPhysicalResourceId(autoScalingGroupName);
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // add notification configurations
-        if (properties.getNotificationConfiguration() != null) {
-          PutNotificationConfigurationType putNotificationConfigurationType = new PutNotificationConfigurationType();
-          putNotificationConfigurationType.setAutoScalingGroupName(info.getPhysicalResourceId());
-          putNotificationConfigurationType.setTopicARN(properties.getNotificationConfiguration().getTopicARN());
-          AutoScalingNotificationTypes autoScalingNotificationTypes = new AutoScalingNotificationTypes();
-          ArrayList<String> member = Lists.newArrayList(properties.getNotificationConfiguration().getNotificationTypes());
-          autoScalingNotificationTypes.setMember(member);
-          putNotificationConfigurationType.setNotificationTypes(autoScalingNotificationTypes);
-          putNotificationConfigurationType.setEffectiveUserId(info.getEffectiveUserId());
-          AsyncRequests.<PutNotificationConfigurationType,PutNotificationConfigurationResponseType> sendSync(configuration, putNotificationConfigurationType);
-        }
-        break;
-      case 2: // add tags (later)
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private Tags convertTags(List<AutoScalingTag> autoScalingTags) {
     Tags tags = new Tags();
     ArrayList<TagType> member = Lists.newArrayList();
@@ -170,80 +305,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
     return tags;
   }
 
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-    // first see if group exists..
-    DescribeAutoScalingGroupsType describeAutoScalingGroupsType = new DescribeAutoScalingGroupsType();
-    AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
-    ArrayList<String> member = Lists.newArrayList(info.getPhysicalResourceId());
-    autoScalingGroupNames.setMember(member);
-    describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
-    describeAutoScalingGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
-    if (doesGroupNotExist(describeAutoScalingGroupsResponseType)) {
-      return; // group is gone...
-    }
-    // make sure capacity, etc is 0
-    UpdateAutoScalingGroupType updateAutoScalingGroupType = new UpdateAutoScalingGroupType();
-    updateAutoScalingGroupType.setMinSize(0);
-    updateAutoScalingGroupType.setMaxSize(0);
-    updateAutoScalingGroupType.setDesiredCapacity(0);
-    updateAutoScalingGroupType.setAutoScalingGroupName(info.getPhysicalResourceId());
-    updateAutoScalingGroupType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<UpdateAutoScalingGroupType,UpdateAutoScalingGroupResponseType> sendSync(configuration, updateAutoScalingGroupType);
-    boolean zeroInstances = false;
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      DescribeAutoScalingGroupsType describeAutoScalingGroupsType2 = new DescribeAutoScalingGroupsType();
-      AutoScalingGroupNames autoScalingGroupNames2 = new AutoScalingGroupNames();
-      ArrayList<String> member2 = Lists.newArrayList(info.getPhysicalResourceId());
-      autoScalingGroupNames2.setMember(member2);
-      describeAutoScalingGroupsType2.setAutoScalingGroupNames(autoScalingGroupNames2);
-      describeAutoScalingGroupsType2.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType2 = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType2);
-      if (doesGroupNotExist(describeAutoScalingGroupsResponseType2)) {
-        return; // group is gone...
-      } else {
-        AutoScalingGroupType firstGroup = describeAutoScalingGroupsResponseType2.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
-        if (firstGroup.getInstances() == null || firstGroup.getInstances().getMember() == null || firstGroup.getInstances().getMember().isEmpty()) {
-          zeroInstances = true;
-          break;
-        }
-      }
-    }
-    if (!zeroInstances) throw new Exception("Timeout (waiting for 0 instances)");
-    // Now delete it...
-    DeleteAutoScalingGroupType deleteAutoScalingGroupType = new DeleteAutoScalingGroupType();
-    deleteAutoScalingGroupType.setAutoScalingGroupName(info.getPhysicalResourceId());
-    deleteAutoScalingGroupType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeleteAutoScalingGroupType,DeleteAutoScalingGroupResponseType> sendSync(configuration, deleteAutoScalingGroupType);
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      DescribeAutoScalingGroupsType describeAutoScalingGroupsType2 = new DescribeAutoScalingGroupsType();
-      AutoScalingGroupNames autoScalingGroupNames2 = new AutoScalingGroupNames();
-      ArrayList<String> member2 = Lists.newArrayList(info.getPhysicalResourceId());
-      autoScalingGroupNames2.setMember(member2);
-      describeAutoScalingGroupsType2.setAutoScalingGroupNames(autoScalingGroupNames2);
-      describeAutoScalingGroupsType2.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType2 = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType2);
-      if (doesGroupNotExist(describeAutoScalingGroupsResponseType2)) {
-        return; // group is gone...
-      }
-    }
-    throw new Exception("Timeout (waiting for group to be deleted)");
-  }
-
   private boolean doesGroupNotExist(DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType) {
     return describeAutoScalingGroupsResponseType == null || describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult() == null
       || describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups() == null
@@ -252,8 +313,15 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
   }
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

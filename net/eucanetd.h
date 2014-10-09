@@ -126,6 +126,8 @@ typedef struct eucanetdConfig_t {
     char midogwhost[HOSTNAME_SIZE];
     char midogwip[HOSTNAME_SIZE];
     char midogwiface[HOSTNAME_SIZE];
+    char midopubnw[HOSTNAME_SIZE];
+    char midopubgwip[HOSTNAME_SIZE];
 
     atomic_file global_network_info_file;
 

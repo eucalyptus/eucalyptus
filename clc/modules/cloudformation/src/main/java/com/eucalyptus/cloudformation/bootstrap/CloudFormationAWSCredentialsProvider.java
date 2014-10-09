@@ -24,7 +24,7 @@ public class CloudFormationAWSCredentialsProvider implements AWSCredentialsProvi
 
   private volatile Supplier<AWSCredentials> credentialsSupplier;
 
-  CloudFormationAWSCredentialsProvider( ) {
+  public CloudFormationAWSCredentialsProvider( ) {
     refresh( );
   }
 

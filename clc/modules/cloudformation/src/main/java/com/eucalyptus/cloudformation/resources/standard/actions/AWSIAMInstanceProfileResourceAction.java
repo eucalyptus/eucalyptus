@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
 import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
@@ -35,11 +37,21 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSIAMInstanceProfileResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSIAMInstanceProfileProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
+
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -48,6 +60,112 @@ public class AWSIAMInstanceProfileResourceAction extends ResourceAction {
 
   private AWSIAMInstanceProfileProperties properties = new AWSIAMInstanceProfileProperties();
   private AWSIAMInstanceProfileResourceInfo info = new AWSIAMInstanceProfileResourceInfo();
+
+  public AWSIAMInstanceProfileResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_INSTANCE_PROFILE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMInstanceProfileResourceAction action = (AWSIAMInstanceProfileResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String instanceProfileName = action.getDefaultPhysicalResourceId();
+        CreateInstanceProfileType createInstanceProfileType = MessageHelper.createMessage(CreateInstanceProfileType.class, action.info.getEffectiveUserId());
+        createInstanceProfileType.setPath(action.properties.getPath());
+        createInstanceProfileType.setInstanceProfileName(instanceProfileName);
+        CreateInstanceProfileResponseType createInstanceProfileResponseType = AsyncRequests.<CreateInstanceProfileType,CreateInstanceProfileResponseType> sendSync(configuration, createInstanceProfileType);
+        String arn = createInstanceProfileResponseType.getCreateInstanceProfileResult().getInstanceProfile().getArn();
+        action.info.setPhysicalResourceId(instanceProfileName);
+        action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    ADD_ROLES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMInstanceProfileResourceAction action = (AWSIAMInstanceProfileResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getRoles() != null) {
+          for (String roleName: action.properties.getRoles()) {
+            AddRoleToInstanceProfileType addRoleToInstanceProfileType = MessageHelper.createMessage(AddRoleToInstanceProfileType.class, action.info.getEffectiveUserId());
+            addRoleToInstanceProfileType.setInstanceProfileName(action.info.getPhysicalResourceId());
+            addRoleToInstanceProfileType.setRoleName(roleName);
+            AsyncRequests.<AddRoleToInstanceProfileType,AddRoleToInstanceProfileResponseType> sendSync(configuration, addRoleToInstanceProfileType);
+          }
+        }
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_INSTANCE_PROFILE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMInstanceProfileResourceAction action = (AWSIAMInstanceProfileResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // if no instance profile, bye...
+        boolean seenAllInstanceProfiles = false;
+        boolean foundInstanceProfile = false;
+        String instanceProfileMarker = null;
+        while (!seenAllInstanceProfiles && !foundInstanceProfile) {
+          ListInstanceProfilesType listInstanceProfilesType = MessageHelper.createMessage(ListInstanceProfilesType.class, action.info.getEffectiveUserId());
+          if (instanceProfileMarker != null) {
+            listInstanceProfilesType.setMarker(instanceProfileMarker);
+          }
+          ListInstanceProfilesResponseType listInstanceProfilesResponseType = AsyncRequests.<ListInstanceProfilesType,ListInstanceProfilesResponseType> sendSync(configuration, listInstanceProfilesType);
+          if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getIsTruncated() == Boolean.TRUE) {
+            instanceProfileMarker = listInstanceProfilesResponseType.getListInstanceProfilesResult().getMarker();
+          } else {
+            seenAllInstanceProfiles = true;
+          }
+          if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles() != null && listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember() != null) {
+            for (InstanceProfileType instanceProfileType: listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember()) {
+              if (instanceProfileType.getInstanceProfileName().equals(action.info.getPhysicalResourceId())) {
+                foundInstanceProfile = true;
+                break;
+              }
+            }
+          }
+        }
+        // we can delete the instance profile without detaching the role
+
+        if (!foundInstanceProfile) return action;
+
+        DeleteInstanceProfileType deleteInstanceProfileType = MessageHelper.createMessage(DeleteInstanceProfileType.class, action.info.getEffectiveUserId());
+        deleteInstanceProfileType.setInstanceProfileName(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteInstanceProfileType,DeleteInstanceProfileResponseType> sendSync(configuration, deleteInstanceProfileType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -69,93 +187,15 @@ public class AWSIAMInstanceProfileResourceAction extends ResourceAction {
   }
 
   @Override
-  public int getNumCreateSteps() {
-    return 2;
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    switch (stepNum) {
-      case 0: // create instance profile
-        String instanceProfileName = getDefaultPhysicalResourceId();
-        CreateInstanceProfileType createInstanceProfileType = new CreateInstanceProfileType();
-        createInstanceProfileType.setEffectiveUserId(info.getEffectiveUserId());
-        createInstanceProfileType.setPath(properties.getPath());
-        createInstanceProfileType.setInstanceProfileName(instanceProfileName);
-        CreateInstanceProfileResponseType createInstanceProfileResponseType = AsyncRequests.<CreateInstanceProfileType,CreateInstanceProfileResponseType> sendSync(configuration, createInstanceProfileType);
-        String arn = createInstanceProfileResponseType.getCreateInstanceProfileResult().getInstanceProfile().getArn();
-        info.setPhysicalResourceId(instanceProfileName);
-        info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // add policies
-        if (properties.getRoles() != null) {
-          for (String roleName: properties.getRoles()) {
-            AddRoleToInstanceProfileType addRoleToInstanceProfileType = new AddRoleToInstanceProfileType();
-            addRoleToInstanceProfileType.setEffectiveUserId(info.getEffectiveUserId());
-            addRoleToInstanceProfileType.setInstanceProfileName(info.getPhysicalResourceId());
-            addRoleToInstanceProfileType.setRoleName(roleName);
-            AsyncRequests.<AddRoleToInstanceProfileType,AddRoleToInstanceProfileResponseType> sendSync(configuration, addRoleToInstanceProfileType);
-          }
-        }
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    // if no instance profile, bye...
-    boolean seenAllInstanceProfiles = false;
-    boolean foundInstanceProfile = false;
-    String instanceProfileMarker = null;
-    while (!seenAllInstanceProfiles && !foundInstanceProfile) {
-      ListInstanceProfilesType listInstanceProfilesType = new ListInstanceProfilesType();
-      listInstanceProfilesType.setEffectiveUserId(info.getEffectiveUserId());
-      if (instanceProfileMarker != null) {
-        listInstanceProfilesType.setMarker(instanceProfileMarker);
-      }
-      ListInstanceProfilesResponseType listInstanceProfilesResponseType = AsyncRequests.<ListInstanceProfilesType,ListInstanceProfilesResponseType> sendSync(configuration, listInstanceProfilesType);
-      if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getIsTruncated() == Boolean.TRUE) {
-        instanceProfileMarker = listInstanceProfilesResponseType.getListInstanceProfilesResult().getMarker();
-      } else {
-        seenAllInstanceProfiles = true;
-      }
-      if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles() != null && listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember() != null) {
-        for (InstanceProfileType instanceProfileType: listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember()) {
-          if (instanceProfileType.getInstanceProfileName().equals(info.getPhysicalResourceId())) {
-            foundInstanceProfile = true;
-            break;
-          }
-        }
-      }
-    }
-    // we can delete the instance profile without detaching the role
-
-    if (!foundInstanceProfile) return;
-
-    DeleteInstanceProfileType deleteInstanceProfileType = new DeleteInstanceProfileType();
-    deleteInstanceProfileType.setInstanceProfileName(info.getPhysicalResourceId());
-    deleteInstanceProfileType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeleteInstanceProfileType,DeleteInstanceProfileResponseType> sendSync(configuration, deleteInstanceProfileType);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

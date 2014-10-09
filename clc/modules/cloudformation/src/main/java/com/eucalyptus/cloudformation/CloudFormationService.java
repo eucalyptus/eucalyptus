@@ -20,9 +20,14 @@
 
 package com.eucalyptus.cloudformation;
 
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
+import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest;
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
@@ -30,19 +35,31 @@ import com.eucalyptus.cloudformation.entity.StackEventEntity;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
+import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
+import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
 import com.eucalyptus.cloudformation.template.url.S3Helper;
 import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowDescriptionTemplate;
+import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
+import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
@@ -53,6 +70,10 @@ import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.netflix.glisten.InterfaceBasedWorkflowClient;
+import com.netflix.glisten.WorkflowClientFactory;
+import com.netflix.glisten.WorkflowDescriptionTemplate;
+import com.netflix.glisten.WorkflowTags;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -202,7 +223,36 @@ public class CloudFormationService {
         stackResourceEntity.setRecordDeleted(Boolean.FALSE);
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
-      new StackCreator(stackEntity, userId, onFailure).start();
+
+      Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
+      StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+      WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
+      InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
+        .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, new WorkflowTags(), timeoutInSeconds, null);
+
+      CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
+      createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
+      StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
+        StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
+        CloudFormationBootstrapper.SWF_DOMAIN,
+        createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
+        createStackWorkflowClient.getWorkflowExecution().getRunId());
+
+      WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+      WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
+      InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
+        .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, new WorkflowTags());
+
+      MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
+      monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
+
+
+      StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
+        StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
+        CloudFormationBootstrapper.SWF_DOMAIN,
+        monitorCreateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
+        monitorCreateStackWorkflowClient.getWorkflowExecution().getRunId());
+
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);
@@ -306,27 +356,45 @@ public class CloudFormationService {
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
       if (stackEntity != null) {
-        if (stackEntity.getStackStatus() == StackEntity.Status.CREATE_IN_PROGRESS || stackEntity.getStackStatus() == StackEntity.Status.ROLLBACK_IN_PROGRESS ||
-          stackEntity.getStackStatus() == StackEntity.Status.DELETE_IN_PROGRESS) {
-          Date mostRecentActionDate = getLatestDate(stackEntity);
-          List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackEntity.getStackId(), accountId); 
-          if (stackResourceEntityList != null) {
-            for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
-              mostRecentActionDate = newestDate(mostRecentActionDate, getLatestDate(stackResourceEntity));
-            }
+        // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
+        boolean existingOpenDeleteWorkflow = false;
+        List<StackWorkflowEntity> deleteWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW);
+        if (deleteWorkflows != null) {
+          if (deleteWorkflows.size() == 1) {
+            throw new ValidationErrorException("More than one delete workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
           }
-          List<StackEventEntity> stackEventEntityList = StackEventEntityManager.getStackEventEntitiesById(stackEntity.getStackId(), accountId);
-          if (stackEventEntityList != null) {
-            for (StackEventEntity stackEventEntity: stackEventEntityList) {
-              mostRecentActionDate = newestDate(mostRecentActionDate, getLatestDate(stackEventEntity));
+          // see if the workflow is open
+          try {
+            AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+            StackWorkflowEntity deleteStackWorkflowEntity = deleteWorkflows.get(0);
+            DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+            describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
+            WorkflowExecution execution = new WorkflowExecution();
+            execution.setRunId(deleteStackWorkflowEntity.getRunId());
+            execution.setWorkflowId(deleteStackWorkflowEntity.getWorkflowId());
+            describeWorkflowExecutionRequest.setExecution(execution);
+            WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+            if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+              existingOpenDeleteWorkflow = true;
             }
-          }
-          // TODO: make this a property
-          if (mostRecentActionDate != null && (System.currentTimeMillis() - mostRecentActionDate.getTime() < 60 * 60 * 1000L)) { // been less than an hour since we tried to delete the stack?
-            throw new StackOperationInProgressException("A stack operation is ongoing (" + stackEntity.getStackStatus() + "), please try again later.");
+          } catch (Exception ex) {
+            LOG.error("Unable to get status of delete workflow for " + stackEntity.getStackId() + ", assuming not open");
+            LOG.debug(ex);
           }
         }
-        new StackDeletor(stackEntity, userId).start();
+        if (!existingOpenDeleteWorkflow) {
+          WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+          WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
+          InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
+            .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, new WorkflowTags());
+          DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
+          deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId);
+          StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
+            StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
+            CloudFormationBootstrapper.SWF_DOMAIN,
+            client.getWorkflowExecution().getWorkflowId(),
+            client.getWorkflowExecution().getRunId());
+        }
       }
     } catch (Exception ex) {
       LOG.error(ex, ex);
@@ -334,35 +402,6 @@ public class CloudFormationService {
     }
     return reply;
   }
-
-  private Date getLatestDate(StackEntity stackEntity) {
-    return newestDate(stackEntity.getCreateOperationTimestamp(), stackEntity.getDeleteOperationTimestamp(), stackEntity.getLastUpdateOperationTimestamp(), stackEntity.getCreationTimestamp(), stackEntity.getLastUpdateTimestamp());
-  }
-
-  private Date getLatestDate(StackResourceEntity stackResourceEntity) {
-    return newestDate(stackResourceEntity.getCreationTimestamp(), stackResourceEntity.getLastUpdateTimestamp());
-  }
-
-  private Date getLatestDate(StackEventEntity stackEventEntity) {
-    return newestDate(stackEventEntity.getTimestamp(), stackEventEntity.getCreationTimestamp(), stackEventEntity.getLastUpdateTimestamp());
-  }
-
-
-  private Date newestDate(Date... dates) {
-    Date latestDate = null;
-    for (Date date: dates) {
-      if (date == null) continue;
-      if (date != null && latestDate == null) {
-        latestDate = date;
-        continue;
-      }
-      if (date.after(latestDate)) {
-        latestDate = date;
-      }
-    }
-    return latestDate;
-  }
-
 
   public DescribeStackEventsResponseType describeStackEvents(DescribeStackEventsType request)
       throws CloudFormationException {
