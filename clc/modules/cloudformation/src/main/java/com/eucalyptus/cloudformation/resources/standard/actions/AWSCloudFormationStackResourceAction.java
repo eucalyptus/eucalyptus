@@ -64,6 +64,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import org.apache.log4j.Logger;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -72,7 +73,7 @@ import java.util.List;
  * Created by ethomas on 2/3/14.
  */
 public class AWSCloudFormationStackResourceAction extends ResourceAction {
-
+  private static final Logger LOG = Logger.getLogger(AWSCloudFormationStackResourceAction.class);
   private AWSCloudFormationStackProperties properties = new AWSCloudFormationStackProperties();
   private AWSCloudFormationStackResourceInfo info = new AWSCloudFormationStackResourceInfo();
 
@@ -122,6 +123,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
             }
           }
         }
+        createStackType.setTemplateURL(action.properties.getTemplateURL());
         // assuming here, we should have an IAM_CAPABILITY item
         ResourceList capabilities = new ResourceList();
         capabilities.getMember().add("CAPABILITY_IAM");
@@ -192,7 +194,8 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
         Outputs outputs = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getOutputs();
         if (outputs != null && outputs.getMember() != null && !outputs.getMember().isEmpty()) {
           for (Output output: outputs.getMember()) {
-            action.info.getOutputAttributes().put("Outputs." + output.getOutputKey(), JsonHelper.getStringFromJsonNode(new TextNode(output.getOutputValue())));
+            // lower case for outputs as other attribute field names start lower case...
+            action.info.getOutputAttributes().put("outputs." + output.getOutputKey(), JsonHelper.getStringFromJsonNode(new TextNode(output.getOutputValue())));
           }
         }
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
@@ -267,8 +270,12 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
         if (status == null) {
           throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
         }
-        if (!status.startsWith("DELETED")) {
-          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is no longer being deleted.");
+        if (status.equals(StackEntity.Status.DELETE_IN_PROGRESS.toString())) {
+          throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being deleted.");
+        }
+        // TODO: consider this logic
+        if (status.endsWith("IN_PROGRESS")) {
+          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is in the middle of " + status + ", not deleting");
         }
         if (status.equals(StackEntity.Status.DELETE_COMPLETE.toString())) {
           return action;
@@ -276,10 +283,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
         if (status.equals(StackEntity.Status.DELETE_FAILED.toString())) {
           throw new ResourceFailureException("Deleting stack " + action.info.getPhysicalResourceId() + " failed");
         }
-        if (status.equals(StackEntity.Status.DELETE_IN_PROGRESS.toString())) {
-          throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being deleted.");
-        }
-        return action;
+        throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " current status is " + status + ", maybe not yet started deleting?");
       }
 
       @Override

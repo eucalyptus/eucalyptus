@@ -24,6 +24,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
 import java.util.ArrayList;
@@ -95,8 +96,10 @@ public class StackEventEntityManager {
             Entities.transactionFor( StackEventEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEventEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.or(Restrictions.eq("stackId", stackNameOrId), Restrictions.eq("stackName", stackNameOrId)));
-      // don't even care if it is deleted
+        .add(Restrictions.or(
+            Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+            Restrictions.eq("stackId", stackNameOrId))
+        ).addOrder( Order.desc("timestamp") );
       List<StackEventEntity> results = criteria.list();
       if (results != null) {
         for (StackEventEntity stackEventEntity: results) {

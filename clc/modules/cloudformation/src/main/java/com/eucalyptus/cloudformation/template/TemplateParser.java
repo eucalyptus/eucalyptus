@@ -726,7 +726,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
-        if (resourceInfo.isAttributeAllowed(attName)) {
+        if (!resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -947,7 +947,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
-        if (resourceInfo.isAttributeAllowed(attName)) {
+        if (!resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -1077,7 +1077,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (resourceInfoMap.containsKey(refName)) {
         ResourceInfo resourceInfo = resourceInfoMap.get(refName);
-        if (resourceInfo.isAttributeAllowed(attName)) {
+        if (!resourceInfo.isAttributeAllowed(attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         }

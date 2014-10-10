@@ -148,8 +148,9 @@ public class CommonDeleteRollbackPromises {
             waitFor(promiseFor(resourceAction.getDeletePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId))) {
               return promiseFor(activities.finalizeDeleteResource(resourceId, stackId, accountId, effectiveUserId));
             }
-          }.withCatch {
-            return promiseFor(activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId));
+          }.withCatch { Throwable t->
+            Throwable rootCause = Throwables.getRootCause(t);
+            return promiseFor(activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage()));
           }.getResult();
         }
       }

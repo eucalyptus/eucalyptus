@@ -66,7 +66,7 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
 
   @Override
   boolean isAttributeAllowed(String attributeName) {
-    return attributeName != null && attributeName.startsWith("Outputs.");
+    return attributeName != null && (attributeName.startsWith("Outputs.") || attributeName.startsWith("outputs."));
   }
 
   @Override
@@ -80,7 +80,7 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
 
   @Override
   void setResourceAttributeJson(String attributeName, String attributeValueJson) throws CloudFormationException {
-    if (attributeName == null || !attributeName.startsWith("Outputs.")) {
+    if (attributeName == null || !(attributeName.startsWith("Outputs.") || attributeName.startsWith("outputs."))) {
       throw new ValidationErrorException("Stack can not have an attribute named " + attributeName);
     } else {
       outputAttributes.put(attributeName, attributeValueJson);
