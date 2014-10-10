@@ -398,6 +398,10 @@ class SubnetType extends EucalyptusData implements VpcTagged {
   static Function<SubnetType, String> id( ) {
     { SubnetType subnet -> subnet.subnetId } as Function<SubnetType, String>
   }
+
+  static Function<SubnetType, String> zone( ) {
+    { SubnetType subnet -> subnet.availabilityZone } as Function<SubnetType, String>
+  }
 }
 class DescribeRouteTablesResponseType extends VpcMessage {
   RouteTableSetType routeTableSet = new RouteTableSetType();

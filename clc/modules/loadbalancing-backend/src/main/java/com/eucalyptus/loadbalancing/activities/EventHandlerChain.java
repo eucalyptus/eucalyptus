@@ -32,15 +32,15 @@ import com.google.common.collect.Lists;
  */
 public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 	private static Logger    LOG     = Logger.getLogger( EventHandlerChain.class );
-	private final List<EventHandler<T>> handlers =
+	private final List<EventHandler<? super T>> handlers =
 			Lists.newArrayList();
-	protected void insert(EventHandler<T> next) {
+	protected void insert(EventHandler<? super T> next) {
 		handlers.add(next);
 	}
 
 	public void execute(T evt) throws EventHandlerChainException{
-		LinkedList<EventHandler<T>> reverseHandler = Lists.newLinkedList();
-		for (EventHandler<T> handler : this.handlers){
+		LinkedList<EventHandler<? super T>> reverseHandler = Lists.newLinkedList();
+		for (EventHandler<? super T> handler : this.handlers){
 			try{
 				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
@@ -54,7 +54,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 					String.format("failed handling %s at %s", evt, handler);
 				final EventHandlerChainException toThrow = 
 						new EventHandlerChainException(msg, e, true);
-				for (EventHandler<T> h : reverseHandler){
+				for (EventHandler<? super T> h : reverseHandler){
 					try{
 						h.rollback();
 					}catch(Exception ex){
@@ -72,7 +72,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 	
 	@SuppressWarnings("unchecked")
 	public <HT> HT findHandler(Class<HT> handlerType){
-		for (EventHandler<T> handler : this.handlers){
+		for (EventHandler<? super T> handler : this.handlers){
 			if (handler.getClass().isAssignableFrom(handlerType)){
 				return (HT) handler;
 			}

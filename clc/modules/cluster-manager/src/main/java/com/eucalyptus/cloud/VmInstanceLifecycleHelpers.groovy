@@ -615,7 +615,7 @@ class VmInstanceLifecycleHelpers {
       final String vpcId = allocation?.subnet?.vpc?.displayName ?: defaultVpcId
       final boolean isVpc = vpcId != null
       if ( networkNames.isEmpty( ) && networkIds.isEmpty( ) ) {
-        Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
+        if ( !isVpc ) Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
           NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
         }
         networkNames.add( NetworkGroups.defaultNetworkName( ) )

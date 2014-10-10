@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
@@ -44,6 +43,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
@@ -310,20 +310,13 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     @Override
     public LoadBalancerPolicyDescription apply(
         LoadBalancerPolicyDescriptionCoreView arg0) {
-      final EntityTransaction db = Entities.get(LoadBalancerPolicyDescription.class);
-      LoadBalancerPolicyDescription policy = null;
-      try{
-        policy = Entities.uniqueResult(arg0.policyDesc);
-        db.commit();
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
+        return Entities.uniqueResult(arg0.policyDesc);
       }catch(final NoSuchElementException ex){
         throw ex;
       }catch (final Exception ex) {
         throw Exceptions.toUndeclared(ex);
-      }finally{
-        if(db.isActive())
-          db.rollback();
       }
-      return policy;
     }
   }
 }

@@ -24,8 +24,37 @@
   </mapping>
   <mapping name="DescribeLoadBalancersByServoResponse" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
-    <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersResult"/>
+    <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult" abstract="true">
+    <structure name="LoadBalancerDescriptions" field="loadBalancerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions"/>
+    <value name="NextMarker" field="nextMarker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription">
+        <!-- BEGIN - Duplicated binding from LoadBalancerDescription -->
+        <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+        <value name="DNSName" field="dnsName" usage="optional"/>
+        <value name="CanonicalHostedZoneName" field="canonicalHostedZoneName" usage="optional"/>
+        <value name="CanonicalHostedZoneNameID" field="canonicalHostedZoneNameID" usage="optional"/>
+        <structure name="ListenerDescriptions" field="listenerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions"/>
+        <structure name="Policies" field="policies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Policies"/>
+        <structure name="BackendServerDescriptions" field="backendServerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions"/>
+        <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones"/>
+        <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Subnets"/>
+        <value name="VPCId" field="vpcId" usage="optional"/>
+        <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Instances"/>
+        <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.HealthCheck"/>
+        <structure name="SourceSecurityGroup" field="sourceSecurityGroup" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SourceSecurityGroup"/>
+        <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SecurityGroups"/>
+        <value name="CreatedTime" field="createdTime" usage="optional"/>
+        <value name="Scheme" field="scheme" usage="optional"/>
+        <!-- END Duplicated binding from LoadBalancerDescription -->
+        <structure name="LoadBalancerAttributes" field="loadBalancerAttributes" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes"/>
+      </structure>
+    </collection>
   </mapping>
   <mapping name="PutServoStates" class="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
@@ -367,24 +396,6 @@
       <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescription"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription" abstract="true">
-    <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
-    <value name="DNSName" field="dnsName" usage="optional"/>
-    <value name="CanonicalHostedZoneName" field="canonicalHostedZoneName" usage="optional"/>
-    <value name="CanonicalHostedZoneNameID" field="canonicalHostedZoneNameID" usage="optional"/>
-    <structure name="ListenerDescriptions" field="listenerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions"/>
-    <structure name="Policies" field="policies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Policies"/>
-    <structure name="BackendServerDescriptions" field="backendServerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions"/>
-    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones"/>
-    <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Subnets"/>
-    <value name="VPCId" field="vpcId" usage="optional"/>
-    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Instances"/>
-    <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.HealthCheck"/>
-    <structure name="SourceSecurityGroup" field="sourceSecurityGroup" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SourceSecurityGroup"/>
-    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SecurityGroups"/>
-    <value name="CreatedTime" field="createdTime" usage="optional"/>
-    <value name="Scheme" field="scheme" usage="optional"/>
-  </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.PolicyDescription"/>
@@ -413,7 +424,27 @@
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescriptions" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription"/>
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription">
+        <!-- NOTE: These bindings are duplicated for LoadBalancerServoDescription -->
+        <!-- Please copy any changes so LoadBalancerServoDescription is an        -->
+        <!-- extension of this mapping -->
+        <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+        <value name="DNSName" field="dnsName" usage="optional"/>
+        <value name="CanonicalHostedZoneName" field="canonicalHostedZoneName" usage="optional"/>
+        <value name="CanonicalHostedZoneNameID" field="canonicalHostedZoneNameID" usage="optional"/>
+        <structure name="ListenerDescriptions" field="listenerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions"/>
+        <structure name="Policies" field="policies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Policies"/>
+        <structure name="BackendServerDescriptions" field="backendServerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions"/>
+        <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones"/>
+        <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Subnets"/>
+        <value name="VPCId" field="vpcId" usage="optional"/>
+        <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Instances"/>
+        <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.HealthCheck"/>
+        <structure name="SourceSecurityGroup" field="sourceSecurityGroup" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SourceSecurityGroup"/>
+        <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SecurityGroups"/>
+        <value name="CreatedTime" field="createdTime" usage="optional"/>
+        <value name="Scheme" field="scheme" usage="optional"/>
+      </structure>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.PolicyNames" abstract="true">
@@ -519,6 +550,119 @@
     <structure name="AppCookieStickinessPolicies" field="appCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies"/>
     <structure name="LBCookieStickinessPolicies" field="lbCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LBCookieStickinessPolicies"/>
     <structure name="OtherPolicies" field="otherPolicies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.PolicyNames"/>
+  </mapping>
+  <mapping name="AddTags" class="com.eucalyptus.loadbalancing.common.msgs.AddTagsType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerNames"/>
+    <structure name="Tags" field="tags" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.TagList"/>
+  </mapping>
+  <mapping name="AddTagsResponse" class="com.eucalyptus.loadbalancing.common.msgs.AddTagsResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="AddTagsResult" field="addTagsResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.AddTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.AddTagsResult" abstract="true"/>
+  <mapping name="DescribeTags" class="com.eucalyptus.loadbalancing.common.msgs.DescribeTagsType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerNamesMax20"/>
+  </mapping>
+  <mapping name="DescribeTagsResponse" class="com.eucalyptus.loadbalancing.common.msgs.DescribeTagsResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="DescribeTagsResult" field="describeTagsResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.DescribeTagsResult" abstract="true">
+    <structure name="TagDescriptions" field="tagDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.TagDescriptions"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.TagDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.TagDescription"/>
+    </collection>
+  </mapping>
+  <mapping name="RemoveTags" class="com.eucalyptus.loadbalancing.common.msgs.RemoveTagsType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerNames"/>
+    <structure name="Tags" field="tags" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.TagKeyList"/>
+  </mapping>
+  <mapping name="RemoveTagsResponse" class="com.eucalyptus.loadbalancing.common.msgs.RemoveTagsResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="RemoveTagsResult" field="removeTagsResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.RemoveTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.RemoveTagsResult" abstract="true"/>
+  <mapping name="ModifyLoadBalancerAttributes" class="com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="LoadBalancerAttributes" field="loadBalancerAttributes" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes"/>
+  </mapping>
+  <mapping name="ModifyLoadBalancerAttributesResponse" class="com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="ModifyLoadBalancerAttributesResult" field="modifyLoadBalancerAttributesResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesResult" abstract="true">
+    <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+    <structure name="LoadBalancerAttributes" field="loadBalancerAttributes" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerAttributes" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerAttributesResponse" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
+    <structure name="DescribeLoadBalancerAttributesResult" field="describeLoadBalancerAttributesResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesResult" abstract="true">
+    <structure name="LoadBalancerAttributes" field="loadBalancerAttributes" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.TagList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.Tag"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.Tag" abstract="true">
+    <value name="Key" field="key" usage="required"/>
+    <value name="Value" field="value" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.TagKeyList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly" abstract="true">
+    <value name="Key" field="key" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes" abstract="true">
+    <structure name="CrossZoneLoadBalancing" field="crossZoneLoadBalancing" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing"/>
+    <structure name="AccessLog" field="accessLog" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AccessLog"/>
+    <structure name="ConnectionDraining" field="connectionDraining" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining"/>
+    <structure name="ConnectionSettings" field="connectionSettings" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.AccessLog" abstract="true">
+    <value name="Enabled" field="enabled" usage="required"/>
+    <value name="S3BucketName" field="s3BucketName" usage="optional"/>
+    <value name="EmitInterval" field="emitInterval" usage="optional"/>
+    <value name="S3BucketPrefix" field="s3BucketPrefix" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing" abstract="true">
+    <value name="Enabled" field="enabled" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings" abstract="true">
+    <value name="IdleTimeout" field="idleTimeout" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerNamesMax20" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.TagDescription" abstract="true">
+    <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.TagList"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining" abstract="true">
+    <value name="Enabled" field="enabled" usage="required"/>
+    <value name="Timeout" field="timeout" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage" abstract="true"/>
 </binding>

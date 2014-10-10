@@ -24,9 +24,9 @@ package com.eucalyptus.loadbalancing.activities;
  *
  */
 public abstract class AbstractEventHandler<T extends LoadbalancingEvent> implements EventHandler<T> {
-	EventHandlerChain<T> chain = null;
+	EventHandlerChain<? extends T> chain = null;
 	
-	protected AbstractEventHandler(final EventHandlerChain<T> chain){
+	protected AbstractEventHandler(final EventHandlerChain<? extends T> chain){
 		this.chain = chain;
 	}
 	
@@ -37,8 +37,7 @@ public abstract class AbstractEventHandler<T extends LoadbalancingEvent> impleme
 	public abstract void rollback() throws EventHandlerException;
 
 	@Override
-	public EventHandlerChain<T> getChain() {
-		// TODO Auto-generated method stub
+	public EventHandlerChain<? extends T> getChain() {
 		return this.chain;
 	}
 	

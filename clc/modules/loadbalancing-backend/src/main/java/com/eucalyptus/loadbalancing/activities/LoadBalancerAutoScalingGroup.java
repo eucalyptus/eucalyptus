@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -39,13 +38,13 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -65,7 +64,7 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 
 	@Transient
 	private LoadBalancerAutoScalingGroupRelationView view = null;
-	
+
 	@PostLoad
 	private void onLoad(){
 		if(this.view==null)
@@ -179,9 +178,9 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		public LoadBalancerAutoScalingGroupCoreView apply(
 				@Nullable LoadBalancerAutoScalingGroup arg0) {
 			return new LoadBalancerAutoScalingGroupCoreView(arg0);
-		}	
+		}
     }
-	
+
 	public enum LoadBalancerAutoScalingGroupEntityTransform implements Function<LoadBalancerAutoScalingGroupCoreView, LoadBalancerAutoScalingGroup>{
 		INSTANCE;
 
@@ -189,31 +188,26 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		@Nullable
 		public LoadBalancerAutoScalingGroup apply(
 				@Nullable LoadBalancerAutoScalingGroupCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerAutoScalingGroup.class);
-			try{
-				final LoadBalancerAutoScalingGroup group = Entities.uniqueResult(arg0.group);
-				db.commit();
-				return group;
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
+				return Entities.uniqueResult(arg0.group);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	public static class LoadBalancerAutoScalingGroupRelationView {
 		private ImmutableList<LoadBalancerServoInstanceCoreView> servos = null;
-		private LoadBalancerCoreView loadbalancer = null;
-		
+		private LoadBalancer loadbalancer = null;
+
 		LoadBalancerAutoScalingGroupRelationView(
 				LoadBalancerAutoScalingGroup group) {
 			if(group.servos!=null)
 				servos = ImmutableList.copyOf(Collections2.transform(group.servos, LoadBalancerServoInstanceCoreViewTransform.INSTANCE));
-			if(group.loadbalancer!=null)
-				loadbalancer = TypeMappers.transform(group.loadbalancer, LoadBalancerCoreView.class);
+			if(group.loadbalancer!=null) {
+				Entities.initialize( group.loadbalancer );
+				loadbalancer = group.loadbalancer;
+			}
 		}
 		
 		public ImmutableList<LoadBalancerServoInstanceCoreView> getServos(){
@@ -221,7 +215,7 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		}
 		
 		public LoadBalancerCoreView getLoadBalancer(){
-			return loadbalancer;
+			return loadbalancer.getCoreView( );
 		}
 	}
 }

@@ -127,8 +127,19 @@ public class ActivityManager {
 					throw Exceptions.toUndeclared(ex);
 				}
 			}
-		};
-		
+		},
+		ApplySecurityGroups(ApplySecurityGroupsEvent.class){
+			@Override
+			public void fireEvent(LoadbalancingEvent event) {
+				try{
+					EventHandlerChains.onApplySecurityGroups().execute((ApplySecurityGroupsEvent) event);
+				}catch(EventHandlerChainException ex){
+					throw Exceptions.toUndeclared(ex);
+				}
+			}
+		},
+		;
+
 		private final Class<? extends LoadbalancingEvent> evtType;
 		
 		LoadbalancerEventListener(Class<? extends LoadbalancingEvent> type){

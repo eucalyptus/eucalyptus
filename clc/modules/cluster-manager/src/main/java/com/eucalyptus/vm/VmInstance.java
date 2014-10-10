@@ -985,6 +985,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
         final Allocation allocInfo = token.getAllocationInfo( );
         final VmInstance.Builder builder = new VmInstance.Builder( );
+        builder.onBuild( new Callback<VmInstance>() {
+          @Override
+          public void fire( final VmInstance input ) {
+            Entities.persist( input );
+          }
+        } );
         VmInstanceLifecycleHelpers.get().prepareVmInstance( token, builder );
         VmInstance vmInst = builder
                                                      .owner( allocInfo.getOwnerFullName( ) )
@@ -1008,7 +1014,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .zombie( token.isZombie( ) )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
-        vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
         token.setVmInstance( vmInst );
