@@ -29,8 +29,14 @@ public class StackWorkflowEntityManager {
         .add(Restrictions.eq("stackId", stackId))
         .add(Restrictions.eq("workflowType", workflowType));
       List<StackWorkflowEntity> match = criteria.list();
-      if (match != null && !match.isEmpty()) {
-        throw new InternalFailureException("Stack workflow entity of type " + workflowType + " already exists for stack id " + stackId);
+      if (match != null && match.size() > 1) {
+        throw new InternalFailureException("More than one stack workflow entity of type " + workflowType + " already exists for stack id " + stackId);
+      } else if (match != null && match.size() == 1) {
+        match.get(0).setDomain(domain);
+        match.get(0).setStackId(stackId);
+        match.get(0).setRunId(runId);
+        match.get(0).setWorkflowId(workflowId);
+        match.get(0).setWorkflowType(workflowType);
       } else {
         Entities.persist(stackWorkflowEntity);
       }

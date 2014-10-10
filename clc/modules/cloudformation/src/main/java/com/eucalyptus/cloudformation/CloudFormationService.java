@@ -360,7 +360,7 @@ public class CloudFormationService {
         boolean existingOpenDeleteWorkflow = false;
         List<StackWorkflowEntity> deleteWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW);
         if (deleteWorkflows != null) {
-          if (deleteWorkflows.size() == 1) {
+          if (deleteWorkflows.size() > 1) {
             throw new ValidationErrorException("More than one delete workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
           }
           // see if the workflow is open
