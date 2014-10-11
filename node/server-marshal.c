@@ -931,7 +931,7 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
         EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
 
         threadCorrelationId *corr_id = set_corrid(meta.correlationId);
-        if ((error = doDetachVolume(&meta, instanceId, volumeId, remoteDev, localDev, force, 1)) != EUCA_OK) {
+        if ((error = doDetachVolume(&meta, instanceId, volumeId, remoteDev, localDev, force)) != EUCA_OK) {
             LOGERROR("[%s][%s] failed error=%d\n", instanceId, volumeId, error);
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncDetachVolumeResponseType_set_correlationId(output, env, meta.correlationId);

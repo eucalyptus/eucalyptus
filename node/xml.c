@@ -293,6 +293,8 @@ static void init_xml(struct nc_state_t *nc_state)
     pthread_mutex_lock(&xml_mutex);
     {
         if (!initialized) {
+            xmlIndentTreeOutput = 1;
+            xmlKeepBlanksDefault(0);
             xmlInitParser();
             LIBXML_TEST_VERSION;       // verifies that loaded library matches the compiled library
             xmlSubstituteEntitiesDefault(1);    // substitute entities while parsing
@@ -643,6 +645,10 @@ int gen_instance_xml(const ncInstance * instance)
                     }
                 }
 
+                if (vbr->locationType == NC_LOCATION_SC) { // for EBS volumes, libvirt XML will be available under /instance/volumes
+                    continue;
+                }
+
                 disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
                 _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
                 _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
@@ -676,10 +682,17 @@ int gen_instance_xml(const ncInstance * instance)
                 xmlNodePtr vol = _NODE(vols, "volume");
                 _ELEMENT(vol, "id", v->volumeId);
                 _ELEMENT(vol, "attachmentToken", v->attachmentToken);
-                _ELEMENT(vol, "localDev", v->localDev);
-                _ELEMENT(vol, "localDevReal", v->localDevReal);
+                _ELEMENT(vol, "devName", v->devName);
                 _ELEMENT(vol, "stateName", v->stateName);
                 _ELEMENT(vol, "connectionString", v->connectionString);
+                xmlNodePtr libvirt = _NODE(vol, "libvirt");
+                if (strlen(v->volLibvirtXml)) {
+                    xmlNodePtr vol_xml = NULL;
+                    xmlParseInNodeContext(libvirt, v->volLibvirtXml, strlen(v->volLibvirtXml), 0, &vol_xml);
+                    if (vol_xml) {
+                        xmlAddChild(libvirt, vol_xml);
+                    }
+                }
             }
         }
 
@@ -772,8 +785,8 @@ free:
 //!
 int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
-#define MKVBRPATH(_suffix)   snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s\n", (i + 1), _suffix);
-#define MKVOLPATH(_suffix)   snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s\n", (i + 1), _suffix);
+#define MKVBRPATH(_suffix)   snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s", (i + 1), _suffix);
+#define MKVOLPATH(_suffix)   snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s", (i + 1), _suffix);
 
 #define XGET_STR_FREE(_XPATH, _dest)                                                 \
 {                                                                                    \
@@ -984,14 +997,24 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             XGET_STR_FREE(volxpath, v->volumeId);
             MKVOLPATH("attachmentToken");
             XGET_STR_FREE(volxpath, v->attachmentToken);
-            MKVOLPATH("localDev");
-            XGET_STR_FREE(volxpath, v->localDev);
-            MKVOLPATH("localDevReal");
-            XGET_STR_FREE(volxpath, v->localDevReal);
             MKVOLPATH("stateName");
             XGET_STR_FREE(volxpath, v->stateName);
             MKVOLPATH("connectionString");
             XGET_STR_FREE(volxpath, v->connectionString);
+            MKVOLPATH("devName");
+            if (get_xpath_content_at(xml_path, volxpath, 0, v->devName, sizeof(v->devName)) == NULL) {
+                // code for upgrade to 4.1
+                MKVOLPATH("localDevReal");
+                XGET_STR_FREE(volxpath, v->devName);
+            }
+            MKVOLPATH("libvirt");
+            if (get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
+                LOGERROR("failed to read '%s' from '%s'\n", volxpath, xml_path);
+                for (int z = 0; res_array[z] != NULL; z++)
+                    EUCA_FREE(res_array[z]);
+                EUCA_FREE(res_array);
+                return (EUCA_ERROR);
+            }
         }
 
         // Free our allocated memory
@@ -1195,14 +1218,13 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
 //!
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] instance a pointer to our instance structure
-//! @param[in] localDevReal a string containing the target device name
-//! @param[in] remoteDev a string containing the disk path.
+//! @param[in] devName a string containing the target device name
 //!
 //! @return The results of calling write_xml_file()
 //!
 //! @see write_xml_file()
 //!
-int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev)
+int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *devName, const char *remoteDev)
 {
     int ret = EUCA_ERROR;
     char bitness[4] = "";
@@ -1250,11 +1272,11 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         // volume information
         disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
         _ATTRIBUTE(disk, "targetDeviceType", "disk");
-        _ATTRIBUTE(disk, "targetDeviceName", localDevReal);
+        _ATTRIBUTE(disk, "targetDeviceName", devName);
         _ATTRIBUTE(disk, "targetDeviceBus", "scsi");
         _ATTRIBUTE(disk, "sourceType", "block");
         char serial[64];
-        snprintf(serial, sizeof(serial), "%s-dev-%s", volumeId, localDevReal);
+        snprintf(serial, sizeof(serial), "%s-dev-%s", volumeId, devName);
         _ATTRIBUTE(disk, "serial", serial);
 
         snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
@@ -1293,6 +1315,75 @@ int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
     pthread_mutex_unlock(&xml_mutex);
 
     return (ret);
+}
+
+//!
+//! Places raw XML result of an xpath query into buf. The query must return
+//! only one element.
+//!
+//! @param[in] xml_path a string containing the path to the XML file to parse
+//! @param[in] xpath a string contianing the XPATH expression to evaluate
+//! @param[out] buf for the XML string
+//! @param[in] buf_len size of the buf
+//!
+//! @return EUCA_OK or EUCA_ERROR
+//!
+int get_xpath_xml(const char *xml_path, const char *xpath, char *buf, int buf_len)
+{
+    int ret = EUCA_ERROR;
+    xmlDocPtr doc = NULL;
+    xmlXPathContextPtr context = NULL;
+    xmlXPathObjectPtr result = NULL;
+    xmlNodeSetPtr nodeset = NULL;
+
+    INIT();
+
+    LOGTRACE("searching for '%s' in '%s'\n", xpath, xml_path);
+    pthread_mutex_lock(&xml_mutex);
+    {
+        if ((doc = xmlParseFile(xml_path)) != NULL) {
+            if ((context = xmlXPathNewContext(doc)) != NULL) {
+                if ((result = xmlXPathEvalExpression(((const xmlChar *)xpath), context)) != NULL) {
+                    if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
+                        nodeset = result->nodesetval;
+                        if (nodeset->nodeNr > 1) {
+                            LOGERROR("multiple matches for '%s' in '%s'\n", xpath, xml_path);
+                        } else {
+                            xmlNodePtr node = nodeset->nodeTab[0]->xmlChildrenNode;
+                            xmlBufferPtr xbuf = xmlBufferCreate();
+                            if (xbuf) {
+                                int len = xmlNodeDump(xbuf, doc, node, 0, 1);
+                                if (len < 0) {
+                                    LOGERROR("failed to extract XML from %s\n", xpath);
+                                } else if (len > buf_len) {
+                                    LOGERROR("insufficient buffer for %s\n", xpath);
+                                } else {
+                                    char * str = (char*)xmlBufferContent(xbuf);
+                                    euca_strncpy(buf, str, buf_len);
+                                    ret = EUCA_OK;
+                                }
+                                xmlBufferFree(xbuf);
+                            } else {
+                                LOGERROR("failed to allocate XML buffer\n");
+                            }
+                        }
+                    }
+                    xmlXPathFreeObject(result);
+                } else {
+                    LOGERROR("no results for '%s' in '%s'\n", xpath, xml_path);
+                }
+                xmlXPathFreeContext(context);
+            } else {
+                LOGERROR("failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
+            }
+            xmlFreeDoc(doc);
+        } else {
+            LOGDEBUG("failed to parse XML in '%s'\n", xml_path);
+        }
+    }
+    pthread_mutex_unlock(&xml_mutex);
+
+    return ret;
 }
 
 //!
@@ -1479,6 +1570,7 @@ static void create_dummy_instance(const char *file)
     _ELEMENT(instance, "VmType", "c1.medium");
     _ELEMENT(instance, "NicType", "linux");
     _ELEMENT(instance, "NicDevice", "eth0");
+    _ELEMENT(instance, "rootDirective", "");
 
     xmlNodePtr key = _NODE(instance, "key");
     _ATTRIBUTE(key, "doInjectKey", "true");
@@ -1528,17 +1620,20 @@ static void create_dummy_instance(const char *file)
     xmlNodePtr vol = _NODE(vols, "volume");
     _ELEMENT(vol, "id", "vol-123ABC");
     _ELEMENT(vol, "attachmentToken", "alskhfnoacsniusacgnoiausgnoiuascnoiaudfh");
-    _ELEMENT(vol, "localDev", "/dev/sde");
-    _ELEMENT(vol, "localDevReal", "/dev/sde");
+    _ELEMENT(vol, "devName", "sde");
     _ELEMENT(vol, "stateName", "attached");
     _ELEMENT(vol, "connectionString", "kajalksqwuyreoiquwyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+    xmlNodePtr libvirt = _NODE(vol, "libvirt");
+    _ELEMENT(libvirt, "disk", "");
+
     vol = _NODE(vols, "volume");
     _ELEMENT(vol, "id", "vol-ABC123");
     _ELEMENT(vol, "attachmentToken", "allaksjdlfkjiusacgnoiausgnoiuascnoiaudfh");
-    _ELEMENT(vol, "localDev", "/dev/sdf");
-    _ELEMENT(vol, "localDevReal", "/dev/sdf");
+    _ELEMENT(vol, "devName", "sdf");
     _ELEMENT(vol, "stateName", "attaching");
     _ELEMENT(vol, "connectionString", "kakjhkjhkjhkjhkjhkyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+    libvirt = _NODE(vol, "libvirt");
+    _ELEMENT(libvirt, "disk", "");
 
     xmlNodePtr nics = _NODE(instance, "nics");
     xmlNodePtr nic = _NODE(nics, "nic");
@@ -1617,6 +1712,7 @@ int main(int argc, char **argv)
 
     create_dummy_instance(in_path);
     LOGINFO("wrote dummy XML to %s\n", in_path);
+    //cat (in_path);
 
     ncInstance instance;
     ncInstance instance2;
@@ -1668,11 +1764,32 @@ int main(int argc, char **argv)
         LOGERROR("failed to see XML in buffer\n");
         goto out;
     }
-    cat(out_path);
+    //cat(out_path);
+
+    LOGINFO("trying out get_xpath_* functions\n");
+    char buf[1024];
+    char * xpath1 = "/domain/devices/disk[1]/source/@file";
+    if (get_xpath_content_at(out_path, xpath1, 0, buf, sizeof(buf)) == NULL) {
+        err = EUCA_ERROR;
+        LOGERROR("failed to read xpath '%s' from '%s'\n", xpath1, out_path);
+        goto out;
+    }
+    LOGINFO("extracted %s as {%s}\n", xpath1, buf);
+    char * xpath2 = "/domain/devices/disk[1]";
+    if (get_xpath_xml(out_path, xpath2, buf, sizeof(buf)) != EUCA_OK) {
+        err = EUCA_ERROR;
+        LOGERROR("failed to read xpath '%s' XML from '%s'\n", xpath2, out_path);
+        goto out;
+    }
+    LOGINFO("extracted %s as {%s}\n", xpath2, buf);
 
 out:
-    remove(out_path);
-    remove(in_path);
+    if (err) {
+        LOGINFO("leaving around files %s and %s\n", out_path, in_path);
+    } else {
+        remove(out_path);
+        remove(in_path);
+    }
     EUCA_FREE(in_path);
     EUCA_FREE(out_path);
     return (err);

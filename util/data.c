@@ -958,8 +958,7 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sLocalDev,
-                      const char *sLocalDevReal, const char *sStateName)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName, const char *sStateName, const char *sXml)
 {
     ncVolume *pVol = NULL;
 
@@ -980,14 +979,14 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         if (sConnectionString)
             euca_strncpy(pVol->connectionString, sConnectionString, VERY_BIG_CHAR_BUFFER_SIZE);
 
-        if (sLocalDev)
-            euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);
-
-        if (sLocalDevReal)
-            euca_strncpy(pVol->localDevReal, sLocalDevReal, CHAR_BUFFER_SIZE);
+        if (sDevName)
+            euca_strncpy(pVol->devName, sDevName, CHAR_BUFFER_SIZE);
 
         if (sStateName)
             euca_strncpy(pVol->stateName, sStateName, CHAR_BUFFER_SIZE);
+
+        if (sXml)
+            euca_strncpy(pVol->volLibvirtXml, sXml, VERY_BIG_CHAR_BUFFER_SIZE);
     }
 
     return (pVol);

@@ -559,56 +559,34 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 }
 
 //!
-//! sets localDevReal (assummed to be at least 32 bytes long) to the filename portion
-//! of the device path (e.g., "sda" of "/dev/sda") also, if non-NULL, sets localDevTag
-//! to (e.g., "unknown,requested:/dev/sda")
+//! converts 'dev' into canonical form (e.g., "sda" of "/dev/sda") unless
+//! it is already in canonical form
 //!
-//! @param[in]  localDev the local device path string (e.g. /dev/sda)
-//! @param[out] localDevReal the device file name portion of the device path (e.g. sda)
-//! @param[out] localDevTag the full device tag string (e.g. unknown,requested:/dev/sda)
+//! @param[in]  dev the device name string (e.g. /dev/sda or sda)
+//! @param[out] cdev the device name in canonical form (without /dev/)
+//! @param[in]  cdev_len length of the cdev buffer in bytes
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-//! @todo chuck make sure localDevTag passed is at least 256 char
-//!
-int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag)
+int canonicalize_dev(const char *dev, char *cdev, int cdev_len)
 {
-    printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
-    bzero(localDevReal, 32);
-    if (strchr(localDev, '/') != NULL) {
-        //Path-style device.../dev/xxx
-        if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
-            //The case on migration, where attachment on source was done
-            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
-            snprintf(localDev, strlen(localDev), "/dev/%s", localDevReal);
-        } else {
-            sscanf(localDev, "/dev/%s", localDevReal);
-        }
-    } else {
-        //No /dev/' prefix, just xxx
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            //The case on migration, where attachment on source was done
-            sscanf(localDev, "unknown,requested:%s", localDevReal);
-            snprintf(localDev, strlen(localDev), "%s", localDevReal);
-        }
-        snprintf(localDevReal, 32, "%s", localDev);
-    }
+    char cdev_local[128];
+    euca_strncpy(cdev_local, dev, sizeof(cdev_local));
 
-    if (localDevReal[0] == 0) {
-        printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
-        return (EUCA_ERROR);
+    const char * s = cdev_local;
+    if (strstr(dev, "/dev/") == dev) {
+        s = s + strlen("/dev/");
     }
+    if (strchr(s, '/')) {
+        LOGERROR("device name string of unexpected format (must be /dev/XXX)\n");
+        return EUCA_ERROR;
+    }
+    if (strlen(s) > (cdev_len - 1)) {
+        LOGERROR("buffer size (%d) exceeded for device name string\n", cdev_len);
+        return EUCA_ERROR;
+    }
+    euca_strncpy(cdev, s, cdev_len);
 
-    if (localDevTag) {
-        //If localDev already has the unknown,requested...just copy it
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "%s", localDev);
-        } else {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
-        }
-    }
     return EUCA_OK;
 }
 
@@ -2282,7 +2260,15 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    init_iscsi(nc_state.home);
+    { // initialize the EBS helpers
+        char * ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
+        char * ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
+        char * ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
+        init_iscsi(nc_state.home, ceph_user, ceph_keys, ceph_conf);
+        EUCA_FREE(ceph_user);
+        EUCA_FREE(ceph_keys);
+        EUCA_FREE(ceph_conf);
+    }
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
@@ -2676,7 +2662,7 @@ static int init(void)
         LOGINFO("using IP %s\n", nc_state.ip);
 
         LOGINFO("Initializing localhost info for vbr processing\n");
-        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec) != 0) {
+        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec, nc_state.config_use_virtio_root, nc_state.config_use_virtio_disk) != 0) {
             LOGFATAL("Error initializing vbr localhost configuration\n");
             return (EUCA_FATAL_ERROR);
         }
@@ -3221,8 +3207,8 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s][%s] attaching volume (localDev=%s)\n", instanceId, volumeId, localDev);
-    LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
+    LOGINFO("[%s][%s] attaching volume\n", instanceId, volumeId);
+    LOGDEBUG("[%s][%s] volume attaching (remoteDev=%s localDev=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
     if (nc_state.H->doAttachVolume)
         ret = nc_state.H->doAttachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev);
@@ -3245,7 +3231,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doDetachVolume() handler call.
 //!
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem)
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force)
 {
     int ret = EUCA_OK;
 
@@ -3254,12 +3240,12 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
     DISABLED_CHECK;
 
     LOGINFO("[%s][%s] detaching volume\n", instanceId, volumeId);
-    LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
+    LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d)\n", instanceId, volumeId, localDev, force);
 
     if (nc_state.H->doDetachVolume)
-        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
+        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
     else
-        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
+        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
 
     return ret;
 }

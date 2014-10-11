@@ -80,11 +80,12 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
-#include <misc.h>
-#include <vnetwork.h>
-#include <data.h>
-#include <config.h>
-#include <sensor.h>
+#include "misc.h"
+#include "vnetwork.h"
+#include "data.h"
+#include "config.h"
+#include "sensor.h"
+#include "ebs_utils.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -229,7 +230,7 @@ struct handlers {
     int (*doDescribeResource) (struct nc_state_t * nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
     int (*doStartNetwork) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
     int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
+    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
                              char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
@@ -309,7 +310,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
 int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
                      char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
@@ -329,7 +330,7 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 
 // helper functions used by the low level handlers
 int get_value(char *s, const char *name, long long *valp);
-int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag);
+int canonicalize_dev(const char *dev, char *cdev, int cdev_len);
 void print_running_domains(void);
 virConnectPtr lock_hypervisor_conn(void);
 void unlock_hypervisor_conn(void);
@@ -355,6 +356,9 @@ int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
+int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char **libvirt_xml, ebs_volume_data ** vol_data);
+int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string);
+void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

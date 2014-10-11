@@ -412,7 +412,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 //!
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    return doDetachVolume(pMeta, instanceId, volumeId, remoteDev, localDev, force, 1);
+    return doDetachVolume(pMeta, instanceId, volumeId, remoteDev, localDev, force);
 }
 
 //!

@@ -138,8 +138,7 @@ int init_ebs_utils();
 char *get_volume_local_device(const char *connection_string);
 int deserialize_volume(char *volume_string, ebs_volume_data ** dest);
 int serialize_volume(ebs_volume_data * vol_data, char **dest);
-int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_device,
-                       ebs_volume_data ** vol_data);
+int connect_ebs_volume(const char *target_dev, const char *target_serial, const char *target_bus, char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_xml, ebs_volume_data ** vol_data);
 int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *volume_string, char *connect_string, char *local_ip, char *local_iqn);
 int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *local_ip, char *local_iqn);
 

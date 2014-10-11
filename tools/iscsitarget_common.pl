@@ -77,6 +77,10 @@ $EM_DRIVER_NOT_FOUND = "iSCSI driver not found";
 $EM_LOGIN_FAILED = "Could not login to";
 $UDEVADM = "udevadm";
 
+$PROTOCOL_ISCSI = "iscsi";
+$PROTOCOL_RBD = "rbd";
+$SECRET_TYPE_CEPH = "ceph";
+
 sub parse_devstring {
   my ($dev_string) = @_;
   return split($DELIMITER, $dev_string);

@@ -533,7 +533,7 @@ static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
                 if (strlen(pInstance->volumes[j].volumeId) > 0) {
                     if (volCount > 0)
                         printf("\t\t                  ");
-                    printf("%s %s %s\n", pInstance->volumes[j].volumeId, pInstance->volumes[j].attachmentToken, pInstance->volumes[j].localDev);
+                    printf("%s %s %s\n", pInstance->volumes[j].volumeId, pInstance->volumes[j].attachmentToken, pInstance->volumes[j].devName);
                     volCount++;
                 }
             }

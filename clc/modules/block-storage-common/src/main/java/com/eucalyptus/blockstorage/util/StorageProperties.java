@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage.util;
 
 import java.util.NoSuchElementException;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -141,6 +142,21 @@ public class StorageProperties {
                     "]}";
 
     public static final Integer DELETED_VOLUME_EXPIRATION_TIME =  24;//hours
+    
+	/**
+	 * <p>Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.</p>
+	 * 
+	 * Example output from perl script: <pre> {@code 
+	 * <disk type='block'> 
+	 * <driver cache='none' name='qemu'/> 
+	 * <source dev='/dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146'/> 
+	 * <target bus='virtio' dev='vdb'/> <serial>vol-5062e8f1-dev-sdb</serial> </disk>
+	 * }</pre>
+	 * 
+	 * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
+	 */
+	public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
+    
     public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;
 	}
