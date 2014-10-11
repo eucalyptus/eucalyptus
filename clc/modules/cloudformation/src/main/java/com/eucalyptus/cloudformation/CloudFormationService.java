@@ -54,6 +54,7 @@ import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
+import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -130,6 +131,8 @@ public class CloudFormationService {
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
+      final String accountName = user.getAccount().getName();
+
 
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
@@ -224,11 +227,14 @@ public class CloudFormationService {
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
 
+      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+
+
       Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
       StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
       WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
       InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
-        .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, new WorkflowTags(), timeoutInSeconds, null);
+        .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
 
       CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
       createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
@@ -241,10 +247,10 @@ public class CloudFormationService {
       WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
       WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
       InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
-        .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, new WorkflowTags());
+        .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 
       MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
-      monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
+      monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
 
 
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -262,7 +268,6 @@ public class CloudFormationService {
     }
     return reply;
   }
-
 
   private String extractTemplateTextFromURL(String templateUrl, User user) throws ValidationErrorException {
     URL url = null;
@@ -352,6 +357,7 @@ public class CloudFormationService {
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
+      final String accountName = user.getAccount().getName();
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
@@ -383,12 +389,15 @@ public class CloudFormationService {
           }
         }
         if (!existingOpenDeleteWorkflow) {
+          String stackId = stackEntity.getStackId();
+          StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+
           WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
           WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
           InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
-            .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, new WorkflowTags());
+            .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
           DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
-          deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId);
+          deleteStackWorkflow.deleteStack(stackId, accountId, stackEntity.getResourceDependencyManagerJson(), userId);
           StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
             StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
             CloudFormationBootstrapper.SWF_DOMAIN,
