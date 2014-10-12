@@ -62,6 +62,8 @@
 
 package com.eucalyptus.blockstorage.ceph;
 
+import java.util.Arrays;
+
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.StringUtils;
@@ -389,7 +391,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 			}
 
 			if (conn == null) {
-				throw new EucalyptusCephException("Unable to find image " + imageName + " in configured pools: " + allPools);
+				throw new EucalyptusCephException("Unable to find image " + imageName + " in configured pools: " + Arrays.toString(allPools));
 			}
 			output = function.apply(conn);
 		} catch (EucalyptusCephException e) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,11 +22,11 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
@@ -71,7 +71,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
 			//  check if the current zone contains the requested zone
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -109,9 +109,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		}
 
 		@Override
-		public void rollback() throws EventHandlerException {
-			;	
-		}
+		public void rollback() { }
 	} 
 	
 	// disabling zones will terminate instances.
@@ -126,7 +124,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		private List<String> ipAddressRemoved = null;
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -146,7 +144,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 			final List<LoadBalancerZoneCoreView> currentZones = Lists.newArrayList(lb.getZones());
 			for(final LoadBalancerZoneCoreView zoneView : currentZones){
 				if(evt.getZones().contains(zoneView.getName())){ // the zone will be disabled
-					LoadBalancerZone zone = null;
+					LoadBalancerZone zone;
 					try{
 						zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
 					}catch(final Exception ex){
@@ -200,7 +198,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		private List<LoadBalancerServoInstance> retiredInstances = null;
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -213,7 +211,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 			final List<LoadBalancerZoneCoreView> currentZones = Lists.newArrayList(lb.getZones());
 			for(final LoadBalancerZoneCoreView zoneView : currentZones){
 				if(evt.getZones().contains(zoneView.getName())){ // the zone will be disabled
-					LoadBalancerZone zone = null;
+					LoadBalancerZone zone;
 					try{
 						zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
 					}catch(final Exception ex){
@@ -221,7 +219,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						continue;
 					}
 					for(final LoadBalancerServoInstanceCoreView instanceView : zone.getServoInstances()){
-						LoadBalancerServoInstance instance = null;
+						LoadBalancerServoInstance instance;
 						try{
 							instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
 						}catch(final Exception ex){
@@ -229,22 +227,16 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 							continue;
 						}
 						
-						final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-						try{
+						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setState(LoadBalancerServoInstance.STATE.Retired);
 							Entities.persist(update);
 							db.commit();
 							retiredInstances.add(update);
 						}catch(final NoSuchElementException ex){
-							db.rollback();
 							LOG.warn("Failed to update the servo instance's state: no such instance found");
 						}catch(final Exception ex){
-							db.rollback();
 							LOG.warn("Failed to update the servo instance's state", ex);
-						}finally {
-							if(db.isActive())
-								db.rollback();
 						}
 					}
 				}
@@ -255,21 +247,15 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		public void rollback() throws EventHandlerException {
 			if(this.retiredInstances!=null){
 				for(final LoadBalancerServoInstance instance : retiredInstances){
-					final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-					try{
+					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 						final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 						update.setState(LoadBalancerServoInstance.STATE.InService);
 						Entities.persist(update);
 						db.commit();
 					}catch(final NoSuchElementException ex){
-						db.rollback();
 						LOG.warn("Failed to update the servo instance's state: no such instance found");
 					}catch(final Exception ex){
-						db.rollback();
 						LOG.warn("Failed to update the servo instance's state", ex);
-					}finally {
-						if(db.isActive())
-							db.rollback();
 					}
 				}
 			}
@@ -291,7 +277,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -339,7 +325,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					this.beforeUpdate = availableZones;
 					this.afterUpdate = updatedZones;
 					
-					LoadBalancerAutoScalingGroup scaleGroup = null;
+					LoadBalancerAutoScalingGroup scaleGroup;
 					try{
 						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
 					}catch(final Exception ex){
@@ -347,21 +333,15 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						throw ex;
 					}
 					
-					final EntityTransaction db = Entities.get( LoadBalancerAutoScalingGroup.class );
-					try{
+					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
 						final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
 						update.setCapacity(newCapacity);
 						Entities.persist(update);
 						db.commit();
 					}catch(NoSuchElementException ex){
-						db.rollback();
 						LOG.error("failed to find the autoscaling group record", ex);
 					}catch(Exception ex){
-						db.rollback();
 						LOG.error("failed to update the autoscaling group record", ex);
-					}finally {
-						if(db.isActive())
-							db.rollback();
 					}
 				}catch(final Exception ex){
 					throw new EventHandlerException("failed to update the autoscaling group", ex);
@@ -380,7 +360,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 				
 					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, this.beforeUpdate, oldCapacity);
 					
-					LoadBalancerAutoScalingGroup scaleGroup = null;
+					LoadBalancerAutoScalingGroup scaleGroup;
 					try{
 						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
 					}catch(final Exception ex){
@@ -388,21 +368,15 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						throw ex;
 					}
 					
-					final EntityTransaction db = Entities.get( LoadBalancerAutoScalingGroup.class );
-					try{
+					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
 						final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
 						update.setCapacity(oldCapacity);
 						Entities.persist(update);
 						db.commit();
 					}catch(NoSuchElementException ex){
-						db.rollback();
 						LOG.error("failed to find the autoscaling group record", ex);
 					}catch(Exception ex){
-						db.rollback();
 						LOG.error("failed to update the autoscaling group record", ex);
-					}finally {
-						if(db.isActive())
-							db.rollback();
 					}
 				}catch(Exception ex){
 					throw new EventHandlerException("failed to update the zone to the original list", ex);
@@ -432,7 +406,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		@Override
 		public void apply(DisabledZoneEvent evt)
 				throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -445,28 +419,19 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					this.getChain().findHandler(UpdateAutoScalingGroup.class);
 			if(updated!= null && updated.getResult()!= null){
 				for(final String removedZone : updated.getResult()){
-					final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-					try{
+					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
 						final LoadBalancerZone update = Entities.uniqueResult(LoadBalancerZone.named(lb, removedZone));
-						update.setState(LoadBalancerZone.STATE.OutOfService);
-						Entities.persist(update);
+						update.setState( LoadBalancerZone.STATE.OutOfService );
 						db.commit();
-					}catch(final NoSuchElementException ex){
-						db.rollback();
 					}catch(final Exception ex){
-						db.rollback();
-					}finally {
-						if(db.isActive())
-							db.rollback();
+						LOG.debug( "Error updating state for load balancer zone", ex );
 					}
 				}
 			}
 		}
 
 		@Override
-		public void rollback() throws EventHandlerException {
-			;
-		}
+		public void rollback() { }
 	}
 	
 	private static class PersistBackendInstanceState extends AbstractEventHandler<DisabledZoneEvent>  {
@@ -479,7 +444,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		private List<LoadBalancerBackendInstance> updatedInstances = null;
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -496,8 +461,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					for(final String removedZone : updated.getResult()){
 						final LoadBalancerZone zone = LoadBalancers.findZone(lb, removedZone);
 						for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
-							final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-							try{
+							try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
 								final LoadBalancerBackendInstance update = Entities.uniqueResult(
 										LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
 								update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
@@ -507,14 +471,9 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 								db.commit();
 								this.updatedInstances.add(update);
 							}catch(final NoSuchElementException ex){
-								db.rollback();
 								LOG.warn("failed to find the backend instance");
 							}catch(final Exception ex){
-								db.rollback();
 								LOG.warn("failed to query the backend instance", ex);
-							}finally {
-								if(db.isActive())
-									db.rollback();
 							}
 						}
 					}
@@ -525,8 +484,8 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		}
 
 		@Override
-		public void rollback() throws EventHandlerException {
-			; // if zone is still InService, the backend instances will automatically transit to InService
+		public void rollback() {
+			// if zone is still InService, the backend instances will automatically transit to InService
 		}
 		
 	}

@@ -25,6 +25,8 @@ public class StandardResourceRetryPolicy {
     if (retryExpirationIntervalSeconds != null && retryExpirationIntervalSeconds > 0) {
       retryPolicy.setRetryExpirationIntervalSeconds(retryExpirationIntervalSeconds);
     }
+    // TODO: maybe I should let max interval not be too bad
+    retryPolicy.setMaximumRetryIntervalSeconds(30L);
     return retryPolicy;
 
   }

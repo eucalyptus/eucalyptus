@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
@@ -37,6 +36,7 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
@@ -76,21 +76,15 @@ public class LoadBalancerCwatchMetrics {
 	public void addMetric(final String servoId, final MetricData metric){
 		// based on the servo Id, find the loadbalancer and the availability zone
 		// 
-		final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-		LoadBalancerZoneCoreView lbZone = null;
-		try{
+		LoadBalancerZoneCoreView lbZone ;
+		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 			LoadBalancerServoInstance servo = Entities.uniqueResult(LoadBalancerServoInstance.named(servoId));
 			lbZone = servo.getAvailabilityZone();
 			db.commit();
 		}catch(NoSuchElementException ex){
-			db.rollback();
 			throw Exceptions.toUndeclared("Failed to find the servo instance "+servoId);
 		}catch(Exception ex){
-			db.rollback();
 			throw Exceptions.toUndeclared("database error while querying "+servoId);
-		}finally{
-			if(db.isActive())
-				db.rollback();
 		}
 		
 		LoadBalancerZone zone = null;

@@ -170,6 +170,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+boolean virtio_root = FALSE; //!< flag that forces use of Virtio for root disk
+boolean virtio_disk = FALSE; //!< flag that forces use of Virtio for non-root disks
+
 #ifdef _UNIT_TEST
 const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
 const char *euca_client_component_name = "nc";  //!< The client component name
@@ -291,7 +294,7 @@ static void dummy_err_fn(const char *msg);
 //!
 //! @note
 //!
-int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec)
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec, boolean use_virtio_root, boolean use_virtio_disk)
 {
     LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
     euca_strncpy(localhost_config.iqn, hostIqn, CHAR_BUFFER_SIZE);
@@ -301,6 +304,8 @@ int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, i
     LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec,
              localhost_config.ws_sec_policy_file);
     hostconfig_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    virtio_root = use_virtio_root;
+    virtio_disk = use_virtio_disk;
     return (EUCA_OK);
 }
 
@@ -730,9 +735,6 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
         if (parse_rec(vbr, vm, pMeta) != EUCA_OK)
             return (EUCA_ERROR);
 
-        if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK)
-            partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
-
         if (vm->root == NULL) {        // we have not identified the EMI yet
             if (vbr->type == NC_RESOURCE_IMAGE || (vbr->type == NC_RESOURCE_EBS && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
                 vm->root = vbr;
@@ -742,6 +744,31 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
                 LOGERROR("more than one EMI specified in the boot record\n");
                 return (EUCA_ERROR);
             }
+        }
+        
+        if (vbr->guestDeviceType == DEV_TYPE_DISK) {
+
+            // force use of Virtio, based on node config
+            if ((vm->root == vbr && virtio_root)
+                ||
+                (vm->root != vbr && virtio_disk)) { 
+                vbr->guestDeviceBus = BUS_TYPE_VIRTIO;
+                vbr->guestDeviceName[0] = 'v';
+            }
+            
+            // compute serial ID
+            char disk_id[128];
+            if (vbr->type == NC_RESOURCE_EBS) {
+                snprintf(disk_id, sizeof(disk_id), "%s", vbr->id);
+            } else {
+                snprintf(disk_id, sizeof(disk_id), "bdm-%s", vbr->typeName);
+            }
+            snprintf(vbr->guestDeviceSerialId, sizeof(vbr->guestDeviceSerialId),
+                     "euca-%s-dev-%s", disk_id, vbr->guestDeviceName);
+        }
+
+        if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK) {
+            partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
         }
     }
 
@@ -1604,7 +1631,7 @@ cleanup:
 static int iqn_creator(artifact * a)
 {
     int rc = EUCA_OK;
-    char *dev = NULL;
+    char *libvirt_xml = NULL;
     ebs_volume_data *vol_data = NULL;
     virtualBootRecord *vbr = NULL;
 
@@ -1612,17 +1639,16 @@ static int iqn_creator(artifact * a)
     vbr = a->vbr;
     assert(vbr);
 
-    rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
-                            localhost_config.iqn, &dev, &vol_data);
+    rc = connect_ebs_volume(vbr->guestDeviceName, vbr->guestDeviceSerialId, libvirtBusTypeNames[vbr->guestDeviceBus], vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &libvirt_xml, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
         EUCA_FREE(vol_data);
         return (EUCA_ERROR);
     }
 
-    if (!dev || !strstr(dev, "/dev")) {
+    if (!libvirt_xml) {
         EUCA_FREE(vol_data);
-        LOGERROR("[%s] failed to connect to iSCSI target\n", a->instanceId);
+        LOGERROR("[%s] failed to connect to EBS target\n", a->instanceId);
         return (EUCA_ERROR);
     } else {
         //Update the vbr preparedResourceLocation with the connection_string returned from token resolution
@@ -1630,7 +1656,7 @@ static int iqn_creator(artifact * a)
     }
 
     // update VBR with device location
-    euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
+    euca_strncpy(vbr->backingPath, libvirt_xml, sizeof(vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
     EUCA_FREE(vol_data);
     return (EUCA_OK);

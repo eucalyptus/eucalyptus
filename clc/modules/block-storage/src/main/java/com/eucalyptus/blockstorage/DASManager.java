@@ -825,7 +825,7 @@ public class DASManager implements LogicalStorageManager {
 					LOG.error(e);
 					return null;
 				}
-				return ",,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
+				return "iscsi,tgt,,,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
 			}
 			return null;
 		}

@@ -176,6 +176,10 @@ extern bunchOfInstances *global_instances_copy;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+static boolean use_virtio_net = FALSE;
+static boolean use_virtio_disk = FALSE;
+static boolean use_virtio_root = FALSE;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXTERNAL PROTOTYPES                            |
@@ -205,9 +209,8 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
 static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
 static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta);
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
-static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml);
 static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
 static void change_createImage_state(ncInstance * instance, createImage_progress state);
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result);
 static void *createImage_thread(void *arg);
@@ -274,6 +277,23 @@ struct handlers default_libvirt_handlers = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+static void refresh_instance_resources(const char *instanceId)
+{
+    char res_name[1][MAX_SENSOR_NAME_LEN] = { "" };
+    char res_alias[1][MAX_SENSOR_NAME_LEN] = { "" };
+
+    euca_strncpy(res_name[0], instanceId, MAX_SENSOR_NAME_LEN);
+
+    // we serialize all hypervisor calls and 
+    // sensor_refresh_resources() may ultimately 
+    // call the hypervisor
+    {
+        sem_p(hyp_sem); 
+        sensor_refresh_resources(res_name, res_alias, 1); // refresh stats
+        sem_v(hyp_sem);
+    }
+}
+
 //!
 //! Default hypervisor initialize handler
 //!
@@ -283,6 +303,9 @@ struct handlers default_libvirt_handlers = {
 //!
 static int doInitialize(struct nc_state_t *nc)
 {
+    use_virtio_net = nc->config_use_virtio_net;
+    use_virtio_disk = nc->config_use_virtio_disk;
+    use_virtio_root = nc->config_use_virtio_root;
     return (EUCA_OK);
 }
 
@@ -639,8 +662,6 @@ int find_and_stop_instance(char *psInstanceId)
 int find_and_start_instance(char *psInstanceId)
 {
     char *psXML = NULL;
-    char sResourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
-    char sResourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
     ncInstance *pInstance = NULL;
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
@@ -702,12 +723,12 @@ int find_and_start_instance(char *psInstanceId)
         if ((dom = virDomainCreateLinux(conn, psXML, 0)) == NULL) {
             LOGERROR("[%s] failed to start instance\n", psInstanceId);
         } else {
-            //! @TODO: check if we sensor values survive stop/start
-            euca_strncpy(sResourceName[0], psInstanceId, MAX_SENSOR_NAME_LEN);
-            sensor_refresh_resources(sResourceName, sResourceAlias, 1); // refresh stats so we set base value accurately
             virDomainFree(dom);
         }
         unlock_hypervisor_conn();
+
+        //! @TODO: check if we sensor values survive stop/start
+        refresh_instance_resources(psInstanceId);
     }
     EUCA_FREE(psXML);
     return (0);
@@ -731,8 +752,6 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
 {
     ncInstance *instance = NULL;
     int err = EUCA_ERROR;
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
     {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
@@ -748,11 +767,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     if (instance == NULL)
         return EUCA_NOT_FOUND_ERROR;
 
-    // refresh stats so latest instance measurements are captured before it disappears
-    euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
-    sem_p(hyp_sem);                    // we serialize all hypervisor calls and sensor_refresh_resources() may ultimately call the hypervisor
-    sensor_refresh_resources(resourceName, resourceAlias, 1);
-    sem_v(hyp_sem);
+    refresh_instance_resources(instanceId);
 
     // do the shutdown in a thread
     pthread_attr_t tattr;
@@ -1047,7 +1062,7 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid,
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR.
 //!
-static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml)
+static int xen_detach_helper(struct nc_state_t *nc, const char *instanceId, const char *localDevReal, const char *xml)
 {
     int fd = 0;
     int rc = -1;
@@ -1108,6 +1123,251 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
     return (err);
 }
 
+// create or update volume record in the instance struct
+static int update_volume(char *instanceId, char *volumeId, char *attachmentToken, char *connect_string, char *canonicalDev, const char *state, const char *xml, boolean do_update_aliases)
+{
+    int ret = EUCA_OK;
+    
+    sem_p(inst_sem);
+    {
+        ncInstance *instance = find_instance(&global_instances, instanceId);
+        ncVolume * volume = NULL;
+
+        if (instance) {
+            volume = save_volume(instance, volumeId, attachmentToken, connect_string, canonicalDev, state, xml);
+        } else {
+            LOGERROR("[%s][%s] failed to find instance for a volume operation\n", instanceId, volumeId);
+            ret = EUCA_ERROR;
+        }
+        if (volume) {
+            save_instance_struct(instance);
+            copy_instances();
+            if (do_update_aliases) {
+                update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
+            }
+        } else {
+            LOGERROR("[%s][%s] failed to update the volume record\n", instanceId, volumeId);
+            ret = EUCA_ERROR;
+        }
+    }
+    sem_v(inst_sem);
+    
+    return ret;
+}
+
+int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char **libvirt_xml, ebs_volume_data ** vol_data)
+{
+    int ret = EUCA_OK;
+    char scUrl[512];
+
+    LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instanceId, volumeId);
+    if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume: %s\n", instanceId, volumeId, volumeId);
+        return EUCA_ERROR;
+    } else {
+        LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
+    }
+
+    if (connect_ebs_volume(dev_name, dev_serial, dev_bus, scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, libvirt_xml, vol_data) != EUCA_OK) {
+        LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
+        return EUCA_ERROR;
+    }
+
+    if (!libvirt_xml) {
+        LOGERROR("[%s][%s] failed to connect to EBS target\n", instanceId, volumeId);
+        return EUCA_ERROR;
+    } else {
+        LOGDEBUG("[%s][%s] attached EBS target\n", instanceId, volumeId);
+    }
+
+    return ret;
+}
+
+int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string)
+{
+   int ret = EUCA_OK;
+    char scUrl[512];
+
+    LOGTRACE("[%s][%s] Disnnecting EBS volume from local host\n", instanceId, volumeId);
+    if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume: %s\n", instanceId, volumeId, volumeId);
+        return EUCA_ERROR;
+    } else {
+        LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
+    }
+
+    if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, connect_string, nc->ip, nc->iqn) != EUCA_OK) {
+        LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
+    }
+
+    return ret;
+}
+
+int get_instance_path(const char *instanceId, char *path, int path_len)
+{
+    int ret = EUCA_OK;
+
+    sem_p(inst_sem);
+    {
+        ncInstance *instance = find_instance(&global_instances, instanceId);
+        if (instance != NULL) {
+            euca_strncpy(path, instance->instancePath, path_len);
+        } else {
+            ret = EUCA_ERROR;
+        }
+    }
+    sem_v(inst_sem);
+
+    return ret;
+}
+
+int create_vol_xml(const char *instanceId, const char *volumeId, const char *xml_in, char **xml_out)
+{
+    int ret = EUCA_OK;
+    
+    char ipath[EUCA_MAX_PATH];
+    get_instance_path(instanceId, ipath, sizeof(ipath));
+    
+    char lpath[EUCA_MAX_PATH];
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    lpath[sizeof(lpath) - 1] = '\0';
+    
+    if (str2file(xml_in, lpath, O_CREAT | O_TRUNC | O_WRONLY, BACKING_FILE_PERM, FALSE) != EUCA_OK) {
+        LOGERROR("[%s][%s] failed to write volume XML to %s\n", instanceId, volumeId, lpath);
+        ret = EUCA_ERROR;
+        goto release;
+    }
+    // invoke hooks
+    if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
+        LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instanceId, volumeId);
+        ret = EUCA_ERROR;
+        goto release;
+    }
+    // read in libvirt XML, which may have been modified by the hook above
+    if ((*xml_out = file2str(lpath)) == NULL) {
+        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instanceId, volumeId, lpath);
+        ret = EUCA_ERROR;
+        goto release;
+    }
+ release:
+    return ret; 
+}
+
+char * read_vol_xml(const char *instanceId, const char *volumeId) 
+{
+    char ipath[EUCA_MAX_PATH];
+    get_instance_path(instanceId, ipath, sizeof(ipath));
+    
+    char lpath[EUCA_MAX_PATH];
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    lpath[sizeof(lpath) - 1] = '\0';
+
+    // read in libvirt XML
+    char * libvirt_xml = file2str(lpath);
+    if (libvirt_xml == NULL) {
+        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instanceId, volumeId, lpath);
+    }
+    return libvirt_xml;
+}
+
+int delete_vol_xml(const char *instanceId, const char *volumeId)
+{
+    char ipath[EUCA_MAX_PATH];
+    get_instance_path(instanceId, ipath, sizeof(ipath));
+    
+    char lpath[EUCA_MAX_PATH];
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    lpath[sizeof(lpath) - 1] = '\0';
+
+    call_hooks(NC_EVENT_POST_DETACH, lpath);  // invoke hooks, but do not do anything if they return error
+
+    return (unlink(lpath))?(EUCA_ERROR):(EUCA_OK);
+}
+
+int attach_vol_instance(struct nc_state_t *nc, const char *devName, const char *instanceId, const char *volumeId, const char *libvirt_xml)
+{
+    int ret = EUCA_OK;
+    
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
+        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+        return EUCA_HYPERVISOR_ERROR;
+    }
+    
+    // find domain on hypervisor
+    virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+    if (dom == NULL) {
+        unlock_hypervisor_conn();
+        return EUCA_HYPERVISOR_ERROR;
+    }
+    
+    int err = 0;
+    for (int i = 1; i <= VOL_RETRIES; i++) {
+        err = virDomainAttachDevice(dom, libvirt_xml);
+        if (err) {
+            LOGERROR("[%s][%s] failed to attach EBS guest device on attempt %d of 3\n", instanceId, volumeId, i);
+            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, libvirt_xml);
+            sleep(3);              // sleep a bit and retry.
+        } else {
+            break;
+        }
+    }
+    
+    if (err) {
+        LOGERROR("[%s][%s] failed to attach EBS guest device after %d tries\n", instanceId, volumeId, VOL_RETRIES);
+        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, libvirt_xml);
+        ret = EUCA_ERROR;
+    }
+    
+    virDomainFree(dom);            // release libvirt resource
+    unlock_hypervisor_conn();
+    
+    return ret;
+}
+
+int detach_vol_instance(struct nc_state_t *nc, const char *devName, const char *instanceId, const char *volumeId, const char *libvirt_xml)
+{
+    int ret = EUCA_OK;
+
+    // connect to hypervisor, find the domain, detach the volume
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
+        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+        ret = EUCA_HYPERVISOR_ERROR;
+    } else {
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        int libvirt_err = 0;
+        if (dom != NULL) {
+            libvirt_err = virDomainDetachDevice(dom, libvirt_xml);
+            if (!strcmp(nc->H->name, "xen")) {
+                libvirt_err = xen_detach_helper(nc, instanceId, devName, libvirt_xml);
+            }
+            virDomainFree(dom);        // release libvirt resource
+        }
+        unlock_hypervisor_conn();
+
+        if (libvirt_err) {
+            LOGERROR("[%s][%s] failed to detach EBS guest device\n", instanceId, volumeId);
+            LOGDEBUG("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, libvirt_err, libvirt_xml);
+            ret = EUCA_ERROR;
+        }
+    }
+
+    return ret;
+}
+
+void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len)
+{
+    snprintf(serial, serial_len, "euca-%s-dev-%s", vol, dev);
+
+    if (use_virtio_disk) {
+        snprintf(bus, bus_len, "virtio");
+    } else {
+        snprintf(bus, bus_len, "scsi");
+    }
+}
+
 //!
 //! Attach a given volume to an instance.
 //!
@@ -1121,266 +1381,69 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
 //!         EUCA_NOT_FOUND_ERROR and EUCA_HYPERVISOR_ERROR.
 //!
-//! @see convert_dev_names()
-//!
 static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev)
 {
     int ret = EUCA_OK;
-    int have_remote_device = 0;
-    char *xml = NULL;
-    char *tagBuf = NULL;
-    char *localDevName = NULL;
-    char *remoteDevStr = NULL;
-    char localDevReal[32] = "";
-    char localDevTag[256] = "";
-    char remoteDevReal[132] = "";
-    char scUrl[512] = "";              //Tmp holder for sc url for sc call.
-    char path[EUCA_MAX_PATH] = "";
-    char lpath[EUCA_MAX_PATH] = "";
-    ncVolume *volume = NULL;
+    boolean have_remote_device = FALSE;
+    char *libvirt_xml = NULL;
+    char *libvirt_xml_modified = NULL;
+    char canonicalDev[32] = "";
     ebs_volume_data *vol_data = NULL;
 
-    if (!strcmp(nc->H->name, "xen")) {
-        tagBuf = NULL;
-        localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
-        tagBuf = localDevTag;
-        localDevName = localDevTag;
-    } else {
-        LOGERROR("[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
-        return EUCA_ERROR;
-    }
-
-    // sets localDevReal to the file name from the device path
-    // and, for KVM, sets localDevTag to the "unknown" string
-    ret = convert_dev_names(localDev, localDevReal, tagBuf);
+    ret = canonicalize_dev(localDev, canonicalDev, sizeof(canonicalDev));
     if (ret)
         return ret;
 
-    // find the instance record
-    sem_p(inst_sem);
-    ncInstance *instance = find_instance(&global_instances, instanceId);
-    sem_v(inst_sem);
-    if (instance == NULL) {
-        return EUCA_NOT_FOUND_ERROR;
-    }
-
-    {                                  // connect to hypervisor and query it
-        virConnectPtr conn = lock_hypervisor_conn();
-        if (conn == NULL) {
-            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            return EUCA_HYPERVISOR_ERROR;
-        }
-        // find domain on hypervisor
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        if (dom == NULL) {
-            if (instance->state != BOOTING && instance->state != STAGING) {
-                LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
-            }
-            unlock_hypervisor_conn();
-            return EUCA_HYPERVISOR_ERROR;
-        }
-        virDomainFree(dom);            // release libvirt resource
-        unlock_hypervisor_conn();
-    }
-
-    // mark volume as 'attaching', save token value as we got from the wire
-    sem_p(inst_sem);
-    {
-        volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING);
-        save_instance_struct(instance);
-        copy_instances();
-    }
-    sem_v(inst_sem);
-
-    if (!volume) {
-        LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
+    if (update_volume(instanceId, volumeId, attachmentToken, NULL, canonicalDev, VOL_STATE_ATTACHING, NULL, FALSE)) {
         return EUCA_ERROR;
     }
-    //Do the ebs connect.
-    LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instanceId, volumeId);
-    if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
-        LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume: %s\n", instanceId, volumeId, volumeId);
-        have_remote_device = 0;
-        ret = EUCA_ERROR;
-        goto release;
-    } else {
-        LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
+    
+    char serial[128];
+    char bus[16];
+    set_serial_and_bus(volumeId, canonicalDev, serial, sizeof(serial), bus, sizeof(bus));
+    if (connect_ebs(canonicalDev, serial, bus, nc, instanceId, volumeId, attachmentToken, &libvirt_xml, &vol_data)) {
+        return EUCA_ERROR;
     }
+    have_remote_device = TRUE;
 
-    if (connect_ebs_volume(scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data) != EUCA_OK) {
-        LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
-        have_remote_device = 0;
+    if (update_volume(instanceId, volumeId, attachmentToken, vol_data->connect_string, NULL, VOL_STATE_ATTACHING, libvirt_xml, FALSE)) {
         ret = EUCA_ERROR;
         goto release;
     }
 
-    if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-        LOGERROR("[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
-        remoteDevReal[0] = '\0';
-        have_remote_device = 0;
-        ret = EUCA_ERROR;
-        goto release;
-    } else {
-        LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
-        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-        have_remote_device = 1;
-    }
 
-    // Update volume with new connection info
-    sem_p(inst_sem);
-    {
-        volume = save_volume(instance, volumeId, attachmentToken, vol_data->connect_string, localDevName, localDevReal, VOL_STATE_ATTACHING);
-        save_instance_struct(instance);
-        copy_instances();
-    }
-    sem_v(inst_sem);
-
-    if (!volume) {
-        LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
-        ret = EUCA_ERROR;
-        goto release;
-    }
-    // make sure there is a block device
-    if (check_block(remoteDevReal)) {
-        LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instanceId, volumeId, remoteDevReal);
-        ret = EUCA_ERROR;
-        goto release;
-    }
-    // generate XML for libvirt attachment request
-    if (gen_volume_xml(volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
-        || gen_libvirt_volume_xml(volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
-        LOGERROR("[%s][%s] could not produce attach device xml\n", instanceId, volumeId);
-        ret = EUCA_ERROR;
-        goto release;
-    }
-    snprintf(path, (sizeof(path) - 1), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX.xml
-    path[sizeof(path) - 1] = '\0';
-
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX-libvirt.xml
-    lpath[sizeof(lpath) - 1] = '\0';
-
-    // invoke hooks
-    if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
-        LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
-        ret = EUCA_ERROR;
-        goto release;
-    }
-    // read in libvirt XML, which may have been modified by the hook above
-    if ((xml = file2str(lpath)) == NULL) {
-        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
+    if (create_vol_xml(instanceId, volumeId, libvirt_xml, &libvirt_xml_modified) != EUCA_OK) {
         ret = EUCA_ERROR;
         goto release;
     }
 
-    {                                  // connect to hypervisor, find the domain, attach the volume
-        virConnectPtr conn = lock_hypervisor_conn();
-        if (conn == NULL) {
-            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            if (xml) {
-                EUCA_FREE(xml);
-            }
-            return EUCA_HYPERVISOR_ERROR;
-        }
-        // find domain on hypervisor
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        if (dom == NULL) {
-            if (instance->state != BOOTING && instance->state != STAGING) {
-                LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
-            }
-            unlock_hypervisor_conn();
-            goto release;
-        }
-
-        int err = 0;
-        for (int i = 1; i <= VOL_RETRIES; i++) {
-            err = virDomainAttachDevice(dom, xml);
-            if (err) {
-                LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
-                LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-                sleep(3);              // sleep a bit and retry.
-            } else {
-                break;
-            }
-        }
-
-        if (err) {
-            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after %d tries\n", instanceId, volumeId, remoteDevReal, localDevReal, VOL_RETRIES);
-            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-            ret = EUCA_ERROR;
-        }
-
-        virDomainFree(dom);            // release libvirt resource
-        unlock_hypervisor_conn();
-    }
-
+    ret = attach_vol_instance(nc, canonicalDev, instanceId, volumeId, libvirt_xml_modified);
+    
 release:
 
-    {                                  // record volume state in memory and on disk
-        char *next_vol_state;
-        if (ret == EUCA_OK) {
-            next_vol_state = VOL_STATE_ATTACHED;
-        } else {
-            next_vol_state = VOL_STATE_ATTACHING_FAILED;
-        }
-
-        sem_p(inst_sem);
-        {
-            volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
-            save_instance_struct(instance);
-            copy_instances();
-            update_disk_aliases(instance);  // ask sensor subsystem to track the volume
-        }
-        sem_v(inst_sem);
-    }
-
-    if ((volume == NULL) && (xml != NULL)) {
+    // record volume state in memory and on disk
+    if (update_volume(instanceId, volumeId, NULL, NULL, NULL,(ret==EUCA_OK)?VOL_STATE_ATTACHED:VOL_STATE_ATTACHING_FAILED, libvirt_xml_modified, (ret==EUCA_OK))
+    		&& (libvirt_xml_modified != NULL)) {
         LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
-
-        // connect to hypervisor, find the domain, detach the volume
-        virConnectPtr conn = lock_hypervisor_conn();
-        if (conn == NULL) {
-            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            ret = EUCA_HYPERVISOR_ERROR;
-            goto cleanup;
-        }
-        // find domain on hypervisor
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        int err = 0;
-        if (dom != NULL) {
-            err = virDomainDetachDevice(dom, xml);
-            virDomainFree(dom);        // release libvirt resource
-        }
-        if (err) {
-            LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
-            LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-        }
-        unlock_hypervisor_conn();
+        
+        detach_vol_instance(nc, canonicalDev, instanceId, volumeId, libvirt_xml_modified);
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && have_remote_device) {
-        LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
+        LOGDEBUG("[%s][%s] attempting to disconnect EBS target due to attachment failure\n", instanceId, volumeId);
         if (vol_data != NULL && vol_data->connect_string[0] != '\0') {
-            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, attachmentToken, vol_data->connect_string, nc->ip, nc->iqn) != EUCA_OK) {
-                LOGERROR("[%s][%s] Error disconnecting ebs volume on error rollback.\n", instanceId, volumeId);
-            }
+            disconnect_ebs(nc, instanceId, volumeId, attachmentToken, vol_data->connect_string);
         }
     }
 
     if (ret == EUCA_OK) {
-        LOGINFO("[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGINFO("[%s][%s] EBS volume attached as guest device '%s'\n", instanceId, volumeId, canonicalDev);
     }
-    // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
-    int log_level_for_devstring = EUCA_LOG_TRACE;
-    if (ret != EUCA_OK)
-        log_level_for_devstring = EUCA_LOG_DEBUG;
-    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDevStr);
 
-cleanup:
     EUCA_FREE(vol_data);
-    EUCA_FREE(remoteDevStr);
-    EUCA_FREE(xml);
+    EUCA_FREE(libvirt_xml);
+    EUCA_FREE(libvirt_xml_modified);
     return ret;
 }
 
@@ -1400,221 +1463,73 @@ cleanup:
 //! @param[in] attachmentToken the target device name
 //! @param[in] localDev the local device name
 //! @param[in] force if set to 1, this will force the volume to detach
-//! @param[in] grab_inst_sem if set to 1, will require the usage of the instance semaphore
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
 //!         EUCA_NOT_FOUND_ERROR and EUCA_HYPERVISOR_ERROR.
 //!
-//! @see convert_dev_names()
-//!
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem)
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force)
 {
     int ret = EUCA_OK;
-    int have_remote_device = 0;
-    char *xml = NULL;
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char volpath[EUCA_MAX_PATH];
-    char lvolpath[EUCA_MAX_PATH];
-    char *tagBuf;
-    char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[132];
-    char scUrl[512];
-    char *connectionString = NULL;
-    instance_states lastState = NO_STATE;
-    char *remoteDevStr = NULL;
-    ncVolume *volume = NULL;
+    char *libvirt_xml = NULL;
+    char canonicalDev[32];
+    char *connect_string = NULL;
 
-    if (!strcmp(nc->H->name, "xen")) {
-        tagBuf = NULL;
-        localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
-        tagBuf = localDevTag;
-        localDevName = localDevTag;
-    } else {
-        LOGERROR("[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
-        return EUCA_ERROR;
-    }
-
-    // get the file name from the device path and, for KVM, the "unknown" string
-    ret = convert_dev_names(localDev, localDevReal, tagBuf);
+    ret = canonicalize_dev(localDev, canonicalDev, sizeof(canonicalDev));
+    if (ret)
+        return ret;
+    
+    ret = update_volume(instanceId, volumeId, NULL, NULL, canonicalDev, VOL_STATE_DETACHING, NULL, FALSE);
     if (ret)
         return ret;
 
-    {                                  // find the instance record and work with it
-        if (grab_inst_sem)
-            sem_p(inst_sem);
-
-        ncInstance *instance = find_instance(&global_instances, instanceId);
-        if (instance == NULL) {
-            LOGERROR("[%s][%s] failed to find instance for volume detachment\n", instanceId, volumeId);
-            if (grab_inst_sem)
-                sem_v(inst_sem);
-            return EUCA_NOT_FOUND_ERROR;
-        }
-        // set up paths for later
-        snprintf(volpath, sizeof(volpath), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX.xml
-        snprintf(lvolpath, sizeof(lvolpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX-libvirt.xml
-
-        // save current state on the stack
-        lastState = instance->state;
-
-        // mark volume as 'detaching', do not over-write the attachment token used for
-        volume = save_volume(instance, volumeId, NULL, NULL, localDevName, localDevReal, VOL_STATE_DETACHING);
-        if (!volume) {
-            LOGERROR("[%s][%s] failed to update the volume record, aborting volume detachment\n", instanceId, volumeId);
-            if (grab_inst_sem)
-                sem_v(inst_sem);
-            return EUCA_ERROR;
-        }
-        save_instance_struct(instance);
-        copy_instances();
-
-        // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0' || volume->attachmentToken[0] == '\0') {
-            LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
-            if (grab_inst_sem)
-                sem_v(inst_sem);
-            return EUCA_ERROR;
-        }
-        // do iscsi connect shellout if remoteDev is an iSCSI target
-        // get credentials, decrypt them
-        // (used to have check if iscsi here, not necessary with AOE deprecation.)
-        remoteDevStr = get_volume_local_device(volume->connectionString);
-        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
-            remoteDevReal[0] = '\0';
-        } else {
-            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-            have_remote_device = 1;
-        }
-        EUCA_FREE(remoteDevStr);
-
-        if (grab_inst_sem)
-            sem_v(inst_sem);
-    }
-
-    // something went wrong above, abort
-    if (!have_remote_device) {
+    // do iscsi connect shellout if remoteDev is an iSCSI target
+    // get credentials, decrypt them
+    // (used to have check if iscsi here, not necessary with AOE deprecation.)
+    /// EBSTODO: verify that device is still there
+    // remoteDevStr = get_volume_local_device(volume->connectionString);
+    
+    if ((libvirt_xml = read_vol_xml(instanceId, volumeId)) == NULL) {
         ret = EUCA_ERROR;
         goto disconnect;
     }
-    // make sure there is a block device
-    if (check_block(remoteDevReal)) {
-        LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId, remoteDevReal);
+    
+    // refresh stats so volume measurements are captured before it disappears
+    refresh_instance_resources(instanceId);
+    
+    if (detach_vol_instance(nc, canonicalDev, instanceId, volumeId, libvirt_xml)) {
         if (!force)
-            ret = EUCA_ERROR;
-        goto disconnect;
-    }
-    // read in libvirt XML
-    xml = file2str(lvolpath);
-    if (xml == NULL) {
-        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instanceId, volumeId, lvolpath);
-        ret = EUCA_ERROR;
-        goto disconnect;
-    }
-
-    {                                  // connect to hypervisor and do
-        virConnectPtr conn = lock_hypervisor_conn();
-        if (conn == NULL) {
-            LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
             ret = EUCA_HYPERVISOR_ERROR;
-            goto disconnect;
-        }
-        // refresh stats so volume measurements are captured before it disappears
-        euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
-        sensor_refresh_resources(resourceName, resourceAlias, 1);
-
-        // find domain on hypervisor
-        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
-        if (dom == NULL) {
-            if (lastState != BOOTING && lastState != STAGING) {
-                LOGWARN("[%s][%s] domain not running on hypervisor, will not try to detach device\n", instanceId, volumeId);
-            }
-            unlock_hypervisor_conn();
-            goto disconnect;
-        }
-        // protect libvirt calls because we've seen problems during concurrent libvirt invocation
-        int err = virDomainDetachDevice(dom, xml);
-        if (!strcmp(nc->H->name, "xen")) {
-            err = xen_detach_helper(nc, instanceId, localDevReal, xml);
-        }
-
-        if (err) {
-            LOGERROR("[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
-            LOGERROR("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-            if (!force)
-                ret = EUCA_HYPERVISOR_ERROR;
-        } else {
-            call_hooks(NC_EVENT_POST_DETACH, volpath);  // invoke hooks, but do not do anything if they return error
-            unlink(lvolpath);          // remove vol-XXX-libvirt.xml
-            unlink(volpath);           // remove vol-XXXX.xml file
-        }
-
-        virDomainFree(dom);            // release libvirt resource
-        unlock_hypervisor_conn();      // unlock the connection to the hypervisor
+    } else {
+        delete_vol_xml(instanceId, volumeId);
     }
+    
+ disconnect:
+    
+    update_volume(instanceId, volumeId, NULL, NULL, NULL, (ret==EUCA_OK)?(VOL_STATE_DETACHED):(VOL_STATE_DETACHING_FAILED), NULL, TRUE);
 
-disconnect:
-
-    {                                  // update the instance structure while under a lock
-        if (grab_inst_sem)
-            sem_p(inst_sem);
-
-        ncInstance *instance = find_instance(&global_instances, instanceId);
-        if (instance == NULL) {
-            LOGWARN("[%s][%s] failed to find the instance to update volume state\n", instanceId, volumeId);
-        } else {
-            // record volume state in memory and on disk
-            char *next_vol_state;
-            if (ret == EUCA_OK) {
-                next_vol_state = VOL_STATE_DETACHED;
-            } else {
-                next_vol_state = VOL_STATE_DETACHING_FAILED;
+    
+    sem_p(inst_sem);
+    {
+        ncInstance * instance = find_instance(&global_instances, instanceId);
+        if (instance) {
+            ncVolume * volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, NULL);
+            if (volume) {
+                connect_string = strdup(volume->connectionString);
             }
-            ncVolume *volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);
-            if (volume == NULL) {
-                LOGWARN("[%s][%s] failed to save the volume record\n", instanceId, volumeId);
-                ret = EUCA_ERROR;
-            } else {
-                connectionString = strdup(volume->connectionString);
-            }
-            save_instance_struct(instance);
-            copy_instances();
-            update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
-        }
-
-        if (grab_inst_sem)
-            sem_v(inst_sem);
-    }
-
-    // if iSCSI, try to disconnect the target
-    if (have_remote_device) {
-        //Do the ebs disconnect.
-        LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-        if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
-            LOGWARN("[%s][%s] could not obtain SC URL (is SC enabled?)\n", instanceId, volumeId);
-            scUrl[0] = '\0';
-        }
-        LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-        //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
-        if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
-            LOGERROR("[%s][%s] failed to disconnect volume\n", instanceId, volumeId);
-            if (!force)
-                ret = EUCA_ERROR;
-
         }
     }
-
+    sem_v(inst_sem);
+    
+    ret = disconnect_ebs(nc, instanceId, volumeId, attachmentToken, connect_string);
     if (ret == EUCA_OK)
-        LOGINFO("[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGINFO("[%s][%s] detached EBS guest device '%s'\n", instanceId, volumeId, canonicalDev);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
     int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
         log_level_for_devstring = EUCA_LOG_DEBUG;
-    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, connectionString);
-    EUCA_FREE(connectionString);
-    EUCA_FREE(xml);
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, connect_string);
+    EUCA_FREE(connect_string);
+    EUCA_FREE(libvirt_xml);
 
     if (force) {
         return (EUCA_OK);

@@ -2669,7 +2669,7 @@ public class ActivityManager {
       final EucalyptusClient client = context.getEucalyptusClient();
 
       final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( );
-      for ( final String subnetId : subnetIds ) {
+      for ( final String subnetId : Iterables.concat( Lists.newArrayList( "verbose" ), subnetIds ) ) {
         final SubnetIdSetItemType subnetIdItem = new SubnetIdSetItemType( );
         subnetIdItem.setSubnetId( subnetId );
         subnetIdItems.add( subnetIdItem );
@@ -2890,6 +2890,7 @@ public class ActivityManager {
 
       final DescribeSecurityGroupsType describeSecurityGroupsType
           = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.getSecurityGroupSet().add( "verbose" );
       describeSecurityGroupsType.getFilterSet().add(
           filter( identifiers ? "group-id" : "group-name", groups ) );
 

@@ -169,7 +169,7 @@ that describes a Eucalyptus instance to be launched.
                     </xsl:choose>
                 </xsl:if>
 
-                <!-- disks or partitions (Xen) -->
+                <!-- disks or partitions (on Xen) from VBR -->
 
                 <xsl:for-each select="/instance/disks/diskPath">
                     <disk>
@@ -242,6 +242,12 @@ that describes a Eucalyptus instance to be launched.
                         <target dev="fda"/>
                     </disk>
                 </xsl:if>
+
+		<!-- disks backed by EBS -->
+
+                <xsl:for-each select="/instance/volumes/volume/libvirt">
+		    <xsl:copy-of select="node()"/>
+		</xsl:for-each>
 
                 <!-- network cards -->
 

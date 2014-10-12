@@ -84,6 +84,13 @@ public class Vpc extends UserMetadata<Vpc.State> implements VpcMetadata {
     return new Vpc( owner, name );
   }
 
+  public static Vpc exampleDefault( final String accountNumber ) {
+    final Vpc vpc = exampleWithOwner( null );
+    vpc.setOwnerAccountNumber( accountNumber );
+    vpc.setDefaultVpc( true );
+    return vpc;
+  }
+
   public static Vpc exampleDefault( final OwnerFullName owner ) {
     final Vpc vpc = exampleWithOwner( owner );
     vpc.setDefaultVpc( true );

@@ -62,5 +62,9 @@ public class EventHandlerChains {
 					return this;
 				}
 			}.build();
-	}		
+	}
+
+	public static EventHandlerChain<ApplySecurityGroupsEvent> onApplySecurityGroups(){
+		return (new EventHandlerChainApplySecurityGroups()).build();
+	}
 }

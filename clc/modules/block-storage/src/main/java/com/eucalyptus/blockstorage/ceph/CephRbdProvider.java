@@ -228,21 +228,15 @@ public class CephRbdProvider implements SANProvider {
 		}
 	}
 
-	// TODO post-nc-changes replace this with the commented method below after changing the method signature in SANProvider interface
 	@Override
-	public Integer addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
-		return -1;
+	public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
+		try {
+			String pool = rbdService.getImagePool(volumeId);
+			return pool + '/' + volumeId;
+		} catch (Exception e) {
+			throw new EucalyptusCloudException("Unable to export " + volumeId, e);
+		}
 	}
-
-	// @Override
-	// public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
-	// try {
-	// String pool = rbdService.getImagePool(volumeId);
-	// return pool + '/' + volumeId;
-	// } catch (Exception e) {
-	// throw new EucalyptusCloudException("Unable to export " + volumeId, e);
-	// }
-	// }
 
 	@Override
 	public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
@@ -322,14 +316,13 @@ public class CephRbdProvider implements SANProvider {
 		}
 	}
 
-	// TODO post-nc-changes uncomment these methods after making changes in SAN Provider
-	// @Override
-	// public String getProtocol() {
-	// return "rbd";
-	// }
-	//
-	// @Override
-	// public String getProviderName() {
-	// return "ceph";
-	// }
+	@Override
+	public String getProtocol() {
+		return "rbd";
+	}
+
+	@Override
+	public String getProviderName() {
+		return "ceph";
+	}
 }

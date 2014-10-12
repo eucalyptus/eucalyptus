@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,9 +22,7 @@ package com.eucalyptus.loadbalancing;
 import java.util.NoSuchElementException;
 
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -34,11 +32,10 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 
@@ -183,20 +180,13 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
     @Override
     public LoadBalancerPolicyAttributeDescription apply(
         LoadBalancerPolicyAttributeDescriptionCoreView arg0) {
-      final EntityTransaction db = Entities.get(LoadBalancerPolicyAttributeDescription.class);
-      LoadBalancerPolicyAttributeDescription attr = null;
-      try{
-        attr = Entities.uniqueResult(arg0.policyDesc);
-        db.commit();
+      try ( TransactionResource db = Entities.transactionFor( LoadBalancerPolicyAttributeDescription.class ) ) {
+        return Entities.uniqueResult(arg0.policyDesc);
       }catch(final NoSuchElementException ex){
         throw ex;
       }catch (final Exception ex) {
         throw Exceptions.toUndeclared(ex);
-      }finally{
-        if(db.isActive())
-          db.rollback();
       }
-      return attr;
     }
   }
 }

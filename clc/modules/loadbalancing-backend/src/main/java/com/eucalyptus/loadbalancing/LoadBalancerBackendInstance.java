@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -43,6 +43,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ClockTick;
@@ -57,6 +58,7 @@ import com.eucalyptus.loadbalancing.backend.LoadBalancingException;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -129,24 +131,19 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.setDescription("Instance registration is still in progress.");
 		
 		if(this.getVmInstance() == null)
-    		throw new InvalidEndPointException();
+			throw new InvalidEndPointException();
 
-    	final EntityTransaction db = Entities.get( LoadBalancerZone.class );
-    	try{
-    		final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
-    		this.setAvailabilityZone(found);
-    		db.commit();
-    	}catch(final NoSuchElementException ex){
-    		db.rollback();
-    	}catch(final Exception ex){
-    		db.rollback();
+		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
+			final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
+			this.setAvailabilityZone(found);
+			db.commit();
+		}catch(final NoSuchElementException ex){
+		}catch(final Exception ex){
 			throw new InternalFailure400Exception("unable to find the zone");
-    	}finally{
-    		if(db.isActive())
-    			db.rollback();
-    		if(this.zone == null)
-    			throw new InternalFailure400Exception("unable to find the instance's zone");
-    	}
+		}finally{
+			if(this.zone == null)
+				throw new InternalFailure400Exception("unable to find the instance's zone");
+		}
 	}
 	
 	public static LoadBalancerBackendInstance newInstance(final OwnerFullName userFullName, final LoadBalancer lb, final String vmId)
@@ -359,16 +356,11 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			/// determine the BE instances to query
 			final List<LoadBalancerBackendInstance> allInstances = Lists.newArrayList();
 			final List<LoadBalancerBackendInstance> stateOutdated = Lists.newArrayList();
-			EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerBackendInstance.named()));
 				db.commit();
 			}catch(final Exception ex){
-				db.rollback();
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			final Date current = new Date(System.currentTimeMillis());
 			// find the record eligible to check its status
@@ -382,19 +374,13 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				}
 			}
 			
-			db = Entities.get(LoadBalancerBackendInstance.class);
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				for(final LoadBalancerBackendInstance be: stateOutdated){
 					final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
 					update.setLastUpdateTimestamp(current);
-					Entities.persist(update);
 				}
 				db.commit();
 			}catch(final Exception ex){
-				db.rollback();
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			
 			final List<String> instancesToCheck = 
@@ -436,8 +422,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 					stateMap.put(instance.getInstanceId(), STATE.Error);
 			}
 			
-			db = Entities.get(LoadBalancerBackendInstance.class);
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				for(final LoadBalancerBackendInstance be : stateOutdated){
 					if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
 						final STATE trueState = stateMap.get(be.getInstanceId());
@@ -452,10 +437,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				}
 				db.commit();
 			}catch(final Exception ex){
-				db.rollback();
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
@@ -482,35 +463,41 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			return this.instance.getVmInstance();
 		}
 
-	    public STATE getBackendState(){
-	    	return this.instance.getBackendState();
-	    }
-	    
-	    public String getReasonCode(){
-	    	return this.instance.getReasonCode();
-	    }
-	    
-	    public String getDescription(){
-	    	return this.instance.getDescription();
-	    }
-	    
-		public String getPartition() {
-			return this.instance.getPartition();
+		public STATE getBackendState(){
+			return this.instance.getBackendState();
 		}
-		
+	    
+		public String getReasonCode(){
+			return this.instance.getReasonCode();
+		}
+	    
+		public String getDescription(){
+			return this.instance.getDescription();
+		}
+	    
 		public String getIpAddress(){
 			return this.instance.getIpAddress();
-		}
-		
-		public String getZoneName(){
-			return this.instance.zone.getName();
 		}
 		
 		public Date instanceStateLastUpdated(){
 			return this.instance.instanceUpdateTimestamp;
 		}
+
+		public static NonNullFunction<LoadBalancerBackendInstanceCoreView,String> instanceId( ) {
+			return StringPropertyFunctions.InstanceId;
+		}
+
+		private enum StringPropertyFunctions implements NonNullFunction<LoadBalancerBackendInstanceCoreView,String> {
+			InstanceId {
+				@Nonnull
+				@Override
+				public String apply( final LoadBalancerBackendInstanceCoreView loadBalancerBackendInstanceCoreView ) {
+					return loadBalancerBackendInstanceCoreView.getInstanceId( );
+				}
+			},
+		}
 	}
-	 
+
 	@TypeMapper
 	public enum LoadBalancerBackendInstanceCoreViewTransform implements Function<LoadBalancerBackendInstance, LoadBalancerBackendInstanceCoreView> {
 		INSTANCE;
@@ -522,7 +509,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			return new LoadBalancerBackendInstanceCoreView(arg0);
 		}
 	}
-	
+
 	public enum LoadBalancerBackendInstanceEntityTransform implements Function<LoadBalancerBackendInstanceCoreView, LoadBalancerBackendInstance> {
 		INSTANCE;
 
@@ -530,31 +517,26 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		@Nullable
 		public LoadBalancerBackendInstance apply(
 				@Nullable LoadBalancerBackendInstanceCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
-			try{
-				final LoadBalancerBackendInstance be = Entities.uniqueResult(arg0.instance);
-				db.commit();
-				return be;
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+				return Entities.uniqueResult(arg0.instance);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}	
 	}
 	
 	private static class LoadBalancerBackendInstanceRelationView  {
 		private LoadBalancerZoneCoreView zone = null;
-		private LoadBalancerCoreView loadbalancer = null;
+		private LoadBalancer loadbalancer = null;
 		
 		LoadBalancerBackendInstanceRelationView(
 				LoadBalancerBackendInstance instance) {
 			if(instance.zone!=null)
 				zone = TypeMappers.transform(instance.zone, LoadBalancerZoneCoreView.class);
-			if(instance.loadbalancer!=null)
-				loadbalancer = TypeMappers.transform(instance.loadbalancer, LoadBalancerCoreView.class);
+			if(instance.loadbalancer!=null) {
+				Entities.initialize( instance.loadbalancer );
+				loadbalancer = instance.loadbalancer;
+			}
 		}
 		
 		public LoadBalancerZoneCoreView getZone(){
@@ -562,7 +544,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		}
 		
 		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer;
+			return this.loadbalancer.getCoreView( );
 		}
 		
 	}

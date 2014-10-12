@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.msgs
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.google.common.base.Function
 
 @PolicyResourceType( "securitygroup" )
 public class VmSecurityMessage extends EucalyptusMessage{
@@ -185,6 +186,14 @@ public class SecurityGroupItemType extends EucalyptusData {
     this.groupName = groupName;
     this.groupDescription = groupDescription;
     this.vpcId = vpcId
+  }
+
+  static Function<SecurityGroupItemType,String> groupId( ) {
+    { SecurityGroupItemType item -> item.groupId } as Function<SecurityGroupItemType,String>
+  }
+
+  static Function<SecurityGroupItemType,String> groupName( ) {
+    { SecurityGroupItemType item -> item.groupName } as Function<SecurityGroupItemType,String>
   }
 }
 
