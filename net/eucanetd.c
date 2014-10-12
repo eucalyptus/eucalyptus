@@ -160,7 +160,7 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_DOMAINNAME", "eucalyptus.internal"}
     ,
-    {"VNET_MODE", "EDGE"}
+    {"VNET_MODE", NETMODE_MANAGED_NOVLAN}
     ,
     {"VNET_NETMASK", NULL}
     ,
@@ -378,7 +378,7 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-        // for testing 
+        // for testing
         //        update_globalnet = 1;
 
         // now, perform any updates that are required
