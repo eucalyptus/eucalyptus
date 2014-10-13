@@ -23,11 +23,13 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
+import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
+import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
@@ -38,6 +40,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
 
+@ComponentPart(CloudFormation)
 @CompileStatic(TypeCheckingMode.SKIP)
 public class CreateStackWorkflowImpl implements CreateStackWorkflow {
   private static final Logger LOG = Logger.getLogger(CreateStackWorkflowImpl.class);

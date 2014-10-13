@@ -39,9 +39,13 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
   private static final int PRE_EXPIRY = 60;
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
-  private final User user;
+  private final Supplier<User> user;
 
   public SecurityTokenAWSCredentialsProvider( final User user ) {
+    this( Suppliers.ofInstance( user ) );
+  }
+
+  public SecurityTokenAWSCredentialsProvider( final Supplier<User> user ) {
     this.user = user;
     refresh( );
   }
@@ -61,7 +65,7 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
       @Override
       public AWSCredentials get() {
         try {
-          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user, EXPIRATION_SECS );
+          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get( ), EXPIRATION_SECS );
           return new BasicSessionCredentials(
               securityToken.getAccessKeyId( ),
               securityToken.getSecretKey( ),

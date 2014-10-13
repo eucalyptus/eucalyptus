@@ -17,11 +17,10 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network.config
+package com.eucalyptus.util
 
 import com.google.common.base.CaseFormat
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import org.codehaus.jackson.map.MapperConfig
 import org.codehaus.jackson.map.PropertyNamingStrategy
 import org.codehaus.jackson.map.introspect.AnnotatedField
@@ -31,7 +30,6 @@ import org.codehaus.jackson.map.introspect.AnnotatedMethod
  *
  */
 @CompileStatic
-@PackageScope
 class UpperCamelPropertyNamingStrategy extends PropertyNamingStrategy {
   @Override
   String nameForField( final MapperConfig<?> mapperConfig,

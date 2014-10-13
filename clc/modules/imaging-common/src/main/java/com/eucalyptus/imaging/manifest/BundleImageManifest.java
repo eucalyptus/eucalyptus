@@ -58,10 +58,9 @@ public enum BundleImageManifest implements ImageManifest {
 		int index = cleanLocation.indexOf( '/' );
 		String bucketName = cleanLocation.substring( 0, index );
 		String manifestKey = cleanLocation.substring( index + 1 );
-        try {
-            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
-            return s3Client.getObjectContent(bucketName, manifestKey);
-        } catch (Exception e) {
+		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin()) ) {
+				return s3Client.getObjectContent(bucketName, manifestKey);
+		} catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
 		}
 	}

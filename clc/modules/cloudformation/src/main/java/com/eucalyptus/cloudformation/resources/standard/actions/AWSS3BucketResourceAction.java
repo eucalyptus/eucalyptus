@@ -101,13 +101,14 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-        String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
-        if (s3c.doesBucketExist(bucketName)) {
-          throw new Exception("Bucket " + bucketName + " exists");
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+          String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
+          if (s3c.doesBucketExist(bucketName)) {
+            throw new Exception("Bucket " + bucketName + " exists");
+          }
+          s3c.createBucket(bucketName);
+          action.info.setPhysicalResourceId(bucketName);
         }
-        s3c.createBucket(bucketName);
-        action.info.setPhysicalResourceId(bucketName);
         return action;
       }
 

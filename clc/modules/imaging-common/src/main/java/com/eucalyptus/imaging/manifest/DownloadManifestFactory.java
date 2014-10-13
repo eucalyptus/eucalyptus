@@ -95,26 +95,25 @@ public class DownloadManifestFactory {
 	 * @throws DownloadManifestException
 	 */
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-			final String manifestName, int expirationHours) throws DownloadManifestException {
-		try {
+		final String manifestName, int expirationHours) throws DownloadManifestException {
+		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true)) ) {
 			//prepare to do pre-signed urls
-      EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
 
-      Date expiration = new Date();
-      long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
-      expiration.setTime(msec);
-      
-      // check if download-manifest already exists
-      if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
-        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created and has not expired. Skipping creation");
-        URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-            DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
-        return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
-      } else {
-        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' does not exist");
-      }
+			Date expiration = new Date();
+			long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
+			expiration.setTime(msec);
 
-      UrlValidator urlValidator = new UrlValidator();
+			// check if download-manifest already exists
+			if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
+				LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created and has not expired. Skipping creation");
+				URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+						DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
+				return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
+			} else {
+				LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' does not exist");
+			}
+
+			UrlValidator urlValidator = new UrlValidator();
 
 			final String manifest = baseManifest.getManifest();
 			if (manifest == null) {
@@ -240,8 +239,7 @@ public class DownloadManifestFactory {
 	}
 	
 	public static String generatePresignedUrl(final String manifestName) throws DownloadManifestException {
-	  try{
-	    EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
+	  try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true)) ) {
 	    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
 	    Date expiration = new Date();
 	    long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
