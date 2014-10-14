@@ -103,7 +103,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
             throw new ValidationErrorException("No such allocation-id " + action.properties.getAllocationId());
           }
-          associateAddressType.setPublicIp(action.properties.getEip());
+          associateAddressType.setAllocationId(action.properties.getAllocationId());
         }
         if (action.properties.getNetworkInterfaceId() != null) {
           associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
@@ -112,8 +112,11 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
         }
         AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
-        associateAddressResponseType.getAssociationId(); // TODO: do we use this anywhere?
-        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        if (action.properties.getAllocationId() != null) {
+          action.info.setPhysicalResourceId(associateAddressResponseType.getAssociationId());
+        } else {
+          action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        }
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -138,7 +141,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
           if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
             DisassociateAddressType disassociateAddressType = MessageHelper.createMessage(DisassociateAddressType.class, action.info.getEffectiveUserId());
-            disassociateAddressType.setPublicIp(action.properties.getEip());
+            disassociateAddressType.setAssociationId(action.info.getPhysicalResourceId());
             AsyncRequests.<DisassociateAddressType, DisassociateAddressResponseType> sendSync(configuration, disassociateAddressType);
           }
         }
