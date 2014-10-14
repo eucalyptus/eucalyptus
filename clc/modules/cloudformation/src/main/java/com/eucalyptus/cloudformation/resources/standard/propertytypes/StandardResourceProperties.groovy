@@ -331,21 +331,21 @@ public class AWSEC2NetworkInterfaceProperties implements ResourceProperties {
   @Property
   List<EC2Tag> tags = Lists.newArrayList();
 }
-
-@ToString(includeNames=true)
-public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
-  @Property
-  Boolean deleteOnTermination;
-  @Required
-  @Property
-  Integer deviceIndex;
-  @Required
-  @Property
-  String instanceId;
-  @Required
-  @Property
-  String networkInterfaceId;
-}
+// Can't do this one until we allow more than one network interface on an instance
+//@ToString(includeNames=true)
+//public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
+//  @Property
+//  Boolean deleteOnTermination;
+//  @Required
+//  @Property
+//  Integer deviceIndex;
+//  @Required
+//  @Property
+//  String instanceId;
+//  @Required
+//  @Property
+//  String networkInterfaceId;
+//}
 
 @ToString(includeNames=true)
 public class AWSEC2RouteProperties implements ResourceProperties {

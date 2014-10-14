@@ -35,8 +35,10 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.PrivateIpA
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -57,6 +59,7 @@ import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType;
 import com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetType;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -75,6 +78,11 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
 
   private AWSEC2NetworkInterfaceProperties properties = new AWSEC2NetworkInterfaceProperties();
   private AWSEC2NetworkInterfaceResourceInfo info = new AWSEC2NetworkInterfaceResourceInfo();
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a network interface to be available after create)")
+  public static volatile Integer NETWORK_INTERFACE_AVAILABLE_MAX_CREATE_RETRY_SECS = 300;
+
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a network interface to be deleted)")
+  public static volatile Integer NETWORK_INTERFACE_DELETED_MAX_DELETE_RETRY_SECS = 300;
 
   public AWSEC2NetworkInterfaceResourceAction() {
     for (CreateSteps createStep: CreateSteps.values()) {
@@ -164,6 +172,31 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         return null;
       }
     },
+    VERIFY_AVAILABLE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
+        NetworkInterfaceIdSetType networkInterfaceIdSet = action.getNetworkInterfaceIdSetType(action.info.getPhysicalResourceId());
+        describeNetworkInterfacesType.setNetworkInterfaceIdSet(networkInterfaceIdSet);
+        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType,DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
+        if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() ==0) {
+          throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet available");
+        }
+        if (!"available".equals(describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getStatus())) {
+          throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
+        }
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(NETWORK_INTERFACE_AVAILABLE_MAX_CREATE_RETRY_SECS).getPolicy();
+      }
+
+    },
+
     CREATE_TAGS {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -185,7 +218,17 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
       public RetryPolicy getRetryPolicy() {
         return null;
       }
-    }
+    };
+  }
+
+  private NetworkInterfaceIdSetType getNetworkInterfaceIdSetType(String networkInterfaceId) {
+    NetworkInterfaceIdSetType networkInterfaceIdSet = new NetworkInterfaceIdSetType();
+    ArrayList<NetworkInterfaceIdSetItemType> item = Lists.newArrayList();
+    NetworkInterfaceIdSetItemType networkInterfaceIdSetItemType = new NetworkInterfaceIdSetItemType();
+    networkInterfaceIdSetItemType.setNetworkInterfaceId(networkInterfaceId);
+    item.add(networkInterfaceIdSetItemType);
+    networkInterfaceIdSet.setItem(item);
+    return networkInterfaceIdSet;
   }
 
   private enum DeleteSteps implements Step {
@@ -195,27 +238,45 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.info.getPhysicalResourceId() == null) return action;
-
-        // check if network interface still exists (return otherwise)
-        DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-        describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.info.getPhysicalResourceId()));
-        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-        if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-          describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
-          return action;
-        }
+        if (checkDeleted(action, configuration)) return action;
         DeleteNetworkInterfaceType deleteNetworkInterfaceType = MessageHelper.createMessage(DeleteNetworkInterfaceType.class, action.info.getEffectiveUserId());
         deleteNetworkInterfaceType.setNetworkInterfaceId(action.info.getPhysicalResourceId());
         AsyncRequests.<DeleteNetworkInterfaceType, DeleteNetworkInterfaceResponseType>sendSync(configuration, deleteNetworkInterfaceType);
         return action;
       }
 
-      @Override
       public RetryPolicy getRetryPolicy() {
         return null;
       }
+    },
+    VERIFY_DELETE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (checkDeleted(action, configuration)) return action;
+        throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(NETWORK_INTERFACE_DELETED_MAX_DELETE_RETRY_SECS).getPolicy();
+      }
+    };
+
+    private static boolean checkDeleted(AWSEC2NetworkInterfaceResourceAction action, ServiceConfiguration configuration) throws Exception {
+      // check if network interface still exists (return otherwise)
+      DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
+      describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.info.getPhysicalResourceId()));
+      DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
+      if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+        describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+        return true;
+      }
+      return false;
     }
-  }
+
+    }
 
   @Override
   public ResourceProperties getResourceProperties() {
