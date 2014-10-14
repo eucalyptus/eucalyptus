@@ -112,6 +112,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         }
         CreateNetworkInterfaceResponseType createNetworkInterfaceResponseType = AsyncRequests.<CreateNetworkInterfaceType, CreateNetworkInterfaceResponseType>sendSync(configuration, createNetworkInterfaceType);
         action.info.setPhysicalResourceId(createNetworkInterfaceResponseType.getNetworkInterface().getNetworkInterfaceId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
 

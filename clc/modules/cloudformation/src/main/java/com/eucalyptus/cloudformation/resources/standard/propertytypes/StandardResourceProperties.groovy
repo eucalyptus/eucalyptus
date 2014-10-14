@@ -235,6 +235,8 @@ public class AWSEC2InstanceProperties implements ResourceProperties {
   @Required
   String imageId;
   @Property
+  String instanceInitiatedShutdownBehavior;
+  @Property
   String instanceType;
   @Property
   String kernelId;

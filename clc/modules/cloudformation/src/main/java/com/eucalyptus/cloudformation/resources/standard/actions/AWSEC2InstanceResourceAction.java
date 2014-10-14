@@ -32,6 +32,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InstanceResou
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPoint;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterface;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterfacePrivateIPSpecification;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
@@ -59,9 +61,15 @@ import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType;
+import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType;
+import com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType;
 import com.eucalyptus.compute.common.RunInstancesResponseType;
 import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
@@ -144,7 +152,9 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if (action.properties.getMonitoring() != null) {
             runInstancesType.setMonitoring(action.properties.getMonitoring());
           }
-          // Skipping mapping resourceaction.properties.getNetworkInterfaces() for now
+          if (action.properties.getNetworkInterfaces() != null && !action.properties.getNetworkInterfaces().isEmpty()) {
+            runInstancesType.setNetworkInterfaceSet(action.convertNetworkInterfaceSet(action.properties.getNetworkInterfaces()));
+          }
           if (action.properties.getPlacementGroupName() != null && !action.properties.getPlacementGroupName().isEmpty()) {
             runInstancesType.setPlacementGroup(action.properties.getPlacementGroupName());
           }
@@ -154,15 +164,29 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if (action.properties.getRamdiskId() != null && !action.properties.getRamdiskId().isEmpty()) {
             runInstancesType.setRamdiskId(action.properties.getRamdiskId());
           }
-          // Skipping mapping resourceaction.properties.getSecurityGroupIds() for now
+
+          if (action.properties.getSecurityGroupIds() != null && !action.properties.getSecurityGroupIds().isEmpty() &&
+            action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty()) {
+            throw new ValidationErrorException("SecurityGroupIds and SecurityGroups can not both be set on an AWS::EC2::Instance");
+          }
+
+          if (action.properties.getSecurityGroupIds() != null && !action.properties.getSecurityGroupIds().isEmpty()) {
+            runInstancesType.setGroupIdSet(Lists.newArrayList(action.properties.getSecurityGroupIds()));
+          }
+
           if (action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty()) {
-            runInstancesType.setSecurityGroups(action.convertSecurityGroups(action.properties.getSecurityGroups(), configuration, action.info.getEffectiveUserId()));
+            runInstancesType.setGroupSet(Lists.newArrayList(action.properties.getSecurityGroups()));
           }
           // Skipping mapping resourceaction.properties.getSourceDestCheck() for now
           if (action.properties.getSubnetId() != null && !action.properties.getSubnetId().isEmpty()) {
             runInstancesType.setSubnetId(action.properties.getSubnetId());
           }
-          // Skipping mapping resourceaction.properties.getTenancy() for now
+          if (action.properties.getTenancy() != null && !action.properties.getTenancy().isEmpty()) {
+            if (!"default".equals(action.properties.getTenancy()) && !"dedicated".equals(action.properties.getTenancy())) {
+              throw new ValidationErrorException("Tenancy must be 'default' or 'dedicated'");
+            }
+            runInstancesType.setPlacementTenancy(action.properties.getTenancy());
+          }
           if (action.properties.getUserData() != null && !action.properties.getUserData().isEmpty()) {
             runInstancesType.setUserData(action.properties.getUserData());
           }
@@ -325,6 +349,78 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
         return new StandardResourceRetryPolicy(INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS).getPolicy();
       }
     }
+  }
+
+  private InstanceNetworkInterfaceSetRequestType convertNetworkInterfaceSet(List<EC2NetworkInterface> networkInterfaces) {
+    InstanceNetworkInterfaceSetRequestType instanceNetworkInterfaceSetRequestType = new InstanceNetworkInterfaceSetRequestType();
+    ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = Lists.newArrayList();
+    for (EC2NetworkInterface networkInterface: networkInterfaces) {
+      InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterfaceSetItemRequestType = new InstanceNetworkInterfaceSetItemRequestType();
+      if (networkInterface.getNetworkInterfaceId() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setNetworkInterfaceId(networkInterface.getNetworkInterfaceId());
+      }
+      if (networkInterface.getDeviceIndex() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setDeviceIndex(networkInterface.getDeviceIndex());
+      }
+      if (networkInterface.getDeleteOnTermination() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setDeleteOnTermination(networkInterface.getDeleteOnTermination());
+      }
+      if (networkInterface.getAssociatePublicIpAddress() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setAssociatePublicIpAddress(networkInterface.getAssociatePublicIpAddress());
+      }
+      if (networkInterface.getDescription() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setDescription(networkInterface.getDescription());
+      }
+      if (networkInterface.getGroupSet() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setGroupSet(convertGroupSet(networkInterface.getGroupSet()));
+      }
+      if (networkInterface.getPrivateIpAddress() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setPrivateIpAddress(networkInterface.getPrivateIpAddress());
+      }
+      if (networkInterface.getPrivateIpAddresses() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setPrivateIpAddressesSet(convertPrivateIpAddressSet(networkInterface.getPrivateIpAddresses()));
+      }
+      if (networkInterface.getSecondaryPrivateIpAddressCount() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setSecondaryPrivateIpAddressCount(networkInterface.getSecondaryPrivateIpAddressCount());
+      }
+      if (networkInterface.getSubnetId() != null) {
+        instanceNetworkInterfaceSetItemRequestType.setSubnetId(networkInterface.getSubnetId());
+      }
+      item.add(instanceNetworkInterfaceSetItemRequestType);
+    }
+    instanceNetworkInterfaceSetRequestType.setItem(item);
+    return instanceNetworkInterfaceSetRequestType;
+  }
+
+  private PrivateIpAddressesSetRequestType convertPrivateIpAddressSet(List<EC2NetworkInterfacePrivateIPSpecification> privateIpAddresses) {
+    if (privateIpAddresses == null) return null;
+    PrivateIpAddressesSetRequestType privateIpAddressesSetRequestType = new PrivateIpAddressesSetRequestType();
+    ArrayList<PrivateIpAddressesSetItemRequestType> item = Lists.newArrayList();
+    for (EC2NetworkInterfacePrivateIPSpecification ec2NetworkInterfacePrivateIPSpecification: privateIpAddresses) {
+      PrivateIpAddressesSetItemRequestType privateIpAddressesSetItemRequestType = new PrivateIpAddressesSetItemRequestType();
+      if (ec2NetworkInterfacePrivateIPSpecification.getPrimary() != null) {
+        privateIpAddressesSetItemRequestType.setPrimary(ec2NetworkInterfacePrivateIPSpecification.getPrimary());
+      }
+      if (ec2NetworkInterfacePrivateIPSpecification.getPrivateIpAddress() != null){
+        privateIpAddressesSetItemRequestType.setPrivateIpAddress(ec2NetworkInterfacePrivateIPSpecification.getPrivateIpAddress());
+      }
+      item.add(privateIpAddressesSetItemRequestType);
+    }
+    privateIpAddressesSetRequestType.setItem(item);
+    return privateIpAddressesSetRequestType;
+  }
+
+  private SecurityGroupIdSetType convertGroupSet(List<String> groupSet) {
+    if (groupSet == null) return null;
+    SecurityGroupIdSetType securityGroupIdSetType = new SecurityGroupIdSetType();
+    ArrayList<SecurityGroupIdSetItemType> item = Lists.newArrayList();
+    for (String groupId: groupSet) {
+      SecurityGroupIdSetItemType securityGroupIdSetItemType = new SecurityGroupIdSetItemType();
+      securityGroupIdSetItemType.setGroupId(groupId);
+      item.add(securityGroupIdSetItemType);
+    }
+    securityGroupIdSetType.setItem(item);
+    return securityGroupIdSetType;
   }
 
   private enum DeleteSteps implements Step {
