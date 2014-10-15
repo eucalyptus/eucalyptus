@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -76,8 +74,6 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -1694,6 +1690,7 @@ public class SimpleWorkflowService {
                               userFullName,
                               workflowExecution,
                               workflowExecution.getDomainName( ),
+                              workflowExecution.getDomainUuid( ),
                               startTimer.getTimerId( ),
                               startTimer.getControl( ),
                               parsePeriod( startTimer.getStartToFireTimeout( ) ),
@@ -2227,77 +2224,6 @@ public class SimpleWorkflowService {
       logger.error( "Error polling for task " + list, e );
       emptyResponse.setCorrelationId( correlationId );
       Contexts.response( emptyResponse );
-    }
-  }
-
-  /**
-   * The workflow lock ensures that locally we are not attempting to update
-   * a workflow concurrently. Other hosts can attempt concurrent updates and
-   * will cause optimistic locking errors. When this occurs the local lock
-   * ensures the cache eviction of stale data occurs prior to the next update
-   * attempt, preventing lost updates.
-   */
-  private static final class WorkflowLock implements AutoCloseable {
-    private static final Interner<WorkflowLock> workflowLockInterner = Interners.newWeakInterner( );
-
-    private final Lock lock = new ReentrantLock( );
-    private final String accountNumber;
-    private final String domainUuid;
-    private final String runId;
-
-    static WorkflowLock lock( final AccountFullName accountFullName, final Domain domain, final String runId ) {
-      return lock( accountFullName.getAccountNumber( ), domain.getNaturalId( ), runId );
-    }
-
-    static WorkflowLock lock( final AccountFullName accountFullName, final Pair<String,String> domainUuidRunIdPair ) {
-      return lock( accountFullName.getAccountNumber( ), domainUuidRunIdPair.getLeft( ), domainUuidRunIdPair.getRight( ) );
-    }
-
-    static WorkflowLock lock( final AccountFullName accountFullName, final String domainUuid, final String runId ) {
-      return lock( accountFullName.getAccountNumber( ), domainUuid, runId );
-    }
-
-    static WorkflowLock lock( final String accountNumber, final String domainUuid, final String runId ) {
-      return workflowLockInterner.intern( new WorkflowLock( accountNumber, domainUuid, runId ) ).lock( );
-    }
-
-    private WorkflowLock( final String accountNumber, final String domainUuid, final String runId ) {
-      this.accountNumber = accountNumber;
-      this.domainUuid = domainUuid;
-      this.runId = runId;
-    }
-
-    public WorkflowLock lock( ) {
-      lock.lock( );
-      return this;
-    }
-
-    @Override
-    public void close( )  {
-      lock.unlock( );
-    }
-
-    @SuppressWarnings( "RedundantIfStatement" )
-    @Override
-    public boolean equals( final Object o ) {
-      if ( this == o ) return true;
-      if ( o == null || getClass() != o.getClass() ) return false;
-
-      final WorkflowLock that = (WorkflowLock) o;
-
-      if ( !accountNumber.equals( that.accountNumber ) ) return false;
-      if ( !domainUuid.equals( that.domainUuid ) ) return false;
-      if ( !runId.equals( that.runId ) ) return false;
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      int result = accountNumber.hashCode();
-      result = 31 * result + domainUuid.hashCode();
-      result = 31 * result + runId.hashCode();
-      return result;
     }
   }
 
