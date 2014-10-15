@@ -125,7 +125,7 @@ public class SimpleWorkflowService {
               userFullName,
               request.getName( ),
               request.getDescription( ),
-              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ), 0 ) );
+              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ), 0 ), 0 ) );
           return domains.save( domain );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -240,10 +240,10 @@ public class SimpleWorkflowService {
               domain,
               request.getDescription( ),
               request.getDefaultTaskList( ) == null ? null : request.getDefaultTaskList( ).getName( ),
-              parsePeriod( request.getDefaultTaskHeartbeatTimeout( ) ),
-              parsePeriod( request.getDefaultTaskScheduleToCloseTimeout( ) ),
-              parsePeriod( request.getDefaultTaskScheduleToStartTimeout( ) ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ) )
+              parsePeriod( request.getDefaultTaskHeartbeatTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskScheduleToCloseTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskScheduleToStartTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ), -1 )
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {
@@ -365,8 +365,8 @@ public class SimpleWorkflowService {
               request.getDescription(),
               request.getDefaultTaskList() == null ? null : request.getDefaultTaskList().getName(),
               request.getDefaultChildPolicy(),
-              parsePeriod( request.getDefaultExecutionStartToCloseTimeout() ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout() )
+              parsePeriod( request.getDefaultExecutionStartToCloseTimeout(), -1 ),
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout(), -1 )
           );
           return workflowTypes.save( workflowType );
         } catch ( SwfMetadataNotFoundException e ) {
@@ -790,11 +790,14 @@ public class SimpleWorkflowService {
               workflowType.getDefaultTaskList( ):
               request.getTaskList( ).getName( );
           final Integer executionStartToCloseTimeout = requireDefault(
-              parsePeriod( request.getExecutionStartToCloseTimeout() ),
+              parsePeriod( request.getExecutionStartToCloseTimeout(), -1 ),
               workflowType.getDefaultExecutionStartToCloseTimeout(), "ExecutionStartToCloseTimeout" );
           final Integer taskStartToCloseTimeout = requireDefault(
-              parsePeriod( request.getTaskStartToCloseTimeout() ),
+              parsePeriod( request.getTaskStartToCloseTimeout(), -1 ),
               workflowType.getDefaultTaskStartToCloseTimeout(), "TaskStartToCloseTimeout" );
+          final String taskStartToCloseTimeoutStr = taskStartToCloseTimeout < 0
+              ? "NONE" :
+              String.valueOf( taskStartToCloseTimeout );
           final WorkflowExecution workflowExecution = WorkflowExecution.create(
               userFullName,
               UUID.randomUUID( ).toString( ),
@@ -804,7 +807,7 @@ public class SimpleWorkflowService {
               childPolicy,
               taskList,
               executionStartToCloseTimeout,
-              taskStartToCloseTimeout,
+              taskStartToCloseTimeout < 0 ? null : taskStartToCloseTimeout,
               request.getTagList( ),
               Lists.newArrayList(
                   new WorkflowExecutionStartedEventAttributes( )
@@ -814,10 +817,10 @@ public class SimpleWorkflowService {
                       .withParentInitiatedEventId( 0L )
                       .withTaskList( new TaskList( ).withName( taskList ) )
                       .withTagList( request.getTagList( ) )
-                      .withTaskStartToCloseTimeout( String.valueOf( taskStartToCloseTimeout ) )
+                      .withTaskStartToCloseTimeout( taskStartToCloseTimeoutStr )
                       .withWorkflowType( request.getWorkflowType( ) ),
                   new DecisionTaskScheduledEventAttributes( )
-                      .withStartToCloseTimeout( String.valueOf( taskStartToCloseTimeout ) )
+                      .withStartToCloseTimeout( taskStartToCloseTimeoutStr )
                       .withTaskList( request.getTaskList( ) )
               )
           );
@@ -1693,7 +1696,7 @@ public class SimpleWorkflowService {
                               workflowExecution.getDomainUuid( ),
                               startTimer.getTimerId( ),
                               startTimer.getControl( ),
-                              parsePeriod( startTimer.getStartToFireTimeout( ) ),
+                              parsePeriod( startTimer.getStartToFireTimeout( ), 0 ),
                               completedId,
                               startedId
                               ) );
@@ -2138,19 +2141,11 @@ public class SimpleWorkflowService {
     throw exception;
   }
 
-  private static Integer parsePeriod( final String period ) {
-    if ( period == null || "NONE".equals( period ) ) {
-      return null;
-    } else {
-      return Integer.parseInt( period );
-    }
-  }
-
-  private static Integer parsePeriod( final String period, final Integer defaultValue ) {
+  private static Integer parsePeriod( final String period, final Integer noneValue ) {
     if ( period == null ) {
-      return defaultValue;
-    } else if ( "NONE".equals( period ) ) {
       return null;
+    } else if ( "NONE".equals( period ) ) {
+      return noneValue;
     } else {
       return Integer.parseInt( period );
     }
@@ -2164,7 +2159,7 @@ public class SimpleWorkflowService {
     if ( period == null && defaultValue == null ) {
       throw new ScheduleActivityTaskException( failureOnNoDefault );
     } else if ( period == null ) {
-      return defaultValue;
+      return defaultValue < 0 ? null : defaultValue;
     } else if ( "NONE".equals( period ) ) {
       return null;
     } else {

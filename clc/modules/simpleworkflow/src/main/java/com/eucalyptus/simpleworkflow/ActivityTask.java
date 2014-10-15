@@ -105,13 +105,13 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Type(type="org.hibernate.type.StringClobType")
   private String input;
 
-  @Column( name = "schedule_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "schedule_to_close_timeout", updatable = false )
   private Integer scheduleToCloseTimeout;
 
-  @Column( name = "schedule_to_start_timeout", nullable = false, updatable = false )
+  @Column( name = "schedule_to_start_timeout", updatable = false )
   private Integer scheduleToStartTimeout;
 
-  @Column( name = "start_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "start_to_close_timeout", updatable = false )
   private Integer startToCloseTimeout;
 
   @Column( name = "heartbeat_timeout", updatable = false )

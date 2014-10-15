@@ -135,7 +135,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Column( name = "exec_start_to_close_timeout", nullable = false, updatable = false )
   private Integer executionStartToCloseTimeout;
 
-  @Column( name = "task_start_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "task_start_to_close_timeout", updatable = false )
   private Integer taskStartToCloseTimeout;
 
   @Column( name = "cancel_requested", nullable = false )
@@ -198,8 +198,8 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
                                           final Domain domain,
                                           final WorkflowType workflowType,
                                           final String workflowId,
-                                          @Nullable final String childPolicy,
-                                          @Nullable final String taskList,
+                                          final String childPolicy,
+                                          final String taskList,
                                           @Nullable final Integer executionStartToCloseTimeout,
                                           @Nullable final Integer taskStartToCloseTimeout,
                                           final List<String> tags,
@@ -211,22 +211,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     workflowExecution.setWorkflowType( workflowType );
     workflowExecution.setWorkflowId( workflowId );
     workflowExecution.setState( ExecutionStatus.Open );
-    workflowExecution.setChildPolicy( childPolicy == null ?
-        workflowType.getDefaultChildPolicy() :
-        childPolicy );
-    workflowExecution.setTaskList( taskList == null ?
-        workflowType.getDefaultTaskList() :
-        taskList );
-    workflowExecution.setExecutionStartToCloseTimeout( executionStartToCloseTimeout == null ?
-        workflowType.getDefaultExecutionStartToCloseTimeout() :
-        executionStartToCloseTimeout );
-    workflowExecution.setTaskStartToCloseTimeout( taskStartToCloseTimeout == null ?
-        workflowType.getDefaultTaskStartToCloseTimeout() :
-        taskStartToCloseTimeout );
+    workflowExecution.setChildPolicy( childPolicy );
+    workflowExecution.setTaskList( taskList );
+    workflowExecution.setExecutionStartToCloseTimeout( executionStartToCloseTimeout );
+    workflowExecution.setTaskStartToCloseTimeout( taskStartToCloseTimeout );
     workflowExecution.setTagList( tags );
     workflowExecution.setCancelRequested( false );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
-    workflowExecution.setDecisionTimestamp( new Date() );
+    workflowExecution.setDecisionTimestamp( new Date( ) );
     workflowExecution.setWorkflowHistory( Lists.<WorkflowHistoryEvent>newArrayList( ) );
     for ( final WorkflowEventAttributes attributes : eventAttributes ) {
       workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create( workflowExecution, attributes ) );
