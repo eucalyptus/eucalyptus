@@ -123,7 +123,6 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         boolean attached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        // TODO: issue below, should not be action.info.getPhysicalResourceId() but the volume id... DUH!  (then run test again)
         describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
         DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
         if (describeVolumesResponseType.getVolumeSet().size() == 0) {

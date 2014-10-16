@@ -311,7 +311,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
           if ("internal".equals(loadBalancerDescription.getScheme())) {
             canonicalHostedZoneName = loadBalancerDescription.getDnsName();
           }
-          action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
           action.info.setSourceSecurityGroupGroupName(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupName)));
           action.info.setSourceSecurityGroupOwnerAlias(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupOwnerAlias)));
           action.info.setCanonicalHostedZoneNameID(JsonHelper.getStringFromJsonNode(new TextNode(canonicalHostedZoneNameId)));
