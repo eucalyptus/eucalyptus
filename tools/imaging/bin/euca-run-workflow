@@ -271,13 +271,17 @@ class WF_DownParts_WriteRaw(WF_base):
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
         parser.add_argument('--import-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the import")
         parser.add_argument('--cloud-cert-path', required=True, metavar='URL', help="Path to the cloud certificate")
+        parser.add_argument('--skip-size-validation', required=False, help="Skip downloaded size validation", default=False, action='store_true')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
+        if args.skip_size_validation:
+            download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path, skipsizevalidation=True)
+        else:
+            download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):

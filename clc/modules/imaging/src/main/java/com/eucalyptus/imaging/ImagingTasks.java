@@ -51,7 +51,7 @@ import edu.ucsb.eucalyptus.msgs.SubnetType;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
-  public enum IMAGE_FORMAT {  RAW, PARTITION, KERNEL, RAMDISK };
+  public enum IMAGE_FORMAT {  RAW, PARTITION, KERNEL, RAMDISK, VMDK };
   private static Object lock = new Object();
   
   public static ImportVolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {

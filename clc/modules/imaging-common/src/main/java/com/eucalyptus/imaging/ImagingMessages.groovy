@@ -256,7 +256,6 @@ public class InstanceStoreTask extends EucalyptusData {
   String uploadPolicy;
   String uploadPolicySignature;
   String s3Url;
-  String ec2Cert;
   String serviceCertArn;
   
   @HttpEmbedded(multiple = true)
