@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,11 +160,18 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
       this.setAuthenticated( false );
       throw e instanceof LoginException ?
           (LoginException) e :
-          new LoginException( e.getMessage( ) );
+          (LoginException) new LoginException( e.getMessage( ) ).initCause( e );
     }
     return this.isAuthenticated( );
   }
-  
+
+  /**
+   * Authenticate the given credentials.
+   *
+   * @return true if the authentication succeeded, or false if this
+   *              LoginModule should be ignored.
+   * @throws Exception if the authentication fails
+   */
   public abstract boolean authenticate( CB credentials ) throws Exception;
   
   @Override
