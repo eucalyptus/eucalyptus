@@ -136,15 +136,15 @@ public class EC2NetworkInterface {
   String description;
   @Required
   @Property
-  List<String> deviceIndex;
+  Integer deviceIndex;
   @Property
-  List<String> groupSet;
+  List<String> groupSet = Lists.newArrayList();
   @Property
   String networkInterfaceId;
   @Property
   String privateIpAddress;
   @Property
-  List<EC2NetworkInterfacePrivateIPSpecification> privateIpAddresses;
+  List<EC2NetworkInterfacePrivateIPSpecification> privateIpAddresses = Lists.newArrayList();
   @Property
   Integer secondaryPrivateIpAddressCount;
   @Property
