@@ -465,6 +465,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public enum RestoreHandler implements Predicate<VmInfo> {
+    /**
+     * Restores non-VPC instances
+     */
     Restore {
       @Override
       public boolean apply( final VmInfo input ) {
@@ -520,6 +523,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
+    /**
+     * Restores instances without network resources in consistent networking modes (EDGE, VPC)
+     *
+     * <p>Not safe for use in other modes due to possible network resource inconsistencies.</p>
+     */
     RestoreFailed {
       @Override
       public boolean apply( final VmInfo input ) {
@@ -563,6 +571,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
+    /**
+     * Unconditionally terminate instances (ebs instances can be restarted)
+     */
     Terminate {
       @Override
       public boolean apply( final VmInfo input ) {
@@ -572,6 +583,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           VmInstances.sendTerminate( input.getInstanceId( ), input.getPlacement( ) );
         }
         return true;
+      }
+    },
+    /**
+     * Terminate instance if metadata is available that shows the instance is not expected to be running.
+     */
+    TerminateDone {
+      @Override
+      public boolean apply( final VmInfo input ) {
+        try {
+          final VmInstance instance = VmInstances.lookupAny( input.getInstanceId( ) );
+          if ( instance.getNaturalId( ).equals( input.getUuid( ) ) && VmStateSet.NOT_RUNNING.apply( instance ) ) {
+            return Terminate.apply( input );
+          }
+        } catch ( final NoSuchElementException e ) {
+          // unknown, so do not terminate
+        } catch ( final Exception e ) {
+          // error, do not terminate
+          LOG.error( "Error handing unknown instance: " + input.getInstanceId( ), e );
+        }
+        return false;
       }
     },
     ;
@@ -2027,7 +2058,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else if ( VmInstances.Timeout.STOPPING.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
-              VmInstance.this.setState( VmState.RUNNING, Reason.APPEND, "MISMATCHED" );
+              if ( Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+                VmInstances.terminated( VmInstance.this );
+              } else if ( Timeout.STOPPING.apply( VmInstance.this ) ) {
+                VmInstances.stopped( VmInstance.this );
+              } else if ( VmInstance.this.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
+                VmInstances.sendTerminate( VmInstance.this.getInstanceId( ), VmInstance.this.getPartition( ) );
+                VmInstance.this.updateTimeStamps( );
+              }
             } else {
               this.updateState( runVm );
             }
