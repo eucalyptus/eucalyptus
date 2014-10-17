@@ -770,6 +770,7 @@ public class EventHandlerChainCreateDbInstance extends
   
   public static class UserDataSetup extends AbstractEventHandler<NewDBInstanceEvent> implements StoredResult<String> {
     private String encryptedPassword = null;
+    private String serverCertArn = null;
     public UserDataSetup(EventHandlerChain<NewDBInstanceEvent> chain){
       super(chain);
     }
@@ -778,9 +779,12 @@ public class EventHandlerChainCreateDbInstance extends
     public void apply(NewDBInstanceEvent evt)  throws EventHandlerException {
       String certPem = null;
       X509Certificate serverCert = null;
+      String serverCertName = null;
       try{
         //   certPem = new String(PEMFiles.getBytes(kpCert));
-        certPem = this.getChain().findHandler(UploadServerCertificate.class).getResult().get(1);
+        List<String> result = this.getChain().findHandler(UploadServerCertificate.class).getResult();
+        serverCertName = result.get(0); 
+        certPem = result.get(1);
         serverCert = PEMFiles.toCertificate(certPem);
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to find the server certificate");
@@ -794,6 +798,13 @@ public class EventHandlerChainCreateDbInstance extends
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to encrypt the password");
       }
+      
+      try{
+        final ServerCertificateType cert = EuareClient.getInstance().getServerCertificate(getSystemUserId(), serverCertName);
+        serverCertArn = cert.getServerCertificateMetadata().getArn();
+      }catch(final Exception ex) {
+        throw new EventHandlerException("Failed to get server certificate named "+serverCertName, ex);
+      }
     }
 
     @Override
@@ -804,8 +815,9 @@ public class EventHandlerChainCreateDbInstance extends
 
     @Override
     public List<String> getResult() {
-      final String userData = B64.standard.encString(String.format("%s\n%s\n%s",
+      final String userData = B64.standard.encString(String.format("%s\n%s\n%s\n%s",
           DatabaseServerProperties.CREDENTIALS_STR,
+          this.serverCertArn,
           this.encryptedPassword,
           DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
               null,

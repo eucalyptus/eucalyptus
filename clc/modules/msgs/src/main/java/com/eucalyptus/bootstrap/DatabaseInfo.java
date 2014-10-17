@@ -112,21 +112,21 @@ public class DatabaseInfo extends AbstractPersistent {
   }
   public void setAppendOnlyPort(final String port){
     this.appendOnlyPort = port;
-    resetDatabase();
+   // resetDatabase();
   }
   public String getAppendOnlyPort(){ 
     return this.appendOnlyPort;
   }
   public void setAppendOnlySsl(final Boolean ssl){
     this.appendOnlySsl = ssl;
-    resetDatabase();
+   // resetDatabase();
   }
   public Boolean getAppendOnlySsl(){
     return this.appendOnlySsl;
   }
   public void setAppendOnlyUser(final String user){
     this.appendOnlyUser = user;
-    resetDatabase();
+  //  resetDatabase();
   }
   public String getAppendOnlyUser(){
     return this.appendOnlyUser;
@@ -143,7 +143,7 @@ public class DatabaseInfo extends AbstractPersistent {
     }catch(final Exception ex){
       LOG.error("Failed to encrypt the database password");
     }
-    resetDatabase();
+   // resetDatabase();
   }
   
   public String getAppendOnlyPassword(){

@@ -36,6 +36,7 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.DatabaseInfo;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -127,6 +128,7 @@ import com.google.common.net.HostSpecifier;
       try{
         final String masterPassword = Crypto.generateAlphanumericId(8, "").toLowerCase();
         final String masterUserName = "eucalyptus";
+        boolean vmCreated = false;
         try {
           // creates a random password for master db user
           final NewDBInstanceEvent evt = new NewDBInstanceEvent(Accounts.lookupSystemAdmin().getUserId());
@@ -135,15 +137,25 @@ import com.google.common.net.HostSpecifier;
           evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
           evt.setPort(DB_PORT);
           DatabaseEventListeners.getInstance().fire(evt);
+          vmCreated = true;
         } catch ( final Exception e ) {
           LOG.error( "failed to create a database vm", e );
+          vmCreated = false;
           //throw e;
         } 
         
         try {
           final EnableDBInstanceEvent evt = new EnableDBInstanceEvent(Accounts.lookupSystemAdmin().getUserId());
           evt.setMasterUserName(masterUserName);
-          evt.setMasterUserPassword(masterPassword);
+          if(vmCreated)
+            evt.setMasterUserPassword(masterPassword);
+          else {
+            final String pwd = DatabaseInfo.getDatabaseInfo().getAppendOnlyPassword();
+            if(pwd != null && pwd.length()>0) {
+              evt.setMasterUserPassword(masterPassword);
+              LOG.debug("Master database password is set from properties");
+            }
+          }
           evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
           evt.setPort(DB_PORT);
           DatabaseEventListeners.getInstance().fire(evt);
@@ -535,6 +547,7 @@ import com.google.common.net.HostSpecifier;
        kvMap.put("log_server_port", logServerPort);
      
      kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+     kvMap.put("compute_service_url", String.format("compute.%s", DNSProperties.DOMAIN));
    
      final StringBuilder sb = new StringBuilder();
      for (String key : kvMap.keySet()){
