@@ -19,7 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow
 
+import com.amazonaws.AmazonServiceException
+import com.amazonaws.transform.JsonErrorUnmarshaller
+import com.amazonaws.util.json.JSONObject
 import com.eucalyptus.simpleworkflow.common.model.CountClosedWorkflowExecutionsRequest
+import com.google.common.collect.ImmutableMap
 import groovy.transform.CompileStatic
 import org.junit.Test
 import static org.junit.Assert.*
@@ -49,5 +53,16 @@ class SwfJsonUtilsTest {
     assertEquals( "latest date", 1408146022000, message.closeTimeFilter.latestDate.time )
     assertEquals( "oldest date", 1408146022999, message.startTimeFilter.oldestDate.time )
     assertEquals( "latest date", 1408146022999, message.startTimeFilter.latestDate.time )
+  }
+
+  @Test
+  public void testErrorMapBinding( ) {
+    String value = SwfJsonUtils.writeObjectAsString ImmutableMap.of( '__type', 'Foo', 'message', 'spoon' )
+    println value
+    assertEquals( 'error message format', '{"__type":"Foo","message":"spoon"}', value )
+
+    AmazonServiceException exception = new JsonErrorUnmarshaller( ).unmarshall( new JSONObject( value ) )
+    assertEquals( 'Unmarshalled error code', 'Foo', exception.errorCode )
+    assertTrue( 'Unmarshalled error message', exception.message.contains( 'spoon' ) )
   }
 }

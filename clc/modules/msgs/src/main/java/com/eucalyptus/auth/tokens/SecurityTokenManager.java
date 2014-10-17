@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
@@ -271,7 +272,7 @@ public class SecurityTokenManager {
       encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
     } catch ( GeneralSecurityException e ) {
       log.debug( e, e );
-      throw new AuthException("Invalid security token");
+      throw new InvalidAccessKeyAuthException("Invalid security token");
     }
 
     final String originatingAccessKeyId = encryptedToken.getOriginatingAccessKeyId();

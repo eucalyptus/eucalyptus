@@ -513,7 +513,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
-      throw new AuthException( "Failed to find access key", e );      
+      throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
     }
   }
 

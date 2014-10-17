@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Hex;
 import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Digest;
@@ -83,7 +84,9 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     if ( !MessageDigest.isEqual( computedSig, providedSig ) ) {
       final String canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
       final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
-      if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) return false;
+      if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) {
+        throw new InvalidSignatureAuthException( "Signature validation failed" );
+      }
     }
     super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );

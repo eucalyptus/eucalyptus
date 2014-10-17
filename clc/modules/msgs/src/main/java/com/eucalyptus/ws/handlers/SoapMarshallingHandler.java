@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import javax.annotation.Nonnull;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -71,16 +72,22 @@ import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.collect.ImmutableMap;
 
 @ChannelHandler.Sharable
-public class SoapMarshallingHandler extends MessageStackHandler {
+public class SoapMarshallingHandler extends MessageStackHandler implements ExceptionMarshallerHandler {
   private static Logger LOG = Logger.getLogger( SoapMarshallingHandler.class );
 
   @Override
@@ -131,4 +138,30 @@ public class SoapMarshallingHandler extends MessageStackHandler {
     }
   }
 
+  @Nonnull
+  @Override
+  public ExceptionResponse marshallException( @Nonnull ChannelEvent event,
+                                              @Nonnull final HttpResponseStatus status,
+                                              @Nonnull final Throwable t ) throws Exception {
+    final SOAPEnvelope soapEnvelope = Binding.createFault(
+        status.getCode() < 500 ? "soapenv:Client" : "soapenv:Server",
+        t.getMessage(),
+        Logs.isExtrrreeeme() ?
+            Exceptions.string( t ) :
+            t.getMessage() );
+
+    final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+    HoldMe.canHas.lock();
+    try {
+      soapEnvelope.serialize( byteOut );
+    } finally {
+      HoldMe.canHas.unlock();
+    }
+
+    return new ExceptionResponse(
+        HttpResponseStatus.INTERNAL_SERVER_ERROR,
+        ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) ),
+        ImmutableMap.of( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" )
+    );
+  }
 }
