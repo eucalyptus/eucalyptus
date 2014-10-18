@@ -28,15 +28,18 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.CreateTags;
 import com.eucalyptus.resources.AbstractEventHandler;
 import com.eucalyptus.resources.EventHandlerChain;
 import com.eucalyptus.resources.EventHandlerException;
 import com.eucalyptus.resources.StoredResult;
+import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.google.common.collect.Lists;
 /**
@@ -48,6 +51,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
 
   @Override
   public EventHandlerChain<EnableDBInstanceEvent> build() {
+    this.append(new CheckAutoscalingGroup(this));
     this.append(new WaitOnVm(this));
     this.append(new WaitOnDb(this));
     this.append(new UpdateProperties(this));
@@ -62,6 +66,47 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
     }
   }
   
+  public static class CheckAutoscalingGroup extends AbstractEventHandler<EnableDBInstanceEvent> {
+
+    protected CheckAutoscalingGroup(
+        EventHandlerChain<EnableDBInstanceEvent> chain) {
+      super(chain);
+    }
+
+    @Override
+    public void apply(EnableDBInstanceEvent evt) throws EventHandlerException {
+      final String userId = evt.getUserId();
+      final String systemUserId = getSystemUserId();
+      String acctNumber = null;
+      try{
+        acctNumber =  Accounts.lookupUserById(userId).getAccountNumber();
+      }catch(final AuthException ex){
+        throw new EventHandlerException("Failed to lookup account number", ex);
+      }
+      final String asgName = 
+          EventHandlerChainCreateDbInstance.CreateAutoScalingGroup.getAutoscalingGroupName(acctNumber, evt.getDbInstanceIdentifier());
+      boolean asgFound = false;
+      try{
+        final DescribeAutoScalingGroupsResponseType response = 
+            AutoScalingClient.getInstance().describeAutoScalingGroups(systemUserId, Lists.newArrayList(asgName));
+        final List<AutoScalingGroupType> groups =
+            response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
+        if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(asgName)){
+          asgFound =true;
+        }
+      }catch(final Exception ex){
+        asgFound = false;
+      }
+      
+      if(!asgFound)
+        throw new EventHandlerException("No such autoscaling group is found: " + asgName);
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      ;
+    }
+  }
   public static class WaitOnVm extends AbstractEventHandler<EnableDBInstanceEvent> implements StoredResult<String> {
     private String instanceId = null;
     protected WaitOnVm(EventHandlerChain<EnableDBInstanceEvent> chain) {
@@ -71,7 +116,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
     @Override
     public void apply(EnableDBInstanceEvent evt) throws EventHandlerException {
       final String tagKey = "Name";
-      final String tagValue = CreateTags.DEFAULT_DB_RES_TAG;
+      final String tagValue = DatabaseServerProperties.DEFAULT_LAUNCHER_TAG;
       final String userId = evt.getUserId();
       final String systemUserId = getSystemUserId();
       

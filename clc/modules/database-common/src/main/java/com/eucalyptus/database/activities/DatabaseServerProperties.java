@@ -56,6 +56,7 @@ import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
@@ -126,7 +127,9 @@ import com.google.common.net.HostSpecifier;
     @Override
     public Boolean call() throws Exception {
       try{
-        final String masterPassword = Crypto.generateAlphanumericId(8, "").toLowerCase();
+        String masterPassword =  DatabaseInfo.getDatabaseInfo().getAppendOnlyPassword();
+        if (masterPassword == null || masterPassword.length()<=0) 
+          masterPassword = Crypto.generateAlphanumericId(8, "").toLowerCase();
         final String masterUserName = "eucalyptus";
         boolean vmCreated = false;
         try {
@@ -141,21 +144,12 @@ import com.google.common.net.HostSpecifier;
         } catch ( final Exception e ) {
           LOG.error( "failed to create a database vm", e );
           vmCreated = false;
-          //throw e;
-        } 
+        }
         
         try {
           final EnableDBInstanceEvent evt = new EnableDBInstanceEvent(Accounts.lookupSystemAdmin().getUserId());
           evt.setMasterUserName(masterUserName);
-          if(vmCreated)
-            evt.setMasterUserPassword(masterPassword);
-          else {
-            final String pwd = DatabaseInfo.getDatabaseInfo().getAppendOnlyPassword();
-            if(pwd != null && pwd.length()>0) {
-              evt.setMasterUserPassword(masterPassword);
-              LOG.debug("Master database password is set from properties");
-            }
-          }
+          evt.setMasterUserPassword(masterPassword);
           evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
           evt.setPort(DB_PORT);
           DatabaseEventListeners.getInstance().fire(evt);
@@ -464,24 +458,33 @@ import com.google.common.net.HostSpecifier;
            final String newEmi = emi != null? emi : lc.getImageId();
            final String newType = instanceType != null? instanceType : lc.getInstanceType();
            String newKeyname = keyname != null ? keyname : lc.getKeyName();
+           
+           // update only the last line of the user data
+           final String oldUserData = B64.standard.decString(lc.getUserData());
+           final List<String> lines = Lists.newArrayList(oldUserData.split("\n"));
+           String prefix = "";
+           if(lines != null && lines.size()>0){
+             lines.remove(lines.size()-1);
+             prefix = Joiner.on("\n").join(lines);
+           }
            String newUserdata = lc.getUserData();
            if(ntpServers!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                     DatabaseServerProperties.CREDENTIALS_STR,
+                     prefix,
                      getServerUserData(ntpServers,
                          null,
                          null)));
            }
            if(logServer!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                 DatabaseServerProperties.CREDENTIALS_STR,
+                 prefix,
                  getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
                          logServer,
                          null)));
            }
            if(logServerPort!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                 DatabaseServerProperties.CREDENTIALS_STR,
+                 prefix,
                  getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
                          null,
                          logServerPort)));

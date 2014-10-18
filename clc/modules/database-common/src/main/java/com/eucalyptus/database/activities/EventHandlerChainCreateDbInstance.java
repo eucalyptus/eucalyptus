@@ -567,8 +567,17 @@ public class EventHandlerChainCreateDbInstance extends
       try{
         final ServerCertificateType cert = 
             EuareClient.getInstance().getServerCertificate(systemUserId, certName);
-        if(cert!=null && cert.getServerCertificateMetadata()!=null)
-          this.createdServerCert = cert.getServerCertificateMetadata().getServerCertificateName();
+        if(cert!=null && cert.getServerCertificateMetadata()!=null) {
+          // delete the existing server cert
+          try{
+            EuareClient.getInstance().deleteServerCertificate(systemUserId, cert.getServerCertificateMetadata().getServerCertificateName());
+            this.createdServerCert=null;
+          }catch(final Exception ex){
+            throw new EventHandlerException("failed to delete server certificate");
+          }
+        }
+      }catch(final EventHandlerException ex) {
+        throw ex;
       }catch(final Exception ex){
         this.createdServerCert = null;
       }
@@ -781,7 +790,6 @@ public class EventHandlerChainCreateDbInstance extends
       X509Certificate serverCert = null;
       String serverCertName = null;
       try{
-        //   certPem = new String(PEMFiles.getBytes(kpCert));
         List<String> result = this.getChain().findHandler(UploadServerCertificate.class).getResult();
         serverCertName = result.get(0); 
         certPem = result.get(1);
@@ -861,7 +869,16 @@ public class EventHandlerChainCreateDbInstance extends
       try{
         final LaunchConfigurationType lcFound = 
             AutoScalingClient.getInstance().describeLaunchConfiguration(systemUserId, launchConfigName);
-        this.createdLaunchConfig = launchConfigName;
+        if(lcFound!=null) {
+          try{
+            AutoScalingClient.getInstance().deleteLaunchConfiguration(systemUserId, launchConfigName);
+            LOG.debug("Deleted the existing launch config: "+launchConfigName);
+            this.createdLaunchConfig=null;
+          }catch(final Exception ex){
+            // this shouldn't happen
+            this.createdLaunchConfig = launchConfigName;
+          }
+        }
       }catch(final Exception ex){
         ;
       }
@@ -1095,10 +1112,9 @@ public class EventHandlerChainCreateDbInstance extends
     private String taggedSgroupId = null;
     private String taggedAsgName = null;
     
-    public static final String DEFAULT_DB_RES_TAG = "euca-internal-db-server";
     public CreateTags(EventHandlerChain<NewDBInstanceEvent> chain){
       super(chain);
-      this.tagValue = DEFAULT_DB_RES_TAG;
+      this.tagValue = DatabaseServerProperties.DEFAULT_LAUNCHER_TAG;
     }
     
     @Override

@@ -147,7 +147,7 @@ public class PersistenceContexts {
       
       return true;
     }
-  }
+  } 
 
   /**
    * Interface for interception of persistence context lookup.
@@ -312,6 +312,9 @@ public class PersistenceContexts {
   }
   
   public static void deregisterPersistenceContext( final String persistenceContext ) {
+    if( !emf.containsKey(persistenceContext))
+      return;
+    
     final EntityManagerFactoryImpl emfactory = emf.remove(persistenceContext);
     if (emfactory != null && emfactory.isOpen()) {
       try{
