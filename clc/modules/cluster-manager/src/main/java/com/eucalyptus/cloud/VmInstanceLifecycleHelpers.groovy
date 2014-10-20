@@ -29,6 +29,7 @@ import com.eucalyptus.cloud.run.ClusterAllocator
 import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException
 import com.eucalyptus.cloud.util.InvalidMetadataException
+import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.cloud.util.ResourceAllocationException
 import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException
@@ -75,7 +76,6 @@ import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
-import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.LockResource
 import com.eucalyptus.util.Ordered
 import com.eucalyptus.util.RestrictedTypes
@@ -297,7 +297,7 @@ class VmInstanceLifecycleHelpers {
     ) {
       instanceNetworkInterface?.privateIpAddressesSet?.item?.find{ PrivateIpAddressesSetItemRequestType item ->
         item.primary?:false
-      }?.privateIpAddress ?: instanceNetworkInterface?.privateIpAddress ?: privateIp
+      }?.privateIpAddress ?: instanceNetworkInterface?.privateIpAddress ?: Strings.emptyToNull( privateIp )
     }
 
     @Nullable
@@ -648,7 +648,9 @@ class VmInstanceLifecycleHelpers {
         networkRuleGroups.put( group.getDisplayName(), group )
       }
 
-      allocation.setNetworkRules( networkRuleGroups )
+      if ( allocation.getNetworkGroups( ).isEmpty( ) ) {
+        allocation.setNetworkRules( networkRuleGroups )
+      }
     }
 
     @Override
@@ -738,9 +740,28 @@ class VmInstanceLifecycleHelpers {
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
       final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
       if ( !Strings.isNullOrEmpty( subnetId ) || instanceNetworkInterface != null ) {
-        if ( !networkingFeatures.contains( NetworkingFeature.Vpc ) ) {
-          throw new InvalidMetadataException( "EC2-VPC not supported, for EC2-Classic do not specify subnet or network interface" )
+        if (!networkingFeatures.contains(NetworkingFeature.Vpc)) {
+          throw new InvalidMetadataException("EC2-VPC not supported, for EC2-Classic do not specify subnet or network interface")
         }
+
+        if (instanceNetworkInterface != null) {
+          if ( !runInstances.securityGroupNames( ).isEmpty( ) ||
+              !runInstances.securityGroupsIds( ).isEmpty( ) ) {
+            throw new InvalidParameterCombinationMetadataException(
+                "Network interfaces and an instance-level security groups may not be specified on the same request" )
+          }
+
+          if ( !Strings.isNullOrEmpty( runInstances.subnetId ) ) {
+            throw new InvalidParameterCombinationMetadataException(
+                "Network interfaces and an instance-level subnet ID may not be specified on the same request" )
+          }
+
+          if ( !Strings.isNullOrEmpty( runInstances.privateIpAddress ) ) {
+            throw new InvalidParameterCombinationMetadataException(
+                "Network interfaces and an instance-level private IP address may not be specified on the same request" )
+          }
+        }
+
         String networkInterfaceSubnetId = null
         String networkInterfaceAvailabilityZone = null
         if ( instanceNetworkInterface?.networkInterfaceId != null ) {
@@ -778,11 +799,18 @@ class VmInstanceLifecycleHelpers {
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
           throw new SecurityGroupLimitMetadataException( );
         }
-
         allocation.subnet = subnet
 
         final Partition partition = Partitions.lookupByName( subnet.availabilityZone );
         allocation.setPartition( partition );
+
+        final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
+        for ( final NetworkGroup networkGroup : groups ) {
+          networkRuleGroups.put( networkGroup.displayName, networkGroup )
+        }
+        if ( !networkRuleGroups.isEmpty( ) ) {
+          allocation.setNetworkRules( networkRuleGroups )
+        }
       } else {
         // Default VPC, lookup subnet for user specified or system selected partition
         final AccountFullName accountFullName = allocation.ownerFullName.asAccountFullName( )

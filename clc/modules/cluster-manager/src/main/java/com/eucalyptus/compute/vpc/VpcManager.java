@@ -1470,6 +1470,11 @@ public class VpcManager {
                     if ( networkInterface.getNetworkGroups( ).size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
                       throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" ) );
                     }
+                    if ( networkInterface.isAttached( ) && networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+                      final Set<NetworkGroup> instanceGroups = networkInterface.getAttachment( ).getInstance( ).getNetworkGroups( );
+                      instanceGroups.clear( );
+                      instanceGroups.addAll( networkInterface.getNetworkGroups( ) );
+                    }
                     invalidate.set( true );
                   } catch ( RuntimeException e ) {
                     final NoSuchMetadataException nsme = Exceptions.findCause(  e, NoSuchMetadataException.class );
