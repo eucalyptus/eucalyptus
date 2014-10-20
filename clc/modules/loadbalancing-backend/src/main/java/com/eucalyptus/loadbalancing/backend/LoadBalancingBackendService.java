@@ -624,13 +624,18 @@ public class LoadBalancingBackendService {
       }
     }
 
-    final LoadBalancer.Scheme scheme = LoadBalancer.Scheme.fromString( request.getScheme( ) ).orNull( );
-    if ( scheme == null && !Strings.isNullOrEmpty( request.getScheme( ) ) ) {
+    LoadBalancer.Scheme reqScheme = LoadBalancer.Scheme.fromString( request.getScheme( ) ).orNull( );
+    if ( reqScheme == null && !Strings.isNullOrEmpty( request.getScheme( ) ) ) {
       throw new InvalidConfigurationRequestException("Invalid scheme ("+request.getScheme( )+")");
     }
-    if ( scheme != null && vpcId == null ) {
-      throw new InvalidConfigurationRequestException("Scheme ("+request.getScheme( )+") should not be specified for EC2-Classic platform");
+    if ( reqScheme != null && vpcId == null ) {
+      if ( reqScheme != LoadBalancer.Scheme.InternetFacing ) {
+        throw new InvalidConfigurationRequestException( "Scheme (" + request.getScheme() + ") should not be specified for EC2-Classic platform" );
+      } else {
+        reqScheme = null; // ignore internet-facing scheme for non-vpc ELB
+      }
     }
+    final LoadBalancer.Scheme scheme = reqScheme;
 
     if ( vpcId != null && scheme != LoadBalancer.Scheme.Internal ) try {
       final List<InternetGatewayType> internetGateways =
