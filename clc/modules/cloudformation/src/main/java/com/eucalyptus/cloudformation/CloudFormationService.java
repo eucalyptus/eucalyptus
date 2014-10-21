@@ -78,10 +78,13 @@ import com.netflix.glisten.WorkflowTags;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -138,6 +141,13 @@ public class CloudFormationService {
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      if (!stackName.matches("^[\\p{Alpha}][\\p{Alnum}]*$")) {
+        throw new ValidationErrorException("Stack name " + stackName + " must be alphanumeric and start with a letter.");
+      }
+      if (stackName.length() > Limits.STACK_NAME_MAX_LENGTH_CHARS) {
+        throw new ValidationErrorException("Stack name " + stackName + " must be no longer than " + Limits.STACK_NAME_MAX_LENGTH_CHARS + " characters.");
+      }
+
       if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
       if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
       List<Parameter> parameters = null;
@@ -168,7 +178,11 @@ public class CloudFormationService {
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         capabilities = request.getCapabilities().getMember();
       }
-
+      if (templateBody != null) {
+        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LEMGTH_BYTES) {
+          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LEMGTH_BYTES + " bytes in a request.");
+        }
+      }
       String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
 
       final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
@@ -280,7 +294,7 @@ public class CloudFormationService {
     boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
     if (inWhitelist) {
       try {
-        return copyStreamToString(url.openStream());
+        return copyStreamToString(new BoundedInputStream(url.openStream(), Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES + 1));
       } catch (UnknownHostException ex) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
       } catch (javax.net.ssl.SSLHandshakeException ex) {
@@ -299,6 +313,9 @@ public class CloudFormationService {
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client(user);
     try {
+      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES) {
+        throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES);
+      }
       return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getKey());
     } catch (Exception ex) {
       LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getKey());
@@ -315,20 +332,18 @@ public class CloudFormationService {
     return input;
   }
 
-  private static String copyStreamToString(InputStream in) throws IOException {
-    StringBuilder stringBuilder = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(in));
-    try {
-      String line = null;
-      while ((line = br.readLine()) != null) {
-        stringBuilder.append(line + "\n");
-      }
-    } finally {
-      if (br != null) {
-        br.close();
-      }
+  private static String copyStreamToString(InputStream in) throws IOException, ValidationErrorException {
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    byte[] buffer = new byte[4096];
+    int length = -1;
+    while ((length = in.read(buffer)) != -1) {
+      bout.write(buffer, 0, length);
     }
-    return stringBuilder.toString();
+    bout.flush();
+    if (bout.toByteArray().length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES) {
+      throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES);
+    }
+    return new String(bout.toByteArray());
   }
 
 
