@@ -132,22 +132,6 @@ public class PersistenceContexts {
     }
   }
   
-  @Provides( Empyrean.class)
-  @RunDuring( Bootstrap.Stage.RemotePersistenceInit)
-  public static class RemotePersistenceContextBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      // load the properties
-      try {
-        Groovyness.run( "setup_persistence_remote.groovy" );
-      } catch(final Exception ex){
-        ;
-      }
-      
-      return true;
-    }
-  } 
 
   /**
    * Interface for interception of persistence context lookup.
@@ -335,6 +319,14 @@ public class PersistenceContexts {
   
   public static List<String> listRemotable( ) {
     return Lists.newArrayList( remotableEntities.keySet( ) );
+  }
+  
+  public static boolean remoteConnected( ) {
+    for(final String remoteContext : listRemotable()) {
+      if(emf.containsKey(remoteContext))
+        return true;
+    }
+    return false;
   }
   
   public static String toRemoteDatabaseName ( final String persistenceContext ) {

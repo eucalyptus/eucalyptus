@@ -36,12 +36,19 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DatabaseInfo;
+import com.eucalyptus.bootstrap.DependsLocal;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -51,8 +58,10 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -84,6 +93,14 @@ import com.google.common.net.HostSpecifier;
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = EmiChangeListener.class)
    public static String DB_SERVER_EMI = "NULL";
+   
+   @ConfigurableField( displayName = "db_server_volume", 
+       description = "volume containing database files",
+       initial = "NULL",
+       readonly = false,
+       type = ConfigurableFieldType.KEYVALUE,
+       changeListener = VolumeChangeListener.class)
+   public static String DB_SERVER_VOLUME = "NULL";
 
    @ConfigurableField( displayName = "db_server_instance_type", 
        description = "instance type for database server",
@@ -116,6 +133,79 @@ import com.google.common.net.HostSpecifier;
        changeListener = NTPServerChangeListener.class
        )
    public static String DB_SERVER_NTP_SERVER = null;
+   
+   
+   
+   @Provides(Reporting.class)
+   @RunDuring(Bootstrap.Stage.Final)
+   @DependsLocal(Reporting.class)
+   public static class ReportingPropertyBootstrapper extends DatabaseServerPropertyBootstrapper {
+   }
+   
+   @Provides(CloudWatchBackend.class)
+   @RunDuring(Bootstrap.Stage.Final)
+   @DependsLocal(CloudWatchBackend.class)
+   public static class CloudWatchPropertyBootstrapper extends DatabaseServerPropertyBootstrapper {
+   }
+   
+   
+   public static class DatabaseServerPropertyBootstrapper extends Bootstrapper.Simple {
+     private static DatabaseServerPropertyBootstrapper singleton = null;
+     public static Bootstrapper getInstance( ) {
+       synchronized ( DatabaseServerPropertyBootstrapper.class ) {
+         if ( singleton == null ) {
+           singleton = new DatabaseServerPropertyBootstrapper( );
+         }
+       }
+       return singleton;
+     }
+     
+     
+     @Override
+     public boolean check( ) throws Exception {
+       if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost()))
+         return true;
+       
+       String vmHost = null;
+       try{
+         final DatabaseInfo dbInfo = DatabaseInfo.getDatabaseInfo();
+         // get the host addr
+         vmHost = dbInfo.getAppendOnlyHost();
+           // get the port
+         final String port = dbInfo.getAppendOnlyPort();
+         final String userName = dbInfo.getAppendOnlyUser();
+         final String password = dbInfo.getAppendOnlyPassword();
+         
+         // get jdbc url and ping
+         final String jdbcUrl =  
+             EventHandlerChainEnableVmDatabase.WaitOnDb.getJdbcUrl(vmHost, Integer.parseInt(port));
+         
+         if(EventHandlerChainEnableVmDatabase.WaitOnDb.pingDatabase(jdbcUrl, userName, password))
+           return true;
+         else
+           return false;
+       }catch(final Exception ex) {
+           LOG.warn("Error pinging append-only database at " + vmHost);
+           return false;
+       }
+     }
+     
+     @Override
+     public boolean enable( ) throws Exception {
+       synchronized (DatabaseServerPropertyBootstrapper.class) {
+         if(PersistenceContexts.remoteConnected())
+           return true;
+         try {
+           Groovyness.run( "setup_persistence_remote.groovy" );
+           LOG.info("Remote persistence contexts are initialized");
+         } catch(final Exception ex){
+           LOG.error("Failed to setup remote persistence contexts", ex);
+           return false;
+         }
+         return true;
+       }
+     }
+   }
    
    
    public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-db-servers";
@@ -158,9 +248,7 @@ import com.google.common.net.HostSpecifier;
           throw e;
         }
       } catch (final Exception ex) { 
-        final ConfigurableProperty prop = PropertyDirectory.getPropertyEntry("cloud.db.db_server_enabled");
-        if (prop!=null)
-          prop.setValue("false");
+        return false;
       } finally {
         launchLock.set(false);
       }
@@ -249,12 +337,27 @@ import com.google.common.net.HostSpecifier;
        try {
          if ( newValue instanceof String  ) {
            if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
-             onPropertyChange((String)newValue, null, null, null, null, null);
+             onPropertyChange((String)newValue, null, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change EMI ID", e);
        }
      }
+   }
+   
+   public static class VolumeChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
+      try {
+        if ( newValue instanceof String  ) {
+          if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
+            onPropertyChange(null, (String)newValue, null, null, null, null, null);
+        }
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not change VOLUME ID", e);
+      }
+    }
    }
 
    public static class InstanceTypeChangeListener implements PropertyChangeListener {
@@ -265,7 +368,7 @@ import com.google.common.net.HostSpecifier;
            if(newValue == null || ((String) newValue).equals(""))
              throw new EucalyptusCloudException("Instance type cannot be unset");
            if(t.getValue()!=null && ! t.getValue().equals(newValue))
-             onPropertyChange(null, (String)newValue, null, null, null, null);
+             onPropertyChange(null, null, (String)newValue, null, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change instance type", e);
@@ -279,7 +382,7 @@ import com.google.common.net.HostSpecifier;
        try {
          if ( newValue instanceof String ) {   
            if(t.getValue()!=null && ! t.getValue().equals(newValue))
-             onPropertyChange(null, null, (String)newValue, null, null, null);
+             onPropertyChange(null, null, null, (String)newValue, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change key name", e);
@@ -356,14 +459,14 @@ import com.google.common.net.HostSpecifier;
          }else
            throw new EucalyptusCloudException("Address is not string type");
          
-         onPropertyChange(null, null, null, (String) newValue, null, null);
+         onPropertyChange(null, null, null, null, (String) newValue, null, null);
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change ntp server address", e);
        }
      }
    }
 
-   private static void onPropertyChange(final String emi, final String instanceType, 
+   private static void onPropertyChange(final String emi, final String volumeId, final String instanceType, 
        final String keyname, final String ntpServers, String logServer, String logServerPort) throws EucalyptusCloudException{
      if (!( Bootstrap.isFinished() && Topology.isEnabled( Eucalyptus.class ) ) )
        return;
@@ -383,6 +486,21 @@ import com.google.common.net.HostSpecifier;
          throw new EucalyptusCloudException("Failed to verify EMI in the system");
        }
      }
+     
+     if(volumeId!=null) {
+       if( ! volumeId.toLowerCase().startsWith("vol-"))
+         throw new EucalyptusCloudException("No such volume is found");
+       
+       try{
+         final List<Volume> volumes = 
+             Ec2Client.getInstance().describeVolumes(null, Lists.newArrayList(volumeId));
+         if(! ( volumeId.equals(volumes.get(0).getVolumeId()) && "available".equals(volumes.get(0).getStatus()))) {
+           throw new Exception();
+         }
+       }catch(final Exception ex) {
+         throw new EucalyptusCloudException("No such volume id is found");
+       }
+     } 
      
      if(instanceType != null){
        ;
@@ -468,27 +586,41 @@ import com.google.common.net.HostSpecifier;
              prefix = Joiner.on("\n").join(lines);
            }
            String newUserdata = lc.getUserData();
+           
+           if(volumeId != null) {
+             newUserdata = B64.standard.encString(String.format("%s\n%s",
+                 prefix,
+                 getServerUserData(volumeId, DatabaseServerProperties.DB_SERVER_NTP_SERVER,
+                     null,
+                     null)));
+           }
+           
            if(ntpServers!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                      prefix,
-                     getServerUserData(ntpServers,
+                     getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, ntpServers,
                          null,
                          null)));
            }
+           
            if(logServer!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  prefix,
-                 getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
+                 getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
+                     DatabaseServerProperties.DB_SERVER_NTP_SERVER,
                          logServer,
                          null)));
            }
+           
            if(logServerPort!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  prefix,
-                 getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
+                 getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
+                     DatabaseServerProperties.DB_SERVER_NTP_SERVER,
                          null,
                          logServerPort)));
            }
+           
            try{
              AutoScalingClient.getInstance().createLaunchConfiguration(null, newEmi, newType, lc.getIamInstanceProfile(), 
                  tmpLaunchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, newUserdata);
@@ -540,8 +672,10 @@ import com.google.common.net.HostSpecifier;
      }
    }
    
-   static String getServerUserData(String ntpServer, String logServer, String logServerPort) {
+   static String getServerUserData(final String volumeId, final String ntpServer, final String logServer, final String logServerPort) {
      Map<String,String> kvMap = new HashMap<String,String>();
+     if(volumeId != null)
+       kvMap.put("volume_id", volumeId);
      if(ntpServer != null)
        kvMap.put("ntp_server", ntpServer);
      if(logServer != null)

@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -56,6 +57,8 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
+import com.eucalyptus.compute.common.DescribeVolumesResponseType;
+import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.ImageDetails;
@@ -72,6 +75,7 @@ import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.compute.common.TerminateInstancesItemType;
 import com.eucalyptus.compute.common.TerminateInstancesResponseType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
@@ -713,6 +717,48 @@ public class Ec2Client {
       return tags;
     }
   }
+  
+
+  private class DescribeVolumesTask extends EucalyptusClientTask<ComputeMessage, Compute>{
+    private List<String> volumeIds = null;
+    private List<Volume> result = null;
+    
+    private DescribeVolumesTask(){
+      this.volumeIds = null;
+    }
+    private DescribeVolumesTask(final List<String> volumeIds){
+      this.volumeIds = volumeIds;
+    }
+    
+    private DescribeVolumesType describeVolumes(){
+      final DescribeVolumesType req = new  DescribeVolumesType();
+      if(this.volumeIds != null && this.volumeIds.size() > 0){
+        req.setVolumeSet(Lists.newArrayList(this.volumeIds));
+      }
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(
+        ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+      client.dispatch(describeVolumes(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final DescribeVolumesResponseType resp = (DescribeVolumesResponseType) response;
+      this.result = resp.getVolumeSet();
+    }
+    
+    public List<Volume> getVolumes(){
+      return this.result;
+    }
+  }
+
 
 
   public List<String> launchInstances(final String userId, final String availabilityZone,
@@ -956,6 +1002,19 @@ public class Ec2Client {
       } else
         throw new EucalyptusActivityException("failed to delete tags");
     } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+    
+  public List<Volume> describeVolumes(final String userId, final List<String> volumeIds){
+    final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
+    }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
   }

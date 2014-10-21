@@ -206,8 +206,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
         throw new EventHandlerException("Failed to lookup vm ip");
       /// TODO spark: ssl option
       // "jdbc:postgresql://%s:%s/%s?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory"
-      final String jdbcUrl = 
-          String.format( "jdbc:postgresql://%s:%s/%s",  instanceIp, evt.getPort(), PING_DB_NAME );
+      final String jdbcUrl = getJdbcUrl( instanceIp, evt.getPort() );
      
       boolean connected = false;
       final int MAX_RETRY_SEC = 600;
@@ -232,7 +231,13 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       LOG.info("Database host "+instanceIp+" is connected");
     }
     
-    private boolean pingDatabase(final String jdbcUrl, final String userName, final String password) {
+    public static String getJdbcUrl(final String instanceIp, final int port) {
+      final String jdbcUrl = 
+          String.format( "jdbc:postgresql://%s:%s/%s",  instanceIp, port, PING_DB_NAME );
+      return jdbcUrl;
+    }
+    
+    public static boolean pingDatabase(final String jdbcUrl, final String userName, final String password) {
       try ( final Connection conn = DriverManager.getConnection( jdbcUrl, userName, password ) ) { 
         try ( final PreparedStatement statement = 
             conn.prepareStatement( "SELECT USER" ) ) { 

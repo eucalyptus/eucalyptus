@@ -47,6 +47,7 @@ import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TagInfo;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
@@ -145,6 +146,21 @@ public class EventHandlerChainCreateDbInstance extends
         throw ex;
       }catch(final Exception ex){
         throw new EventHandlerException("failed to validate the db server EMI", ex);
+      }
+      
+      final String volumeId = DatabaseServerProperties.DB_SERVER_VOLUME;
+      List<Volume> volumes = null;
+      try{
+        volumes = Ec2Client.getInstance().describeVolumes(systemUserId, Lists.newArrayList(volumeId));
+        if(volumes==null || volumes.size()<=0 || ! volumes.get(0).getVolumeId().toLowerCase().equals(volumeId.toLowerCase()))
+          throw new EventHandlerException("No such volume id is found: " + volumeId);
+        
+        if(! "available".equals(volumes.get(0).getStatus()))
+          throw new EventHandlerException("Volume is not available");
+      }catch(final EventHandlerException ex) {
+        throw ex;
+      }catch(final Exception ex) {
+        throw new EventHandlerException("failed to validate the db server volume ID", ex);
       }
       
       List<ClusterInfoType> clusters = null;
@@ -827,7 +843,8 @@ public class EventHandlerChainCreateDbInstance extends
           DatabaseServerProperties.CREDENTIALS_STR,
           this.serverCertArn,
           this.encryptedPassword,
-          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
+          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
+              DatabaseServerProperties.DB_SERVER_NTP_SERVER,
               null,
               null)));
       return Lists.newArrayList(userData);
