@@ -80,6 +80,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
+import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException;
@@ -90,6 +91,7 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
 import com.eucalyptus.crypto.Hmac;
@@ -270,6 +272,9 @@ public class VmControl {
       final InvalidMetadataException e4 = Exceptions.findCause( ex, InvalidMetadataException.class );
       if ( e4 instanceof VpcRequiredMetadataException ) {
         throw new ClientComputeException( "VPCIdNotSpecified", "Default VPC not found, please specify a subnet." );
+      }
+      if ( e4 instanceof InvalidParameterCombinationMetadataException ) {
+        throw new ClientComputeException( "InvalidParameterCombination", e4.getMessage( ) );
       }
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
       final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
@@ -912,6 +917,15 @@ public class VmControl {
         }
         vm.getNetworkGroups( ).clear( );
         vm.getNetworkGroups( ).addAll( groups );
+        if ( vm.getNetworkInterfaces( ) != null ) {
+          for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+            if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+              networkInterface.getNetworkGroups( ).clear( );
+              networkInterface.getNetworkGroups( ).addAll( groups );
+              break;
+            }
+          }
+        }
         tx.commit();
         NetworkGroups.flushRules( );
       } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {
