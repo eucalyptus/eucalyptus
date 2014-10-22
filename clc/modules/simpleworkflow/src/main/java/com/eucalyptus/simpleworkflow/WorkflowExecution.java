@@ -186,6 +186,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @OrderColumn( name = "event_id" )
   private List<WorkflowHistoryEvent> workflowHistory;
 
+  @OneToMany( fetch = FetchType.LAZY, cascade = { CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "workflowExecution" )
+  @OrderColumn( name = "scheduled_event_id" )
+  private List<ActivityTask> activityTasks;
+
   protected WorkflowExecution( ) {
   }
 
