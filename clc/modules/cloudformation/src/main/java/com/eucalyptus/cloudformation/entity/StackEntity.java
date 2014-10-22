@@ -128,7 +128,9 @@ public class StackEntity extends AbstractPersistent {
   @Column(name = "stack_id", nullable = false )
   String stackId;
 
-  @Column( name = "stack_policy", length =  16384)
+  @Column( name = "stack_policy")
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String stackPolicy;
 
   @Column(name = "stack_name", nullable = false )
@@ -148,7 +150,9 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String tagsJson;
 
-  @Column( name = "template_body", length =  307200)
+  @Column( name = "template_body" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String templateBody;
 
   @Column(name = "template_format_version", nullable = false )
