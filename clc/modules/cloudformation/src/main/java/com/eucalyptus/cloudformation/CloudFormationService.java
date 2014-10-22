@@ -31,7 +31,6 @@ import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
-import com.eucalyptus.cloudformation.entity.StackEventEntity;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
@@ -53,7 +52,6 @@ import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -74,7 +72,6 @@ import com.google.common.collect.Maps;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
-import com.netflix.glisten.WorkflowTags;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -82,12 +79,9 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -179,8 +173,8 @@ public class CloudFormationService {
         capabilities = request.getCapabilities().getMember();
       }
       if (templateBody != null) {
-        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LEMGTH_BYTES) {
-          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LEMGTH_BYTES + " bytes in a request.");
+        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
         }
       }
       String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
@@ -294,7 +288,7 @@ public class CloudFormationService {
     boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
     if (inWhitelist) {
       try {
-        return copyStreamToString(new BoundedInputStream(url.openStream(), Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES + 1));
+        return copyStreamToString(new BoundedInputStream(url.openStream(), Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1));
       } catch (UnknownHostException ex) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
       } catch (javax.net.ssl.SSLHandshakeException ex) {
@@ -313,8 +307,8 @@ public class CloudFormationService {
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client(user);
     try {
-      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES) {
-        throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES);
+      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+        throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
       }
       return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getKey());
     } catch (Exception ex) {
@@ -340,8 +334,8 @@ public class CloudFormationService {
       bout.write(buffer, 0, length);
     }
     bout.flush();
-    if (bout.toByteArray().length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES) {
-      throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES);
+    if (bout.toByteArray().length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+      throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
     }
     return new String(bout.toByteArray());
   }

@@ -19,8 +19,8 @@ public class Limits {
   public volatile static long MAX_RESOURCES_PER_TEMPLATE = 200;
   public volatile static long RESOURCE_NAME_MAX_LENGTH_CHARS = 255;
   public volatile static long MAX_STACKS_PER_ACCOUNT = 20; // TODO: quota
-  public volatile static long REQUEST_TEMPLATE_BODY_MAX_LEMGTH_BYTES = 51200;
-  public volatile static long REQUEST_TEMPLATE_URL_MAX_CONTENT_LEMGTH_BYTES = 460800;
+  public volatile static long REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES = 51200;
+  public volatile static long REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES = 460800;
   public volatile static long TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES = 1024;
 
 }
