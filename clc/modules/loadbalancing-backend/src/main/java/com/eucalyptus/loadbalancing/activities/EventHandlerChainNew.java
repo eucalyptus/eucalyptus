@@ -659,7 +659,16 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}
 			
 			if(sgroup!=null){
+				final boolean tagGroup;
 				try{
+					final LoadBalancer lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+					tagGroup = lb.getVpcId( ) == null;
+				}catch(NoSuchElementException ex){
+					throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
+				}catch(Exception ex){
+					throw new EventHandlerException("Failed due to query exception", ex);
+				}
+				if ( tagGroup ) try{
 					EucalyptusActivityTasks.getInstance().createTags(TAG_KEY, TAG_VALUE, Lists.newArrayList(sgroup));
 				}catch(final Exception ex){
 					LOG.warn("could not tag the security group", ex);
