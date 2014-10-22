@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -41,6 +42,7 @@ import com.eucalyptus.resources.EventHandlerException;
 import com.eucalyptus.resources.StoredResult;
 import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
+import com.eucalyptus.resources.client.EuareClient;
 import com.google.common.collect.Lists;
 /**
  * @author Sang-Min Park
@@ -204,12 +206,10 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       
       if(instanceIp == null)
         throw new EventHandlerException("Failed to lookup vm ip");
-      /// TODO spark: ssl option
-      // "jdbc:postgresql://%s:%s/%s?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory"
       final String jdbcUrl = getJdbcUrl( instanceIp, evt.getPort() );
      
       boolean connected = false;
-      final int MAX_RETRY_SEC = 600;
+      final int MAX_RETRY_SEC = 120;
       for(int i = 1; i<= MAX_RETRY_SEC; i++) {
         if (pingDatabase(jdbcUrl, evt.getMasterUserName(), evt.getMasterUserPassword())) {
           connected = true;
@@ -233,7 +233,14 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
     
     public static String getJdbcUrl(final String instanceIp, final int port) {
       final String jdbcUrl = 
-          String.format( "jdbc:postgresql://%s:%s/%s",  instanceIp, port, PING_DB_NAME );
+          String.format( "jdbc:postgresql://%s:%s/%s",  instanceIp, port, PING_DB_NAME);
+      return jdbcUrl;
+    }
+    
+    public static String getJdbcUrlWithSsl(final String instanceIp, final int port) {
+      final String ssl = "ssl=true&sslfactory=com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory";
+      final String jdbcUrl = 
+          String.format( "jdbc:postgresql://%s:%s/%s?%s",  instanceIp, port, PING_DB_NAME, ssl );
       return jdbcUrl;
     }
     
@@ -276,6 +283,24 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
         dbHost = this.getChain().findHandler(WaitOnDb.class).getResult().get(0);
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to look up database host");
+      }
+      
+      try{
+        final String acctNumber = Accounts.lookupUserById(evt.getUserId()).getAccountNumber();
+        final String dbId = evt.getDbInstanceIdentifier();
+        final String certName = 
+            EventHandlerChainCreateDbInstance.UploadServerCertificate.getCertificateName(acctNumber, dbId);
+        final ServerCertificateType serverCert = EuareClient.getInstance().getServerCertificate(null, certName);
+        final String certBody = serverCert.getCertificateBody();
+        final String bodyPem = certBody;
+
+        final ConfigurableProperty certProp = 
+            PropertyDirectory.getPropertyEntry("cloud.db.appendonlysslcert");
+        certProp.setValue(bodyPem);
+        LOG.debug("Certificate body is updated for postgresql ssl connection");
+      }catch(final Exception ex){
+        LOG.error("Failed to read the server certificate", ex);
+        throw new EventHandlerException("Failed to read the server certificate");
       }
       
       try{

@@ -568,6 +568,11 @@ public class EventHandlerChainCreateDbInstance extends
       super(chain);
     }
     
+    // make it static for now; later should be stored in db
+    public static String getCertificateName(final String acctNumber, final String dbIdentifier) {
+      return String.format("%s-%s-%s", SERVER_CERT_NAME_PREFIX, acctNumber, dbIdentifier);
+    }
+    
     @Override
     public void apply(NewDBInstanceEvent evt)  throws EventHandlerException {
       final String userId = evt.getUserId();
@@ -579,7 +584,7 @@ public class EventHandlerChainCreateDbInstance extends
         throw new EventHandlerException("Failed to lookup account number", ex);
       }
       final String certPath = DEFAULT_SERVER_CERT_PATH;
-      final String certName = String.format("%s-%s-%s", SERVER_CERT_NAME_PREFIX, acctNumber, evt.getDbInstanceIdentifier());
+      final String certName = getCertificateName(acctNumber, evt.getDbInstanceIdentifier());
       try{
         final ServerCertificateType cert = 
             EuareClient.getInstance().getServerCertificate(systemUserId, certName);

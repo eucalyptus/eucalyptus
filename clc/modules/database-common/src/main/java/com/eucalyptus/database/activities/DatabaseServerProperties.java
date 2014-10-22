@@ -178,7 +178,7 @@ import com.google.common.net.HostSpecifier;
          
          // get jdbc url and ping
          final String jdbcUrl =  
-             EventHandlerChainEnableVmDatabase.WaitOnDb.getJdbcUrl(vmHost, Integer.parseInt(port));
+             EventHandlerChainEnableVmDatabase.WaitOnDb.getJdbcUrlWithSsl(vmHost, Integer.parseInt(port));
          
          if(EventHandlerChainEnableVmDatabase.WaitOnDb.pingDatabase(jdbcUrl, userName, password))
            return true;

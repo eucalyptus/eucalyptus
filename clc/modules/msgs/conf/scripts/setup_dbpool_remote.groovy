@@ -77,6 +77,7 @@ import com.eucalyptus.util.LogUtil
 Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool_remote' );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
+ClassLoader.getSystemClassLoader().loadClass('com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory');
 String pool_db_driver = 'org.postgresql.Driver';
 final DatabaseInfo dbInfo = DatabaseInfo.getDatabaseInfo();
 String db_host = dbInfo.getAppendOnlyHost();
@@ -118,7 +119,8 @@ def setupDbPool = { String db_name ->
     // Setup proxool
   proxool_config = new Properties();
   proxool_config.putAll(default_pool_props);
-  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}";
+  String sslParam = "ssl=true&sslfactory=com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory"
+  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}?${sslParam}";
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
   
   // Register proxool

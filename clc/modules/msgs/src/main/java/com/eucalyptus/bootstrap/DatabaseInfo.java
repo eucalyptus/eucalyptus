@@ -70,12 +70,6 @@ public class DatabaseInfo extends AbstractPersistent {
   @Column(name = "append_only_port")
   private String appendOnlyPort = null;
   
-  @ConfigurableField( displayName = "append_only_ssl", 
-      description = "enable ssl when connecting to the backend database for append-only data",
-      type = ConfigurableFieldType.BOOLEAN)
-  @Column(name = "append_only_ssl")
-  private Boolean appendOnlySsl = null;
-
   @ConfigurableField( displayName = "append_only_user", 
       description = "user name of the backend database for append-only data",
       type = ConfigurableFieldType.KEYVALUE)
@@ -90,16 +84,24 @@ public class DatabaseInfo extends AbstractPersistent {
   @Lob
   private String appendOnlyPassword = null; 
   
+  @ConfigurableField( displayName = "append_only_ssl", 
+      description = "ssl certificate to use when connecting to the backend database for append-only data",
+      type = ConfigurableFieldType.KEYVALUEHIDDEN)
+  @Column(name = "append_only_ssl_certificate")
+  @Type(type="org.hibernate.type.StringClobType")
+  @Lob
+  private String appendOnlySslCert = null;
+
+  
   public DatabaseInfo() { }
   
   private static DatabaseInfo newDefault() {
     final DatabaseInfo newInfo = new DatabaseInfo();
     newInfo.appendOnlyHost = "localhost";
     newInfo.appendOnlyPort = "";
-    newInfo.appendOnlySsl = false;
     newInfo.appendOnlyUser = "";
     newInfo.appendOnlyPassword = "";
-    
+    newInfo.appendOnlySslCert = "";
     return newInfo;
   }
   
@@ -117,14 +119,6 @@ public class DatabaseInfo extends AbstractPersistent {
   
   public String getAppendOnlyPort(){ 
     return this.appendOnlyPort;
-  }
-  
-  public void setAppendOnlySsl(final Boolean ssl){
-    this.appendOnlySsl = ssl;
-  }
-  
-  public Boolean getAppendOnlySsl(){
-    return this.appendOnlySsl;
   }
   
   public void setAppendOnlyUser(final String user){
@@ -161,6 +155,14 @@ public class DatabaseInfo extends AbstractPersistent {
       return null;
     }
  }
+  
+  public void setAppendOnlySslCert(final String cert){
+    this.appendOnlySslCert = cert;
+  }
+  
+  public String getAppendOnlySslCert() {
+    return this.appendOnlySslCert;
+  }
 
   private void resetDatabase() {
     if (this.appendOnlyHost == null ||  this.appendOnlyHost.length()<=0)
