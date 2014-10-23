@@ -19,8 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.OwnerFullName;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -58,7 +61,7 @@ import java.util.Map;
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stacks" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackEntity extends AbstractPersistent {
+public class StackEntity extends AbstractPersistent implements CloudFormationMetadata.StackMetadata{
 
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "create_operation_timestamp")
@@ -163,6 +166,16 @@ public class StackEntity extends AbstractPersistent {
 
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
+
+  @Override
+  public String getDisplayName() {
+    return stackName;
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance(accountId);
+  }
 
   public static class Output {
     String description;

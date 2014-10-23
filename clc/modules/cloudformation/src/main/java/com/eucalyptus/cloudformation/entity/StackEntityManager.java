@@ -49,7 +49,7 @@ import java.util.List;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(StackEntity stackEntity) throws AlreadyExistsException {
+  public static StackEntity addStack(StackEntity stackEntity) throws AlreadyExistsException {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -67,6 +67,7 @@ public class StackEntityManager {
       // do something
       db.commit( );
     }
+    return stackEntity;
   }
 
   public static List<StackEntity> describeStacks(String accountId, String stackNameOrId) {
