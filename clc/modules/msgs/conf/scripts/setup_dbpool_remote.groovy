@@ -120,13 +120,17 @@ def setupDbPool = { String db_name ->
   proxool_config = new Properties();
   proxool_config.putAll(default_pool_props);
   String sslParam = "ssl=true&sslfactory=com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory"
-  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}?${sslParam}";
+  String timeout = "connectTimeout=7&socketTimeout=7&loginTimeout=7" 
+  /* default 30 sec timeout causes shutdown hanging when remote db is disconnected
+   * When shutting down proxool pools, proxool's lock wait until the existing connection pools are given socket timeout exception. 
+   * The worst case wait time is { # of remote DBs x timeout }, which is roughly 14 seconds. 
+   */
+  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}?${sslParam}&${timeout}";
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
   
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
-  ProxoolFacade.disableShutdownHook();
 }
 
 if ("localhost".equals(db_host)){
