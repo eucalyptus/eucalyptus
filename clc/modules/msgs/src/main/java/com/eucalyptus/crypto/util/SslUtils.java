@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,13 +38,13 @@ import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Lists.newArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.MapMaker;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -68,6 +68,14 @@ public class SslUtils {
 
   public static String[] getEnabledCipherSuites( final String cipherStrings, final String[] supportedCipherSuites ) {
       return SSL_CIPHER_LOOKUP.getUnchecked( params(cipherStrings, supportedCipherSuites) );
+  }
+
+  public static String[] getEnabledProtocols( final String protocolsList, final String[] supportedProtocols ) {
+    final Iterable<String> protocols =
+        Splitter.on( anyOf( ": ," ) ).omitEmptyStrings( ).trimResults( ).split( protocolsList );
+    return Iterables.toArray(
+        Iterables.filter( protocols, Predicates.in( Arrays.asList( supportedProtocols ) ) ),
+        String.class );
   }
 
   static final class SslCipherSuiteBuilderParams {
