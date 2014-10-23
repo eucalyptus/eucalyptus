@@ -110,6 +110,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
@@ -280,6 +281,8 @@ public class X509Download extends HttpServlet {
         remotePublicify( CloudWatch.class ) ) );
     sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
         remotePublicify( LoadBalancing.class ) ) );
+    sb.append( entryFor( "AWS_SIMPLEWORKFLOW_URL", null,
+        remotePublicify( SimpleWorkflow.class ) ) );
     sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
     String baseName = null;
     if ( x509 != null && keyPair != null ) {
