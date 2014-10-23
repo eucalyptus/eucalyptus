@@ -22,15 +22,16 @@ package com.eucalyptus.cloudformation.workflow
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
+import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.component.annotation.ComponentPart
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
 
+@ComponentPart(CloudFormation)
 @CompileStatic(TypeCheckingMode.SKIP)
 public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   private static final Logger LOG = Logger.getLogger(DeleteStackWorkflowImpl.class);

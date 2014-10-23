@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,32 +78,33 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
     GET_BUCKET_AND_CREATE_OBJECT {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
-        // look for an existing bucket...
-        String bucketName = null;
-        ObjectNode objectNode = null;
-        List<Bucket> buckets = s3c.listBuckets();
-        for (Bucket bucket: buckets) {
-          if (bucket.getName().toLowerCase().startsWith(WAIT_CONDITION_BUCKET_PREFIX.toLowerCase())) {
-            // TODO: what happens if versioning is off?
-            bucketName = bucket.getName();
+        final AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new CloudFormationAWSCredentialsProvider().getCredentials() ) ) {
+          // look for an existing bucket...
+          String bucketName = null;
+          ObjectNode objectNode = null;
+          List<Bucket> buckets = s3c.listBuckets();
+          for ( Bucket bucket : buckets ) {
+            if ( bucket.getName().toLowerCase().startsWith( WAIT_CONDITION_BUCKET_PREFIX.toLowerCase() ) ) {
+              // TODO: what happens if versioning is off?
+              bucketName = bucket.getName();
+            }
           }
+          if ( bucketName == null ) {
+            // TODO: check prefix length
+            bucketName = ( WAIT_CONDITION_BUCKET_PREFIX + "-" + Crypto.generateAlphanumericId( 13, "" ) ).toLowerCase();
+          }
+          s3c.createBucket( bucketName );
+          String keyName = action.getStackEntity().getStackId() + "/" + action.info.getLogicalResourceId() + "/WaitHandle";
+          ObjectMapper mapper = new ObjectMapper();
+          objectNode = mapper.createObjectNode();
+          objectNode.put( "version", "1.0" );
+          objectNode.put( "bucket", bucketName );
+          objectNode.put( "key", keyName );
+          action.info.setEucaParts( JsonHelper.getStringFromJsonNode( objectNode ) );
+          String url = s3c.generatePresignedUrl( bucketName, keyName, action.in12Hours(), HttpMethod.PUT ).toString();
+          action.info.setPhysicalResourceId( url );
         }
-        if (bucketName == null) {
-          // TODO: check prefix length
-          bucketName = (WAIT_CONDITION_BUCKET_PREFIX + "-" + Crypto.generateAlphanumericId(13, "")).toLowerCase();
-        }
-        s3c.createBucket(bucketName);
-        String keyName = action.getStackEntity().getStackId() + "/" + action.info.getLogicalResourceId() + "/WaitHandle";
-        ObjectMapper mapper = new ObjectMapper();
-        objectNode = mapper.createObjectNode();
-        objectNode.put("version","1.0");
-        objectNode.put("bucket", bucketName);
-        objectNode.put("key", keyName);
-        action.info.setEucaParts(JsonHelper.getStringFromJsonNode(objectNode));
-        String url = s3c.generatePresignedUrl(bucketName, keyName, action.in12Hours(), HttpMethod.PUT).toString();
-        action.info.setPhysicalResourceId(url);
         return action;
       }
 
