@@ -70,9 +70,9 @@ import com.google.common.base.Function
 import com.google.common.collect.Lists
 import groovy.transform.Canonical
 
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRange
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
 
 class VpcMessage extends EucalyptusMessage {
 }

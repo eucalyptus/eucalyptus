@@ -28,10 +28,9 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
-import edu.ucsb.eucalyptus.msgs.VpcMessageValidation
 
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
 
 public class VmControlMessage extends ComputeMessage {
   
