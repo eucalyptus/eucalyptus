@@ -21,7 +21,7 @@ package edu.ucsb.eucalyptus.msgs
 
 import spock.lang.Specification
 
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue.*
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue.*
 
 /**
  *
