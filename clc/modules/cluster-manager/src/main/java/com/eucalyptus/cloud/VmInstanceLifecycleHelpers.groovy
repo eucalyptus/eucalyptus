@@ -21,6 +21,7 @@ package com.eucalyptus.cloud
 
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
+import com.eucalyptus.auth.AuthContext
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
@@ -634,9 +635,10 @@ class VmInstanceLifecycleHelpers {
           }
         }
       }
+      final AuthContext authContext = allocation.getAuthContext( ).get( )
       for ( String groupId : networkIds ) {
         if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
-          groups.add( NetworkGroups.lookupByGroupId( accountFullName, groupId ) )
+          groups.add( NetworkGroups.lookupByGroupId( authContext.isSystemUser( ) ? null : accountFullName, groupId ) )
         }
       }
 
