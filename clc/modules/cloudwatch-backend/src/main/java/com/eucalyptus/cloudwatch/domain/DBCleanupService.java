@@ -23,10 +23,13 @@ import java.util.Date;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
+import com.eucalyptus.component.Topology;
 
 public class DBCleanupService implements Runnable {
   Logger LOG = Logger.getLogger(DBCleanupService.class);
@@ -36,6 +39,12 @@ public class DBCleanupService implements Runnable {
   @Override
   public void run() {
     LOG.info("Calling cloudwatch db cleanup service");
+    if (!( Bootstrap.isFinished() &&
+        Topology.isEnabled( CloudWatchBackend.class ) )) {
+      LOG.info("Cloudwatch service is not ENABLED");
+      return;
+    }
+    
     Date twoWeeksAgo = new Date(System.currentTimeMillis() - 2 * 7 * 24 * 60 * 60 * 1000L);
     try {
       MetricManager.deleteMetrics(twoWeeksAgo);
