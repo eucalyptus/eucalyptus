@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -114,6 +114,8 @@ public class SslSetup {
   public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "SSL ciphers for webservices." )
   public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+  @ConfigurableField( description = "SSL protocols for webservices." )
+  public static String        SERVER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
 
   public static class SslCertChangeListener implements PropertyChangeListener<String> {
     
@@ -197,7 +199,8 @@ public class SslSetup {
     engine.setUseClientMode( false );
     engine.setWantClientAuth( false );
     engine.setNeedClientAuth( false );
-    engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( SERVER_SSL_CIPHERS, engine.getSupportedCipherSuites() ) );
+    engine.setEnabledProtocols( SslUtils.getEnabledProtocols( SERVER_SSL_PROTOCOLS, engine.getSupportedProtocols( ) ) );
+    engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( SERVER_SSL_CIPHERS, engine.getSupportedCipherSuites( ) ) );
     return engine;
   }
   

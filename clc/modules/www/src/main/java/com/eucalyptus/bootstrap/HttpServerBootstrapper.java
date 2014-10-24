@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.bootstrap;
 
 import static com.eucalyptus.crypto.util.SslUtils.getEnabledCipherSuites;
+import static com.eucalyptus.crypto.util.SslUtils.getEnabledProtocols;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -112,6 +113,9 @@ public class HttpServerBootstrapper extends Bootstrapper {
   @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
                       displayName = "euca.https.ciphers" )
   public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+  @ConfigurableField( description = "SSL protocols for HTTPS listener.",
+                      displayName = "euca.https.protocols" )
+  public static String  HTTPS_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
 
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
@@ -258,6 +262,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
     protected SSLEngine createSSLEngine( final SocketChannel channel ) throws IOException {
       final SSLEngine engine = super.createSSLEngine( channel );
       engine.setEnabledCipherSuites( getEnabledCipherSuites( HTTPS_CIPHERS, engine.getSupportedCipherSuites( ) ) );
+      engine.setEnabledProtocols( getEnabledProtocols( HTTPS_PROTOCOLS, engine.getSupportedProtocols( ) ) );
       return engine;
     }
   }
