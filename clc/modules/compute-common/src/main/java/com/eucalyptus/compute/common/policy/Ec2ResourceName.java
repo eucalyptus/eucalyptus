@@ -60,9 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.policy.ern;
+package com.eucalyptus.compute.common.policy;
 
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.Ern;
 
 public class Ec2ResourceName extends Ern {
   

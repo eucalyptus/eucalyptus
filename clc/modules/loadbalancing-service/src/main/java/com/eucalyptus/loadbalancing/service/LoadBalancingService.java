@@ -20,13 +20,13 @@
 package com.eucalyptus.loadbalancing.service;
 
 import com.eucalyptus.auth.AuthContextSupplier;
+import static com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec.*;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingBackendMessage;
@@ -57,7 +57,7 @@ public class LoadBalancingService {
     // Authorization
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier user = ctx.getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_LOADBALANCING, getIamActionByMessageType( request ), user ) ) {
+    if ( !Permissions.perhapsAuthorized( VENDOR_LOADBALANCING, getIamActionByMessageType( request ), user ) ) {
       throw new LoadBalancingAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
