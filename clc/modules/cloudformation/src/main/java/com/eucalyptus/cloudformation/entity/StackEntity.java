@@ -508,4 +508,11 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
   public void setRecordDeleted(Boolean recordDeleted) {
     this.recordDeleted = recordDeleted;
   }
+
+  public static StackEntity exampleUndeletedWithAccount(String accountId) {
+    StackEntity stackEntity = new StackEntity();
+    stackEntity.setAccountId(accountId);
+    stackEntity.setRecordDeleted(false);
+    return stackEntity;
+  }
 }

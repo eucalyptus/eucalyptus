@@ -38,8 +38,8 @@ public class CloudFormationNumberQuotaKey extends QuotaKey {
   @Override
   public final boolean canApply( String action, String resourceType ) {
     return PolicySpec.qualifiedName(
-      PolicySpec.VENDOR_LOADBALANCING,
-      PolicySpec.LOADBALANCING_CREATELOADBALANCER).equals( action );
+      PolicySpec.VENDOR_CLOUDFORMATION,
+      PolicySpec.CLOUDFORMATION_CREATESTACK).equals( action );
   }
 
   @Override
@@ -72,11 +72,7 @@ public class CloudFormationNumberQuotaKey extends QuotaKey {
     public Long apply( final OwnerFullName input ) {
       try (TransactionResource db =
              Entities.transactionFor(StackEntity.class)) {
-        Criteria criteria = Entities.createCriteria(StackEntity.class)
-          .add(Restrictions.eq("accountId", input.getAccountNumber()))
-          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-        List<StackEntity> entityList = criteria.list();
-        long retVal = entityList == null ? 0L : entityList.size();
+        long retVal = Entities.count(StackEntity.exampleUndeletedWithAccount(input.getAccountNumber()));
         db.rollback();
         return retVal;
       }
