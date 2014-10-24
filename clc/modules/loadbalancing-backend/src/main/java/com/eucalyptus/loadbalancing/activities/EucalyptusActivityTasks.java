@@ -498,10 +498,10 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public Optional<VpcType> defaultVpc( ) {
+	public Optional<VpcType> defaultVpc( final String userId ) {
 		return Iterables.tryFind( resultOf(
 				new EucaDescribeVpcsTask( true ),
-				new EucalyptusSystemActivity(),
+				new EucalyptusUserActivity( userId ),
 				"failed to describe default vpc"
 		), Predicates.alwaysTrue() );
 	}

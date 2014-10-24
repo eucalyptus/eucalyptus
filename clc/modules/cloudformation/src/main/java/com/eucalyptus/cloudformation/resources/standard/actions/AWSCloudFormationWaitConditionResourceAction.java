@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,59 +130,60 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
       LOG.trace("bucketName=" + bucketName);
       String keyName = objectNode.get("key").textValue();
       LOG.trace("keyName=" + bucketName);
-      final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
       boolean foundFailure = false;
-      LOG.trace("Handle:" + action.properties.getHandle());
-      VersionListing versionListing = s3c.listVersions(bucketName, "");
-      LOG.trace("Found " + versionListing.getVersionSummaries() + " versions to check");
-      Map<String, String> dataMap = Maps.newHashMap();
-      for (S3VersionSummary versionSummary : versionListing.getVersionSummaries()) {
-        LOG.trace("Key:" + versionSummary.getKey());
-        if (!versionSummary.getKey().equals(keyName)) {
-          continue;
-        }
-        LOG.trace("Getting version: " + versionSummary.getVersionId());
-        try {
-          GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, keyName, versionSummary.getVersionId());
-          S3Object s3Object = s3c.getObject(getObjectRequest);
-          JsonNode jsonNode = null;
-          try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
-            jsonNode = new ObjectMapper().readTree(s3ObjectInputStream);
-          }
-          if (!jsonNode.isObject()) {
-            LOG.trace("Read object, json but not object..skipping file");
+      final Map<String, String> dataMap = Maps.newHashMap();
+      try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
+        LOG.trace( "Handle:" + action.properties.getHandle() );
+        VersionListing versionListing = s3c.listVersions( bucketName, "" );
+        LOG.trace( "Found " + versionListing.getVersionSummaries() + " versions to check" );
+        for ( S3VersionSummary versionSummary : versionListing.getVersionSummaries() ) {
+          LOG.trace( "Key:" + versionSummary.getKey() );
+          if ( !versionSummary.getKey().equals( keyName ) ) {
             continue;
           }
-          ObjectNode localObjectNode = (ObjectNode) jsonNode;
-          String status = localObjectNode.get("Status").textValue();
-          if (status == null) {
-            LOG.trace("Null status, skipping");
-            continue;
+          LOG.trace( "Getting version: " + versionSummary.getVersionId() );
+          try {
+            GetObjectRequest getObjectRequest = new GetObjectRequest( bucketName, keyName, versionSummary.getVersionId() );
+            S3Object s3Object = s3c.getObject( getObjectRequest );
+            JsonNode jsonNode = null;
+            try ( S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent() ) {
+              jsonNode = new ObjectMapper().readTree( s3ObjectInputStream );
+            }
+            if ( !jsonNode.isObject() ) {
+              LOG.trace( "Read object, json but not object..skipping file" );
+              continue;
+            }
+            ObjectNode localObjectNode = (ObjectNode) jsonNode;
+            String status = localObjectNode.get( "Status" ).textValue();
+            if ( status == null ) {
+              LOG.trace( "Null status, skipping" );
+              continue;
+            }
+            String data = localObjectNode.get( "Data" ).textValue();
+            if ( data == null ) {
+              LOG.trace( "Null data, skipping" );
+              continue;
+            }
+            String uniqueId = localObjectNode.get( "UniqueId" ).textValue();
+            if ( data == null ) {
+              LOG.trace( "Null uniqueId, skipping" );
+              continue;
+            }
+            if ( "FAILURE".equals( status ) ) {
+              foundFailure = true;
+              LOG.trace( "found failure, gonna die" );
+              break;
+            } else if ( !"SUCCESS".equals( status ) ) {
+              LOG.trace( "weird status...skipping" );
+              continue;
+            } else {
+              LOG.trace( "found success, uniqueId=" + uniqueId );
+              dataMap.put( uniqueId, data );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            LOG.trace( "Exception while going through the objects, will skip this one." );
           }
-          String data = localObjectNode.get("Data").textValue();
-          if (data == null) {
-            LOG.trace("Null data, skipping");
-            continue;
-          }
-          String uniqueId = localObjectNode.get("UniqueId").textValue();
-          if (data == null) {
-            LOG.trace("Null uniqueId, skipping");
-            continue;
-          }
-          if ("FAILURE".equals(status)) {
-            foundFailure = true;
-            LOG.trace("found failure, gonna die");
-            break;
-          } else if (!"SUCCESS".equals(status)) {
-            LOG.trace("weird status...skipping");
-            continue;
-          } else {
-            LOG.trace("found success, uniqueId=" + uniqueId);
-            dataMap.put(uniqueId, data);
-          }
-        } catch (Exception ex) {
-          LOG.error(ex, ex);
-          LOG.trace("Exception while going through the objects, will skip this one.");
         }
       }
       if (foundFailure) {

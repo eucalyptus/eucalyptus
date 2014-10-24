@@ -1663,53 +1663,52 @@ public class SimpleWorkflowService {
                     case "StartTimer":
                       final StartTimerDecisionAttributes startTimer = decision.getStartTimerDecisionAttributes( );
                       try {
-                        if ( timers.listByExample(
+                        if ( !timers.listByExample(
                             Timer.exampleWithTimerId(
                                 accountFullName,
-                                workflowExecution.getDomainName( ),
-                                workflowExecution.getDisplayName( ),
-                                startTimer.getTimerId( ) ),
-                            Predicates.alwaysTrue( ),
-                            Functions.<Timer>identity( )
-                        ).isEmpty( ) ) {
-                         final Long startedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                              workflowExecution,
-                              new TimerStartedEventAttributes()
-                                  .withControl( startTimer.getControl( ) )
-                                  .withDecisionTaskCompletedEventId( completedId )
-                                  .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) )
-                                  .withTimerId( startTimer.getTimerId() )
-                          ) );
-                          if ( timers.countByWorkflowExecution(
-                              accountFullName,
-                              domain.getDisplayName( ),
-                              workflowExecution.getDisplayName( ) ) >=
-                              SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution( ) ) {
-                            throw upClient(
-                                "LimitExceededFault",
-                                "Request would exceed limit for open timers per workflow execution" );
-                          }
-                          timers.save( Timer.create(
-                              userFullName,
-                              workflowExecution,
-                              workflowExecution.getDomainName( ),
-                              workflowExecution.getDomainUuid( ),
-                              startTimer.getTimerId( ),
-                              startTimer.getControl( ),
-                              parsePeriod( startTimer.getStartToFireTimeout( ), 0 ),
-                              completedId,
-                              startedId
-                              ) );
-                        } else {
-                          workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                              workflowExecution,
-                              new StartTimerFailedEventAttributes()
-                                  .withCause( StartTimerFailedCause.TIMER_ID_ALREADY_IN_USE )
-                                  .withDecisionTaskCompletedEventId( completedId )
-                                  .withTimerId( startTimer.getTimerId() )
-                          ) );
-                          scheduleDecisionTask = true;
+                                workflowExecution.getDomainName(),
+                                workflowExecution.getDisplayName(),
+                                startTimer.getTimerId() ),
+                            Predicates.alwaysTrue(),
+                            Functions.<Timer>identity()
+                        ).isEmpty() ) {
+                          throw new StartTimerException( StartTimerFailedCause.TIMER_ID_ALREADY_IN_USE );
                         }
+                        final Long startedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new TimerStartedEventAttributes()
+                                .withControl( startTimer.getControl() )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withStartToFireTimeout( startTimer.getStartToFireTimeout() )
+                                .withTimerId( startTimer.getTimerId() )
+                        ) );
+                        if ( timers.countByWorkflowExecution(
+                            accountFullName,
+                            domain.getDisplayName(),
+                            workflowExecution.getDisplayName() ) >=
+                            SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution() ) {
+                          throw new StartTimerException( StartTimerFailedCause.OPEN_TIMERS_LIMIT_EXCEEDED );
+                        }
+                        timers.save( Timer.create(
+                            userFullName,
+                            workflowExecution,
+                            workflowExecution.getDomainName(),
+                            workflowExecution.getDomainUuid(),
+                            startTimer.getTimerId(),
+                            startTimer.getControl(),
+                            parsePeriod( startTimer.getStartToFireTimeout(), 0 ),
+                            completedId,
+                            startedId
+                        ) );
+                      } catch ( StartTimerException e ) {
+                        workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new StartTimerFailedEventAttributes()
+                                .withCause( e.getFailedCause( ) )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withTimerId( startTimer.getTimerId() )
+                        ) );
+                        scheduleDecisionTask = true;
                       } catch ( SwfMetadataException e ) {
                         throw up( e );
                       }
@@ -1964,9 +1963,9 @@ public class SimpleWorkflowService {
   }
 
   public History getWorkflowExecutionHistory( final GetWorkflowExecutionHistoryRequest request ) throws SimpleWorkflowException {
-    final Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName( );
-    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName();
     final Predicate<? super WorkflowExecution> accessible =
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
@@ -2232,6 +2231,20 @@ public class SimpleWorkflowService {
     }
 
     public ScheduleActivityTaskFailedCause getFailedCause( ) {
+      return failedCause;
+    }
+  }
+
+  private static final class StartTimerException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    private final StartTimerFailedCause failedCause;
+
+    public StartTimerException( final StartTimerFailedCause failedCause ) {
+      this.failedCause = failedCause;
+    }
+
+    public StartTimerFailedCause getFailedCause( ) {
       return failedCause;
     }
   }

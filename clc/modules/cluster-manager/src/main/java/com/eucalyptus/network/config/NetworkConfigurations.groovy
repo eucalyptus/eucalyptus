@@ -38,6 +38,7 @@ import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
+import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter

@@ -20,11 +20,12 @@
 
 package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest
 import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
+import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.StackEvent
 import com.eucalyptus.cloudformation.ValidationErrorException
@@ -45,6 +46,7 @@ import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
 import com.eucalyptus.cloudformation.workflow.steps.Step
+import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -54,8 +56,11 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.netflix.glisten.ActivityOperations
 import com.netflix.glisten.impl.swf.SwfActivityOperations
+import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
+@ComponentPart(CloudFormation)
+@CompileStatic
 public class StackActivityImpl implements StackActivity {
 
   @Delegate
@@ -526,7 +531,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   public String checkCreateStackWorkflowClosed(String stackId) {
-    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
     List<StackWorkflowEntity> createStackWorkflowEntities = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW);
     // TODO: is it really appropriate to fail if no workflows exist
     if (createStackWorkflowEntities == null || createStackWorkflowEntities.isEmpty()) {
@@ -572,13 +577,13 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String cancelCreateAndMonitorWorkflows(String stackId) {
-    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
     cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW));
     cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW));
     return "";
   }
 
-  private boolean isWorkflowOpen(AmazonSimpleWorkflowClient simpleWorkflowClient, StackWorkflowEntity stackWorkflowEntity) {
+  private boolean isWorkflowOpen(AmazonSimpleWorkflow simpleWorkflowClient, StackWorkflowEntity stackWorkflowEntity) {
     boolean isOpen = false;
     try {
       DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
@@ -596,7 +601,7 @@ public class StackActivityImpl implements StackActivity {
     }
     return isOpen;
   }
-  private void cancelOpenWorkflows(AmazonSimpleWorkflowClient simpleWorkflowClient, List<StackWorkflowEntity> workflows) {
+  private void cancelOpenWorkflows(AmazonSimpleWorkflow simpleWorkflowClient, List<StackWorkflowEntity> workflows) {
     if (workflows != null) {
       // Should only be one here, but that is checked for elsewhere, cancel everything
       for (StackWorkflowEntity workflow : workflows) {
@@ -612,7 +617,7 @@ public class StackActivityImpl implements StackActivity {
   }
   @Override
   public String verifyCreateAndMonitorWorkflowsClosed(String stackId) {
-    AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+    AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
     List<StackWorkflowEntity> monitorWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW);
     if (monitorWorkflows != null) {
       for (StackWorkflowEntity workflow : monitorWorkflows) {

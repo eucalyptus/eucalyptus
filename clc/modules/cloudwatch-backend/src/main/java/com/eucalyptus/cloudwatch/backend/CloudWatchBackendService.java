@@ -128,8 +128,8 @@ public class CloudWatchBackendService {
         fixedThreadPool), 0, 1, TimeUnit.MINUTES);
     ScheduledExecutorService dbCleanupService = Executors
         .newSingleThreadScheduledExecutor();
-    dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 0, 1,
-        TimeUnit.DAYS);
+    dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 1, 24,
+        TimeUnit.HOURS);
   }
 
   private static final Logger LOG = Logger.getLogger(CloudWatchBackendService.class);

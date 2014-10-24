@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,12 @@
  *
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional fatalrmation or have any questions.
+ * additional information or have any questions.
  ************************************************************************/
 
 package com.eucalyptus.cloudformation;
 
-import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
@@ -327,8 +327,7 @@ public class CloudFormationService {
     String[] validServicePaths = new String[]{ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH, ComponentIds.lookup(ObjectStorage.class).getServicePath()};
     String[] validDomains = new String[]{removeLastDot(DomainNames.externalSubdomain().toString())};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
-    EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client(user);
-    try {
+    try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( user ) ) {
       if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
         throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
       }
@@ -402,7 +401,7 @@ public class CloudFormationService {
           }
           // see if the workflow is open
           try {
-            AmazonSimpleWorkflowClient simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+            AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
             StackWorkflowEntity deleteStackWorkflowEntity = deleteWorkflows.get(0);
             DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
             describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());

@@ -85,13 +85,15 @@ default_hiber_config = [
 ]
 
 PersistenceContexts.listRemotable().each { String context_name ->
+  
+  LOG.info("attempting to deregister persistence context: " + context_name);
   try {
     PersistenceContexts.deregisterPersistenceContext( context_name);
   }catch( final Exception ex){
     LOG.error("failed to deregister persistence context: "+context_name, ex);
     throw new EucalyptusCloudException("failed to deregister persistence context: "+context_name, ex);
   }
-  LOG.debug("deregistered persistence context: "+context_name);
+  LOG.info("deregistered persistence context: "+context_name);
   
   
     // Configure the hibernate connection
@@ -133,7 +135,6 @@ PersistenceContexts.listRemotable().each { String context_name ->
         ent.simpleName
       }
   )
-  
   // Register the context
   try {
     PersistenceContexts.registerPersistenceContext(context_name, config)

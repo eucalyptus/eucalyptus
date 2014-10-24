@@ -31,9 +31,9 @@ import com.eucalyptus.util.Pair;
 /**
  *
  */
-public class VpcMessageValidation {
+public class ComputeMessageValidation {
 
-  public static class VpcMessageValidationAssistant implements MessageValidation.ValidationAssistant {
+  public static class ComputeMessageValidationAssistant implements MessageValidation.ValidationAssistant {
     @Override
     public boolean validate( final Object object ) {
       return object instanceof EucalyptusData;

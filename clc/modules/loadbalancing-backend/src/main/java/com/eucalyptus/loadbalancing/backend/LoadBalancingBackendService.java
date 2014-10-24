@@ -608,9 +608,10 @@ public class LoadBalancingBackendService {
         }
       }
     }
+    final String adminUserId = lookupAdmin( ctx );
     boolean defaultVpc = false;
     if ( subnetVpcId == null ) { // check for a default VPC
-      final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( );
+      final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( adminUserId );
       subnetVpcId = vpcOptional.transform( VpcType.id( ) ).orNull( );
       defaultVpc = subnetVpcId != null;
     }
@@ -624,13 +625,18 @@ public class LoadBalancingBackendService {
       }
     }
 
-    final LoadBalancer.Scheme scheme = LoadBalancer.Scheme.fromString( request.getScheme( ) ).orNull( );
-    if ( scheme == null && !Strings.isNullOrEmpty( request.getScheme( ) ) ) {
+    LoadBalancer.Scheme reqScheme = LoadBalancer.Scheme.fromString( request.getScheme( ) ).orNull( );
+    if ( reqScheme == null && !Strings.isNullOrEmpty( request.getScheme( ) ) ) {
       throw new InvalidConfigurationRequestException("Invalid scheme ("+request.getScheme( )+")");
     }
-    if ( scheme != null && vpcId == null ) {
-      throw new InvalidConfigurationRequestException("Scheme ("+request.getScheme( )+") should not be specified for EC2-Classic platform");
+    if ( reqScheme != null && vpcId == null ) {
+      if ( reqScheme != LoadBalancer.Scheme.InternetFacing ) {
+        throw new InvalidConfigurationRequestException( "Scheme (" + request.getScheme() + ") should not be specified for EC2-Classic platform" );
+      } else {
+        reqScheme = null; // ignore internet-facing scheme for non-vpc ELB
+      }
     }
+    final LoadBalancer.Scheme scheme = reqScheme;
 
     if ( vpcId != null && scheme != LoadBalancer.Scheme.Internal ) try {
       final List<InternetGatewayType> internetGateways =
@@ -645,12 +651,6 @@ public class LoadBalancingBackendService {
       throw new InternalFailureException( "Unable to verify VPC configuration" );
     }
 
-    final String adminUserId;
-    try {
-      adminUserId = ctx.getAccount().lookupAdmin().getUserId();
-    } catch ( final AuthException e ) {
-      throw new LoadBalancingException( "Error accessing default security group" );
-    }
     final Set<String> securityGroupIds = Sets.newHashSet( );
     if ( request.getSecurityGroups( ) != null ) {
       securityGroupIds.addAll( request.getSecurityGroups( ).getMember( ) );
@@ -1462,7 +1462,7 @@ public class LoadBalancingBackendService {
     final Set<String> allZones = Sets.newHashSet( Iterables.transform( lb.getZones(), LoadBalancerZoneCoreView.name( ) ) );
 
     // check for a default VPC
-    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( );
+    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( lookupAdmin( ctx ) );
     final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
     if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ) ) ) {
       final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone( lb.getVpcId( ), true, requestedZones );
@@ -2495,6 +2495,14 @@ public class LoadBalancingBackendService {
       predicates.add(  com.eucalyptus.util.Strings.startsWith( prefix ) );
     }
     return Predicates.or( predicates );
+  }
+
+  private static String lookupAdmin( final Context ctx ) throws LoadBalancingException {
+    try {
+      return ctx.getAccount( ).lookupAdmin( ).getUserId( );
+    } catch ( final AuthException e ) {
+      throw new LoadBalancingException( "Error accessing account information" );
+    }
   }
 
   private static LoadBalancingException handleException( final Exception e ) throws LoadBalancingException {

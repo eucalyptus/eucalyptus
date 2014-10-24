@@ -47,6 +47,7 @@ import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TagInfo;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
@@ -145,6 +146,21 @@ public class EventHandlerChainCreateDbInstance extends
         throw ex;
       }catch(final Exception ex){
         throw new EventHandlerException("failed to validate the db server EMI", ex);
+      }
+      
+      final String volumeId = DatabaseServerProperties.DB_SERVER_VOLUME;
+      List<Volume> volumes = null;
+      try{
+        volumes = Ec2Client.getInstance().describeVolumes(systemUserId, Lists.newArrayList(volumeId));
+        if(volumes==null || volumes.size()<=0 || ! volumes.get(0).getVolumeId().toLowerCase().equals(volumeId.toLowerCase()))
+          throw new EventHandlerException("No such volume id is found: " + volumeId);
+        
+        if(! "available".equals(volumes.get(0).getStatus()))
+          throw new EventHandlerException("Volume is not available");
+      }catch(final EventHandlerException ex) {
+        throw ex;
+      }catch(final Exception ex) {
+        throw new EventHandlerException("failed to validate the db server volume ID", ex);
       }
       
       List<ClusterInfoType> clusters = null;
@@ -552,6 +568,11 @@ public class EventHandlerChainCreateDbInstance extends
       super(chain);
     }
     
+    // make it static for now; later should be stored in db
+    public static String getCertificateName(final String acctNumber, final String dbIdentifier) {
+      return String.format("%s-%s-%s", SERVER_CERT_NAME_PREFIX, acctNumber, dbIdentifier);
+    }
+    
     @Override
     public void apply(NewDBInstanceEvent evt)  throws EventHandlerException {
       final String userId = evt.getUserId();
@@ -563,12 +584,21 @@ public class EventHandlerChainCreateDbInstance extends
         throw new EventHandlerException("Failed to lookup account number", ex);
       }
       final String certPath = DEFAULT_SERVER_CERT_PATH;
-      final String certName = String.format("%s-%s-%s", SERVER_CERT_NAME_PREFIX, acctNumber, evt.getDbInstanceIdentifier());
+      final String certName = getCertificateName(acctNumber, evt.getDbInstanceIdentifier());
       try{
         final ServerCertificateType cert = 
             EuareClient.getInstance().getServerCertificate(systemUserId, certName);
-        if(cert!=null && cert.getServerCertificateMetadata()!=null)
-          this.createdServerCert = cert.getServerCertificateMetadata().getServerCertificateName();
+        if(cert!=null && cert.getServerCertificateMetadata()!=null) {
+          // delete the existing server cert
+          try{
+            EuareClient.getInstance().deleteServerCertificate(systemUserId, cert.getServerCertificateMetadata().getServerCertificateName());
+            this.createdServerCert=null;
+          }catch(final Exception ex){
+            throw new EventHandlerException("failed to delete server certificate");
+          }
+        }
+      }catch(final EventHandlerException ex) {
+        throw ex;
       }catch(final Exception ex){
         this.createdServerCert = null;
       }
@@ -781,7 +811,6 @@ public class EventHandlerChainCreateDbInstance extends
       X509Certificate serverCert = null;
       String serverCertName = null;
       try{
-        //   certPem = new String(PEMFiles.getBytes(kpCert));
         List<String> result = this.getChain().findHandler(UploadServerCertificate.class).getResult();
         serverCertName = result.get(0); 
         certPem = result.get(1);
@@ -819,7 +848,8 @@ public class EventHandlerChainCreateDbInstance extends
           DatabaseServerProperties.CREDENTIALS_STR,
           this.serverCertArn,
           this.encryptedPassword,
-          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_NTP_SERVER,
+          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
+              DatabaseServerProperties.DB_SERVER_NTP_SERVER,
               null,
               null)));
       return Lists.newArrayList(userData);
@@ -861,7 +891,16 @@ public class EventHandlerChainCreateDbInstance extends
       try{
         final LaunchConfigurationType lcFound = 
             AutoScalingClient.getInstance().describeLaunchConfiguration(systemUserId, launchConfigName);
-        this.createdLaunchConfig = launchConfigName;
+        if(lcFound!=null) {
+          try{
+            AutoScalingClient.getInstance().deleteLaunchConfiguration(systemUserId, launchConfigName);
+            LOG.debug("Deleted the existing launch config: "+launchConfigName);
+            this.createdLaunchConfig=null;
+          }catch(final Exception ex){
+            // this shouldn't happen
+            this.createdLaunchConfig = launchConfigName;
+          }
+        }
       }catch(final Exception ex){
         ;
       }
@@ -1095,10 +1134,9 @@ public class EventHandlerChainCreateDbInstance extends
     private String taggedSgroupId = null;
     private String taggedAsgName = null;
     
-    public static final String DEFAULT_DB_RES_TAG = "euca-internal-db-server";
     public CreateTags(EventHandlerChain<NewDBInstanceEvent> chain){
       super(chain);
-      this.tagValue = DEFAULT_DB_RES_TAG;
+      this.tagValue = DatabaseServerProperties.DEFAULT_LAUNCHER_TAG;
     }
     
     @Override

@@ -413,9 +413,9 @@ public class VmInstances {
       initial = "5" )
   public static Integer INSTANCE_REACHABILITY_TIMEOUT   = 5;
 
-  @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate')",
+  @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate', 'terminate-done')",
       initial = "restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
-  public static String UNKNOWN_INSTANCE_HANDLERS        = "restore-failed, restore";
+  public static String UNKNOWN_INSTANCE_HANDLERS        = "terminate-done, restore-failed, restore";
 
   @ConfigurableField( description = "Instance metadata user data cache configuration.",
       initial = "maximumSize=50, expireAfterWrite=5s, softValues",
@@ -460,7 +460,7 @@ public class VmInstances {
        final Iterable<Optional<VmInstance.RestoreHandler>> handlers =
            VmInstance.RestoreHandler.parseList( String.valueOf( newValue ) );
        if ( Iterables.size( handlers ) != Iterables.size( Optional.presentInstances( handlers ) ) ) {
-         throw new ConfigurablePropertyException( "Invalid unknown instance handler in " + newValue + "; valid values are 'restore', 'restore-failed', 'terminate'" );
+         throw new ConfigurablePropertyException( "Invalid unknown instance handler in " + newValue + "; valid values are 'restore', 'restore-failed', 'terminate', 'terminate-done'" );
        }
     }
   }
@@ -1008,6 +1008,10 @@ public class VmInstances {
 
   public static void buried( final VmInstance vm ) throws TransactionException {
     Entities.asTransaction( VmInstance.class, Transitions.BURIED, VmInstances.TX_RETRIES ).apply( vm );
+  }
+
+  public static void buried( final String key ) throws NoSuchElementException, TransactionException {
+    buried( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
 
   public static void terminated( final VmInstance vm ) throws TransactionException {
