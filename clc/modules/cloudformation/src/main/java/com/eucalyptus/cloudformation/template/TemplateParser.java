@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
+import com.eucalyptus.cloudformation.Limits;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.TemplateParameter;
@@ -268,9 +269,9 @@ public class TemplateParser {
   private void parseDescription(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     String description = JsonHelper.getString(templateJsonNode, TemplateSection.Description.toString());
     if (description == null) return;
-    if (description.length() > 4000) {
+    if (description.getBytes().length > Limits.TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES) {
       throw new ValidationErrorException("Template format error: " + TemplateSection.Description + " must "
-        + "be no longer than 4000 characters.");
+        + "be no longer than " + Limits.TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES + " bytes");
     }
     template.setDescription(description);
   }
@@ -281,13 +282,25 @@ public class TemplateParser {
     JsonNode mappingsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Mappings.toString());
     if (mappingsJsonNode == null) return;
     for (String mapName: Lists.newArrayList(mappingsJsonNode.fieldNames())) {
+      if (mapName.length() > Limits.MAPPING_NAME_MAX_LENGTH_CHARS) {
+        throw new ValidationErrorException("Mapping name " + mapName + " exceeds the maximum number of allowed characters (" + Limits.MAPPING_NAME_MAX_LENGTH_CHARS + ")");
+      }
       JsonNode mappingJsonNode = JsonHelper.checkObject(mappingsJsonNode, mapName, "Every "
         + TemplateSection.Mappings + " member " + mapName + " must be a map");
 
       for (String mapKey: Lists.newArrayList(mappingJsonNode.fieldNames())) {
+        if (mapKey.length() > Limits.MAPPING_NAME_MAX_LENGTH_CHARS) {
+          throw new ValidationErrorException("Mapping key " + mapKey + " exceeds the maximum number of allowed characters (" + Limits.MAPPING_NAME_MAX_LENGTH_CHARS + ")");
+        }
         JsonNode attributesJsonNode = JsonHelper.checkObject(mappingJsonNode, mapKey, "Every "
           + TemplateSection.Mappings + " member " + mapKey + " must be a map");
+        if (Lists.newArrayList(attributesJsonNode.fieldNames()).size() > Limits.MAX_ATTRIBUTES_PER_MAPPING) {
+          throw new ValidationErrorException("Mapping with key " + mapKey + " has more than " + Limits.MAX_ATTRIBUTES_PER_MAPPING + ", the max allowed.");
+        }
         for (String attribute: Lists.newArrayList(attributesJsonNode.fieldNames())) {
+          if (attribute.length() > Limits.MAPPING_NAME_MAX_LENGTH_CHARS) {
+            throw new ValidationErrorException("Attribute " + attribute + " exceeds the maximum number of allowed characters (" + Limits.MAPPING_NAME_MAX_LENGTH_CHARS + ")");
+          }
           JsonNode valueJsonNode = JsonHelper.checkStringOrArray(attributesJsonNode, attribute, "Every "
             + TemplateSection.Mappings + " attribute must be a String or a List.");
           if (!mapping.containsKey(mapName)) {
@@ -299,6 +312,9 @@ public class TemplateParser {
           mapping.get(mapName).get(mapKey).put(attribute, JsonHelper.getStringFromJsonNode(valueJsonNode));
         }
       }
+    }
+    if (mapping.keySet().size() > Limits.MAX_MAPPINGS_PER_TEMPLATE) {
+      throw new ValidationErrorException("Mappings exceed maximum allowed of " + Limits.MAX_MAPPINGS_PER_TEMPLATE + " mappings per template");
     }
     template.setMapping(mapping);
   }
@@ -325,8 +341,18 @@ public class TemplateParser {
         }
         // construct new objects and check non-existent values
         List<String> noValueParameters = Lists.newArrayList();
-
+        if (parameterList.size() > Limits.MAX_PARAMETERS_PER_TEMPLATE) {
+          throw new ValidationErrorException("Too many parameters in the template.  Max of " + Limits.MAX_PARAMETERS_PER_TEMPLATE + " allowed.");
+        }
         for (Parameter parameter : parameterList) {
+          if (parameter.getParameter().getKey().length() > Limits.PARAMETER_NAME_MAX_LENGTH_CHARS) {
+             throw new ValidationErrorException("Parameter " + parameter.getParameter().getKey() +
+             " exceeds the maximum parameter name length of " + Limits.PARAMETER_NAME_MAX_LENGTH_CHARS + " characters.");
+          }
+          if (parameter.getParameter().getStringValue() != null && parameter.getParameter().getStringValue().getBytes().length > Limits.PARAMETER_VALUE_MAX_LENGTH_BYTES) {
+            throw new ValidationErrorException("Parameter " + parameter.getParameter().getKey() +
+              " exceeds the maximum parameter value length of " + Limits.PARAMETER_VALUE_MAX_LENGTH_BYTES + " bytes.");
+          }
           template.getParameters().add(parameter.getParameter());
           template.getTemplateParameters().add(parameter.getTemplateParameter());
           if (parameter.getParameter().getStringValue() == null) {
@@ -785,8 +811,16 @@ public class TemplateParser {
     }
 
     DependencyManager resourceDependencies = new DependencyManager();
-
+    if (resourceKeys.size() > Limits.MAX_RESOURCES_PER_TEMPLATE) {
+      throw new ValidationErrorException("Too many resources in the template.  Max allowed is " + Limits.MAX_RESOURCES_PER_TEMPLATE + ".");
+    }
     for (String resourceKey: resourceKeys) {
+      if (resourceKey != null && resourceKey.length() > Limits.RESOURCE_NAME_MAX_LENGTH_CHARS) {
+        throw new ValidationErrorException("Resource name " + resourceKey + " exceeds the maximum resource name length of " + Limits.RESOURCE_NAME_MAX_LENGTH_CHARS + " characters.");
+      }
+      if (!resourceKey.matches("^[\\p{Alnum}]*$")) {
+        throw new ValidationErrorException("Resource name " + resourceKey + " must be alphanumeric.");
+      }
       resourceDependencies.addNode(resourceKey);
     }
     // evaluate resource dependencies and do some type checking...
@@ -978,6 +1012,9 @@ public class TemplateParser {
       List<String> unresolvedResourceDependencies = Lists.newArrayList();
       List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
       for (String outputKey: outputKeys) {
+        if (outputKey.length() > Limits.OUTPUT_NAME_MAX_LENGTH_CHARS) {
+          throw new ValidationErrorException("Output " + outputKey + " name exceeds the maximum length of " + Limits.OUTPUT_NAME_MAX_LENGTH_CHARS + " characters");
+        }
         // TODO: we could create an output object, but would have to serialize it to pass to inputs anyway, so just
         // parse for now, fail on any errors, and reparse once evaluated.
         JsonNode outputJsonNode = outputsJsonNode.get(outputKey);
@@ -1033,6 +1070,9 @@ public class TemplateParser {
       }
       if (!unresolvedResourceDependencies.isEmpty()) {
         throw new ValidationErrorException("Template format error: Unresolved resource dependencies " + unresolvedResourceDependencies + " in the Outputs block of the template");
+      }
+      if (outputs.size() > Limits.MAX_OUTPUTS_PER_TEMPLATE) {
+        throw new ValidationErrorException("Stack exceeds the maximum allowed number of outputs.("+Limits.MAX_OUTPUTS_PER_TEMPLATE+")");
       }
       template.setOutputs(outputs);
     }
