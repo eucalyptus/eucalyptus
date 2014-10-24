@@ -258,7 +258,7 @@ public class VerifyMetadata {
         throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
             + " Please contact your cloud administrator.");
       
-      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.common.EucalyptusActivityTasks.getInstance().describeVMTypes();
       long diskSizeBytes = 0;
       for(VmTypeDetails type:allTypes){
         if (type.getName().equalsIgnoreCase(workerType)){

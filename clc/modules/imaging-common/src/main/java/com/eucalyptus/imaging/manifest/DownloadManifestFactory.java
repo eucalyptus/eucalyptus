@@ -48,7 +48,7 @@ import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.imaging.UrlValidator;
+import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
