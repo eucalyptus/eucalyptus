@@ -13,7 +13,6 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 10/10/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-@Canonical
 class StackWorkflowTags extends WorkflowTags {
   String stackId;
   String stackName;

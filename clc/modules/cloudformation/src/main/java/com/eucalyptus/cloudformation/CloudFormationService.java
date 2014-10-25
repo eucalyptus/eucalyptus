@@ -64,9 +64,11 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
@@ -75,13 +77,13 @@ import com.netflix.glisten.WorkflowDescriptionTemplate;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
 
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -118,7 +120,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public CreateStackResponseType createStack(CreateStackType request)
+  public CreateStackResponseType createStack(final CreateStackType request)
       throws CloudFormationException {
     CreateStackResponseType reply = request.getReply();
     try {
@@ -135,6 +137,13 @@ public class CloudFormationService {
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      if (!stackName.matches("^[\\p{Alpha}][\\p{Alnum}]*$")) {
+        throw new ValidationErrorException("Stack name " + stackName + " must be alphanumeric and start with a letter.");
+      }
+      if (stackName.length() > Limits.STACK_NAME_MAX_LENGTH_CHARS) {
+        throw new ValidationErrorException("Stack name " + stackName + " must be no longer than " + Limits.STACK_NAME_MAX_LENGTH_CHARS + " characters.");
+      }
+
       if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
       if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
       List<Parameter> parameters = null;
@@ -161,29 +170,18 @@ public class CloudFormationService {
       availabilityZones.put(REGION, defaultRegionAvailabilityZones);
       availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       pseudoParameterValues.setAvailabilityZones(availabilityZones);
-      ArrayList<String> capabilities = Lists.newArrayList();
+      final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        capabilities = request.getCapabilities().getMember();
+        capabilities.addAll(request.getCapabilities().getMember());
       }
 
-      String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
 
-      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
-      StackEntity stackEntity = new StackEntity();
-      StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
-      stackEntity.setStackName(stackName);
-      stackEntity.setStackId(stackId);
-      stackEntity.setAccountId(accountId);
-      stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
-      stackEntity.setStackStatusReason("User initiated");
-      stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
-      stackEntity.setCreationTimestamp(new Date());
-      if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
+      if (templateBody != null) {
+        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
+        }
       }
-      if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
-        stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
-      }
+
       if (request.getTags()!= null && request.getTags().getMember() != null) {
         for (Tag tag: request.getTags().getMember()) {
           if (Strings.isNullOrEmpty(tag.getKey()) || Strings.isNullOrEmpty(tag.getValue())) {
@@ -194,68 +192,103 @@ public class CloudFormationService {
             throw new ValidationErrorException("Invalid tag key.  \"euca:\" is a reserved prefix.");
           }
         }
-        stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
       }
-      if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
-        throw new ValidationErrorException("Either DisableRollback or OnFailure can be specified, not both.");
-      }
-      stackEntity.setRecordDeleted(Boolean.FALSE);
-      String onFailure = "ROLLBACK";
-      if (request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
-        if (!request.getOnFailure().equals("ROLLBACK") && !request.getOnFailure().equals("DELETE") &&
-          !request.getOnFailure().equals("DO_NOTHING")) {
-          throw new ValidationErrorException("Value '" + request.getOnFailure() + "' at 'onFailure' failed to satisfy " +
-            "constraint: Member must satisfy enum value set: [ROLLBACK, DELETE, DO_NOTHING]");
-        } else {
-          onFailure = request.getOnFailure();
+
+      String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
+
+      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
+
+
+      final Supplier<StackEntity> allocator = new Supplier<StackEntity>() {
+        @Override
+        public StackEntity get() {
+          try {
+            StackEntity stackEntity = new StackEntity();
+            StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
+            stackEntity.setStackName(stackName);
+            stackEntity.setStackId(stackId);
+            stackEntity.setAccountId(accountId);
+            stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
+            stackEntity.setStackStatusReason("User initiated");
+            stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
+            stackEntity.setCreationTimestamp(new Date());
+            if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
+              stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
+            }
+            if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
+              stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
+            }
+
+            if (request.getTags()!= null && request.getTags().getMember() != null) {
+              stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
+            }
+            stackEntity.setRecordDeleted(Boolean.FALSE);
+            stackEntity = StackEntityManager.addStack(stackEntity);
+
+            // TODO: Arguably everything after here should be considered not part of the allocation of the stack entity
+
+            String onFailure;
+            if (request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
+              if (!request.getOnFailure().equals("ROLLBACK") && !request.getOnFailure().equals("DELETE") &&
+                !request.getOnFailure().equals("DO_NOTHING")) {
+                throw new ValidationErrorException("Value '" + request.getOnFailure() + "' at 'onFailure' failed to satisfy " +
+                  "constraint: Member must satisfy enum value set: [ROLLBACK, DELETE, DO_NOTHING]");
+              } else {
+                onFailure = request.getOnFailure();
+              }
+            } else {
+              onFailure = (request.getDisableRollback() == Boolean.TRUE) ? "DO_NOTHING" : "ROLLBACK";
+            }
+
+            for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
+              StackResourceEntity stackResourceEntity = new StackResourceEntity();
+              stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+              stackResourceEntity.setDescription(""); // TODO: maybe on resource info?
+              stackResourceEntity.setResourceStatus(StackResourceEntity.Status.NOT_STARTED);
+              stackResourceEntity.setStackId(stackId);
+              stackResourceEntity.setStackName(stackName);
+              stackResourceEntity.setRecordDeleted(Boolean.FALSE);
+              StackResourceEntityManager.addStackResource(stackResourceEntity);
+            }
+
+            StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+            Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
+            StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+            WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
+            InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
+              .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
+
+            CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
+            createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
+            StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
+              StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
+              CloudFormationBootstrapper.SWF_DOMAIN,
+              createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
+              createStackWorkflowClient.getWorkflowExecution().getRunId());
+
+            WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+            WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
+            InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
+              .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags);
+
+            MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
+            monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
+
+
+            StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
+              StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
+              CloudFormationBootstrapper.SWF_DOMAIN,
+              monitorCreateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
+              monitorCreateStackWorkflowClient.getWorkflowExecution().getRunId());
+
+            return stackEntity;
+          } catch ( CloudFormationException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
         }
-      } else {
-        onFailure = (request.getDisableRollback() == Boolean.TRUE) ? "DO_NOTHING" : "ROLLBACK";
-      }
-      StackEntityManager.addStack(stackEntity);
-      for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
-        StackResourceEntity stackResourceEntity = new StackResourceEntity();
-        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-        stackResourceEntity.setDescription(""); // TODO: maybe on resource info?
-        stackResourceEntity.setResourceStatus(StackResourceEntity.Status.NOT_STARTED);
-        stackResourceEntity.setStackId(stackId);
-        stackResourceEntity.setStackName(stackName);
-        stackResourceEntity.setRecordDeleted(Boolean.FALSE);
-        StackResourceEntityManager.addStackResource(stackResourceEntity);
-      }
+      };
 
-      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
-
-
-      Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
-      StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
-      WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
-        .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
-
-      CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
-      createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
-      StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
-        StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
-        CloudFormationBootstrapper.SWF_DOMAIN,
-        createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
-        createStackWorkflowClient.getWorkflowExecution().getRunId());
-
-      WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
-      WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
-        .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags);
-
-      MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
-      monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
-
-
-      StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
-        StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
-        CloudFormationBootstrapper.SWF_DOMAIN,
-        monitorCreateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
-        monitorCreateStackWorkflowClient.getWorkflowExecution().getRunId());
-
+      final StackEntity stackEntity = RestrictedTypes.allocateUnitlessResource(allocator);
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);
@@ -277,7 +310,7 @@ public class CloudFormationService {
     boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
     if (inWhitelist) {
       try {
-        return copyStreamToString(url.openStream());
+        return copyStreamToString(new BoundedInputStream(url.openStream(), Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1));
       } catch (UnknownHostException ex) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
       } catch (javax.net.ssl.SSLHandshakeException ex) {
@@ -295,6 +328,9 @@ public class CloudFormationService {
     String[] validDomains = new String[]{removeLastDot(DomainNames.externalSubdomain().toString())};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( user ) ) {
+      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+        throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+      }
       return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getKey());
     } catch (Exception ex) {
       LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getKey());
@@ -311,20 +347,18 @@ public class CloudFormationService {
     return input;
   }
 
-  private static String copyStreamToString(InputStream in) throws IOException {
-    StringBuilder stringBuilder = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(in));
-    try {
-      String line = null;
-      while ((line = br.readLine()) != null) {
-        stringBuilder.append(line + "\n");
-      }
-    } finally {
-      if (br != null) {
-        br.close();
-      }
+  private static String copyStreamToString(InputStream in) throws IOException, ValidationErrorException {
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    byte[] buffer = new byte[4096];
+    int length = -1;
+    while ((length = in.read(buffer)) != -1) {
+      bout.write(buffer, 0, length);
     }
-    return stringBuilder.toString();
+    bout.flush();
+    if (bout.toByteArray().length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+      throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+    }
+    return new String(bout.toByteArray());
   }
 
 
