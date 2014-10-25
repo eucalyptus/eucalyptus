@@ -19,9 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.imaging.service.ws
 
-import com.eucalyptus.imaging.PutInstanceImportTaskStatusType
-import com.eucalyptus.imaging.GetInstanceImportTaskType
-import com.eucalyptus.imaging.ws.ImagingQueryBinding
+import com.eucalyptus.imaging.common.GetInstanceImportTaskType
+import com.eucalyptus.imaging.common.PutInstanceImportTaskStatusType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
