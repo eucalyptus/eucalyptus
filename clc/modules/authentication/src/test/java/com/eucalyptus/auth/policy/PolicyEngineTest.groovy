@@ -21,7 +21,11 @@ package com.eucalyptus.auth.policy
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
+import com.eucalyptus.auth.policy.ern.Ern
+import com.eucalyptus.auth.policy.ern.EuareErnBuilder
 import com.google.common.base.Suppliers
+import org.junit.Before
+import org.junit.BeforeClass
 
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch.All
 import com.eucalyptus.auth.entities.AuthorizationEntity
@@ -44,6 +48,11 @@ import com.google.common.base.Function
  */
 @TypeChecked
 class PolicyEngineTest {
+
+  @BeforeClass
+  public static void beforeClass( ){
+    Ern.registerServiceErnBuilder( new EuareErnBuilder( ) )
+  }
 
   @Test
   public void testPersonaRolePolicyAccountCreate(  ) {

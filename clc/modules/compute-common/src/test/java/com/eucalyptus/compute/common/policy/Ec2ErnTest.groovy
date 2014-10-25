@@ -28,10 +28,10 @@ class Ec2ErnTest {
   @Test
   void testParseValid( ) {
     List<String> arns = [
-        'arn:aws:ec2:us-east-1::image/ami-1a2b3c4d',
-        'arn:aws:ec2:us-east-1:123456789012:instance/*',
-        'arn:aws:ec2:us-east-1:123456789012:volume/*',
-        'arn:aws:ec2:us-east-1:123456789012:volume/vol-1a2b3c4d',
+        'arn:aws:ec2:*::image/ami-1a2b3c4d',
+        'arn:aws:ec2:*:123456789012:instance/*',
+        'arn:aws:ec2:*:123456789012:volume/*',
+        'arn:aws:ec2:*:123456789012:volume/vol-1a2b3c4d',
     ]
     for ( String arn : arns ) {
       Ern.parse( arn )
