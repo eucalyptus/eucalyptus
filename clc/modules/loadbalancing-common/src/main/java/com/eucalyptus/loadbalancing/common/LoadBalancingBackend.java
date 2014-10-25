@@ -29,11 +29,12 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
+@PolicyVendor( LoadBalancingPolicySpec.VENDOR_LOADBALANCING )
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
 public class LoadBalancingBackend extends ComponentId {
