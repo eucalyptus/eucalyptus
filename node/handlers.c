@@ -220,6 +220,9 @@ configEntry configKeysNoRestartNC[] = {
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {"LOGFACILITY", ""},
+    {CONFIG_NC_CEPH_USER, DEFAULT_CEPH_USER},
+    {CONFIG_NC_CEPH_KEYS, DEFAULT_CEPH_KEYRING},
+    {CONFIG_NC_CEPH_CONF, DEFAULT_CEPH_CONF},
     {NULL, NULL},
 };
 
@@ -255,6 +258,7 @@ static struct handlers *available_handlers[] = {
 static void *libvirt_thread(void *ptr);
 static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
+static void update_ebs_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative);
@@ -1229,6 +1233,23 @@ static void update_log_params(void)
 }
 
 //!
+//! helper that is used during initialization and by monitornig thread
+//!
+static void update_ebs_params(void)
+{
+    char * ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
+    char * ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
+    char * ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
+    init_iscsi(nc_state.home,
+               (ceph_user==NULL)?(DEFAULT_CEPH_USER):(ceph_user),
+               (ceph_keys==NULL)?(DEFAULT_CEPH_KEYRING):(ceph_keys),
+               (ceph_conf==NULL)?(DEFAULT_CEPH_CONF):(ceph_conf));
+    EUCA_FREE(ceph_user);
+    EUCA_FREE(ceph_keys);
+    EUCA_FREE(ceph_conf);
+}
+
+//!
 //! This defines the NC monitoring thread
 //!
 //! @param[in] arg a transparent pointer to the global NC state structure
@@ -1515,6 +1536,9 @@ void *monitoring_thread(void *arg)
 
                     // log-related options
                     update_log_params();
+
+                    // EBS-related options
+                    update_ebs_params();
 
                     //! @todo pick up other NC options dynamically?
                 }
@@ -2260,15 +2284,8 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    { // initialize the EBS helpers
-        char * ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
-        char * ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
-        char * ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
-        init_iscsi(nc_state.home, ceph_user, ceph_keys, ceph_conf);
-        EUCA_FREE(ceph_user);
-        EUCA_FREE(ceph_keys);
-        EUCA_FREE(ceph_conf);
-    }
+    // initialize the EBS subsystem
+    update_ebs_params();
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be

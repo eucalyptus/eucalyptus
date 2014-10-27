@@ -200,12 +200,15 @@ void init_iscsi(const char *euca_home, const char *new_ceph_user, const char *ne
     // override defaults for the Ceph parameters
     if (new_ceph_user != NULL) {
         euca_strncpy(ceph_user, new_ceph_user, sizeof(ceph_user));
+        LOGDEBUG("              Ceph user: %s\n", ceph_user);
     }
     if (new_ceph_keyring != NULL) {
         euca_strncpy(ceph_keyring, new_ceph_keyring, sizeof(ceph_keyring));
+        LOGDEBUG("      Ceph keyring path: %s\n", ceph_keyring);
     }
     if (new_ceph_conf != NULL) {
         euca_strncpy(ceph_conf, new_ceph_conf, sizeof(ceph_conf));
+        LOGDEBUG("Ceph configuration path: %s\n", ceph_conf);
     }
 
     // initialize the semaphore on first invocation only
