@@ -83,6 +83,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define DEFAULT_CEPH_USER    "eucalyptus"
+#define DEFAULT_CEPH_KEYRING "/etc/ceph/ceph.client.eucalyptus.keyring"
+#define DEFAULT_CEPH_CONF    "/etc/ceph/ceph.conf"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -113,9 +117,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-void init_iscsi(const char *euca_home);
-char *connect_iscsi_target(const char *dev_string);
-int disconnect_iscsi_target(const char *dev_string, int do_rescan);
+void init_iscsi(const char *euca_home, const char *new_ceph_user, const char *new_ceph_keyring, const char *new_ceph_conf);
+char *connect_iscsi_target(const char *volume_id, const char *target_dev, const char *target_serial, const char *target_bus, const char *dev_string);
+int disconnect_iscsi_target(const char *dev_string, boolean do_rescan);
 char *get_iscsi_target(const char *dev_string);
 int check_iscsi(const char *dev_string);
 

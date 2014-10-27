@@ -79,6 +79,7 @@ import java.util.zip.ZipFile;
 import javax.security.auth.Subject;
 import org.junit.Test;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
@@ -483,7 +484,7 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
   }
 
-  @Test
+  @Test( expected = InvalidSignatureAuthException.class )
   public void testHmacV2Invalid() throws Exception {
     final HmacCredentials creds = creds(
         "MrFSyGZ44%2fOe4nOfXQImKmR8oRABMrmNk2mJIWz1dCA%3d",
@@ -496,7 +497,7 @@ public class HmacLoginModuleTest {
         "localhost:8773",
         2,
         Hmac.HmacSHA256 );
-    assertFalse("Authentication failed", hmacV2LoginModule().authenticate(creds));
+    hmacV2LoginModule().authenticate( creds );
   }
 
   /**

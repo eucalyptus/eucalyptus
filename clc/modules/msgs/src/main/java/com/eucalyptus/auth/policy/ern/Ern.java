@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,88 +62,46 @@
 
 package com.eucalyptus.auth.policy.ern;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.log4j.Logger;
 import net.sf.json.JSONException;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 
 public abstract class Ern {
   
-  private static final Logger LOG = Logger.getLogger( Ern.class );
-  
   public static final String ARN_PREFIX = "arn:aws:";
-  // Resource ARN syntax
+  public static final String ARN_WILDCARD = "*";
   public static final Pattern ARN_PATTERN =
-      Pattern.compile( "\\*" + 
-                       "|(?:arn:aws:(?:" +
-                           "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile|server-certificate)((?:/[^/\\s]+)+)|\\*))" +
-                           "|(?:(" + PolicySpec.VENDOR_EC2 + ")::([0-9]{12}|eucalyptus)?:([a-z0-9_-]+)/(\\S+))" +
-                           "|(?:(" + PolicySpec.VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
-                           ")" +
-                       ")" );
+      Pattern.compile( "arn:aws:([a-z][a-z0-9-]*):(\\*)?:([0-9]{12}|eucalyptus)?:(.*)" );
+
+  private static List<ServiceErnBuilder> ernBuilders = new CopyOnWriteArrayList<>( );
 
   // Group index of ARN fields in the ARN pattern
-  public static final int ARN_PATTERNGROUP_IAM = 1;
-  public static final int ARN_PATTERNGROUP_IAM_NAMESPACE = 2;
-  public static final int ARN_PATTERNGROUP_IAM_USERGROUP = 3;
-  public static final int ARN_PATTERNGROUP_IAM_ID = 4;
-  public static final int ARN_PATTERNGROUP_EC2 = 5;
-  public static final int ARN_PATTERNGROUP_EC2_TYPE = 7;
-  public static final int ARN_PATTERNGROUP_EC2_ID = 8;
-  public static final int ARN_PATTERNGROUP_S3 = 8;
-  public static final int ARN_PATTERNGROUP_S3_BUCKET = 9;
-  public static final int ARN_PATTERNGROUP_S3_OBJECT = 10;
- 
+  public static final int ARN_PATTERNGROUP_SERVICE = 1;
+  public static final int ARN_PATTERNGROUP_REGION = 2;
+  public static final int ARN_PATTERNGROUP_ACCOUNT = 3;
+  public static final int ARN_PATTERNGROUP_RESOURCE = 4;
+
   protected String vendor;
   protected String region = "";
   protected String namespace = "";
 
   public static Ern parse( String ern ) throws JSONException {
+    if ( ARN_WILDCARD.equals( ern ) ) return new WildcardResourceName();
     final Matcher matcher = ARN_PATTERN.matcher( ern );
-    if ( !matcher.matches( ) ) {
-      throw new JSONException( "'" + ern + "' is not a valid ARN" );
+    if ( matcher.matches() ) {
+      final String service = matcher.group( ARN_PATTERNGROUP_SERVICE );
+      final String region = matcher.group( ARN_PATTERNGROUP_REGION );
+      final String account = matcher.group( ARN_PATTERNGROUP_ACCOUNT );
+      final String resource = matcher.group( ARN_PATTERNGROUP_RESOURCE );
+      for ( final ServiceErnBuilder builder : ernBuilders ) {
+        if ( builder.supports( service ) ) {
+          return builder.build( ern, service, region, account, resource );
+        }
+      }
     }
-    if ( matcher.group( ARN_PATTERNGROUP_IAM ) != null ) {
-      final Optional<String> pathName = Optional.fromNullable( matcher.group( ARN_PATTERNGROUP_IAM_ID ) );
-      final String path;
-      final String name;
-      int lastSlash = pathName.isPresent() ? pathName.get().lastIndexOf( '/' ) : 0;
-      if ( lastSlash == 0 ) {
-        path = "/";
-        name = pathName.isPresent() ? pathName.get().substring( 1 ) : "*";
-      } else {
-        path = pathName.get().substring( 0, lastSlash );
-        name = pathName.get().substring( lastSlash + 1 );
-      }
-      final String accountId = matcher.group( ARN_PATTERNGROUP_IAM_NAMESPACE );
-      final String type = Objects.firstNonNull( matcher.group( ARN_PATTERNGROUP_IAM_USERGROUP ), "*" );
-      return new EuareResourceName( accountId, type, path, name);
-    } else if ( matcher.group( ARN_PATTERNGROUP_EC2 ) != null ) {
-      String type = matcher.group( ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
-      if ( !PolicySpec.EC2_RESOURCES.contains( type ) ) {
-        throw new JSONException( "EC2 type '" + type + "' is not supported" );
-      }
-      String id = matcher.group( ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
-      if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( type ) ) {
-        AddressUtil.validateAddressRange( id );
-      }
-      // allow for pre-v4.1 type names
-      if ( "keypair".equals( type ) ) {
-        type = PolicySpec.EC2_RESOURCE_KEYPAIR;
-      } else if ( "securitygroup".equals( type ) ) {
-        type = PolicySpec.EC2_RESOURCE_SECURITYGROUP;
-      }
-      return new Ec2ResourceName( type, id );
-    } else if ( matcher.group( ARN_PATTERNGROUP_S3 ) != null ) {
-      String bucket = matcher.group( ARN_PATTERNGROUP_S3_BUCKET );
-      String object = matcher.group( ARN_PATTERNGROUP_S3_OBJECT );
-      return new S3ResourceName( bucket, object );
-    } else {
-      return new WildcardResourceName( );
-    }
+    throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }
   
   public String getVendor( ) {
@@ -161,5 +119,10 @@ public abstract class Ern {
   public abstract String getResourceType( );
   
   public abstract String getResourceName( );
-  
+
+  public static void registerServiceErnBuilder( final ServiceErnBuilder builder ) {
+    if ( !ernBuilders.contains( builder ) ) {
+      ernBuilders.add( builder );
+    }
+  }
 }

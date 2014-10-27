@@ -70,9 +70,9 @@ import com.google.common.base.Function
 import com.google.common.collect.Lists
 import groovy.transform.Canonical
 
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRange
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
 
 class VpcMessage extends EucalyptusMessage {
 }
@@ -397,6 +397,10 @@ class SubnetType extends EucalyptusData implements VpcTagged {
 
   static Function<SubnetType, String> id( ) {
     { SubnetType subnet -> subnet.subnetId } as Function<SubnetType, String>
+  }
+
+  static Function<SubnetType, String> zone( ) {
+    { SubnetType subnet -> subnet.availabilityZone } as Function<SubnetType, String>
   }
 }
 class DescribeRouteTablesResponseType extends VpcMessage {

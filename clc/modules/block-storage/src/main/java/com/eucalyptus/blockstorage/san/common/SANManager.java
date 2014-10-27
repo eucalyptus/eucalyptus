@@ -705,7 +705,7 @@ public class SANManager implements LogicalStorageManager {
 				}
 
 				// Ensure that the SC can attach to the volume.
-				Integer lun = -1;
+				String lun = null;
 				try {
 					LOG.info("Exporting backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId + " to SC host IQN " + scIqn);
 					lun = connectionManager.addInitiatorRule(sanSnapshotId, scIqn);
@@ -713,14 +713,17 @@ public class SANManager implements LogicalStorageManager {
 					LOG.debug("Failed to setup attachment for snapshot " + snapshotId + " to SC", attEx);
 					throw new EucalyptusCloudException("Could not setup snapshot volume " + snapshotId + " to SC because of error in attach prep", attEx);
 				}
+				
+				if (lun == null) {
+					throw new EucalyptusCloudException("Failed to export backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId
+							+ " to SC host IQN " + scIqn);
+				}
 
-				// Run the connect
+				// Store the lun ID in the iqn string, its needed for disconnecting the snapshot from SC later
+				iqn = iqn + ',' + lun;
 				StorageResource storageResource = null;
 				try {
-					// Negative luns are invalid, so don't include, i.e Equallogic uses no lun
-					if (lun >= 0) {
-						iqn = iqn + "," + String.valueOf(lun);
-					}
+					// Run the connect
 					storageResource = connectionManager.connectTarget(iqn);
 					storageResource.setId(snapshotId);
 				} catch (Exception connEx) {
@@ -734,7 +737,7 @@ public class SANManager implements LogicalStorageManager {
 					throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from ObjectStorage",
 							connEx);
 				}
-
+				
 				SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn, sizeExpected).withSanVolumeId(sanSnapshotId);
                 try {
                     Transactions.save(snapInfo);
@@ -880,7 +883,7 @@ public class SANManager implements LogicalStorageManager {
 		}
 
 		LOG.info("Exporting backend volume " + sanVolumeId + " mapping to " + volumeId + " to NC host IQN " + nodeIqn);
-		Integer lun = connectionManager.addInitiatorRule(sanVolumeId, nodeIqn);
+		String lun = connectionManager.addInitiatorRule(sanVolumeId, nodeIqn);
 		if (lun == null) {
 			throw new EucalyptusCloudException("No LUN found from connection manager");
 		}
@@ -895,9 +898,11 @@ public class SANManager implements LogicalStorageManager {
 		// Construct the correct connect string to return:
 		// <user>,<authmode>,<lun string>,<volume property/SAN iqn>
 		StringBuilder sb = new StringBuilder();
+		sb.append(connectionManager.getProtocol()).append(',');
+		sb.append(connectionManager.getProviderName()).append(',');
 		sb.append(optionalUser == null ? "" : optionalUser).append(',');
 		sb.append(auth == null ? "" : auth).append(',');
-		sb.append(lun.toString()).append(',');
+		sb.append(lun).append(',');
 		sb.append(volumeConnectionString);
 		return sb.toString();
 	}

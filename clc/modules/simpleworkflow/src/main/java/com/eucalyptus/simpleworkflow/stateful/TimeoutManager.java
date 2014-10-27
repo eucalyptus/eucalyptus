@@ -21,6 +21,7 @@ package com.eucalyptus.simpleworkflow.stateful;
 
 import static com.eucalyptus.simpleworkflow.NotifyClient.NotifyTaskList;
 import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionDurationMillis;
+import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Idle;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Pending;
 import java.util.Collection;
 import java.util.Date;
@@ -46,6 +47,7 @@ import com.eucalyptus.simpleworkflow.Timers;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;
 import com.eucalyptus.simpleworkflow.WorkflowHistoryEvent;
+import com.eucalyptus.simpleworkflow.WorkflowLock;
 import com.eucalyptus.simpleworkflow.WorkflowType;
 import com.eucalyptus.simpleworkflow.WorkflowTypes;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
@@ -94,31 +96,42 @@ public class TimeoutManager {
     final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
       for ( final Timer timer : timers.listFired( Functions.<Timer>identity( ) ) ) try {
-        timers.updateByExample( timer, timer.getOwner( ), timer.getDisplayName( ), new Function<Timer, Void>( ) {
-          @Override
-          public Void apply( final Timer timer ) {
-            final WorkflowExecution workflowExecution = timer.getWorkflowExecution( );
-            workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                workflowExecution,
-                new TimerFiredEventAttributes( )
-                    .withStartedEventId( timer.getStartedEventId( ) )
-                    .withTimerId( timer.getDisplayName( ) )
-            ) );
-            if ( workflowExecution.getDecisionStatus() != Pending ) {
+        try ( final WorkflowLock lock = WorkflowLock.lock(
+            timer.getOwnerAccountNumber( ),
+            timer.getDomainUuid( ),
+            timer.getWorkflowRunId( ) ) ) {
+          timers.withRetries( ).updateByExample(
+              timer,
+              timer.getOwner( ),
+              timer.getDisplayName( ),
+              new Function<Timer, Void>( ) {
+            @Override
+            public Void apply( final Timer timer ) {
+              final WorkflowExecution workflowExecution = timer.getWorkflowExecution( );
               workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                   workflowExecution,
-                  new DecisionTaskScheduledEventAttributes( )
-                      .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                      .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  new TimerFiredEventAttributes( )
+                      .withStartedEventId( timer.getStartedEventId( ) )
+                      .withTimerId( timer.getDisplayName( ) )
               ) );
-              workflowExecution.setDecisionStatus( Pending );
-              workflowExecution.setDecisionTimestamp( new Date( ) );
-              addToNotifyLists( taskLists, workflowExecution );
+              if ( workflowExecution.getDecisionStatus() != Pending ) {
+                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                    workflowExecution,
+                    new DecisionTaskScheduledEventAttributes( )
+                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                ) );
+                if ( workflowExecution.getDecisionStatus() == Idle ) {
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                  addToNotifyLists( taskLists, workflowExecution );
+                }
+              }
+              Entities.delete( timer );
+              return null;
             }
-            Entities.delete( timer );
-            return null;
-          }
-        } );
+          } );
+        }
       } catch ( SwfMetadataException e ) {
         if ( !handleException( e ) ) {
           logger.error( "Error processing fired timer: " +  timer.getWorkflowRunId() + "/" + timer.getStartedEventId( ), e );
@@ -178,40 +191,49 @@ public class TimeoutManager {
   private void timeoutActivityTasks( ) {
     final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
-      for ( final ActivityTask task : activityTasks.listTimedOut( Functions.<ActivityTask>identity( ) ) ) try {
-        activityTasks.updateByExample( task, task.getOwner( ), task.getDisplayName(), new Function<ActivityTask, Void>() {
-          @Override
-          public Void apply( final ActivityTask activityTask ) {
-            final Pair<String,Date> timeout = activityTask.calculateNextTimeout( );
-            if ( timeout != null ) {
-              final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution();
-              workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                  workflowExecution,
-                  new ActivityTaskTimedOutEventAttributes()
-                      .withDetails( activityTask.getHeartbeatDetails() )
-                      .withScheduledEventId( activityTask.getScheduledEventId() )
-                      .withStartedEventId( activityTask.getStartedEventId() )
-                      .withTimeoutType( timeout.getLeft() )
-              ) );
-              if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+      for ( final ActivityTask task : activityTasks.listTimedOut( Functions.<ActivityTask>identity( ) ) ) {
+        try ( final WorkflowLock lock =
+                  WorkflowLock.lock( task.getOwnerAccountNumber( ), task.getDomainUuid( ), task.getWorkflowRunId( ) ) ) {
+          activityTasks.withRetries( ).updateByExample(
+              task,
+              task.getOwner( ),
+              task.getDisplayName( ),
+              new Function<ActivityTask, Void>() {
+            @Override
+            public Void apply( final ActivityTask activityTask ) {
+              final Pair<String,Date> timeout = activityTask.calculateNextTimeout( );
+              if ( timeout != null ) {
+                final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution();
                 workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                     workflowExecution,
-                    new DecisionTaskScheduledEventAttributes( )
-                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                    new ActivityTaskTimedOutEventAttributes()
+                        .withDetails( activityTask.getHeartbeatDetails() )
+                        .withScheduledEventId( activityTask.getScheduledEventId() )
+                        .withStartedEventId( activityTask.getStartedEventId() )
+                        .withTimeoutType( timeout.getLeft() )
                 ) );
-                workflowExecution.setDecisionStatus( Pending );
-                workflowExecution.setDecisionTimestamp( new Date( ) );
-                addToNotifyLists( taskLists, workflowExecution );
+                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskScheduledEventAttributes( )
+                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  ) );
+                  if ( workflowExecution.getDecisionStatus() == Idle ) {
+                    workflowExecution.setDecisionStatus( Pending );
+                    workflowExecution.setDecisionTimestamp( new Date( ) );
+                    addToNotifyLists( taskLists, workflowExecution );
+                  }
+                }
+                Entities.delete( activityTask );
               }
-              Entities.delete( activityTask );
+              return null;
             }
-            return null;
+          } );
+        } catch ( SwfMetadataException e ) {
+          if ( !handleException( e ) ) {
+            logger.error( "Error processing activity task timeout: " + task.getWorkflowRunId() + "/" + task.getScheduledEventId(), e );
           }
-        } );
-      } catch ( SwfMetadataException e ) {
-        if ( !handleException( e ) ) {
-          logger.error( "Error processing activity task timeout: " + task.getWorkflowRunId() + "/" + task.getScheduledEventId(), e );
         }
       }
     } catch ( SwfMetadataException e ) {
@@ -224,54 +246,64 @@ public class TimeoutManager {
     final Set<NotifyTaskList> taskLists = Sets.newHashSet( );
     try {
       final long now = System.currentTimeMillis();
-      for ( final WorkflowExecution workflowExecution : workflowExecutions.listTimedOut( now, Functions.<WorkflowExecution>identity( ) ) ) try {
-        workflowExecutions.updateByExample( workflowExecution, workflowExecution.getOwner( ), workflowExecution.getDisplayName(), new Function<WorkflowExecution, Void>() {
-          @Override
-          public Void apply( final WorkflowExecution workflowExecution ) {
-            final Date timeout = workflowExecution.calculateNextTimeout( );
-            if ( timeout != null ) {
-              if ( workflowExecution.isWorkflowTimedOut( now, getWorkflowExecutionDurationMillis( ) ) ) {
-                workflowExecution.closeWorkflow(
-                    WorkflowExecution.CloseStatus.Timed_Out,
-                    WorkflowHistoryEvent.create(
-                        workflowExecution,
-                        new WorkflowExecutionTimedOutEventAttributes()
-                            .withTimeoutType( "START_TO_CLOSE" )
-                            .withChildPolicy( workflowExecution.getChildPolicy() )
-                ) );
-              } else { // decision task timed out
-                final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
-                final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
-                final WorkflowHistoryEvent scheduled = Iterables.find(
-                    reverseEvents,
-                    CollectionUtils.propertyPredicate( "DecisionTaskScheduled", WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE ) );
-                final Optional<WorkflowHistoryEvent> previousStarted = Iterables.tryFind(
-                    reverseEvents,
-                    CollectionUtils.propertyPredicate( "DecisionTaskStarted", WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE ) );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new DecisionTaskTimedOutEventAttributes( )
-                        .withTimeoutType( "START_TO_CLOSE" )
-                        .withScheduledEventId( scheduled.getEventId( ) )
-                        .withStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).orNull( ) )
-                ) );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new DecisionTaskScheduledEventAttributes( )
-                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
-                ) );
-                workflowExecution.setDecisionStatus( Pending );
-                workflowExecution.setDecisionTimestamp( new Date( ) );
-                addToNotifyLists( taskLists, workflowExecution );
+      for ( final WorkflowExecution workflowExecution :
+          workflowExecutions.listTimedOut( now, Functions.<WorkflowExecution>identity( ) ) ) {
+        try ( final WorkflowLock lock = WorkflowLock.lock(
+            workflowExecution.getOwnerAccountNumber( ),
+            workflowExecution.getDomainUuid( ),
+            workflowExecution.getDisplayName( ) ) ) {
+          workflowExecutions.withRetries( ).updateByExample(
+              workflowExecution,
+              workflowExecution.getOwner( ),
+              workflowExecution.getDisplayName( ),
+              new Function<WorkflowExecution, Void>() {
+            @Override
+            public Void apply( final WorkflowExecution workflowExecution ) {
+              final Date timeout = workflowExecution.calculateNextTimeout( );
+              if ( timeout != null ) {
+                if ( workflowExecution.isWorkflowTimedOut( now, getWorkflowExecutionDurationMillis( ) ) ) {
+                  workflowExecution.closeWorkflow(
+                      WorkflowExecution.CloseStatus.Timed_Out,
+                      WorkflowHistoryEvent.create(
+                          workflowExecution,
+                          new WorkflowExecutionTimedOutEventAttributes()
+                              .withTimeoutType( "START_TO_CLOSE" )
+                              .withChildPolicy( workflowExecution.getChildPolicy() )
+                      ) );
+                } else { // decision task timed out
+                  final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
+                  final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
+                  final WorkflowHistoryEvent scheduled = Iterables.find(
+                      reverseEvents,
+                      CollectionUtils.propertyPredicate( "DecisionTaskScheduled", WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE ) );
+                  final Optional<WorkflowHistoryEvent> previousStarted = Iterables.tryFind(
+                      reverseEvents,
+                      CollectionUtils.propertyPredicate( "DecisionTaskStarted", WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE ) );
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskTimedOutEventAttributes( )
+                          .withTimeoutType( "START_TO_CLOSE" )
+                          .withScheduledEventId( scheduled.getEventId( ) )
+                          .withStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).orNull( ) )
+                  ) );
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new DecisionTaskScheduledEventAttributes( )
+                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                  ) );
+                  workflowExecution.setDecisionStatus( Pending );
+                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                  addToNotifyLists( taskLists, workflowExecution );
+                }
               }
+              return null;
             }
-            return null;
+          } );
+        } catch ( final SwfMetadataException e ) {
+          if ( !handleException( e ) ) {
+            logger.error( "Error processing workflow execution/decision task timeout: " + workflowExecution.getDisplayName(), e );
           }
-        } );
-      } catch ( final SwfMetadataException e ) {
-        if ( !handleException( e ) ) {
-          logger.error( "Error processing workflow execution/decision task timeout: " + workflowExecution.getDisplayName(), e );
         }
       }
     } catch ( final SwfMetadataException e ) {

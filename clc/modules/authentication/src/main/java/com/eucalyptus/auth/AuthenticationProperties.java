@@ -76,6 +76,7 @@ import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.util.Cidr;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
 
 @ConfigurableClass( root = "authentication", description = "Parameters for authentication." )
 public class AuthenticationProperties {
@@ -89,6 +90,9 @@ public class AuthenticationProperties {
 
   @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
   public static volatile String CREDENTIAL_DOWNLOAD_HOST_MATCH = "";
+
+  @ConfigurableField( description = "Port to use in service URLs when 'bootstrap.webservices.port' is not appropriate.", changeListener = PortChangeListener.class )
+  public static volatile String CREDENTIAL_DOWNLOAD_PORT; // String as null value is valid
 
   @ConfigurableField( description = "Limit for access keys per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public static volatile Integer ACCESS_KEYS_LIMIT = 2;
@@ -126,5 +130,17 @@ public class AuthenticationProperties {
       }
     }
   }
-  
+
+  public static class PortChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      String strValue = Strings.emptyToNull( Objects.toString( newValue, "" ) );
+      if ( strValue != null ) {
+        final Integer value = Ints.tryParse( strValue );
+        if ( value == null || value < 1 || value > 65535 ) {
+          throw new ConfigurablePropertyException( "Invalid value: " + newValue );
+        }
+      }
+    }
+  }
 }

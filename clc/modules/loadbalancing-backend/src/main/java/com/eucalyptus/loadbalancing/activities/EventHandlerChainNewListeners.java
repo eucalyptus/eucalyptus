@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,22 +19,24 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import static com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup.generateDefaultVPCSecurityGroupName;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Listener;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -93,15 +95,13 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 
     @Override
     public void rollback() throws EventHandlerException {
-      ;
-    }
+		}
 	}
 
 	public static class AuthorizeIngressRule extends AbstractEventHandler<CreateListenerEvent> {
 		private CreateListenerEvent event = null;
 		
-		protected AuthorizeIngressRule(
-				EventHandlerChain<CreateListenerEvent> chain) {
+		protected AuthorizeIngressRule(EventHandlerChain<CreateListenerEvent> chain) {
 			super(chain);
 		}
 
@@ -109,7 +109,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 		public void apply(CreateListenerEvent evt) throws EventHandlerException {
 			this.event = evt;
 			final Collection<Listener> listeners = evt.getListeners();
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
@@ -119,16 +119,32 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			}catch(Exception ex){
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
-			if(groupName == null)
-				throw new EventHandlerException("Group name is not found");
-			
-			for(Listener listener : listeners){
-				int port = listener.getLoadBalancerPort();
-				String protocol = "tcp"; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
-				try{
-					EucalyptusActivityTasks.getInstance().authorizeSecurityGroup(groupName, protocol, port);
-				}catch(Exception ex){
-					throw new EventHandlerException(String.format("failed to authorize %s, %s, %d", groupName, protocol, port), ex);
+
+			final Map<String,String> securityGroupIdsToNames = lb.getCoreView( ).getSecurityGroupIdsToNames( );
+			String protocol = "tcp"; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
+			if ( lb.getVpcId( ) == null ) {
+				if ( groupName == null )
+					throw new EventHandlerException( "Group name is not found" );
+
+				for ( Listener listener : listeners ) {
+					int port = listener.getLoadBalancerPort();
+					try {
+						EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupName, protocol, port );
+					} catch ( Exception ex ) {
+						throw new EventHandlerException( String.format( "failed to authorize %s, %s, %d", groupName, protocol, port ), ex );
+					}
+				}
+			} else if ( securityGroupIdsToNames.size( ) == 1 ) {
+				if ( securityGroupIdsToNames.values( ).contains( generateDefaultVPCSecurityGroupName( lb.getVpcId( ) ) ) ) {
+					final String groupId = Iterables.getOnlyElement( securityGroupIdsToNames.keySet( ) );
+					for ( Listener listener : listeners ) {
+						int port = listener.getLoadBalancerPort();
+						try {
+							EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupId, protocol, port );
+						} catch ( Exception ex ) {
+							throw new EventHandlerException( String.format( "failed to authorize %s, %s, %d", groupId, protocol, port ), ex );
+						}
+					}
 				}
 			}
 		}
@@ -139,7 +155,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				return;
 			
 			final Collection<Listener> listeners = this.event.getListeners();
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
@@ -147,7 +163,6 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				if(group!=null)
 					groupName = group.getName();
 			}catch(Exception ex){
-				;
 			}
 			if(groupName == null)
 				return;
@@ -158,9 +173,8 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				protocol = protocol.toLowerCase();
 				
 				try{
-					EucalyptusActivityTasks.getInstance().revokeSecurityGroup(groupName, protocol, port);
+					EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port );
 				}catch(Exception ex){
-					;
 				}
 			}
 		}
@@ -242,7 +256,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 		@Override
 		public void apply(CreateListenerEvent evt)
 				throws EventHandlerException {
-			LoadBalancer lb = null;
+			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
@@ -263,35 +277,27 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				lb.getHealthCheckUnhealthyThreshold();
 				lb.getHealthyThreshold();
 			}catch(final IllegalStateException ex){ /// only when the health check is not previously configured
-				Listener firstListener = null;
+				Listener firstListener;
 				if(evt.getListeners()==null || evt.getListeners().size()<=0)
 					throw new EventHandlerException("No listener requested");
 				
 				final List<Listener> listeners = Lists.newArrayList(evt.getListeners());
 				firstListener = listeners.get(0);
-				final String target = String.format("TCP:%d", firstListener.getInstancePort());
-				final EntityTransaction db = Entities.get( LoadBalancer.class );
-				try{
+				final String target = String.format( "TCP:%d", firstListener.getInstancePort() );
+				try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
 					final LoadBalancer update = Entities.uniqueResult(lb);
-			    	update.setHealthCheck(DEFAULT_HEALTHY_THRESHOLD, DEFAULT_INTERVAL, target, DEFAULT_TIMEOUT, DEFAULT_UNHEALTHY_THRESHOLD);
-					Entities.persist(update);
+					update.setHealthCheck( DEFAULT_HEALTHY_THRESHOLD, DEFAULT_INTERVAL, target, DEFAULT_TIMEOUT, DEFAULT_UNHEALTHY_THRESHOLD );
 					db.commit();
 				}catch(final NoSuchElementException exx){
-					db.rollback();
 					LOG.warn("Loadbalancer not found in the database");
 				}catch(final Exception exx){
-					db.rollback();
 					LOG.warn("Unable to query the loadbalancer", ex);
-				}finally {
-					if(db.isActive())
-						db.rollback();
 				}
 			}
 		}
 
 		@Override
 		public void rollback() throws EventHandlerException {
-			;
 		}
 	}
 }

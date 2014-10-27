@@ -55,7 +55,9 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.common.Imaging;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
@@ -158,19 +160,19 @@ public class ImagingServiceProperties {
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
   public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
   
-  @Provides(Imaging.class)
+  @Provides(ImagingBackend.class)
   @RunDuring(Bootstrap.Stage.Final)
-  @DependsLocal(Imaging.class)
-  public static class ImagingServicePropertyBootstrapper extends Bootstrapper.Simple {
+  @DependsLocal(ImagingBackend.class)
+  public static class ImagingBackendServicePropertyBootstrapper extends Bootstrapper.Simple {
 
-    private static ImagingServicePropertyBootstrapper singleton;
+    private static ImagingBackendServicePropertyBootstrapper singleton;
     private static final Callable<String> imageNotConfiguredFaultRunnable =
         Faults.forComponent( Imaging.class ).havingId( 1015 ).logOnFirstRun();
 
     public static Bootstrapper getInstance() {
-      synchronized ( ImagingServicePropertyBootstrapper.class ) {
+      synchronized ( ImagingBackendServicePropertyBootstrapper.class ) {
         if ( singleton == null ) {
-          singleton = new ImagingServicePropertyBootstrapper( );
+          singleton = new ImagingBackendServicePropertyBootstrapper( );
           LOG.info( "Creating Imaging Bootstrapper instance." );
         } else {
           LOG.debug( "Returning Imaging Balancing Bootstrapper instance." );

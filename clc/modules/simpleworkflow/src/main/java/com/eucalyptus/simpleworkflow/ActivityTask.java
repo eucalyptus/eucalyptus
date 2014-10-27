@@ -76,6 +76,9 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domain;
 
+  @Column( name = "domain_uuid", nullable = false, updatable = false )
+  private String domainUuid;
+
   @Column( name = "workflow_run_id", nullable = false, updatable = false )
   private String workflowRunId;
 
@@ -102,13 +105,13 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   @Type(type="org.hibernate.type.StringClobType")
   private String input;
 
-  @Column( name = "schedule_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "schedule_to_close_timeout", updatable = false )
   private Integer scheduleToCloseTimeout;
 
-  @Column( name = "schedule_to_start_timeout", nullable = false, updatable = false )
+  @Column( name = "schedule_to_start_timeout", updatable = false )
   private Integer scheduleToStartTimeout;
 
-  @Column( name = "start_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "start_to_close_timeout", updatable = false )
   private Integer startToCloseTimeout;
 
   @Column( name = "heartbeat_timeout", updatable = false )
@@ -137,6 +140,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   public static ActivityTask create( final OwnerFullName ownerFullName,
                                      final WorkflowExecution workflowExecution,
                                      final String domain,
+                                     final String domainUuid,
                                      final String activityId,
                                      final String activityType,
                                      final String activityVersion,
@@ -150,6 +154,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
     final ActivityTask activityTask = new ActivityTask( ownerFullName, activityId );
     activityTask.setWorkflowExecution( workflowExecution );
     activityTask.setDomain( domain );
+    activityTask.setDomainUuid( domainUuid );
     activityTask.setWorkflowRunId( workflowExecution.getDisplayName( ) );
     activityTask.setActivityType( activityType );
     activityTask.setActivityVersion( activityVersion );
@@ -267,6 +272,14 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   public void setDomain( final String domain ) {
     this.domain = domain;
+  }
+
+  public String getDomainUuid( ) {
+    return domainUuid;
+  }
+
+  public void setDomainUuid( final String domainUuid ) {
+    this.domainUuid = domainUuid;
   }
 
   public String getWorkflowRunId() {

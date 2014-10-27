@@ -80,6 +80,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
+import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException;
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException;
@@ -90,6 +91,7 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
 import com.eucalyptus.crypto.Hmac;
@@ -271,6 +273,9 @@ public class VmControl {
       if ( e4 instanceof VpcRequiredMetadataException ) {
         throw new ClientComputeException( "VPCIdNotSpecified", "Default VPC not found, please specify a subnet." );
       }
+      if ( e4 instanceof InvalidParameterCombinationMetadataException ) {
+        throw new ClientComputeException( "InvalidParameterCombination", e4.getMessage( ) );
+      }
       if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
       final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
       if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
@@ -385,20 +390,24 @@ public class VmControl {
     final List<String> failedVmList = new ArrayList<>( );
     final List<VmInstance> vmList = new ArrayList<>(  );
     final Collection<String> identifiers = normalizeIdentifiers( request.getInstancesSet( ) );
+    for ( String requestedInstanceId : identifiers ) {
+      try {
+        VmInstance vm = RestrictedTypes.doPrivileged( requestedInstanceId, VmInstance.class );
+        vmList.add( vm );
+      } catch ( final AuthException | NoSuchElementException e ) {
+        failedVmList.add( requestedInstanceId );
+      } catch ( final Exception e ) {
+        LOG.error( "Error looking up instance for termination: " + requestedInstanceId, e );
+        failedVmList.add( requestedInstanceId );
+      }
+    }
+    if ( !failedVmList.isEmpty( ) ) {
+      if ( failedVmList.size( ) > 1 )
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance IDs '" + Joiner.on( ", " ).join( failedVmList ) +"' do not exist" );
+      else
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + Joiner.on( ", " ).join( failedVmList ) +"' does not exist" );
+    }
     try {
-      for ( String requestedInstanceId : identifiers ) {
-        try {
-          VmInstance vm = RestrictedTypes.doPrivileged( requestedInstanceId, VmInstance.class );
-          vmList.add( vm );
-        } catch ( final Exception e ) {
-          LOG.debug( e );
-          LOG.debug( "Ignoring terminate request for non-existant instance: " + requestedInstanceId );
-          failedVmList.add( requestedInstanceId );
-        }
-      }
-      if ( !failedVmList.isEmpty( ) ) {
-        throw new NoSuchElementException( "InvalidInstanceID.NotFound" );
-      }
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
       Function<VmInstance,TerminateInstancesItemType> terminateFunction = new Function<VmInstance,TerminateInstancesItemType>( ) {
         @Override
@@ -429,17 +438,21 @@ public class VmControl {
             } else if ( VmStateSet.DONE.apply( vm ) ) {
               oldCode = newCode = VmState.TERMINATED.getCode( );
               oldState = newState = VmState.TERMINATED.getName( );
-              VmInstances.delete( vm );
+              VmInstances.buried( vm );
             }
             MessageContexts.remember(vm.getInstanceId(), request.getClass(), request);
             result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
           } catch ( final TerminatedInstanceException e ) {
             oldCode = newCode = VmState.TERMINATED.getCode( );
             oldState = newState = VmState.TERMINATED.getName( );
-            VmInstances.delete( vm.getInstanceId( ) );
+            try {
+              VmInstances.buried( vm.getInstanceId( ) );
+            } catch ( TransactionException e1 ) {
+              throw Exceptions.toUndeclared( e1 );
+            }
             result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
           } catch ( final NoSuchElementException e ) {
-            LOG.debug( "Ignoring terminate request for non-existant instance: " + vm.getInstanceId( ) );
+            LOG.debug( "Ignoring terminate request for non-existent instance: " + vm.getInstanceId( ) );
           } catch ( final Exception e ) {
             throw Exceptions.toUndeclared( e );
           }
@@ -463,12 +476,6 @@ public class VmControl {
     } catch ( final Throwable e ) {
       LOG.error( e );
       LOG.debug( e, e );
-      if ( Exceptions.isCausedBy( e, NoSuchElementException.class ) ) {
-        if ( failedVmList.size( ) > 1 )
-          throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance IDs '" + Joiner.on( ", " ).join( failedVmList ) +"' do not exist" );
-        else
-          throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + Joiner.on( ", " ).join( failedVmList ) +"' does not exist" );
-      }
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
@@ -910,6 +917,15 @@ public class VmControl {
         }
         vm.getNetworkGroups( ).clear( );
         vm.getNetworkGroups( ).addAll( groups );
+        if ( vm.getNetworkInterfaces( ) != null ) {
+          for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+            if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+              networkInterface.getNetworkGroups( ).clear( );
+              networkInterface.getNetworkGroups( ).addAll( groups );
+              break;
+            }
+          }
+        }
         tx.commit();
         NetworkGroups.flushRules( );
       } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {

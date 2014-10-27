@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,14 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
@@ -40,13 +38,13 @@ import com.eucalyptus.loadbalancing.backend.DuplicatePolicyNameException;
 import com.eucalyptus.loadbalancing.backend.InvalidConfigurationRequestException;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingException;
 import com.eucalyptus.loadbalancing.backend.PolicyTypeNotFoundException;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttribute;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttributeDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttributeDescriptions;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttributeTypeDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttributeTypeDescriptions;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyTypeDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeTypeDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeTypeDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyTypeDescription;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -68,20 +66,16 @@ public class LoadBalancerPolicies {
         Lists.newArrayList(initialize40());
    
     for(final LoadBalancerPolicyTypeDescription policyType : requiredPolicyTypes){
-      final EntityTransaction db = Entities.get( LoadBalancerPolicyTypeDescription.class );
-      try{
-        LoadBalancerPolicyTypeDescription found = Entities.uniqueResult(policyType);
-        db.commit();
-      }catch(final NoSuchElementException ex){
-        Entities.persist(policyType);
-        db.commit();
-        LOG.debug(String.format("New policy type has been added: %s", policyType));
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
+        try {
+          Entities.uniqueResult( policyType );
+        }catch( final NoSuchElementException ex ){
+          Entities.persist( policyType );
+          db.commit();
+          LOG.debug(String.format("New policy type has been added: %s", policyType));
+        }
       }catch(final Exception ex){
-        db.rollback();
         throw Exceptions.toUndeclared(ex);
-      }finally{
-        if(db.isActive())
-          db.rollback();
       }
     }
   }
@@ -107,41 +101,23 @@ public class LoadBalancerPolicies {
   }
   
   public static List<LoadBalancerPolicyTypeDescription> getLoadBalancerPolicyTypeDescriptions(){
-    final EntityTransaction db = Entities.get( LoadBalancerPolicyTypeDescription.class );
-    List<LoadBalancerPolicyTypeDescription> result = null;
-    try{
-      result = Entities.query(new LoadBalancerPolicyTypeDescription());
-      db.commit();
-      return result;
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
+      return Entities.query(new LoadBalancerPolicyTypeDescription());
     }catch(final NoSuchElementException ex){
-      db.rollback();
       return Lists.newArrayList();
     }catch(final Exception ex){
-      db.rollback();
       throw ex;
-    }finally{
-      if(db.isActive())
-       db.rollback();
     }
   }
   
   public static LoadBalancerPolicyTypeDescription findLoadBalancerPolicyTypeDescription(final String policyTypeName) 
       throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( LoadBalancerPolicyTypeDescription.class );
-    LoadBalancerPolicyTypeDescription result = null;
-    try{
-      result = Entities.uniqueResult(LoadBalancerPolicyTypeDescription.named(policyTypeName));
-      db.commit();
-      return result;
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
+      return Entities.uniqueResult(LoadBalancerPolicyTypeDescription.named(policyTypeName));
     }catch(final NoSuchElementException ex){
-      db.rollback();
       throw ex;
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-       db.rollback();
     }
   }
 
@@ -187,16 +163,9 @@ public class LoadBalancerPolicies {
       for(final PolicyAttribute attr : attributes){
         policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), attr.getAttributeValue());
       }
-      final EntityTransaction db = Entities.get(LoadBalancerPolicyDescription.class);
-      try{
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
         Entities.persist(policyDesc);
         db.commit();
-      }catch(final Exception ex){
-        db.rollback();
-        throw ex;
-      }finally{
-        if(db.isActive())
-          db.rollback();
       }
   }
   
@@ -216,37 +185,22 @@ public class LoadBalancerPolicies {
     if(listeners!=null && listeners.size()>0)
       throw new InvalidConfigurationRequestException("The policy is enabled for listeners");
     
-    EntityTransaction db = Entities.get(LoadBalancerPolicyAttributeDescription.class);
-    try{
-      final Map<String, String> criteria = new HashMap<String, String>();
-      criteria.put("metadata_policy_desc_fk", toDelete.getRecordId());
-      Entities.deleteAllMatching(LoadBalancerPolicyAttributeDescription.class, 
-          "WHERE metadata_policy_desc_fk = :metadata_policy_desc_fk", criteria);
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyAttributeDescription.class ) ) {
+      Entities.deleteAllMatching(LoadBalancerPolicyAttributeDescription.class,
+          "WHERE metadata_policy_desc_fk = :metadata_policy_desc_fk",
+          Collections.singletonMap("metadata_policy_desc_fk", toDelete.getRecordId()));
       db.commit();
-    }catch(final NoSuchElementException ex){
-      db.rollback();
     }catch(final Exception ex){
-      LOG.error("Failed to delete policy attributes", ex);
-      db.rollback();
-    }finally{
-      if(db.isActive())
-        db.rollback();
+      LOG.error( "Failed to delete policy attributes", ex );
     }
    
-    db = Entities.get(LoadBalancerPolicyDescription.class);
-    try{
-      final Map<String, String> criteria = new HashMap<String, String>();
-      criteria.put("unique_name", toDelete.getUniqueName());
-      Entities.deleteAllMatching(LoadBalancerPolicyDescription.class, "WHERE unique_name = :unique_name", criteria);
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
+      Entities.deleteAllMatching(LoadBalancerPolicyDescription.class,
+          "WHERE unique_name = :unique_name",
+          Collections.singletonMap("unique_name", toDelete.getUniqueName()));
       db.commit();
-    }catch(final NoSuchElementException ex){
-      db.rollback();
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-        db.rollback();
     }
   }
   
@@ -287,53 +241,36 @@ public class LoadBalancerPolicies {
   }
   
   public static List<LoadBalancerPolicyDescription> getPoliciesOfListener(final LoadBalancerListener listener){
-    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
-    try{
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
       final LoadBalancerListener found = Entities.uniqueResult(listener);
       final List<LoadBalancerPolicyDescriptionCoreView> policies=found.getPolicies();
       db.commit();
       return Lists.transform(policies, LoadBalancerPolicyDescriptionEntityTransform.INSTANCE);
     }catch(final NoSuchElementException ex){
-      db.rollback();
       return Lists.newArrayList();
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-        db.rollback();
     }
   }
   
   public static void removePoliciesFromListener(final LoadBalancerListener listener){
-    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
-    try{
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
       final LoadBalancerListener update = Entities.uniqueResult(listener);
       update.resetPolicies();
       Entities.persist(update);
       db.commit();
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-        db.rollback();
     }
   }
   
   public static void removePolicyFromListener(final LoadBalancerListener listener, final LoadBalancerPolicyDescription policy){
-    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
-    try{
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
       final LoadBalancerListener update = Entities.uniqueResult(listener);
       update.removePolicy(policy);
-      Entities.persist(update);
       db.commit();
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-        db.rollback();
     }
   }
   
@@ -359,21 +296,15 @@ public class LoadBalancerPolicies {
       }
     }
     
-    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
-    try{
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
       final LoadBalancerListener update = Entities.uniqueResult(listener);
       for(final LoadBalancerPolicyDescription policy : policies){
         update.removePolicy(policy);
         update.addPolicy(policy);
       }
-      Entities.persist(update);
       db.commit();
     }catch(final Exception ex){
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    }finally{
-      if(db.isActive())
-        db.rollback();
     }
   }
   

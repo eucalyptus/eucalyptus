@@ -36,6 +36,7 @@ import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.criterion.Conjunction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
@@ -71,6 +72,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -123,7 +125,7 @@ public class SimpleWorkflowService {
               userFullName,
               request.getName( ),
               request.getDescription( ),
-              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ) ), 0 ) );
+              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ), 0 ), 0 ) );
           return domains.save( domain );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -238,10 +240,10 @@ public class SimpleWorkflowService {
               domain,
               request.getDescription( ),
               request.getDefaultTaskList( ) == null ? null : request.getDefaultTaskList( ).getName( ),
-              parsePeriod( request.getDefaultTaskHeartbeatTimeout( ) ),
-              parsePeriod( request.getDefaultTaskScheduleToCloseTimeout( ) ),
-              parsePeriod( request.getDefaultTaskScheduleToStartTimeout( ) ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ) )
+              parsePeriod( request.getDefaultTaskHeartbeatTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskScheduleToCloseTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskScheduleToStartTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ), -1 )
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {
@@ -363,8 +365,8 @@ public class SimpleWorkflowService {
               request.getDescription(),
               request.getDefaultTaskList() == null ? null : request.getDefaultTaskList().getName(),
               request.getDefaultChildPolicy(),
-              parsePeriod( request.getDefaultExecutionStartToCloseTimeout() ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout() )
+              parsePeriod( request.getDefaultExecutionStartToCloseTimeout(), -1 ),
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout(), -1 )
           );
           return workflowTypes.save( workflowType );
         } catch ( SwfMetadataNotFoundException e ) {
@@ -788,11 +790,14 @@ public class SimpleWorkflowService {
               workflowType.getDefaultTaskList( ):
               request.getTaskList( ).getName( );
           final Integer executionStartToCloseTimeout = requireDefault(
-              parsePeriod( request.getExecutionStartToCloseTimeout() ),
+              parsePeriod( request.getExecutionStartToCloseTimeout(), -1 ),
               workflowType.getDefaultExecutionStartToCloseTimeout(), "ExecutionStartToCloseTimeout" );
           final Integer taskStartToCloseTimeout = requireDefault(
-              parsePeriod( request.getTaskStartToCloseTimeout() ),
+              parsePeriod( request.getTaskStartToCloseTimeout(), -1 ),
               workflowType.getDefaultTaskStartToCloseTimeout(), "TaskStartToCloseTimeout" );
+          final String taskStartToCloseTimeoutStr = taskStartToCloseTimeout < 0
+              ? "NONE" :
+              String.valueOf( taskStartToCloseTimeout );
           final WorkflowExecution workflowExecution = WorkflowExecution.create(
               userFullName,
               UUID.randomUUID( ).toString( ),
@@ -802,7 +807,7 @@ public class SimpleWorkflowService {
               childPolicy,
               taskList,
               executionStartToCloseTimeout,
-              taskStartToCloseTimeout,
+              taskStartToCloseTimeout < 0 ? null : taskStartToCloseTimeout,
               request.getTagList( ),
               Lists.newArrayList(
                   new WorkflowExecutionStartedEventAttributes( )
@@ -812,10 +817,10 @@ public class SimpleWorkflowService {
                       .withParentInitiatedEventId( 0L )
                       .withTaskList( new TaskList( ).withName( taskList ) )
                       .withTagList( request.getTagList( ) )
-                      .withTaskStartToCloseTimeout( String.valueOf( taskStartToCloseTimeout ) )
+                      .withTaskStartToCloseTimeout( taskStartToCloseTimeoutStr )
                       .withWorkflowType( request.getWorkflowType( ) ),
                   new DecisionTaskScheduledEventAttributes( )
-                      .withStartToCloseTimeout( String.valueOf( taskStartToCloseTimeout ) )
+                      .withStartToCloseTimeout( taskStartToCloseTimeoutStr )
                       .withTaskList( request.getTaskList( ) )
               )
           );
@@ -857,7 +862,10 @@ public class SimpleWorkflowService {
             for ( final ActivityTask pendingTask : pending ) {
               if ( activityTask != null ) break;
               boolean retry = true;
-              while ( retry ) try {
+              while ( retry ) try ( final WorkflowLock lock = WorkflowLock.lock(
+                  accountFullName,
+                  pendingTask.getDomainUuid( ),
+                  pendingTask.getWorkflowRunId() ) ) {
                 retry = false;
                 activityTask = activityTasks.updateByExample(
                     pendingTask,
@@ -901,6 +909,10 @@ public class SimpleWorkflowService {
                     });
 
               } catch ( Exception e ) {
+                final StaleObjectStateException stale = Exceptions.findCause( e, StaleObjectStateException.class );
+                if ( stale != null ) try {
+                  Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+                } catch ( ClassNotFoundException ce ) { /* eviction failure */ }
                 if ( PersistenceExceptions.isStaleUpdate( e ) ) {
                   logger.info( "Activity task for domain " + domain + ", list " + taskList + " already taken"  );
                 } else if (  PersistenceExceptions.isLockError( e ) ) {
@@ -977,39 +989,46 @@ public class SimpleWorkflowService {
       final TaskToken token =
           taskTokenManager.decryptTaskToken( accountFullName.getAccountNumber( ), request.getTaskToken( ) );
 
-      final Pair<String,String> domainTaskListPair = activityTasks.withRetries( ).updateByExample(
-          ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId( ), token.getScheduledEventId( ) ),
-          accountFullName,
-          token.getRunId( ) + "/" + token.getScheduledEventId( ),
-          new Function<ActivityTask, Pair<String,String>>() {
-            @Override
-            public Pair<String,String> apply( final ActivityTask activityTask ) {
-              if ( accessible.apply( activityTask ) ) {
-                final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new ActivityTaskCanceledEventAttributes()
-                        .withDetails( request.getDetails() )
-                        .withLatestCancelRequestedEventId( activityTask.getCancelRequestedEventId() )
-                        .withScheduledEventId( activityTask.getScheduledEventId() )
-                        .withStartedEventId( activityTask.getStartedEventId() )
-                ) );
-                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+      final Pair<String,String> domainTaskListPair;
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, token.getDomainUuid( ), token.getRunId( ) ) ) {
+        domainTaskListPair = activityTasks.withRetries().updateByExample(
+            ActivityTask.exampleWithUniqueName( accountFullName, token.getRunId(), token.getScheduledEventId() ),
+            accountFullName,
+            token.getRunId() + "/" + token.getScheduledEventId(),
+            new Function<ActivityTask, Pair<String, String>>() {
+              @Override
+              public Pair<String, String> apply( final ActivityTask activityTask ) {
+                if ( accessible.apply( activityTask ) ) {
+                  final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution();
                   workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                       workflowExecution,
-                      new DecisionTaskScheduledEventAttributes( )
-                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                      new ActivityTaskCanceledEventAttributes()
+                          .withDetails( request.getDetails() )
+                          .withLatestCancelRequestedEventId( activityTask.getCancelRequestedEventId() )
+                          .withScheduledEventId( activityTask.getScheduledEventId() )
+                          .withStartedEventId( activityTask.getStartedEventId() )
                   ) );
-                  workflowExecution.setDecisionStatus( Pending );
-                  workflowExecution.setDecisionTimestamp( new Date( ) );
+                  if ( workflowExecution.getDecisionStatus() != Pending ) {
+                    workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new DecisionTaskScheduledEventAttributes()
+                            .withTaskList( new TaskList().withName( workflowExecution.getTaskList() ) )
+                            .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout() ) )
+                    ) );
+                    if ( workflowExecution.getDecisionStatus() == Idle ) {
+                      workflowExecution.setDecisionStatus( Pending );
+                      workflowExecution.setDecisionTimestamp( new Date() );
+                    }
+                  }
+                  Entities.delete( activityTask );
+                  return workflowExecution.getDecisionStatus() == Pending ?
+                      Pair.pair( workflowExecution.getDomainName(), workflowExecution.getTaskList() ) :
+                      null;
                 }
-                Entities.delete( activityTask );
-                return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
+                return null;
               }
-              return null;
-            }
-          } );
+            } );
+      }
 
       if ( domainTaskListPair != null ) {
         notifyTaskList( accountFullName, domainTaskListPair.getLeft(), "decision", domainTaskListPair.getRight() );
@@ -1043,46 +1062,55 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      final WorkflowExecution workflowExecution = workflowExecutions.withRetries( ).updateByExample(
-          WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
-          accountFullName,
-          token.getRunId( ),
-          new Function<WorkflowExecution, WorkflowExecution>() {
-            @Nullable
-            @Override
-            public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
-              if ( accessible.apply( workflowExecution ) ) {
-                try {
-                  activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
-                      accountFullName,
-                      token.getRunId( ),
-                      token.getScheduledEventId( ) ) );
-                } catch ( SwfMetadataException e ) {
-                  throw up( e );
+      final WorkflowExecution workflowExecution;
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, domain, token.getRunId( ) ) ) {
+        workflowExecution = workflowExecutions.withRetries().updateByExample(
+            WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName(), token.getRunId() ),
+            accountFullName,
+            token.getRunId(),
+            new Function<WorkflowExecution, WorkflowExecution>() {
+              @Nullable
+              @Override
+              public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
+                if ( accessible.apply( workflowExecution ) ) {
+                  try {
+                    activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
+                        accountFullName,
+                        token.getRunId(),
+                        token.getScheduledEventId() ) );
+                  } catch ( SwfMetadataException e ) {
+                    throw up( e );
+                  }
+
+                  // TODO:STEVE: verify token valid (no reuse, etc)
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new ActivityTaskCompletedEventAttributes()
+                          .withResult( request.getResult() )
+                          .withScheduledEventId( token.getScheduledEventId() )
+                          .withStartedEventId( token.getStartedEventId() )
+                  ) );
+                  if ( workflowExecution.getDecisionStatus() != Pending ) {
+                    workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new DecisionTaskScheduledEventAttributes()
+                            .withTaskList( new TaskList().withName( workflowExecution.getTaskList() ) )
+                            .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout() ) )
+                    ) );
+                    if ( workflowExecution.getDecisionStatus() == Idle ) {
+                      workflowExecution.setDecisionStatus( Pending );
+                      workflowExecution.setDecisionTimestamp( new Date() );
+                    }
+                  }
                 }
-
-                // TODO:STEVE: verify token valid (no reuse, etc)
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new ActivityTaskCompletedEventAttributes( )
-                        .withResult( request.getResult( ) )
-                        .withScheduledEventId( token.getScheduledEventId( ) )
-                        .withStartedEventId( token.getStartedEventId( ) )
-                ) );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new DecisionTaskScheduledEventAttributes()
-                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
-                ) );
-                workflowExecution.setDecisionStatus( Pending );
-                workflowExecution.setDecisionTimestamp( new Date( ) );
+                return workflowExecution;
               }
-              return workflowExecution;
-            }
-          } );
+            } );
+      }
 
-      notifyTaskList( accountFullName, workflowExecution.getDomainName( ), "decision", workflowExecution.getTaskList( ) );
+      if ( workflowExecution.getDecisionStatus() == Pending ) {
+        notifyTaskList( accountFullName, workflowExecution.getDomainName(), "decision", workflowExecution.getTaskList() );
+      }
     } catch( Exception e ) {
       throw handleException( e );
     }
@@ -1107,47 +1135,56 @@ public class SimpleWorkflowService {
           Predicates.alwaysTrue( ),
           Functions.<Domain>identity( ) );
 
-      final WorkflowExecution workflowExecution = workflowExecutions.withRetries( ).updateByExample(
-          WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
-          accountFullName,
-          token.getRunId( ),
-          new Function<WorkflowExecution, WorkflowExecution>() {
-            @Nullable
-            @Override
-            public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
-              if ( accessible.apply( workflowExecution ) ) {
-                try {
-                  activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
-                      accountFullName,
-                      token.getRunId( ),
-                      token.getScheduledEventId( ) ) );
-                } catch ( SwfMetadataException e ) {
-                  throw up( e );
+      final WorkflowExecution workflowExecution;
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, domain, token.getRunId( ) ) ) {
+        workflowExecution = workflowExecutions.withRetries().updateByExample(
+            WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName(), token.getRunId() ),
+            accountFullName,
+            token.getRunId(),
+            new Function<WorkflowExecution, WorkflowExecution>() {
+              @Nullable
+              @Override
+              public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
+                if ( accessible.apply( workflowExecution ) ) {
+                  try {
+                    activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
+                        accountFullName,
+                        token.getRunId(),
+                        token.getScheduledEventId() ) );
+                  } catch ( SwfMetadataException e ) {
+                    throw up( e );
+                  }
+
+                  // TODO:STEVE: verify token valid (no reuse, etc)
+                  workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                      workflowExecution,
+                      new ActivityTaskFailedEventAttributes()
+                          .withDetails( request.getDetails() )
+                          .withReason( request.getReason() )
+                          .withScheduledEventId( token.getScheduledEventId() )
+                          .withStartedEventId( token.getStartedEventId() )
+                  ) );
+                  if ( workflowExecution.getDecisionStatus() != Pending ) {
+                    workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new DecisionTaskScheduledEventAttributes()
+                            .withTaskList( new TaskList().withName( workflowExecution.getTaskList() ) )
+                            .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout() ) )
+                    ) );
+                    if ( workflowExecution.getDecisionStatus() == Idle ) {
+                      workflowExecution.setDecisionStatus( Pending );
+                      workflowExecution.setDecisionTimestamp( new Date() );
+                    }
+                  }
                 }
-
-                // TODO:STEVE: verify token valid (no reuse, etc)
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new ActivityTaskFailedEventAttributes()
-                        .withDetails( request.getDetails() )
-                        .withReason( request.getReason() )
-                        .withScheduledEventId( token.getScheduledEventId() )
-                        .withStartedEventId( token.getStartedEventId() )
-                ) );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new DecisionTaskScheduledEventAttributes()
-                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
-                ) );
-                workflowExecution.setDecisionStatus( Pending );
-                workflowExecution.setDecisionTimestamp( new Date( ) );
+                return workflowExecution;
               }
-              return workflowExecution;
-            }
-          } );
+            } );
+      }
 
-      notifyTaskList( accountFullName, workflowExecution.getDomainName( ), "decision", workflowExecution.getTaskList( ) );
+      if ( workflowExecution.getDecisionStatus( ) == Pending ) {
+        notifyTaskList( accountFullName, workflowExecution.getDomainName(), "decision", workflowExecution.getTaskList() );
+      }
     } catch( Exception e ) {
       throw handleException( e );
     }
@@ -1176,7 +1213,10 @@ public class SimpleWorkflowService {
         for ( final WorkflowExecution execution : pending ) {
           if ( decisionTask != null ) break;
           boolean retry = true;
-          while ( retry ) try {
+          while ( retry ) try ( final WorkflowLock lock = WorkflowLock.lock(
+              accountFullName,
+              execution.getDomainUuid( ),
+              execution.getDisplayName( ) ) ) {
             retry = false;
             decisionTask = workflowExecutions.updateByExample(
                 WorkflowExecution.exampleWithUniqueName( accountFullName, execution.getDomainName( ), execution.getDisplayName( ) ),
@@ -1229,6 +1269,10 @@ public class SimpleWorkflowService {
                   }
                 } );
           } catch ( Exception e ) {
+            final StaleObjectStateException stale = Exceptions.findCause( e, StaleObjectStateException.class );
+            if ( stale != null ) try {
+              Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+            } catch ( ClassNotFoundException ce ) { /* eviction failure */ }
             if ( PersistenceExceptions.isStaleUpdate( e ) ) {
               logger.info( "Decision task for workflow " + execution.getDisplayName() + " already taken." );
             } else if (  PersistenceExceptions.isLockError( e ) ) {
@@ -1271,7 +1315,8 @@ public class SimpleWorkflowService {
           Functions.<Domain>identity( ) );
 
       final Set<Pair<String,String>> notificationTypeListPairs = Sets.newHashSet( );
-      workflowExecutions.withRetries( ).updateByExample(
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, domain, token.getRunId() ) ) {
+        workflowExecutions.withRetries( ).updateByExample(
           WorkflowExecution.exampleWithUniqueName( accountFullName, domain.getDisplayName( ), token.getRunId( ) ),
           accountFullName,
           token.getRunId( ),
@@ -1280,6 +1325,9 @@ public class SimpleWorkflowService {
             @Override
             public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
               if ( accessible.apply( workflowExecution ) ) {
+                // clear pending notifications in case of retries
+                notificationTypeListPairs.clear( );
+
                 // verify token is valid
                 final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
                 final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
@@ -1300,6 +1348,22 @@ public class SimpleWorkflowService {
                   workflowExecution.setDecisionTimestamp( new Date( ) );
                   notificationTypeListPairs.add( Pair.pair( "decision", workflowExecution.getTaskList( ) ) );
                 }
+
+                // setup activity count supplier
+                int activityTaskScheduledCount = 0;
+                final Supplier<Long> activityTaskCounter = Suppliers.memoize( new Supplier<Long>( ) {
+                  @Override
+                  public Long get( ) {
+                    try {
+                      return activityTasks.countByWorkflowExecution(
+                          accountFullName,
+                          domain.getDisplayName( ),
+                          workflowExecution.getDisplayName( ) );
+                    } catch ( SwfMetadataException e ) {
+                      throw up( e );
+                    }
+                  }
+                } );
 
                 // process decision task response
                 workflowExecution.setLatestExecutionContext( request.getExecutionContext( ) );
@@ -1518,10 +1582,7 @@ public class SimpleWorkflowService {
                           throw new ScheduleActivityTaskException( DEFAULT_TASK_LIST_UNDEFINED );
                         }
 
-                        if ( activityTasks.countByWorkflowExecution(
-                            accountFullName,
-                            domain.getDisplayName( ),
-                            workflowExecution.getDisplayName( ) ) >=
+                        if ( activityTaskCounter.get( ) + activityTaskScheduledCount >=
                             SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
                           throw new ScheduleActivityTaskException( OPEN_ACTIVITIES_LIMIT_EXCEEDED );
                         }
@@ -1530,6 +1591,7 @@ public class SimpleWorkflowService {
                             userFullName,
                             workflowExecution,
                             domain.getDisplayName(),
+                            domain.getNaturalId( ),
                             scheduleActivity.getActivityId(),
                             scheduleActivity.getActivityType().getName(),
                             scheduleActivity.getActivityType().getVersion(),
@@ -1553,6 +1615,7 @@ public class SimpleWorkflowService {
                                 activityType.getDefaultTaskHeartbeatTimeout( ),
                                 DEFAULT_HEARTBEAT_TIMEOUT_UNDEFINED )
                         ) );
+                        activityTaskScheduledCount++;
 
                         notificationTypeListPairs.add( Pair.pair( "activity", list ) );
                       } catch ( final ScheduleActivityTaskException e ) {
@@ -1600,52 +1663,52 @@ public class SimpleWorkflowService {
                     case "StartTimer":
                       final StartTimerDecisionAttributes startTimer = decision.getStartTimerDecisionAttributes( );
                       try {
-                        if ( timers.listByExample(
+                        if ( !timers.listByExample(
                             Timer.exampleWithTimerId(
                                 accountFullName,
-                                workflowExecution.getDomainName( ),
-                                workflowExecution.getDisplayName( ),
-                                startTimer.getTimerId( ) ),
-                            Predicates.alwaysTrue( ),
-                            Functions.<Timer>identity( )
-                        ).isEmpty( ) ) {
-                         final Long startedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                              workflowExecution,
-                              new TimerStartedEventAttributes()
-                                  .withControl( startTimer.getControl( ) )
-                                  .withDecisionTaskCompletedEventId( completedId )
-                                  .withStartToFireTimeout( startTimer.getStartToFireTimeout( ) )
-                                  .withTimerId( startTimer.getTimerId() )
-                          ) );
-                          if ( timers.countByWorkflowExecution(
-                              accountFullName,
-                              domain.getDisplayName( ),
-                              workflowExecution.getDisplayName( ) ) >=
-                              SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution( ) ) {
-                            throw upClient(
-                                "LimitExceededFault",
-                                "Request would exceed limit for open timers per workflow execution" );
-                          }
-                          timers.save( Timer.create(
-                              userFullName,
-                              workflowExecution,
-                              workflowExecution.getDomainName( ),
-                              startTimer.getTimerId( ),
-                              startTimer.getControl( ),
-                              parsePeriod( startTimer.getStartToFireTimeout( ) ),
-                              completedId,
-                              startedId
-                              ) );
-                        } else {
-                          workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                              workflowExecution,
-                              new StartTimerFailedEventAttributes()
-                                  .withCause( StartTimerFailedCause.TIMER_ID_ALREADY_IN_USE )
-                                  .withDecisionTaskCompletedEventId( completedId )
-                                  .withTimerId( startTimer.getTimerId() )
-                          ) );
-                          scheduleDecisionTask = true;
+                                workflowExecution.getDomainName(),
+                                workflowExecution.getDisplayName(),
+                                startTimer.getTimerId() ),
+                            Predicates.alwaysTrue(),
+                            Functions.<Timer>identity()
+                        ).isEmpty() ) {
+                          throw new StartTimerException( StartTimerFailedCause.TIMER_ID_ALREADY_IN_USE );
                         }
+                        final Long startedId = workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new TimerStartedEventAttributes()
+                                .withControl( startTimer.getControl() )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withStartToFireTimeout( startTimer.getStartToFireTimeout() )
+                                .withTimerId( startTimer.getTimerId() )
+                        ) );
+                        if ( timers.countByWorkflowExecution(
+                            accountFullName,
+                            domain.getDisplayName(),
+                            workflowExecution.getDisplayName() ) >=
+                            SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution() ) {
+                          throw new StartTimerException( StartTimerFailedCause.OPEN_TIMERS_LIMIT_EXCEEDED );
+                        }
+                        timers.save( Timer.create(
+                            userFullName,
+                            workflowExecution,
+                            workflowExecution.getDomainName(),
+                            workflowExecution.getDomainUuid(),
+                            startTimer.getTimerId(),
+                            startTimer.getControl(),
+                            parsePeriod( startTimer.getStartToFireTimeout(), 0 ),
+                            completedId,
+                            startedId
+                        ) );
+                      } catch ( StartTimerException e ) {
+                        workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new StartTimerFailedEventAttributes()
+                                .withCause( e.getFailedCause( ) )
+                                .withDecisionTaskCompletedEventId( completedId )
+                                .withTimerId( startTimer.getTimerId() )
+                        ) );
+                        scheduleDecisionTask = true;
                       } catch ( SwfMetadataException e ) {
                         throw up( e );
                       }
@@ -1674,6 +1737,7 @@ public class SimpleWorkflowService {
               return workflowExecution;
             }
           } );
+          }
 
           //TODO:STEVE: update API to allow batch notification
           for ( final Pair<String,String> notificationTypeListPair : notificationTypeListPairs ) {
@@ -1698,37 +1762,55 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      final Pair<String,String> domainTaskListPair = workflowExecutions.withRetries( ).updateByExample(
-          WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
+      final WorkflowExecution example = WorkflowExecution.exampleForOpenWorkflow(
           accountFullName,
+          request.getDomain(),
+          request.getWorkflowId(),
+          request.getRunId() );
+      final Pair<String,String> domainUuidRunIdPair = workflowExecutions.lookupByExample(
+          example, accountFullName,
           request.getWorkflowId( ),
-          new Function<WorkflowExecution,Pair<String,String>>(){
-            @Override
-            public Pair<String,String> apply( final WorkflowExecution workflowExecution ) {
-              if ( accessible.apply( workflowExecution ) ) {
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                        workflowExecution,
-                        new WorkflowExecutionSignaledEventAttributes( )
-                            .withExternalInitiatedEventId( 0L )
-                            .withInput( request.getInput( ) )
-                            .withSignalName( request.getSignalName( ) )
-                ) );
-                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+          Predicates.alwaysTrue( ),
+          Pair.builder(
+              WorkflowExecutions.WorkflowExecutionStringFunctions.DOMAIN_UUID,
+              SimpleWorkflowMetadatas.toDisplayName( ) ) );
+
+      final Pair<String,String> domainTaskListPair;
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, domainUuidRunIdPair ) ) {
+        domainTaskListPair = workflowExecutions.withRetries().updateByExample(
+            example,
+            accountFullName,
+            request.getWorkflowId(),
+            new Function<WorkflowExecution, Pair<String, String>>() {
+              @Override
+              public Pair<String, String> apply( final WorkflowExecution workflowExecution ) {
+                if ( accessible.apply( workflowExecution ) ) {
                   workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                       workflowExecution,
-                      new DecisionTaskScheduledEventAttributes()
-                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                      new WorkflowExecutionSignaledEventAttributes()
+                          .withExternalInitiatedEventId( 0L )
+                          .withInput( request.getInput() )
+                          .withSignalName( request.getSignalName() )
                   ) );
-                  workflowExecution.setDecisionStatus( Pending );
-                  workflowExecution.setDecisionTimestamp( new Date( ) );
-                  return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
+                  if ( workflowExecution.getDecisionStatus() != Pending ) {
+                    workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new DecisionTaskScheduledEventAttributes()
+                            .withTaskList( new TaskList().withName( workflowExecution.getTaskList() ) )
+                            .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout() ) )
+                    ) );
+                    if ( workflowExecution.getDecisionStatus() == Idle ) {
+                      workflowExecution.setDecisionStatus( Pending );
+                      workflowExecution.setDecisionTimestamp( new Date() );
+                      return Pair.pair( workflowExecution.getDomainName(), workflowExecution.getTaskList() );
+                    }
+                  }
                 }
+                return null;
               }
-              return null;
             }
-          }
-      );
+        );
+      }
 
       if ( domainTaskListPair != null ) {
         notifyTaskList( accountFullName, domainTaskListPair.getLeft( ), "decision", domainTaskListPair.getRight( ) );
@@ -1754,36 +1836,54 @@ public class SimpleWorkflowService {
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      final Pair<String,String> domainTaskListPair = workflowExecutions.withRetries( ).updateByExample(
-          WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
+      final WorkflowExecution example = WorkflowExecution.exampleForOpenWorkflow(
           accountFullName,
+          request.getDomain(),
+          request.getWorkflowId(),
+          request.getRunId() );
+      final Pair<String,String> domainUuidRunIdPair = workflowExecutions.lookupByExample(
+          example, accountFullName,
           request.getWorkflowId( ),
-          new Function<WorkflowExecution,Pair<String,String>>(){
-            @Override
-            public Pair<String,String> apply( final WorkflowExecution workflowExecution ) {
-              if ( accessible.apply( workflowExecution ) ) {
-                workflowExecution.setCancelRequested( true );
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new WorkflowExecutionCancelRequestedEventAttributes( )
-                        .withExternalInitiatedEventId( 0L )
-                ) );
-                if ( workflowExecution.getDecisionStatus( ) != Pending ) {
+          Predicates.alwaysTrue( ),
+          Pair.builder(
+              WorkflowExecutions.WorkflowExecutionStringFunctions.DOMAIN_UUID,
+              SimpleWorkflowMetadatas.toDisplayName( ) ) );
+
+      final Pair<String, String> domainTaskListPair;
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName,  domainUuidRunIdPair ) ) {
+        domainTaskListPair = workflowExecutions.withRetries().updateByExample(
+            example,
+            accountFullName,
+            request.getWorkflowId(),
+            new Function<WorkflowExecution, Pair<String, String>>() {
+              @Override
+              public Pair<String, String> apply( final WorkflowExecution workflowExecution ) {
+                if ( accessible.apply( workflowExecution ) ) {
+                  workflowExecution.setCancelRequested( true );
                   workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
                       workflowExecution,
-                      new DecisionTaskScheduledEventAttributes()
-                          .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                          .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                      new WorkflowExecutionCancelRequestedEventAttributes()
+                          .withExternalInitiatedEventId( 0L )
                   ) );
-                  workflowExecution.setDecisionStatus( Pending );
-                  workflowExecution.setDecisionTimestamp( new Date( ) );
-                  return Pair.pair( workflowExecution.getDomainName( ), workflowExecution.getTaskList( ) );
+                  if ( workflowExecution.getDecisionStatus() != Pending ) {
+                    workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                        workflowExecution,
+                        new DecisionTaskScheduledEventAttributes()
+                            .withTaskList( new TaskList().withName( workflowExecution.getTaskList() ) )
+                            .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout() ) )
+                    ) );
+                    if ( workflowExecution.getDecisionStatus() == Idle ) {
+                      workflowExecution.setDecisionStatus( Pending );
+                      workflowExecution.setDecisionTimestamp( new Date() );
+                      return Pair.pair( workflowExecution.getDomainName(), workflowExecution.getTaskList() );
+                    }
+                  }
                 }
+                return null;
               }
-              return null;
             }
-          }
-      );
+        );
+      }
 
       if ( domainTaskListPair != null ) {
         notifyTaskList( accountFullName, domainTaskListPair.getLeft( ), "decision", domainTaskListPair.getRight( ) );
@@ -1802,18 +1902,32 @@ public class SimpleWorkflowService {
   }
 
   public SimpleWorkflowMessage terminateWorkflowExecution( final TerminateWorkflowExecutionRequest request ) throws SimpleWorkflowException {
-    final Context ctx = Contexts.lookup();
+    final Context ctx = Contexts.lookup( );
     final UserFullName userFullName = ctx.getUserFullName( );
-    final AccountFullName accountFullName = userFullName.asAccountFullName();
+    final AccountFullName accountFullName = userFullName.asAccountFullName( );
     final Predicate<? super WorkflowExecution> accessible =
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
     try {
-      workflowExecutions.withRetries( ).updateByExample(
-          WorkflowExecution.exampleForOpenWorkflow( accountFullName, request.getDomain( ), request.getWorkflowId( ) ),
+      final WorkflowExecution example = WorkflowExecution.exampleForOpenWorkflow(
           accountFullName,
+          request.getDomain(),
+          request.getWorkflowId(),
+          request.getRunId() );
+      final Pair<String,String> domainUuidRunIdPair = workflowExecutions.lookupByExample(
+          example, accountFullName,
           request.getWorkflowId( ),
-           new Function<WorkflowExecution,Void>(){
+          Predicates.alwaysTrue( ),
+          Pair.builder(
+              WorkflowExecutions.WorkflowExecutionStringFunctions.DOMAIN_UUID,
+              SimpleWorkflowMetadatas.toDisplayName( ) ) );
+
+      try ( final WorkflowLock lock = WorkflowLock.lock( accountFullName, domainUuidRunIdPair ) ) {
+        workflowExecutions.withRetries().updateByExample(
+            example,
+            accountFullName,
+            request.getWorkflowId(),
+            new Function<WorkflowExecution, Void>() {
               @Override
               public Void apply( final WorkflowExecution workflowExecution ) {
                 if ( accessible.apply( workflowExecution ) ) {
@@ -1823,17 +1937,18 @@ public class SimpleWorkflowService {
                           workflowExecution,
                           new WorkflowExecutionTerminatedEventAttributes()
                               .withChildPolicy( Objects.firstNonNull(
-                                  request.getChildPolicy( ),
-                                  workflowExecution.getChildPolicy( ) ) )
+                                  request.getChildPolicy(),
+                                  workflowExecution.getChildPolicy() ) )
                               .withDetails( request.getDetails() )
                               .withReason( request.getReason() ) )
                   );
                 }
                 deleteActivities( activityTasks, accountFullName, workflowExecution );
                 return null;
-             }
-           }
-      );
+              }
+            }
+        );
+      }
     } catch ( SwfMetadataNotFoundException e ) {
       throw new SimpleWorkflowClientException(
           "UnknownResourceFault",
@@ -1848,9 +1963,9 @@ public class SimpleWorkflowService {
   }
 
   public History getWorkflowExecutionHistory( final GetWorkflowExecutionHistoryRequest request ) throws SimpleWorkflowException {
-    final Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName( );
-    final AccountFullName accountFullName = userFullName.asAccountFullName( );
+    final AccountFullName accountFullName = userFullName.asAccountFullName();
     final Predicate<? super WorkflowExecution> accessible =
         SimpleWorkflowMetadatas.filteringFor( WorkflowExecution.class ).byPrivileges( ).buildPredicate( );
 
@@ -2025,19 +2140,11 @@ public class SimpleWorkflowService {
     throw exception;
   }
 
-  private static Integer parsePeriod( final String period ) {
-    if ( period == null || "NONE".equals( period ) ) {
-      return null;
-    } else {
-      return Integer.parseInt( period );
-    }
-  }
-
-  private static Integer parsePeriod( final String period, final Integer defaultValue ) {
+  private static Integer parsePeriod( final String period, final Integer noneValue ) {
     if ( period == null ) {
-      return defaultValue;
-    } else if ( "NONE".equals( period ) ) {
       return null;
+    } else if ( "NONE".equals( period ) ) {
+      return noneValue;
     } else {
       return Integer.parseInt( period );
     }
@@ -2051,7 +2158,7 @@ public class SimpleWorkflowService {
     if ( period == null && defaultValue == null ) {
       throw new ScheduleActivityTaskException( failureOnNoDefault );
     } else if ( period == null ) {
-      return defaultValue;
+      return defaultValue < 0 ? null : defaultValue;
     } else if ( "NONE".equals( period ) ) {
       return null;
     } else {
@@ -2124,6 +2231,20 @@ public class SimpleWorkflowService {
     }
 
     public ScheduleActivityTaskFailedCause getFailedCause( ) {
+      return failedCause;
+    }
+  }
+
+  private static final class StartTimerException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    private final StartTimerFailedCause failedCause;
+
+    public StartTimerException( final StartTimerFailedCause failedCause ) {
+      this.failedCause = failedCause;
+    }
+
+    public StartTimerFailedCause getFailedCause( ) {
       return failedCause;
     }
   }

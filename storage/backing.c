@@ -813,6 +813,24 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         goto out;
     }
 
+    // copy EBS entries from VBR[] to volumes[]
+    for (int i = 0; ((i < EUCA_MAX_VBRS) && (i < instance->params.virtualBootRecordLen)); i++) {
+        virtualBootRecord *vbr = &(instance->params.virtualBootRecord[i]);
+        if (vbr->locationType == NC_LOCATION_SC) {
+            char *volumeId = vbr->id;
+            if (save_volume(instance,
+                            volumeId,
+                            vbr->resourceLocation, // attachmentToken
+                            vbr->preparedResourceLocation, // connect_string
+                            vbr->guestDeviceName,
+                            VOL_STATE_ATTACHED,
+                            vbr->backingPath)) { // the XML
+                LOGERROR("[%s] failed to add record for volume %s\n", instance->instanceId, volumeId);
+            }
+        }
+    }
+
+
     if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
         goto out;
 
@@ -934,26 +952,12 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     char path[EUCA_MAX_PATH] = "";
     char work_regex[1024] = "";        // {userId}/{instanceId}/.*
     char scURL[512] = "";
-    ncVolume *volume = NULL;
-    virtualMachine *vm = &(instance->params);
-    virtualBootRecord *vbr = NULL;
 
     if (get_localhost_sc_url(scURL) != EUCA_OK || strlen(scURL) == 0) {
         LOGWARN("[%s] could not obtain SC URL (is SC enabled?)\n", instance->instanceId);
         scURL[0] = '\0';
     }
     // find and detach iSCSI targets, if any
-    for (i = 0; ((i < EUCA_MAX_VBRS) && (i < vm->virtualBootRecordLen)); i++) {
-        vbr = &(vm->virtualBootRecord[i]);
-        if (vbr->locationType == NC_LOCATION_SC) {
-            if (disconnect_ebs_volume
-                (scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip,
-                 localhost_config.iqn) != 0) {
-                LOGERROR("[%s] failed to disconnect volume attached to '%s'\n", instance->instanceId, vbr->backingPath);
-            }
-        }
-    }
-    // there may be iSCSI targets for volumes if instance disappeared or was migrated
     for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
         ncVolume *volume = &instance->volumes[i];
         if (!is_volume_used(volume))
@@ -1006,7 +1010,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         }
 
         for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-            volume = &instance->volumes[i];
+            ncVolume *volume = &instance->volumes[i];
             snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);
             unlink(path);
         }

@@ -158,7 +158,7 @@ host_config localhost_config;
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec);
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec, boolean use_virtio_root, boolean use_virtio_disk);
 int vbr_update_hostconfig_scurl(char *new_sc_url);
 int get_localhost_sc_url(char *dest);
 

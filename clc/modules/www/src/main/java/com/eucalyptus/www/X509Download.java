@@ -66,6 +66,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -109,12 +110,15 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.net.InetAddresses;
+import com.google.common.primitives.Ints;
 
 public class X509Download extends HttpServlet {
   
@@ -277,6 +281,8 @@ public class X509Download extends HttpServlet {
         remotePublicify( CloudWatch.class ) ) );
     sb.append( entryFor( "AWS_ELB_URL", "Load Balancing service URL is not configured.",
         remotePublicify( LoadBalancing.class ) ) );
+    sb.append( entryFor( "AWS_SIMPLEWORKFLOW_URL", null,
+        remotePublicify( SimpleWorkflow.class ) ) );
     sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
     String baseName = null;
     if ( x509 != null && keyPair != null ) {
@@ -352,7 +358,7 @@ public class X509Download extends HttpServlet {
   private static Optional<String> remotePublicify( final Class<? extends ComponentId> componentClass ) {
     Optional<String> url = Optional.absent( );
     if ( Topology.isEnabled( componentClass ) ) try {
-      url = Optional.of( hostMap( ServiceUris.remotePublicify( Topology.lookup( componentClass ) ) ).toString() );
+      url = Optional.of( portUpdate( hostMap( ServiceUris.remotePublicify( Topology.lookup( componentClass ) ) ) ).toString() );
     } catch ( final Exception e ) {
       LOG.error( "Failed to get URL for service " + componentClass.getSimpleName( ), e );
     }
@@ -374,6 +380,21 @@ public class X509Download extends HttpServlet {
       }
     }
     return uri;
+  }
+
+  private static URI portUpdate( final URI uri ) {
+    int port = Objects.firstNonNull(
+        AuthenticationProperties.CREDENTIAL_DOWNLOAD_PORT == null ?
+            null :
+            Ints.tryParse( AuthenticationProperties.CREDENTIAL_DOWNLOAD_PORT ),
+        StackConfiguration.PORT );
+    try {
+      return port != uri.getPort( ) ?
+        new URI( uri.getScheme( ), uri.getUserInfo( ), uri.getHost( ), port, uri.getPath( ), uri.getQuery( ), uri.getFragment( ) ) :
+        uri;
+    } catch ( URISyntaxException e ) {
+      return uri;
+    }
   }
 
   private static String entryFor( final String variable,

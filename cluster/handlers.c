@@ -6460,7 +6460,7 @@ int init_config(void)
         pubmode = configFileValue("VNET_MODE");
         if (!pubmode) {
             LOGWARN("VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
-            pubmode = strdup(NETMODE_SYSTEM);
+            pubmode = strdup(NETMODE_MANAGED_NOVLAN);
             if (!pubmode) {
                 LOGFATAL("Out of memory\n");
                 unlock_exit(1);
@@ -8018,7 +8018,7 @@ void print_ccInstance(char *tag, ccInstance * in)
             strncat(volbuf, ",", 1);
             strncat(volbuf, in->volumes[i].attachmentToken, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
-            strncat(volbuf, in->volumes[i].localDev, CHAR_BUFFER_SIZE);
+            strncat(volbuf, in->volumes[i].devName, CHAR_BUFFER_SIZE);
             strncat(volbuf, ",", 1);
             strncat(volbuf, in->volumes[i].stateName, CHAR_BUFFER_SIZE);
             strncat(volbuf, " ", 1);

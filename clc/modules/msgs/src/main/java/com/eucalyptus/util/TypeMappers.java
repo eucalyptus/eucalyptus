@@ -143,7 +143,7 @@ public class TypeMappers {
             registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) Classes.newInstance( candidate ) );
             return true;
           } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
+            LOG.error( "Error registering type mapper: " + candidate, ex1 );
           }
         }
       }

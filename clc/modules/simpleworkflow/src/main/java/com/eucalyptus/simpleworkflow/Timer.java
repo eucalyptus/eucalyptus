@@ -57,6 +57,9 @@ public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMeta
   @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domain;
 
+  @Column( name = "domain_uuid", nullable = false, updatable = false )
+  private String domainUuid;
+
   @Column( name = "workflow_run_id", nullable = false, updatable = false )
   private String workflowRunId;
 
@@ -88,6 +91,7 @@ public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMeta
   public static Timer create( final OwnerFullName ownerFullName,
                               final WorkflowExecution workflowExecution,
                               final String domain,
+                              final String domainUuid,
                               final String timerId,
                               final String control,
                               final Integer startToFireTimeout,
@@ -96,6 +100,7 @@ public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMeta
     final Timer timer = new Timer( ownerFullName, timerId );
     timer.setWorkflowExecution( workflowExecution );
     timer.setDomain( domain );
+    timer.setDomainUuid( domainUuid );
     timer.setWorkflowRunId( workflowExecution.getDisplayName() );
     timer.setControl( control );
     timer.setStartToFireTimeout( startToFireTimeout );
@@ -173,6 +178,14 @@ public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMeta
 
   public void setDomain( final String domain ) {
     this.domain = domain;
+  }
+
+  public String getDomainUuid() {
+    return domainUuid;
+  }
+
+  public void setDomainUuid( final String domainUuid ) {
+    this.domainUuid = domainUuid;
   }
 
   public String getWorkflowRunId() {

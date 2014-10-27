@@ -20,13 +20,13 @@
 package com.eucalyptus.loadbalancing.service;
 
 import com.eucalyptus.auth.AuthContextSupplier;
+import static com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec.*;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingBackendMessage;
@@ -43,21 +43,31 @@ import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
 import com.google.common.base.Objects;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
  */
+@SuppressWarnings( "UnusedDeclaration" )
 public class LoadBalancingService {
 
   public LoadBalancingMessage dispatchAction( final LoadBalancingMessage request ) throws EucalyptusCloudException {
+    // Authorization
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier user = ctx.getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_LOADBALANCING, getIamActionByMessageType( request ), user ) ) {
+    if ( !Permissions.perhapsAuthorized( VENDOR_LOADBALANCING, getIamActionByMessageType( request ), user ) ) {
       throw new LoadBalancingAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
+    // Validation
+    final String error = Iterables.getFirst( request.validate( ).values( ), null );
+    if ( error != null ) {
+      throw new LoadBalancingClientException( "InvalidConfigurationRequest", error );
+    }
+
+    // Dispatch
     try {
       final LoadBalancingBackendMessage backendRequest = (LoadBalancingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       if ( backendRequest instanceof LoadBalancingServoBackendMessage ) {
@@ -81,9 +91,9 @@ public class LoadBalancingService {
     return Class.forName( request.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) );
   }
 
-  private static BaseMessage send( final BaseMessage request ) throws Exception {
+  private static BaseMessage send( final LoadBalancingBackendMessage request ) throws Exception {
     try {
-      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), request );
+      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), (BaseMessage)request );
     } catch ( NoSuchElementException e ) {
       throw new LoadBalancingUnavailableException( "Service Unavailable" );
     } catch ( ServiceDispatchException e ) {
@@ -93,7 +103,7 @@ public class LoadBalancingService {
       }
       throw e;
     } catch ( final FailedRequestException e ) {
-      if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
+      if ( ((BaseMessage)request).getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
         return e.getRequest( );
       }
       throw e.getRequest( ) == null ?

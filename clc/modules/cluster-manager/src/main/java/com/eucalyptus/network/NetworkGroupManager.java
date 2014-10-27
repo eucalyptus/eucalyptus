@@ -206,8 +206,7 @@ public class NetworkGroupManager {
       throw new ClientComputeException( "CannotDelete", "Group ("+group.getGroupId()+") cannot be deleted, it is the default group for " + group.getVpcId( ) );
     }
 
-    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) &&
-        getDefaultVpcId( ctx.getUserFullName( ).asAccountFullName( ) ) == null ) {
+    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
       NetworkGroups.createDefault( AccountFullName.getInstance( group.getOwnerAccountNumber( ) ) );
     }
     try {
@@ -227,9 +226,7 @@ public class NetworkGroupManager {
           request.getSecurityGroupSet( ).remove( "verbose" ) ||
           request.getSecurityGroupIdSet( ).remove( "verbose" );
 
-      if ( getDefaultVpcId( ctx.getUserFullName( ).asAccountFullName( ) ) == null ) {
-          NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
-      }
+      NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
 
       final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
       final Predicate<? super NetworkGroup> requestedAndAccessible =

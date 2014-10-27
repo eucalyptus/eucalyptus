@@ -69,14 +69,31 @@ package com.eucalyptus.compute.common.backend
 
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.id.Eucalyptus;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.util.MessageValidation
+import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.google.common.collect.Lists
 
+import javax.annotation.Nonnull
+
+import static com.eucalyptus.util.MessageValidation.validateRecursively
+
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
+
 @ComponentMessage(Eucalyptus.class)
-public class VmTypeMessage extends BaseMessage{
+public class VmTypeMessage extends BaseMessage implements MessageValidation.ValidatableMessage {
+
+  Map<String,String> validate( ) {
+    validateRecursively(
+        Maps.<String,String>newTreeMap( ),
+        new ComputeMessageValidation.ComputeMessageValidationAssistant( ),
+        "",
+        this )
+  }
 }
 public class VmTypeDetails extends EucalyptusData {
   String name;
@@ -109,9 +126,13 @@ public class VmTypeEphemeralDisk extends EucalyptusData {
 public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
   Boolean reset = false;
   Boolean force = false;
+  @Nonnull
   String name;
+  @FieldRange( min = 1l )
   Integer cpu;
+  @FieldRange( min = 1l )
   Integer disk;
+  @FieldRange( min = 1l )
   Integer memory;
 }
 public class ModifyInstanceTypeAttributeResponseType extends VmTypeMessage {

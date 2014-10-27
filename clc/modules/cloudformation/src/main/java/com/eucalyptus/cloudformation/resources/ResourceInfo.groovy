@@ -34,9 +34,10 @@ public abstract class ResourceInfo {
   public boolean supportsSnapshot() {
     return false;
   }
-  public boolean canCheckAttributes() {
-    return true;
+  public boolean isAttributeAllowed(String attributeName) {
+    return ResourceAttributeResolver.resourceHasAttribute(this, attributeName);
   }
+
   public Collection<String> getRequiredCapabilities() {
     return new ArrayList<String>();
   }

@@ -2,15 +2,15 @@
  * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU General License as published by
  * the Free Software Foundation; version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU General License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU General License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  *
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
@@ -20,638 +20,120 @@
 @GroovyAddClassUUID
 package com.eucalyptus.loadbalancing.common.backend.msgs
 
-import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import com.eucalyptus.loadbalancing.common.LoadBalancingBackend
+import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult
+import com.eucalyptus.loadbalancing.common.msgs.Instances
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage
+import com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult
+import com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata
 
-import com.eucalyptus.cloudwatch.common.msgs.MetricData;
-import java.lang.reflect.Field
+import com.eucalyptus.cloudwatch.common.msgs.MetricData
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
+
 import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.binding.HttpEmbedded
-import com.eucalyptus.binding.HttpParameterMapping
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
-public class LoadBalancingServoBackendMessage extends LoadBalancingBackendMessage {
+class LoadBalancingServoBackendMessage extends LoadBalancingMessage implements LoadBalancingBackendMessage {
   String sourceIp
 }
 
-public class DescribeLoadBalancersByServoType extends LoadBalancingServoBackendMessage {
+class DescribeLoadBalancersByServoType extends LoadBalancingServoBackendMessage {
   String instanceId;
-  public DescribeLoadBalancersByServoType() {  }
+  DescribeLoadBalancersByServoType() {  }
 }
 
-public class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoBackendMessage {
-  public DescribeLoadBalancersResponseType() {  }
-  DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
+class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoBackendMessage {
+  DescribeLoadBalancersByServoResult describeLoadBalancersResult = new DescribeLoadBalancersByServoResult( );
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 
-public class PutServoStatesType extends LoadBalancingServoBackendMessage {
+class PutServoStatesType extends LoadBalancingServoBackendMessage {
   String instanceId;
 
   Instances instances;
 
   MetricData metricData;
-  public PutServoceStatesType(){}
 }
 
-public class PutServoStatesResponseType extends LoadBalancingServoBackendMessage {
-  public PutServoStatesResponseType() { }
+class PutServoStatesResponseType extends LoadBalancingServoBackendMessage {
+  PutServoStatesResponseType() { }
   PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 
-public class PutServoStatesResult extends EucalyptusData {
-  public PutServoStatesResult() { }
-}
-
-public class CreateLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Listeners listeners;
-  AvailabilityZones availabilityZones;
-  Subnets subnets;
-  SecurityGroups securityGroups;
-  String scheme;
-  public CreateLoadBalancerType() {  }
-}
-
-@ComponentMessage(LoadBalancingBackend.class)
-public class LoadBalancingBackendMessage extends BaseMessage {
-  @Override
-  def <TYPE extends BaseMessage> TYPE getReply() {
-    TYPE type = super.getReply()
-    try {
-      Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
-      responseMetadataField.setAccessible( true )
-      ((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
-    } catch ( Exception e ) {
-    }
-    return type
-  }
-}
-public class CreateLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public CreateLoadBalancerResponseType() {  }
-  CreateLoadBalancerResult createLoadBalancerResult = new CreateLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class CreateLoadBalancerPolicyResult extends EucalyptusData {
-  public CreateLoadBalancerPolicyResult() {  }
-}
-public class DeregisterInstancesFromLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public DeregisterInstancesFromLoadBalancerResponseType() {  }
-  DeregisterInstancesFromLoadBalancerResult deregisterInstancesFromLoadBalancerResult = new DeregisterInstancesFromLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class CreateAppCookieStickinessPolicyResult extends EucalyptusData {
-  public CreateAppCookieStickinessPolicyResult() {  }
-}
-public class Listeners extends EucalyptusData {
-  public Listeners() {  }
-
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<Listener> member = new ArrayList<Listener>();
-}
-public class DeleteLoadBalancerListenersResult extends EucalyptusData {
-  public DeleteLoadBalancerListenersResult() {  }
-}
-public class DescribeLoadBalancerPolicyTypesType extends LoadBalancingBackendMessage {
-  PolicyTypeNames policyTypeNames;
-  public DescribeLoadBalancerPolicyTypesType() {  }
-}
-public class CreateLoadBalancerPolicyResponseType extends LoadBalancingBackendMessage {
-  public CreateLoadBalancerPolicyResponseType() {  }
-  CreateLoadBalancerPolicyResult createLoadBalancerPolicyResult = new CreateLoadBalancerPolicyResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class CreateLoadBalancerListenersResponseType extends LoadBalancingBackendMessage {
-  public CreateLoadBalancerListenersResponseType() {  }
-  CreateLoadBalancerListenersResult createLoadBalancerListenersResult = new CreateLoadBalancerListenersResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class SetLoadBalancerPoliciesForBackendServerResponseType extends LoadBalancingBackendMessage {
-  public SetLoadBalancerPoliciesForBackendServerResponseType() {  }
-  SetLoadBalancerPoliciesForBackendServerResult setLoadBalancerPoliciesForBackendServerResult = new SetLoadBalancerPoliciesForBackendServerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DeleteLoadBalancerResult extends EucalyptusData {
-  public DeleteLoadBalancerResult() {  }
-}
-public class DeregisterInstancesFromLoadBalancerResult extends EucalyptusData {
-  Instances instances;
-  public DeregisterInstancesFromLoadBalancerResult() {  }
-}
-public class RegisterInstancesWithLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Instances instances;
-  public RegisterInstancesWithLoadBalancerType() {  }
-  public RegisterInstancesWithLoadBalancerType( String loadBalancerName,
-                                                Collection<String> instanceIds ) {
-    this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
-  }
-}
-public class AttachLoadBalancerToSubnetsResponseType extends LoadBalancingBackendMessage {
-  public AttachLoadBalancerToSubnetsResponseType() {  }
-  AttachLoadBalancerToSubnetsResult attachLoadBalancerToSubnetsResult = new AttachLoadBalancerToSubnetsResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class LoadBalancerDescription extends EucalyptusData {
-  String loadBalancerName;
-  String dnsName;
-  String canonicalHostedZoneName;
-  String canonicalHostedZoneNameID;
-  ListenerDescriptions listenerDescriptions;
-  Policies policies;
-  BackendServerDescriptions backendServerDescriptions;
-  AvailabilityZones availabilityZones;
-  Subnets subnets;
-  String vpcId;
-  Instances instances;
-  HealthCheck healthCheck;
-  SourceSecurityGroup sourceSecurityGroup;
-  SecurityGroups securityGroups;
-
-  Date createdTime;
-  String scheme;
-  public LoadBalancerDescription() {  }
-}
-public class LBCookieStickinessPolicies extends EucalyptusData {
-  public LBCookieStickinessPolicies() {  }
-
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<LBCookieStickinessPolicy> member = new ArrayList<LBCookieStickinessPolicy>();
-}
-public class PolicyTypeDescriptions extends EucalyptusData {
-  public PolicyTypeDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<PolicyTypeDescription> member = new ArrayList<PolicyTypeDescription>();
-}
-public class Ports extends EucalyptusData {
-  public Ports() {  }
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class CreateAppCookieStickinessPolicyResponseType extends LoadBalancingBackendMessage {
-  public CreateAppCookieStickinessPolicyResponseType() {  }
-  CreateAppCookieStickinessPolicyResult createAppCookieStickinessPolicyResult = new CreateAppCookieStickinessPolicyResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class EnableAvailabilityZonesForLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public EnableAvailabilityZonesForLoadBalancerResponseType() {  }
-  EnableAvailabilityZonesForLoadBalancerResult enableAvailabilityZonesForLoadBalancerResult = new EnableAvailabilityZonesForLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class Subnets extends EucalyptusData {
-  public Subnets() {  }
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class ApplySecurityGroupsToLoadBalancerResult extends EucalyptusData {
-  SecurityGroups securityGroups;
-  public ApplySecurityGroupsToLoadBalancerResult() {  }
-}
-public class InstanceStates extends EucalyptusData {
-  public InstanceStates() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<InstanceState> member = new ArrayList<InstanceState>();
-}
-public class DescribeInstanceHealthResponseType extends LoadBalancingBackendMessage {
-  public DescribeInstanceHealthResponseType() {  }
-  DescribeInstanceHealthResult describeInstanceHealthResult = new DescribeInstanceHealthResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class Error extends EucalyptusData {
+class Error extends EucalyptusData {
   String type;
   String code;
   String message;
-  public Error() {  }
+  Error() {  }
   ErrorDetail detail = new ErrorDetail();
 }
-public class DeleteLoadBalancerPolicyResult extends EucalyptusData {
-  public DeleteLoadBalancerPolicyResult() {  }
+class ErrorDetail extends EucalyptusData {
+  ErrorDetail() {  }
 }
-public class DescribeLoadBalancerPolicyTypesResponseType extends LoadBalancingBackendMessage {
-  public DescribeLoadBalancerPolicyTypesResponseType() {  }
-  DescribeLoadBalancerPolicyTypesResult describeLoadBalancerPolicyTypesResult = new DescribeLoadBalancerPolicyTypesResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class CreateLBCookieStickinessPolicyResult extends EucalyptusData {
-  public CreateLBCookieStickinessPolicyResult() {  }
-}
-public class DescribeLoadBalancerPoliciesType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  PolicyNames policyNames;
-  public DescribeLoadBalancerPoliciesType() {  }
-}
-public class PolicyAttributeDescriptions extends EucalyptusData {
-  public PolicyAttributeDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<PolicyAttributeDescription> member = new ArrayList<PolicyAttributeDescription>();
-}
-public class DescribeLoadBalancerPoliciesResponseType extends LoadBalancingBackendMessage {
-  public DescribeLoadBalancerPoliciesResponseType() {  }
-  DescribeLoadBalancerPoliciesResult describeLoadBalancerPoliciesResult = new DescribeLoadBalancerPoliciesResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DeleteLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  public DeleteLoadBalancerType() {  }
-}
-public class Instance extends EucalyptusData {
-  String instanceId;
-  public Instance() {  }
-}
-public class DisableAvailabilityZonesForLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  AvailabilityZones availabilityZones;
-  public DisableAvailabilityZonesForLoadBalancerType() {  }
-}
-public class RegisterInstancesWithLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public RegisterInstancesWithLoadBalancerResponseType() {  }
-  RegisterInstancesWithLoadBalancerResult registerInstancesWithLoadBalancerResult = new RegisterInstancesWithLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class Listener extends EucalyptusData {
-  String protocol;
-  Integer loadBalancerPort;
-  String instanceProtocol;
-  Integer instancePort;
-  String SSLCertificateId;
-  public Listener() {  }
-}
-public class SetLoadBalancerPoliciesForBackendServerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Integer instancePort;
-  PolicyNames policyNames;
-  public SetLoadBalancerPoliciesForBackendServerType() {  }
-}
-public class AttachLoadBalancerToSubnetsResult extends EucalyptusData {
-  Subnets subnets;
-  public AttachLoadBalancerToSubnetsResult() {  }
-}
-public class SetLoadBalancerPoliciesOfListenerResponseType extends LoadBalancingBackendMessage {
-  public SetLoadBalancerPoliciesOfListenerResponseType() {  }
-  SetLoadBalancerPoliciesOfListenerResult setLoadBalancerPoliciesOfListenerResult = new SetLoadBalancerPoliciesOfListenerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class HealthCheck extends EucalyptusData {
-  String target;
-  Integer interval;
-  Integer timeout;
-  Integer unhealthyThreshold;
-  Integer healthyThreshold;
-  public HealthCheck() {  }
-}
-public class DescribeLoadBalancerPolicyTypesResult extends EucalyptusData {
-  PolicyTypeDescriptions policyTypeDescriptions;
-  public DescribeLoadBalancerPolicyTypesResult() {  }
-}
-public class PolicyTypeDescription extends EucalyptusData {
-  String policyTypeName;
-  String description;
-  PolicyAttributeTypeDescriptions policyAttributeTypeDescriptions;
-  public PolicyTypeDescription() {  }
-}
-public class DisableAvailabilityZonesForLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public DisableAvailabilityZonesForLoadBalancerResponseType() {  }
-  DisableAvailabilityZonesForLoadBalancerResult disableAvailabilityZonesForLoadBalancerResult = new DisableAvailabilityZonesForLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DescribeLoadBalancersResponseType extends LoadBalancingBackendMessage {
-  public DescribeLoadBalancersResponseType() {  }
-  DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class AppCookieStickinessPolicy extends EucalyptusData {
-  String policyName;
-  String cookieName;
-  public AppCookieStickinessPolicy() {  }
-}
-public class SetLoadBalancerListenerSSLCertificateType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Integer loadBalancerPort;
-  String SSLCertificateId;
-  public SetLoadBalancerListenerSSLCertificateType() {  }
-}
-public class PolicyTypeNames extends EucalyptusData {
-  public PolicyTypeNames() {  }
 
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
+@ComponentMessage(LoadBalancingBackend.class)
+interface LoadBalancingBackendMessage {
 }
-public class ListenerDescription extends EucalyptusData {
-  Listener listener;
-  PolicyNames policyNames;
-  public ListenerDescription() {  }
-}
-public class LoadBalancerNames extends EucalyptusData {
-  public LoadBalancerNames() {  }
 
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class SetLoadBalancerPoliciesOfListenerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Integer loadBalancerPort;
-  PolicyNames policyNames;
-  public SetLoadBalancerPoliciesOfListenerType() {  }
-}
-public class DetachLoadBalancerFromSubnetsResult extends EucalyptusData {
-  Subnets subnets;
-  public DetachLoadBalancerFromSubnetsResult() {  }
-}
-public class ListenerDescriptions extends EucalyptusData {
-  public ListenerDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<ListenerDescription> member = new ArrayList<ListenerDescription>();
-}
-public class DeleteLoadBalancerListenersType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Ports loadBalancerPorts;
-  public DeleteLoadBalancerListenersType() {  }
-}
-public class PolicyNames extends EucalyptusData {
-  public PolicyNames() {  }
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class EnableAvailabilityZonesForLoadBalancerResult extends EucalyptusData {
-  AvailabilityZones availabilityZones;
-  public EnableAvailabilityZonesForLoadBalancerResult() {  }
-}
-public class DetachLoadBalancerFromSubnetsType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Subnets subnets;
-  public DetachLoadBalancerFromSubnetsType() {  }
-}
-public class PolicyAttributeTypeDescriptions extends EucalyptusData {
-  public PolicyAttributeTypeDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<PolicyAttributeTypeDescription> member = new ArrayList<PolicyAttributeTypeDescription>();
-}
-public class CreateLoadBalancerListenersResult extends EucalyptusData {
-  public CreateLoadBalancerListenersResult() {  }
-}
-public class DeleteLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public DeleteLoadBalancerResponseType() {  }
-  DeleteLoadBalancerResult deleteLoadBalancerResult = new DeleteLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DeleteLoadBalancerPolicyType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  String policyName;
-  public DeleteLoadBalancerPolicyType() {  }
-}
-public class CreateLoadBalancerPolicyType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  String policyName;
-  String policyTypeName;
-  PolicyAttributes policyAttributes;
-  public CreateLoadBalancerPolicyType() {  }
-}
-public class ConfigureHealthCheckType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  HealthCheck healthCheck;
-  public ConfigureHealthCheckType() {  }
-}
-public class CreateAppCookieStickinessPolicyType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  String policyName;
-  String cookieName;
-  public CreateAppCookieStickinessPolicyType() {  }
-}
-public class ConfigureHealthCheckResult extends EucalyptusData {
-  HealthCheck healthCheck;
-  public ConfigureHealthCheckResult() {  }
-}
-public class Instances extends EucalyptusData {
-  public Instances() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<Instance> member = new ArrayList<Instance>();
-}
-public class AvailabilityZones extends EucalyptusData {
-  public AvailabilityZones() {  }
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class SourceSecurityGroup extends EucalyptusData {
-  String ownerAlias;
-  String groupName;
-  public SourceSecurityGroup() {  }
-}
-public class DetachLoadBalancerFromSubnetsResponseType extends LoadBalancingBackendMessage {
-  public DetachLoadBalancerFromSubnetsResponseType() {  }
-  DetachLoadBalancerFromSubnetsResult detachLoadBalancerFromSubnetsResult = new DetachLoadBalancerFromSubnetsResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class ErrorDetail extends EucalyptusData {
-  public ErrorDetail() {  }
-}
-public class DescribeLoadBalancersResult extends EucalyptusData {
-  LoadBalancerDescriptions loadBalancerDescriptions;
-  String nextMarker;
-  public DescribeLoadBalancersResult() {  }
-}
-public class DeleteLoadBalancerListenersResponseType extends LoadBalancingBackendMessage {
-  public DeleteLoadBalancerListenersResponseType() {  }
-  DeleteLoadBalancerListenersResult deleteLoadBalancerListenersResult = new DeleteLoadBalancerListenersResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class LoadBalancerDescriptions extends EucalyptusData {
-  public LoadBalancerDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<LoadBalancerDescription> member = new ArrayList<LoadBalancerDescription>();
-}
-public class BackendServerDescription extends EucalyptusData {
-  Integer instancePort;
-  PolicyNames policyNames;
-  public BackendServerDescription() {  }
-}
-public class DescribeLoadBalancerPoliciesResult extends EucalyptusData {
-  PolicyDescriptions policyDescriptions;
-  public DescribeLoadBalancerPoliciesResult() {  }
-}
-public class RegisterInstancesWithLoadBalancerResult extends EucalyptusData {
-  Instances instances;
-  public RegisterInstancesWithLoadBalancerResult() {  }
-}
-public class PolicyAttribute extends EucalyptusData {
-  String attributeName;
-  String attributeValue;
-  public PolicyAttribute() {  }
-}
-public class CreateLoadBalancerListenersType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Listeners listeners;
-  public CreateLoadBalancerListenersType() {  }
-}
-public class ConfigureHealthCheckResponseType extends LoadBalancingBackendMessage {
-  public ConfigureHealthCheckResponseType() {  }
-  ConfigureHealthCheckResult configureHealthCheckResult = new ConfigureHealthCheckResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DisableAvailabilityZonesForLoadBalancerResult extends EucalyptusData {
-  AvailabilityZones availabilityZones;
-  public DisableAvailabilityZonesForLoadBalancerResult() {  }
-}
-public class SetLoadBalancerListenerSSLCertificateResponseType extends LoadBalancingBackendMessage {
-  public SetLoadBalancerListenerSSLCertificateResponseType() {  }
-  SetLoadBalancerListenerSSLCertificateResult setLoadBalancerListenerSSLCertificateResult = new SetLoadBalancerListenerSSLCertificateResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class Policies extends EucalyptusData {
-  AppCookieStickinessPolicies appCookieStickinessPolicies;
-  LBCookieStickinessPolicies lbCookieStickinessPolicies;
-  PolicyNames otherPolicies;
-  public Policies() {  }
-}
-public class CreateLoadBalancerResult extends EucalyptusData {
-  String dnsName;
-  public CreateLoadBalancerResult() {  }
-}
-public class SecurityGroups extends EucalyptusData {
-  public SecurityGroups() {  }
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> member = new ArrayList<String>();
-}
-public class CreateLBCookieStickinessPolicyResponseType extends LoadBalancingBackendMessage {
-  public CreateLBCookieStickinessPolicyResponseType() {  }
-  CreateLBCookieStickinessPolicyResult createLBCookieStickinessPolicyResult = new CreateLBCookieStickinessPolicyResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class LBCookieStickinessPolicy extends EucalyptusData {
-  String policyName;
-  Long cookieExpirationPeriod;
-  public LBCookieStickinessPolicy() {  }
-}
-public class SetLoadBalancerPoliciesForBackendServerResult extends EucalyptusData {
-  public SetLoadBalancerPoliciesForBackendServerResult() {  }
-}
-public class EnableAvailabilityZonesForLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  AvailabilityZones availabilityZones;
-  public EnableAvailabilityZonesForLoadBalancerType() {  }
-}
-public class DeleteLoadBalancerPolicyResponseType extends LoadBalancingBackendMessage {
-  public DeleteLoadBalancerPolicyResponseType() {  }
-  DeleteLoadBalancerPolicyResult deleteLoadBalancerPolicyResult = new DeleteLoadBalancerPolicyResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class DescribeInstanceHealthType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Instances instances;
-  public DescribeInstanceHealthType() {  }
-  public DescribeInstanceHealthType( String loadBalancerName,
-                                     Collection<String> instanceIds ) {
-    this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
-  }
-}
-public class CreateLBCookieStickinessPolicyType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  String policyName;
-  Long cookieExpirationPeriod;
-  public CreateLBCookieStickinessPolicyType() {  }
-}
-public class PolicyDescription extends EucalyptusData {
-  String policyName;
-  String policyTypeName;
-  PolicyAttributeDescriptions policyAttributeDescriptions;
-  public PolicyDescription() {  }
-}
-public class InstanceState extends EucalyptusData {
-  String instanceId;
-  String state;
-  String reasonCode;
-  String description;
-  public InstanceState() {  }
-}
-public class DescribeLoadBalancersType extends LoadBalancingBackendMessage {
-  LoadBalancerNames loadBalancerNames;
-  String marker;
-  public DescribeLoadBalancersType() {  }
-}
-public class DeregisterInstancesFromLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Instances instances;
-  public DeregisterInstancesFromLoadBalancerType() {  }
-  public DeregisterInstancesFromLoadBalancerType( String loadBalancerName,
-                                                  Collection<String> instanceIds ) {
-    this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
-  }
-}
-public class AttachLoadBalancerToSubnetsType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  Subnets subnets;
-  public AttachLoadBalancerToSubnetsType() {  }
-}
-public class ApplySecurityGroupsToLoadBalancerResponseType extends LoadBalancingBackendMessage {
-  public ApplySecurityGroupsToLoadBalancerResponseType() {  }
-  ApplySecurityGroupsToLoadBalancerResult applySecurityGroupsToLoadBalancerResult = new ApplySecurityGroupsToLoadBalancerResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-public class AppCookieStickinessPolicies extends EucalyptusData {
-  public AppCookieStickinessPolicies() {  }
-  ArrayList<AppCookieStickinessPolicy> member = new ArrayList<AppCookieStickinessPolicy>();
-}
-public class ResponseMetadata extends EucalyptusData {
-  String requestId;
-  public ResponseMetadata() {  }
-}
-public class BackendServerDescriptions extends EucalyptusData {
-  public BackendServerDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<BackendServerDescription> member = new ArrayList<BackendServerDescription>();
-}
-public class PolicyAttributes extends EucalyptusData {
-  public PolicyAttributes() {  }
 
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<PolicyAttribute> member = new ArrayList<PolicyAttribute>();
-}
-public class ApplySecurityGroupsToLoadBalancerType extends LoadBalancingBackendMessage {
-  String loadBalancerName;
-  SecurityGroups securityGroups;
-  public ApplySecurityGroupsToLoadBalancerType() {  }
-}
-public class SetLoadBalancerPoliciesOfListenerResult extends EucalyptusData {
-  public SetLoadBalancerPoliciesOfListenerResult() {  }
-}
-public class DescribeInstanceHealthResult extends EucalyptusData {
-  InstanceStates instanceStates;
-  public DescribeInstanceHealthResult() {  }
-}
-public class PolicyAttributeTypeDescription extends EucalyptusData {
-  String attributeName;
-  String attributeType;
-  String description;
-  String defaultValue;
-  String cardinality;
-  public PolicyAttributeTypeDescription() {  }
-}
-public class PolicyDescriptions extends EucalyptusData {
-  public PolicyDescriptions() {  }
-  @HttpEmbedded(multiple=true)
-  @HttpParameterMapping(parameter="member")
-  ArrayList<PolicyDescription> member = new ArrayList<PolicyDescription>();
-}
-public class PolicyAttributeDescription extends EucalyptusData {
-  String attributeName;
-  String attributeValue;
-  public PolicyAttributeDescription() {  }
-}
-public class SetLoadBalancerListenerSSLCertificateResult extends EucalyptusData {
-  public SetLoadBalancerListenerSSLCertificateResult() {  }
-}
+class AddTagsResponseType extends com.eucalyptus.loadbalancing.common.msgs.AddTagsResponseType implements LoadBalancingBackendMessage { }
+class AddTagsType extends com.eucalyptus.loadbalancing.common.msgs.AddTagsType implements LoadBalancingBackendMessage { }
+class ApplySecurityGroupsToLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.ApplySecurityGroupsToLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class ApplySecurityGroupsToLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.ApplySecurityGroupsToLoadBalancerType implements LoadBalancingBackendMessage { }
+class AttachLoadBalancerToSubnetsResponseType extends com.eucalyptus.loadbalancing.common.msgs.AttachLoadBalancerToSubnetsResponseType implements LoadBalancingBackendMessage { }
+class AttachLoadBalancerToSubnetsType extends com.eucalyptus.loadbalancing.common.msgs.AttachLoadBalancerToSubnetsType implements LoadBalancingBackendMessage { }
+class ConfigureHealthCheckResponseType extends com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResponseType implements LoadBalancingBackendMessage { }
+class ConfigureHealthCheckType extends com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckType implements LoadBalancingBackendMessage { }
+class CreateAppCookieStickinessPolicyResponseType extends com.eucalyptus.loadbalancing.common.msgs.CreateAppCookieStickinessPolicyResponseType implements LoadBalancingBackendMessage { }
+class CreateAppCookieStickinessPolicyType extends com.eucalyptus.loadbalancing.common.msgs.CreateAppCookieStickinessPolicyType implements LoadBalancingBackendMessage { }
+class CreateLBCookieStickinessPolicyResponseType extends com.eucalyptus.loadbalancing.common.msgs.CreateLBCookieStickinessPolicyResponseType implements LoadBalancingBackendMessage { }
+class CreateLBCookieStickinessPolicyType extends com.eucalyptus.loadbalancing.common.msgs.CreateLBCookieStickinessPolicyType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerListenersResponseType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerListenersResponseType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerListenersType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerListenersType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerPolicyResponseType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerPolicyResponseType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerPolicyType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerPolicyType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class CreateLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerListenersResponseType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerListenersResponseType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerListenersType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerListenersType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerPolicyResponseType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerPolicyResponseType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerPolicyType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerPolicyType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class DeleteLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerType implements LoadBalancingBackendMessage { }
+class DeregisterInstancesFromLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class DeregisterInstancesFromLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerType implements LoadBalancingBackendMessage { }
+class DescribeInstanceHealthResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResponseType implements LoadBalancingBackendMessage { }
+class DescribeInstanceHealthType extends com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerAttributesResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesResponseType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerAttributesType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerAttributesType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerPoliciesResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPoliciesResponseType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerPoliciesType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPoliciesType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerPolicyTypesResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPolicyTypesResponseType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancerPolicyTypesType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPolicyTypesType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancersResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersResponseType implements LoadBalancingBackendMessage { }
+class DescribeLoadBalancersType extends com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersType implements LoadBalancingBackendMessage { }
+class DescribeTagsResponseType extends com.eucalyptus.loadbalancing.common.msgs.DescribeTagsResponseType implements LoadBalancingBackendMessage { }
+class DescribeTagsType extends com.eucalyptus.loadbalancing.common.msgs.DescribeTagsType implements LoadBalancingBackendMessage { }
+class DetachLoadBalancerFromSubnetsResponseType extends com.eucalyptus.loadbalancing.common.msgs.DetachLoadBalancerFromSubnetsResponseType implements LoadBalancingBackendMessage { }
+class DetachLoadBalancerFromSubnetsType extends com.eucalyptus.loadbalancing.common.msgs.DetachLoadBalancerFromSubnetsType implements LoadBalancingBackendMessage { }
+class DisableAvailabilityZonesForLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.DisableAvailabilityZonesForLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class DisableAvailabilityZonesForLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.DisableAvailabilityZonesForLoadBalancerType implements LoadBalancingBackendMessage { }
+class EnableAvailabilityZonesForLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.EnableAvailabilityZonesForLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class EnableAvailabilityZonesForLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.EnableAvailabilityZonesForLoadBalancerType implements LoadBalancingBackendMessage { }
+class ModifyLoadBalancerAttributesResponseType extends com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesResponseType implements LoadBalancingBackendMessage { }
+class ModifyLoadBalancerAttributesType extends com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesType implements LoadBalancingBackendMessage { }
+class RegisterInstancesWithLoadBalancerResponseType extends com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerResponseType implements LoadBalancingBackendMessage { }
+class RegisterInstancesWithLoadBalancerType extends com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType implements LoadBalancingBackendMessage { }
+class RemoveTagsResponseType extends com.eucalyptus.loadbalancing.common.msgs.RemoveTagsResponseType implements LoadBalancingBackendMessage { }
+class RemoveTagsType extends com.eucalyptus.loadbalancing.common.msgs.RemoveTagsType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerListenerSSLCertificateResponseType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerListenerSSLCertificateResponseType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerListenerSSLCertificateType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerListenerSSLCertificateType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerPoliciesForBackendServerResponseType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesForBackendServerResponseType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerPoliciesForBackendServerType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesForBackendServerType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerPoliciesOfListenerResponseType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesOfListenerResponseType implements LoadBalancingBackendMessage { }
+class SetLoadBalancerPoliciesOfListenerType extends com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesOfListenerType implements LoadBalancingBackendMessage { }
+
+

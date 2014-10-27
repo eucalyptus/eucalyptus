@@ -21,78 +21,78 @@
 
 <binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_imaging_2014_02_14">
   <namespace uri="http://www.eucalyptus.com/ns/imaging/2014-02-14/" default="elements"/>
-  <mapping class="com.eucalyptus.imaging.ImagingMessage" abstract="true" />
+  <mapping class="com.eucalyptus.imaging.common.ImagingMessage" abstract="true" />
 
-  <mapping name="ImportImage" class="com.eucalyptus.imaging.ImportImageType" extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
+  <mapping name="ImportImage" class="com.eucalyptus.imaging.common.ImportImageType" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
     <value name="description" field="description" usage="optional" />
-    <structure name="image" field="image" usage="required" type="com.eucalyptus.imaging.ImportDiskImage" />
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.imaging.common.ImportDiskImage" />
   </mapping>
-  <mapping name="ImportImageResponse" class="com.eucalyptus.imaging.ImportImageResponseType" extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
-    <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.imaging.DiskImageConversionTask" />
+  <mapping name="ImportImageResponse" class="com.eucalyptus.imaging.common.ImportImageResponseType" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
+    <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.imaging.common.DiskImageConversionTask" />
   </mapping>
-  <mapping name="DescribeConversionTasks" class="com.eucalyptus.imaging.DescribeConversionTasksType" extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
+  <mapping name="DescribeConversionTasks" class="com.eucalyptus.imaging.common.DescribeConversionTasksType" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
     <collection name="conversionTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="conversionTaskIdSet" item-type="java.lang.String">
       <structure name="item">
         <value name="conversionTaskId" />
       </structure>
     </collection>
   </mapping>
-  <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.imaging.DescribeConversionTasksResponseType" extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
+  <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.imaging.common.DescribeConversionTasksResponseType" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
     <structure name="conversionTasks" usage="optional">
       <collection field="conversionTasks" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <structure name="item" type="com.eucalyptus.imaging.DiskImageConversionTask" />
+        <structure name="item" type="com.eucalyptus.imaging.common.DiskImageConversionTask" />
       </collection>
     </structure>
   </mapping>
-  <mapping name="CancelConversionTask" class="com.eucalyptus.imaging.CancelConversionTaskType" extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
+  <mapping name="CancelConversionTask" class="com.eucalyptus.imaging.common.CancelConversionTaskType" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
     <value name="conversionTaskId" field="conversionTaskId" usage="required" />
   </mapping>
-  <mapping name="CancelConversionTaskResponse" class="com.eucalyptus.imaging.CancelConversionTaskResponseType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
+  <mapping name="CancelConversionTaskResponse" class="com.eucalyptus.imaging.common.CancelConversionTaskResponseType"
+    extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.imaging.ImportDiskImage" abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.ImportDiskImage" abstract="true">
     <collection name="diskImageSet" field="diskImageSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="item" type="com.eucalyptus.imaging.ImportDiskImageDetail" />
+      <structure name="item" type="com.eucalyptus.imaging.common.ImportDiskImageDetail" />
     </collection>
-    <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.imaging.ConvertedImageDetail" />
+    <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.imaging.common.ConvertedImageDetail" />
     <value name="description" field="description" usage="optional" />
     <value name="accessKey" field="accessKey" usage="optional" />
     <value name="uploadPolicy" field="uploadPolicy" usage="optional" />
     <value name="uploadPolicySignature" field="uploadPolicySignature" usage="optional" />
   </mapping>
 
-  <mapping class="com.eucalyptus.imaging.ImportDiskImageDetail" abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.ImportDiskImageDetail" abstract="true">
     <value name="id" field="id" usage="required" />
     <value name="format" field="format" usage="required" />
     <value name="bytes" field="bytes" usage="required" />
     <value name="downloadManifestUrl" field="downloadManifestUrl" usage="required" />
   </mapping>
 
-  <mapping class="com.eucalyptus.imaging.ConvertedImageDetail" abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.ConvertedImageDetail" abstract="true">
     <value name="bucket" field="bucket" usage="required" />
     <value name="prefix" field="prefix" usage="optional" />
     <value name="architecture" field="architecture" usage="optional" />
     <value name="imageId" field="imageId" usage="optional" />
   </mapping>
 
-  <mapping class="com.eucalyptus.imaging.DiskImageConversionTask" abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.DiskImageConversionTask" abstract="true">
     <value name="conversionTaskId" field="conversionTaskId" usage="required" />
     <value name="expirationTime" field="expirationTime" usage="optional" />
     <structure name="importDisk" field="importDisk" usage="optional"
-      type="com.eucalyptus.imaging.ImportDiskImage" />
+      type="com.eucalyptus.imaging.common.ImportDiskImage" />
     <value name="state" field="state" usage="required" />
     <value name="statusMessage" field="statusMessage" usage="optional" />
   </mapping>
 
-  <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+  <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.common.PutInstanceImportTaskStatusType"
+    extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage" />
     <value name="instanceId" field="instanceId"/>
     <value name="importTaskId" field="importTaskId"/>
     <value name="status" field="status"/>
@@ -102,35 +102,35 @@
     <value name="bytesConverted" field="bytesConverted" usage="optional"/>
   </mapping>
 
-  <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusResponseType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+  <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.imaging.common.PutInstanceImportTaskStatusResponseType"
+    extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage" />
     <value name="cancelled" field="cancelled"/>
   </mapping>
   
-  <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.GetInstanceImportTaskType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+  <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.common.GetInstanceImportTaskType"
+    extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage" />
     <value name="instanceId" field="instanceId"/>
   </mapping>
 
-  <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.GetInstanceImportTaskResponseType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
-    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+  <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.common.GetInstanceImportTaskResponseType"
+    extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
     <value name="importTaskType" field="importTaskType"/>
-    <structure name="volumeTask" field="volumeTask" usage="optional" type="com.eucalyptus.imaging.VolumeTask" />
-    <structure name="instanceStoreTask" field="instanceStoreTask" usage="optional" type="com.eucalyptus.imaging.InstanceStoreTask" />
+    <structure name="volumeTask" field="volumeTask" usage="optional" type="com.eucalyptus.imaging.common.VolumeTask" />
+    <structure name="instanceStoreTask" field="instanceStoreTask" usage="optional" type="com.eucalyptus.imaging.common.InstanceStoreTask" />
   </mapping>
 
-  <mapping class="com.eucalyptus.imaging.VolumeTask"  abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.VolumeTask"  abstract="true">
     <value name="volumeId" field="volumeId"/>
     <collection name="imageManifestSet" field="imageManifestSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="item" type="com.eucalyptus.imaging.ImageManifest" />
+      <structure name="item" type="com.eucalyptus.imaging.common.ImageManifest" />
     </collection>
   </mapping>
 
-  <mapping class="com.eucalyptus.imaging.InstanceStoreTask"  abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.InstanceStoreTask"  abstract="true">
     <value name="accountId" field="accountId"/>
     <value name="accessKey" field="accessKey"/>
     <value name="uploadPolicy" field="uploadPolicy"/>
@@ -138,12 +138,12 @@
     <value name="s3Url" field="s3Url"/>
     <value name="serviceCertArn" field="serviceCertArn"/>
     <collection name="importImageSet" field="importImageSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="item" type="com.eucalyptus.imaging.ImportDiskImageDetail"/>
+      <structure name="item" type="com.eucalyptus.imaging.common.ImportDiskImageDetail"/>
     </collection>
-    <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.imaging.ConvertedImageDetail"/>
+    <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.imaging.common.ConvertedImageDetail"/>
   </mapping>
   
-  <mapping class="com.eucalyptus.imaging.ImageManifest"  abstract="true">
+  <mapping class="com.eucalyptus.imaging.common.ImageManifest"  abstract="true">
     <value name="manifestUrl" field="manifestUrl"/>
     <value name="format" field="format"/>
   </mapping>

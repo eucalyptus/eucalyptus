@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -28,16 +30,19 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2DHCPOptionsResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2DHCPOptionsProperties;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.CreateDhcpOptionsType;
-import com.eucalyptus.compute.common.CreateRouteTableResponseType;
-import com.eucalyptus.compute.common.CreateRouteTableType;
 import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteDhcpOptionsResponseType;
@@ -53,9 +58,8 @@ import com.eucalyptus.compute.common.DhcpValueType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import org.junit.After;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +71,108 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
 
   private AWSEC2DHCPOptionsProperties properties = new AWSEC2DHCPOptionsProperties();
   private AWSEC2DHCPOptionsResourceInfo info = new AWSEC2DHCPOptionsResourceInfo();
+
+  public AWSEC2DHCPOptionsResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_DHCP_OPTIONS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2DHCPOptionsResourceAction action = (AWSEC2DHCPOptionsResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        action.validateProperties();
+        CreateDhcpOptionsType createDhcpOptionsType = MessageHelper.createMessage(CreateDhcpOptionsType.class, action.info.getEffectiveUserId());
+        DhcpConfigurationItemSetType dhcpConfigurationSet = new DhcpConfigurationItemSetType();
+        dhcpConfigurationSet.setItem(Lists.<DhcpConfigurationItemType>newArrayList());
+        ArrayList<DhcpConfigurationItemType> item = Lists.newArrayList();
+        if (!Strings.isNullOrEmpty(action.properties.getDomainName())) {
+          dhcpConfigurationSet.getItem().add(action.createDhcpConfigurationItemType("domain-name", action.createValueSet(action.properties.getDomainName())));
+        }
+        if (action.properties.getDomainNameServers() != null && !action.properties.getDomainNameServers().isEmpty()) {
+          dhcpConfigurationSet.getItem().add(action.createDhcpConfigurationItemType("domain-name-servers", action.createValueSet(action.properties.getDomainNameServers())));
+        }
+        if (action.properties.getNtpServers() != null && !action.properties.getNtpServers().isEmpty()) {
+          dhcpConfigurationSet.getItem().add(action.createDhcpConfigurationItemType("ntp-servers", action.createValueSet(action.properties.getNtpServers())));
+        }
+        if (action.properties.getNetbiosNameServers() != null && !action.properties.getNetbiosNameServers().isEmpty()) {
+          dhcpConfigurationSet.getItem().add(action.createDhcpConfigurationItemType("netbios-name-servers", action.createValueSet(action.properties.getNetbiosNameServers())));
+        }
+        if (action.properties.getNetbiosNodeType() != null) {
+          dhcpConfigurationSet.getItem().add(action.createDhcpConfigurationItemType("netbios-node-type", action.createValueSet(String.valueOf(action.properties.getNetbiosNodeType()))));
+        }
+        createDhcpOptionsType.setDhcpConfigurationSet(dhcpConfigurationSet);
+        CreateDhcpOptionsResponseType createDhcpOptionsResponseType = AsyncRequests.<CreateDhcpOptionsType, CreateDhcpOptionsResponseType> sendSync(configuration, createDhcpOptionsType);
+        action.info.setPhysicalResourceId(createDhcpOptionsResponseType.getDhcpOptions().getDhcpOptionsId());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2DHCPOptionsResourceAction action = (AWSEC2DHCPOptionsResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_DHCP_OPTIONS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2DHCPOptionsResourceAction action = (AWSEC2DHCPOptionsResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+        // Check dhcp options (return if gone)
+        DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
+        action.setDhcpOptionsId(describeDhcpOptionsType, action.info.getPhysicalResourceId());
+        DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
+        if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+          return action; // already deleted
+        }
+        DeleteDhcpOptionsType deleteDhcpOptionsType = MessageHelper.createMessage(DeleteDhcpOptionsType.class, action.info.getEffectiveUserId());
+        deleteDhcpOptionsType.setDhcpOptionsId(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteDhcpOptionsType,DeleteDhcpOptionsResponseType> sendSync(configuration, deleteDhcpOptionsType);
+        return action;
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      }
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -85,61 +191,6 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2DHCPOptionsResourceInfo) resourceInfo;
-  }
-
-  @Override
-  public int getNumCreateSteps() {
-    return 2;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create dhcp options
-        // property validation
-        validateProperties();
-        CreateDhcpOptionsType createDhcpOptionsType = new CreateDhcpOptionsType();
-        createDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-        DhcpConfigurationItemSetType dhcpConfigurationSet = new DhcpConfigurationItemSetType();
-        dhcpConfigurationSet.setItem(Lists.<DhcpConfigurationItemType>newArrayList());
-        ArrayList<DhcpConfigurationItemType> item = Lists.newArrayList();
-        if (!Strings.isNullOrEmpty(properties.getDomainName())) {
-          dhcpConfigurationSet.getItem().add(createDhcpConfigurationItemType("domain-name", createValueSet(properties.getDomainName())));
-        }
-        if (properties.getDomainNameServers() != null && !properties.getDomainNameServers().isEmpty()) {
-          dhcpConfigurationSet.getItem().add(createDhcpConfigurationItemType("domain-name-servers", createValueSet(properties.getDomainNameServers())));
-        }
-        if (properties.getNtpServers() != null && !properties.getNtpServers().isEmpty()) {
-          dhcpConfigurationSet.getItem().add(createDhcpConfigurationItemType("ntp-servers", createValueSet(properties.getNtpServers())));
-        }
-        if (properties.getNetbiosNameServers() != null && !properties.getNetbiosNameServers().isEmpty()) {
-          dhcpConfigurationSet.getItem().add(createDhcpConfigurationItemType("netbios-name-servers", createValueSet(properties.getNetbiosNameServers())));
-        }
-        if (properties.getNetbiosNodeType() != null) {
-          dhcpConfigurationSet.getItem().add(createDhcpConfigurationItemType("netbios-node-type", createValueSet(String.valueOf(properties.getNetbiosNodeType()))));
-        }
-        createDhcpOptionsType.setDhcpConfigurationSet(dhcpConfigurationSet);
-        CreateDhcpOptionsResponseType createDhcpOptionsResponseType = AsyncRequests.<CreateDhcpOptionsType, CreateDhcpOptionsResponseType> sendSync(configuration, createDhcpOptionsType);
-        info.setPhysicalResourceId(createDhcpOptionsResponseType.getDhcpOptions().getDhcpOptionsId());
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // tag dhcp options
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
-        }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
   }
 
   private DhcpConfigurationItemType createDhcpConfigurationItemType(String key, DhcpValueSetType valueSet) {
@@ -174,33 +225,6 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
     }
   }
 
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    // Check dhcp optionss (return if gone)
-    DescribeDhcpOptionsType describeDhcpOptionsType = new DescribeDhcpOptionsType();
-    describeDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-    setDhcpOptionsId(describeDhcpOptionsType, info.getPhysicalResourceId());
-    DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-    if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
-      return; // already deleted
-    }
-    DeleteDhcpOptionsType deleteDhcpOptionsType = new DeleteDhcpOptionsType();
-    deleteDhcpOptionsType.setEffectiveUserId(info.getEffectiveUserId());
-    deleteDhcpOptionsType.setDhcpOptionsId(info.getPhysicalResourceId());
-    AsyncRequests.<DeleteDhcpOptionsType,DeleteDhcpOptionsResponseType> sendSync(configuration, deleteDhcpOptionsType);
-  }
-
   private void setDhcpOptionsId(DescribeDhcpOptionsType describeDhcpOptionsType, String dhcpOptionsId) {
     DhcpOptionsIdSetType dhcpOptionsSet = new DhcpOptionsIdSetType();
     ArrayList<DhcpOptionsIdSetItemType> item = Lists.newArrayList();
@@ -214,9 +238,17 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
 
 
   @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
+
+  @Override
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+  }
+
 
 }
 

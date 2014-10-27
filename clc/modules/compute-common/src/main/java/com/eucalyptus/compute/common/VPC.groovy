@@ -29,21 +29,21 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import edu.ucsb.eucalyptus.msgs.VpcMessageValidation
+import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation
 import groovy.transform.Canonical
 
 import static com.eucalyptus.util.MessageValidation.validateRecursively;
 import static com.eucalyptus.util.MessageValidation.ValidatableMessage;
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRange
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegex
-import static edu.ucsb.eucalyptus.msgs.VpcMessageValidation.FieldRegexValue
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
 
 class VpcMessage extends ComputeMessage implements ValidatableMessage {
 
   Map<String,String> validate( ) {
     validateRecursively(
         Maps.<String,String>newTreeMap( ),
-        new VpcMessageValidation.VpcMessageValidationAssistant( ),
+        new ComputeMessageValidation.ComputeMessageValidationAssistant( ),
         "",
         this )
   }

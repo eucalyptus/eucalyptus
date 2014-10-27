@@ -220,8 +220,8 @@ public class ActivityManager {
       .add( new ScalingTask( 3600, ActivityTask.Expiry            ) { @Override void doWork( ) throws Exception { deleteExpiredActivities( ); } } )
       .add( new ScalingTask(   10, ActivityTask.ZoneHealth        ) { @Override void doWork( ) throws Exception { updateUnavailableZones( ); } } )
       .add( new ScalingTask(   10, ActivityTask.Recovery          ) { @Override void doWork( ) throws Exception { progressUnstableStates( ); } } )
-      .add( new ScalingTask(   10, ActivityTask.Scaling           ) { @Override void doWork( ) throws Exception { scalingActivities( ); } } )
       .add( new ScalingTask(   10, ActivityTask.Scaling           ) { @Override void doWork( ) throws Exception { replaceUnhealthy( ); } } )
+      .add( new ScalingTask(   10, ActivityTask.Scaling           ) { @Override void doWork( ) throws Exception { scalingActivities( ); } } )
       .add( new ScalingTask(   10, ActivityTask.InstanceCleanup   ) { @Override void doWork( ) throws Exception { runningInstanceChecks( ); } } )
       .add( new ScalingTask(   10, ActivityTask.MetricsSubmission ) { @Override void doWork( ) throws Exception { submitMetrics( ); } } )
       .build( );
@@ -2669,7 +2669,7 @@ public class ActivityManager {
       final EucalyptusClient client = context.getEucalyptusClient();
 
       final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( );
-      for ( final String subnetId : subnetIds ) {
+      for ( final String subnetId : Iterables.concat( Lists.newArrayList( "verbose" ), subnetIds ) ) {
         final SubnetIdSetItemType subnetIdItem = new SubnetIdSetItemType( );
         subnetIdItem.setSubnetId( subnetId );
         subnetIdItems.add( subnetIdItem );
@@ -2890,6 +2890,7 @@ public class ActivityManager {
 
       final DescribeSecurityGroupsType describeSecurityGroupsType
           = new DescribeSecurityGroupsType();
+      describeSecurityGroupsType.getSecurityGroupSet().add( "verbose" );
       describeSecurityGroupsType.getFilterSet().add(
           filter( identifiers ? "group-id" : "group-name", groups ) );
 

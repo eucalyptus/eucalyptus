@@ -73,6 +73,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+/**
+ * NOTE: Please do not add service specific IAM policy details here.
+ */
 public class PolicySpec {
   
   public static final String VERSION = "Version";
@@ -104,7 +107,6 @@ public class PolicySpec {
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
   public static final String VENDOR_CLOUDFORMATION = "cloudformation";
-  public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
   
   public static final String ALL_ACTION = "*";
@@ -474,35 +476,6 @@ public class PolicySpec {
   public static final String CLOUDFORMATION_UPDATESTACK = "updatestack";
   public static final String CLOUDFORMATION_VALIDATETEMPLATE = "validatetemplate";
 
-  //Load Balancing actions, based on API Reference (API Version 2012-06-01)
-  public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
-  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
-  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
-  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
-  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
-  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
-  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
-  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
-  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
-  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
-  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
-  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
-  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
-  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
-  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
-  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
-
-  // Non-AWS, Euca-specific ELB operations
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
-  public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
-  
   // Euca-specific Imaging Service operations
   public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";
   public static final String IMAGINGSERVICE_GETINSTANCEIMPORTTASK = "getinstanceimporttask";
@@ -512,9 +485,10 @@ public class PolicySpec {
       .put( VENDOR_STS, ImmutableSet.of( VENDOR_IAM ) )
       .build();
 
-  // Set of vendors with case sensitive resource names
-  public static final Set<String> VENDORS_CASE_SENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
-      .add( VENDOR_IAM )
+  // Set of vendors with case insensitive resource names
+  public static final Set<String> VENDORS_CASE_INSENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
+      .add( VENDOR_EC2 )
+      .add( VENDOR_S3 )
       .build();
 
   // Action syntax
@@ -625,21 +599,13 @@ public class PolicySpec {
     return null;
   }
   
-  public static String objectFullName( String bucketName, String objectKey ) {
-    if ( objectKey.startsWith( "/" ) ) {
-      return bucketName + objectKey;
-    } else {
-      return bucketName + "/" + objectKey;
-    }
-  }
-  
   public static String describeAction( final String vendor, final String resource ) {
     return "describe" + resource + "s";
   }
 
   public static String canonicalizeResourceName( final String type,
                                                  final String name ) {
-    return type == null || VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
+    return type == null || !VENDORS_CASE_INSENSITIVE_RESOURCES.contains( vendor( type ) ) ?
         name :
         name.toLowerCase();
   }

@@ -19,8 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.OwnerFullName;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -58,7 +61,7 @@ import java.util.Map;
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stacks" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackEntity extends AbstractPersistent {
+public class StackEntity extends AbstractPersistent implements CloudFormationMetadata.StackMetadata{
 
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "create_operation_timestamp")
@@ -128,7 +131,9 @@ public class StackEntity extends AbstractPersistent {
   @Column(name = "stack_id", nullable = false )
   String stackId;
 
-  @Column( name = "stack_policy", length =  16384)
+  @Column( name = "stack_policy")
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String stackPolicy;
 
   @Column(name = "stack_name", nullable = false )
@@ -148,7 +153,9 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String tagsJson;
 
-  @Column( name = "template_body", length =  307200)
+  @Column( name = "template_body" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String templateBody;
 
   @Column(name = "template_format_version", nullable = false )
@@ -159,6 +166,16 @@ public class StackEntity extends AbstractPersistent {
 
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
+
+  @Override
+  public String getDisplayName() {
+    return stackName;
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance(accountId);
+  }
 
   public static class Output {
     String description;
@@ -490,5 +507,12 @@ public class StackEntity extends AbstractPersistent {
 
   public void setRecordDeleted(Boolean recordDeleted) {
     this.recordDeleted = recordDeleted;
+  }
+
+  public static StackEntity exampleUndeletedWithAccount(String accountId) {
+    StackEntity stackEntity = new StackEntity();
+    stackEntity.setAccountId(accountId);
+    stackEntity.setRecordDeleted(false);
+    return stackEntity;
   }
 }

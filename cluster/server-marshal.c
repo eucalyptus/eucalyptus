@@ -1581,7 +1581,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
         vol = adb_volumeType_create(env);
         adb_volumeType_set_volumeId(vol, env, src->volumes[i].volumeId);
         adb_volumeType_set_remoteDev(vol, env, src->volumes[i].attachmentToken);
-        adb_volumeType_set_localDev(vol, env, src->volumes[i].localDev);
+        adb_volumeType_set_localDev(vol, env, src->volumes[i].devName);
         adb_volumeType_set_state(vol, env, src->volumes[i].stateName);
 
         adb_ccInstanceType_add_volumes(dst, env, vol);

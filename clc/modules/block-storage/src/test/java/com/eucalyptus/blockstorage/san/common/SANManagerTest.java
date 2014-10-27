@@ -216,7 +216,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected one SANVolumeInfo to exist",
-                    results != null || results.size() == 1);
+                    results != null && results.size() == 1);
             SANVolumeInfo created = results.get(0);
             assertTrue("expected volume id to be " + volId + ", but was " + created.getVolumeId(),
                     volId.equals(created.getVolumeId()));
@@ -257,7 +257,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected one SANVolumeInfo to exist",
-                    results != null || results.size() == 1);
+                    results != null && results.size() == 1);
             SANVolumeInfo created = results.get(0);
             assertTrue("expected volume id to be " + volId + ", but was " + created.getVolumeId(),
                     volId.equals(created.getVolumeId()));
@@ -345,7 +345,7 @@ public class SANManagerTest {
     public void getSnapshotSize_NoSnapshotTest() throws Exception {
         final SANProvider sanProvider = context.mock(SANProvider.class);
         SANManager test = new SANManager(sanProvider);
-        int sizeReturned = test.getSnapshotSize("foo");
+        test.getSnapshotSize("foo");
     }
 
     @Test
@@ -508,7 +508,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected one SANVolumeInfo to exist",
-                    results != null || results.size() == 1);
+                    results != null && results.size() == 1);
             SANVolumeInfo created = results.get(0);
             assertTrue("expected volume id to be " + volId + ", but was " + created.getVolumeId(),
                     volId.equals(created.getVolumeId()));
@@ -596,7 +596,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected one SANVolumeInfo to exist",
-                    results != null || results.size() == 1);
+                    results != null && results.size() == 1);
             SANVolumeInfo created = results.get(0);
             assertTrue("expected volume id to be " + snapId + ", but was " + created.getVolumeId(),
                     snapId.equals(created.getVolumeId()));
@@ -649,13 +649,15 @@ public class SANManagerTest {
 
         final SANProvider sanProvider = context.mock(SANProvider.class);
         context.checking(new Expectations(){{
-            oneOf(sanProvider).addInitiatorRule(sanVolId, volIqn); will(returnValue(new Integer(1)));
+        	oneOf(sanProvider).getProtocol(); will(returnValue("fooprotocol"));
+        	oneOf(sanProvider).getProviderName(); will(returnValue("fooprovider"));
+            oneOf(sanProvider).addInitiatorRule(sanVolId, volIqn); will(returnValue(new String("1")));
             oneOf(sanProvider).getVolumeConnectionString(volId); will(returnValue("fooconnectionstring"));
             oneOf(sanProvider).getAuthType(); will(returnValue("fooauthtype"));
             oneOf(sanProvider).getOptionalChapUser(); will(returnValue("foooptchapuser"));
         }});
 
-        String expected = "foooptchapuser,fooauthtype,1,fooconnectionstring";
+        String expected = "fooprotocol,fooprovider,foooptchapuser,fooauthtype,1,fooconnectionstring";
         SANManager test = new SANManager(sanProvider);
         String result = test.exportVolume(volId, volIqn);
         assertTrue("expected result to be '" + expected + "' but was '" + result + "'",
@@ -778,8 +780,8 @@ public class SANManagerTest {
 
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
-            assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+            assertTrue("expected one SANVolumeInfo to exist",
+                    results != null && results.size() == 1);
         }
     }
 
@@ -871,7 +873,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -911,7 +913,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -948,7 +950,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -989,7 +991,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -1026,7 +1028,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -1067,7 +1069,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected two SANVolumeInfo to exist",
-                    results != null || results.size() == 2);
+                    results != null && results.size() == 2);
         }
     }
 
@@ -1097,7 +1099,7 @@ public class SANManagerTest {
         final SANProvider sanProvider = context.mock(SANProvider.class);
         context.checking(new Expectations(){{
             oneOf(sanProvider).createSnapshotHolder(rezPrefix + volId + rezSuffix, snapSz * 1024l); will(returnValue("foo-iqn"));
-            oneOf(sanProvider).addInitiatorRule(rezPrefix + volId + rezSuffix, "sc-foo-iqn"); will(returnValue(new Integer(1)));
+            oneOf(sanProvider).addInitiatorRule(rezPrefix + volId + rezSuffix, "sc-foo-iqn"); will(returnValue(new String("1")));
             oneOf(sanProvider).connectTarget("foo-iqn,1"); will(returnValue(new StorageResource(volId, "foopath", StorageResource.Type.FILE) {
                 @Override
                 public Long getSize() throws Exception {
@@ -1127,7 +1129,7 @@ public class SANManagerTest {
         try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
             List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
             assertTrue("expected one SANVolumeInfo to exist",
-                    results != null || results.size() == 1);
+                    results != null && results.size() == 1);
         }
     }
 }

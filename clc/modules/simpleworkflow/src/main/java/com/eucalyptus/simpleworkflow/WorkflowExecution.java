@@ -126,13 +126,16 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Column( name = "domain", length = 256, nullable = false, updatable = false )
   private String domainName;
 
+  @Column( name = "domain_uuid", nullable = false, updatable = false )
+  private String domainUuid;
+
   @Column( name = "task_list", length = 256, nullable = false, updatable = false )
   private String taskList;
 
   @Column( name = "exec_start_to_close_timeout", nullable = false, updatable = false )
   private Integer executionStartToCloseTimeout;
 
-  @Column( name = "task_start_to_close_timeout", nullable = false, updatable = false )
+  @Column( name = "task_start_to_close_timeout", updatable = false )
   private Integer taskStartToCloseTimeout;
 
   @Column( name = "cancel_requested", nullable = false )
@@ -183,6 +186,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @OrderColumn( name = "event_id" )
   private List<WorkflowHistoryEvent> workflowHistory;
 
+  @OneToMany( fetch = FetchType.LAZY, cascade = { CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "workflowExecution" )
+  @OrderColumn( name = "scheduled_event_id" )
+  private List<ActivityTask> activityTasks;
+
   protected WorkflowExecution( ) {
   }
 
@@ -195,8 +202,8 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
                                           final Domain domain,
                                           final WorkflowType workflowType,
                                           final String workflowId,
-                                          @Nullable final String childPolicy,
-                                          @Nullable final String taskList,
+                                          final String childPolicy,
+                                          final String taskList,
                                           @Nullable final Integer executionStartToCloseTimeout,
                                           @Nullable final Integer taskStartToCloseTimeout,
                                           final List<String> tags,
@@ -204,25 +211,18 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     final WorkflowExecution workflowExecution = new WorkflowExecution( owner, name );
     workflowExecution.setDomain( domain );
     workflowExecution.setDomainName( domain.getDisplayName( ) );
+    workflowExecution.setDomainUuid( domain.getNaturalId( ) );
     workflowExecution.setWorkflowType( workflowType );
     workflowExecution.setWorkflowId( workflowId );
     workflowExecution.setState( ExecutionStatus.Open );
-    workflowExecution.setChildPolicy( childPolicy == null ?
-        workflowType.getDefaultChildPolicy() :
-        childPolicy );
-    workflowExecution.setTaskList( taskList == null ?
-        workflowType.getDefaultTaskList() :
-        taskList );
-    workflowExecution.setExecutionStartToCloseTimeout( executionStartToCloseTimeout == null ?
-        workflowType.getDefaultExecutionStartToCloseTimeout() :
-        executionStartToCloseTimeout );
-    workflowExecution.setTaskStartToCloseTimeout( taskStartToCloseTimeout == null ?
-        workflowType.getDefaultTaskStartToCloseTimeout() :
-        taskStartToCloseTimeout );
+    workflowExecution.setChildPolicy( childPolicy );
+    workflowExecution.setTaskList( taskList );
+    workflowExecution.setExecutionStartToCloseTimeout( executionStartToCloseTimeout );
+    workflowExecution.setTaskStartToCloseTimeout( taskStartToCloseTimeout );
     workflowExecution.setTagList( tags );
     workflowExecution.setCancelRequested( false );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
-    workflowExecution.setDecisionTimestamp( new Date() );
+    workflowExecution.setDecisionTimestamp( new Date( ) );
     workflowExecution.setWorkflowHistory( Lists.<WorkflowHistoryEvent>newArrayList( ) );
     for ( final WorkflowEventAttributes attributes : eventAttributes ) {
       workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create( workflowExecution, attributes ) );
@@ -407,6 +407,14 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   public void setDomainName( final String domainName ) {
     this.domainName = domainName;
+  }
+
+  public String getDomainUuid( ) {
+    return domainUuid;
+  }
+
+  public void setDomainUuid( final String domainUuid ) {
+    this.domainUuid = domainUuid;
   }
 
   public String getTaskList( ) {

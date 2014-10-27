@@ -213,7 +213,7 @@ public interface SANProvider {
 	 * @return Integer id of the lun exported
 	 * @throws EucalyptusCloudException
 	 */
-	public Integer addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+	public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
 	/**
 	 * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
@@ -297,6 +297,9 @@ public interface SANProvider {
 	 * @throws EucalyptusCloudException
 	 */
 	public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
-		
+	
+	public String getProtocol();
+	
+	public String getProviderName();
 }
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,12 +64,10 @@ package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.codec.net.URLCodec;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.util.B64;
@@ -125,7 +123,7 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
     final AccessKey key =
         AccessKeys.lookupAccessKey( credentials.getQueryId( ), credentials.getSecurityToken( ) );
-    if ( !key.isActive() ) throw new AuthException( "Invalid access key or token" );
+    if ( !key.isActive() ) throw new InvalidAccessKeyAuthException( "Invalid access key or token" );
     return key;
   }
   

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities
-import com.eucalyptus.loadbalancing.common.backend.msgs.Instance
-import com.eucalyptus.loadbalancing.common.backend.msgs.Listener
-import com.eucalyptus.context.Context;
+import com.eucalyptus.loadbalancing.common.msgs.Instance
+import com.eucalyptus.loadbalancing.common.msgs.Listener
+import com.eucalyptus.context.Context
 import com.eucalyptus.event.GenericEvent
 
 /**
@@ -28,38 +28,41 @@ import com.eucalyptus.event.GenericEvent
  *
  */
 class LoadbalancingEvent extends GenericEvent<String> { 
-	String loadBalancer="";
-	Context context;
+	String loadBalancer=""
+	Context context
 	
 	@Override
 	public String toString(){
-		return "evt: "+this.getClass().toString();
+		return "evt: "+this.getClass().toString()
 	}
 }
 
 class LoadbalancingUserEvent extends LoadbalancingEvent{ }
-class LoadbalancingAdminEvent extends LoadbalancingEvent{ }
 
 class NewLoadbalancerEvent extends LoadbalancingUserEvent { 
-	Collection<String> zones;
-	
+	Collection<String> zones
+	Map<String,String> zoneToSubnetIdMap
 }
 class DeleteLoadbalancerEvent extends LoadbalancingUserEvent { }
 class CreateListenerEvent extends LoadbalancingUserEvent {
-	Collection<Listener> listeners;
+	Collection<Listener> listeners
 }
 class DeleteListenerEvent extends LoadbalancingUserEvent {
-	Collection<Integer> ports;
+	Collection<Integer> ports
 }
 class RegisterInstancesEvent extends LoadbalancingUserEvent {
-	Collection<Instance> instances;
+	Collection<Instance> instances
 }
 class DeregisterInstancesEvent extends LoadbalancingUserEvent {
-	Collection<Instance> instances;
+	Collection<Instance> instances
 }
 class EnabledZoneEvent extends LoadbalancingUserEvent {
-	Collection<String> zones;
+	Collection<String> zones
+	Map<String,String> zoneToSubnetIdMap
 }
 class DisabledZoneEvent extends LoadbalancingUserEvent {
-	Collection<String> zones;
+	Collection<String> zones
+}
+class ApplySecurityGroupsEvent extends LoadbalancingUserEvent {
+	Map<String,String> securityGroupIdsToNames
 }

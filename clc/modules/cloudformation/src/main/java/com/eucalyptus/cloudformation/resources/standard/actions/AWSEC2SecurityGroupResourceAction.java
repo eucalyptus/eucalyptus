@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -31,55 +33,69 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Secu
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2SecurityGroupRule;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
+import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AllocateAddressResponseType;
-import com.eucalyptus.compute.common.AllocateAddressType;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
-import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.CreateTagsResponseType;
-import com.eucalyptus.compute.common.CreateTagsType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
 import com.eucalyptus.compute.common.CreateSecurityGroupType;
+import com.eucalyptus.compute.common.CreateTagsResponseType;
+import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteSecurityGroupResponseType;
 import com.eucalyptus.compute.common.DeleteSecurityGroupType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
+import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
+  public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 300;
+
   private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
+
+  public AWSEC2SecurityGroupResourceAction() {
+    for (Step createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (Step deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -100,55 +116,62 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     info = (AWSEC2SecurityGroupResourceInfo) resourceInfo;
   }
 
-  @Override
-  public int getNumCreateSteps() {
-    return 4;
-  }
-
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    switch (stepNum) {
-      case 0: // create security group
-        CreateSecurityGroupType createSecurityGroupType = new CreateSecurityGroupType();
-        if (!Strings.isNullOrEmpty(properties.getGroupDescription())) {
-          createSecurityGroupType.setGroupDescription(properties.getGroupDescription());
+  private enum CreateSteps implements Step {
+    CREATE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        CreateSecurityGroupType createSecurityGroupType = MessageHelper.createMessage(CreateSecurityGroupType.class, action.info.getEffectiveUserId());
+        if (!Strings.isNullOrEmpty(action.properties.getGroupDescription())) {
+          createSecurityGroupType.setGroupDescription(action.properties.getGroupDescription());
         }
-        if (!Strings.isNullOrEmpty(properties.getVpcId())) {
-          createSecurityGroupType.setVpcId(properties.getVpcId());
+        if (!Strings.isNullOrEmpty(action.properties.getVpcId())) {
+          createSecurityGroupType.setVpcId(action.properties.getVpcId());
         }
-        String groupName = getDefaultPhysicalResourceId();
+        String groupName = action.getDefaultPhysicalResourceId();
         createSecurityGroupType.setGroupName(groupName);
-        createSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
         CreateSecurityGroupResponseType createSecurityGroupResponseType = AsyncRequests.<CreateSecurityGroupType,CreateSecurityGroupResponseType> sendSync(configuration, createSecurityGroupType);
         String groupId = createSecurityGroupResponseType.getGroupId();
-        if (!Strings.isNullOrEmpty(properties.getVpcId())) {
-          info.setPhysicalResourceId(groupId);
+        if (!Strings.isNullOrEmpty(action.properties.getVpcId())) {
+          action.info.setPhysicalResourceId(groupId);
         } else {
-          info.setPhysicalResourceId(groupName);
+          action.info.setPhysicalResourceId(groupName);
         }
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
-        break;
-      case 1: // create tags
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(info, getStackEntity());
-        if (properties.getTags() != null && !properties.getTags().isEmpty()) {
-          TagHelper.checkReservedEC2TemplateTags(properties.getTags());
-          tags.addAll(properties.getTags());
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        action.info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
+        return action;
+      }
+
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
         }
-        CreateTagsType createTagsType = new CreateTagsType();
-        createTagsType.setUserId(info.getEffectiveUserId());
-        createTagsType.markPrivileged(); // due to stack aws: tags
-        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue()));
+        // due to stack aws: tags
+        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+        createTagsType.setResourcesSet(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue()));
         createTagsType.setTagSet(EC2Helper.createTagSet(tags));
         AsyncRequests.<CreateTagsType,CreateTagsResponseType> sendSync(configuration, createTagsType);
-        break;
-      case 2: // create ingress rules
-        if (properties.getSecurityGroupIngress() != null && !properties.getSecurityGroupIngress().isEmpty()) {
-          for (EC2SecurityGroupRule ec2SecurityGroupRule : properties.getSecurityGroupIngress()) {
-            AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = new AuthorizeSecurityGroupIngressType();
-            authorizeSecurityGroupIngressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-            authorizeSecurityGroupIngressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+        return action;
+      }
+
+    },
+    CREATE_INGRESS_RULES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getSecurityGroupIngress() != null && !action.properties.getSecurityGroupIngress().isEmpty()) {
+          for (EC2SecurityGroupRule ec2SecurityGroupRule : action.properties.getSecurityGroupIngress()) {
+            AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = MessageHelper.createMessage(AuthorizeSecurityGroupIngressType.class, action.info.getEffectiveUserId());
+            authorizeSecurityGroupIngressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
 
             // Can't specify cidr and source security group
             if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp()) &&
@@ -178,7 +201,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
               // I think SourceSecurityGroupOwnerId is needed here.  If not provided, use the local account id
               String sourceSecurityGroupOwnerId = ec2SecurityGroupRule.getSourceSecurityGroupOwnerId();
               if (Strings.isNullOrEmpty(sourceSecurityGroupOwnerId)) {
-                sourceSecurityGroupOwnerId = stackEntity.getAccountId();
+                sourceSecurityGroupOwnerId = action.getStackEntity().getAccountId();
               }
               ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, ec2SecurityGroupRule.getSourceSecurityGroupName(), null)));
             }
@@ -186,20 +209,24 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
             AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
           }
         }
-        break;
-      case 3: // create egress rules
-        if (properties.getSecurityGroupEgress() != null && !properties.getSecurityGroupEgress().isEmpty()) {
+        return action;
+      }
+    },
+    CREATE_EGRESS_RULES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getSecurityGroupEgress() != null && !action.properties.getSecurityGroupEgress().isEmpty()) {
           // revoke default
-          RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = new RevokeSecurityGroupEgressType();
-          revokeSecurityGroupEgressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-          revokeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+          RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = MessageHelper.createMessage(RevokeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
+          revokeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
           revokeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(DEFAULT_EGRESS_RULE()));
           RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
 
-          for (EC2SecurityGroupRule ec2SecurityGroupRule : properties.getSecurityGroupEgress()) {
-            AuthorizeSecurityGroupEgressType authorizeSecurityGroupEgressType = new AuthorizeSecurityGroupEgressType();
-            authorizeSecurityGroupEgressType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-            authorizeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue());
+          for (EC2SecurityGroupRule ec2SecurityGroupRule : action.properties.getSecurityGroupEgress()) {
+            AuthorizeSecurityGroupEgressType authorizeSecurityGroupEgressType = MessageHelper.createMessage(AuthorizeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
+            authorizeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue());
 
             // Can't specify cidr and Destination security group
             if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp()) && !Strings.isNullOrEmpty(ec2SecurityGroupRule.getDestinationSecurityGroupId())) {
@@ -220,11 +247,56 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
             AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgressResponseType = AsyncRequests.<AuthorizeSecurityGroupEgressType, AuthorizeSecurityGroupEgressResponseType> sendSync(configuration, authorizeSecurityGroupEgressType);
           }
         }
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
+        return action;
+      }
+    };
+
+    // None of these tasks require retry...
+
+    @Override
+    public RetryPolicy getRetryPolicy() {
+      return null;
+    }
+
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // See if group was ever populated
+        if (action.info.getPhysicalResourceId() == null) return action;
+        // See if group exists now
+        String groupId = JsonHelper.getJsonNodeFromString(action.info.getGroupId()).textValue();
+        DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
+        describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(groupId));
+        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+          AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+        ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+        if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
+          return action;
+        }
+        // Delete the group (may fail)
+        DeleteSecurityGroupType deleteSecurityGroupType = MessageHelper.createMessage(DeleteSecurityGroupType.class, action.info.getEffectiveUserId());
+        deleteSecurityGroupType.setGroupId(groupId);
+        try {
+          AsyncRequests.<DeleteSecurityGroupType, DeleteSecurityGroupResponseType>sendSync(configuration, deleteSecurityGroupType);
+          return action;
+        } catch (Exception ex) {
+          Throwable cause = Throwables.getRootCause(ex);
+          throw new ValidationFailedException(ex.getMessage());
+        }
+      }
+
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return new StandardResourceRetryPolicy(SECURITY_GROUP_MAX_DELETE_RETRY_SECS).getPolicy();
+      }
     }
   }
+
 
   private static final IpPermissionType DEFAULT_EGRESS_RULE() {
     IpPermissionType ipPermissionType = new IpPermissionType();
@@ -234,50 +306,15 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    Exception finalException = null;
-    // Need to retry this as we may have instances terminating from an autoscaling group...
-    for (int i=0;i<60;i++) { // sleeping for 5 seconds 60 times... (5 minutes)
-      Thread.sleep(5000L);
-      String groupId = JsonHelper.getJsonNodeFromString(info.getGroupId()).textValue();
-      DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
-      describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-      describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(groupId));
-      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-        AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
-      ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-      if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
-        return;
-      }
-
-      DeleteSecurityGroupType deleteSecurityGroupType = new DeleteSecurityGroupType();
-      deleteSecurityGroupType.setGroupId(groupId);
-      deleteSecurityGroupType.setEffectiveUserId(getResourceInfo().getEffectiveUserId());
-      try {
-        DeleteSecurityGroupResponseType deleteSecurityGroupResponseType = AsyncRequests.<DeleteSecurityGroupType,DeleteSecurityGroupResponseType> sendSync(configuration, deleteSecurityGroupType);
-        return;
-      } catch (Exception ex) {
-        LOG.debug("Error deleting security group.  Will retry");
-        finalException = ex;
-      }
-    }
-    throw finalException;
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

@@ -79,85 +79,90 @@ $NOT_REQUIRED = "not_required";
 
 $DEFAULT = "default";
 
-$ISCSIADM = untaint(`which iscsiadm`);
-$MULTIPATH = untaint(`which multipath`);
-$DMSETUP = untaint(`which dmsetup`);
-
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
-
-# check binaries
-if (!-x $ISCSIADM) {
-  print STDERR "Unable to find iscsiadm\n";
-  do_exit(1);
-}
 
 # check input params
 $dev_string = untaint(shift @ARGV);
-($euca_home, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
+($euca_home, $volume_id, $target_device, $target_serial, $target_bus, $ceph_user, $ceph_keyring, $ceph_conf, $protocol, $provider, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
 
 if (is_null_or_empty($euca_home)) {
   print STDERR "EUCALYPTUS path is not defined:$dev_string\n";
   do_exit(1);
 }
 
-$EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
-%conf_iface_map = get_conf_iface_map();
-
-# prepare target paths:
-# <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
-if ((@paths < 1) || ((@paths % 3) != 0)) {
-  print STDERR "Target paths are not complete:$dev_string\n";
-  do_exit(1);
-}
-
-$multipath = 0;
-$multipath = 1 if @paths > 3;
-if (($multipath == 1) && (!-x $MULTIPATH)) {
-  print STDERR "Unable to find multipath\n";
-  do_exit(1);
-}
-sanitize_path(\@paths);
-
-if (is_null_or_empty($lun)) {
-  $lun = -1;
-}
-
-#Rescan
-rescan_all_sessions();
-
-@devices = ();
-# iterate through each path, login/refresh for the new lun
-while (@paths > 0) {
-  $conf_iface = shift(@paths);
-  $ip = shift(@paths);
-  $store = shift(@paths);
-  # get netdev from iface name using eucalyptus.conf
-  $netdev = get_netdev_by_conf($conf_iface);
-  # get dev from lun
-  push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
-}
-# get the actual device
-# Non-multipathing: the iSCSI device
-# Multipathing: the mpath device
-if ($multipath == 0) {
-  $localdev = $devices[0];
+if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
+  print STDERR "Found rbd as protocol in connection string, getting target is a no-op\n";
+  print "no-op";
 } else {
-  $localdev = retry_until_exists(\&get_mpath_device, \@devices, 5);
-}
-if (is_null_or_empty($localdev)) {
-  print STDERR "Unable to get attached target device.\n";
-  do_exit(1);
-}
-if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
-} else {
-  # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
-  run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
-  sleep(2);
-  $localdev = "/dev/mapper/$localdev";
-}
+  $ISCSIADM = untaint(`which iscsiadm`);
+  $MULTIPATH = untaint(`which multipath`);
+  $DMSETUP = untaint(`which dmsetup`);
+  
+  # check binaries
+  if (!-x $ISCSIADM) {
+    print STDERR "Unable to find iscsiadm\n";
+    do_exit(1);
+  }
 
-print "$localdev";
+  $EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
+  %conf_iface_map = get_conf_iface_map();
+
+  # prepare target paths:
+  # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
+  if ((@paths < 1) || ((@paths % 3) != 0)) {
+    print STDERR "Target paths are not complete:$dev_string\n";
+    do_exit(1);
+  }
+
+  $multipath = 0;
+  $multipath = 1 if @paths > 3;
+  if (($multipath == 1) && (!-x $MULTIPATH)) {
+    print STDERR "Unable to find multipath\n";
+    do_exit(1);
+  }
+  sanitize_path(\@paths);
+
+  if (is_null_or_empty($lun)) {
+    $lun = -1;
+  }
+
+  #Rescan
+  rescan_all_sessions();
+
+  @devices = ();
+  # iterate through each path, login/refresh for the new lun
+  while (@paths > 0) {
+    $conf_iface = shift(@paths);
+    $ip = shift(@paths);
+    $store = shift(@paths);
+    # get netdev from iface name using eucalyptus.conf
+    $netdev = get_netdev_by_conf($conf_iface);
+    # get dev from lun
+    push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+  }
+  # get the actual device
+  # Non-multipathing: the iSCSI device
+  # Multipathing: the mpath device
+  if ($multipath == 0) {
+    $localdev = $devices[0];
+  } else {
+    $localdev = retry_until_exists(\&get_mpath_device, \@devices, 5);
+  }
+  if (is_null_or_empty($localdev)) {
+    print STDERR "Unable to get attached target device.\n";
+    do_exit(1);
+  }
+  if ($multipath == 0) {
+    $localdev = "/dev/$localdev";
+  } else {
+    # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
+    run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
+    sleep(2);
+    $localdev = "/dev/mapper/$localdev";
+  }
+
+  print "$localdev";
+}
 
 ##################################################################
 sub retry_until_exists {

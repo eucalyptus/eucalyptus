@@ -77,6 +77,7 @@ import com.eucalyptus.util.LogUtil
 Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool_remote' );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
+ClassLoader.getSystemClassLoader().loadClass('com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory');
 String pool_db_driver = 'org.postgresql.Driver';
 final DatabaseInfo dbInfo = DatabaseInfo.getDatabaseInfo();
 String db_host = dbInfo.getAppendOnlyHost();
@@ -118,13 +119,18 @@ def setupDbPool = { String db_name ->
     // Setup proxool
   proxool_config = new Properties();
   proxool_config.putAll(default_pool_props);
-  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}";
+  String sslParam = "ssl=true&sslfactory=com.eucalyptus.database.activities.VmDatabaseSSLSocketFactory"
+  String timeout = "connectTimeout=7&socketTimeout=7&loginTimeout=7" 
+  /* default 30 sec timeout causes shutdown hanging when remote db is disconnected
+   * When shutting down proxool pools, proxool's lock wait until the existing connection pools are given socket timeout exception. 
+   * The worst case wait time is { # of remote DBs x timeout }, which is roughly 14 seconds. 
+   */
+  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}/${db_name}?${sslParam}&${timeout}";
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
   
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
-  ProxoolFacade.disableShutdownHook();
 }
 
 if ("localhost".equals(db_host)){

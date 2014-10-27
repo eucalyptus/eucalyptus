@@ -22,25 +22,23 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
 import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.CreateInstanceProfileType;
 import com.eucalyptus.auth.euare.CreateRoleResponseType;
 import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteRoleResponseType;
 import com.eucalyptus.auth.euare.DeleteRoleType;
 import com.eucalyptus.auth.euare.EuareMessage;
 import com.eucalyptus.auth.euare.GetRolePolicyResponseType;
@@ -55,27 +53,17 @@ import com.eucalyptus.auth.euare.ListRolePoliciesResponseType;
 import com.eucalyptus.auth.euare.ListRolePoliciesType;
 import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
-import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
-import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
-import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
@@ -84,24 +72,17 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationNames;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.SecurityGroups;
-import com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityResponseType;
-import com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityType;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
-import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
-import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -109,32 +90,25 @@ import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.AddMultiARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.CreateMultiARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -142,31 +116,40 @@ import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribeInternetGatewaysResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInternetGatewaysType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
+import edu.ucsb.eucalyptus.msgs.DescribeVpcsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeVpcsType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.GroupItemType;
+import edu.ucsb.eucalyptus.msgs.Filter;
+import edu.ucsb.eucalyptus.msgs.GroupIdSetType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import edu.ucsb.eucalyptus.msgs.InternetGatewayIdSetItemType;
+import edu.ucsb.eucalyptus.msgs.InternetGatewayIdSetType;
+import edu.ucsb.eucalyptus.msgs.InternetGatewayType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RemoveMultiANameResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
-import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordResponseType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupIdSetItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SubnetIdSetItemType;
+import edu.ucsb.eucalyptus.msgs.SubnetIdSetType;
+import edu.ucsb.eucalyptus.msgs.SubnetType;
+import edu.ucsb.eucalyptus.msgs.VpcType;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -180,27 +163,22 @@ public class EucalyptusActivityTasks {
 	}
 
 	private interface ActivityContext<TM extends BaseMessage, TC extends ComponentId> {
-	  String getUserId();
 	  DispatchingClient<TM, TC> getClient();
 	}
-	
-	private class EuareSystemActivity implements ActivityContext<EuareMessage, Euare>{
-		private EuareSystemActivity(){}
 
-		@Override
-		public String getUserId() {
-			try{
-				return Accounts.lookupSystemAdmin().getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}		
+	private abstract class ActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> implements ActivityContext<TM, TC>{
+		private final Class<TC> componentIdClass;
+		private ActivityContextSupport( final Class<TC> componentIdClass ) {
+			this.componentIdClass = componentIdClass;
 		}
 
+		abstract String getUserId( );
+
 		@Override
-		public DispatchingClient<EuareMessage, Euare> getClient() {
+		public DispatchingClient<TM, TC> getClient() {
 			try{
-				final DispatchingClient<EuareMessage, Euare> client =
-					new DispatchingClient<>( this.getUserId(), Euare.class );
+				final DispatchingClient<TM, TC> client =
+						new DispatchingClient<>( this.getUserId(), this.componentIdClass );
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -208,962 +186,486 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
-	private class EuareUserActivity implements ActivityContext<EuareMessage, Euare> {
-	  private String userId = null;
-	  private EuareUserActivity(final String userId){ this.userId = userId; }
 
-	  @Override
-    public String getUserId() {
-      return this.userId;
-    }
+	private abstract class SystemActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> extends ActivityContextSupport<TM, TC>{
+		private SystemActivityContextSupport( final Class<TC> componentIdClass ) {
+			super( componentIdClass );
+		}
 
-    @Override
-    public DispatchingClient<EuareMessage, Euare> getClient() {
-      try{
-        final DispatchingClient<EuareMessage, Euare> client =
-          new DispatchingClient<>(this.getUserId(), Euare.class);
-        client.init();
-        return client;
-      }catch(Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-	  
-	}
-	
-	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScaling>{
-		private AutoScalingSystemActivity(){	}
-
-		@Override
-		public String getUserId() {
+		public final String getUserId() {
 			try{
 				return Accounts.lookupSystemAdmin().getUserId();
 			}catch(AuthException ex){
 				throw Exceptions.toUndeclared(ex);
 			}
 		}
-
-		@Override
-		public DispatchingClient<AutoScalingMessage, AutoScaling> getClient() {
-			try{
-				final DispatchingClient<AutoScalingMessage, AutoScaling> client =
-					new DispatchingClient<>( this.getUserId(),AutoScaling.class );
-				client.init();
-				return client;
-			}catch(Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-		
 	}
-	
-	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatch>{
+
+	private abstract class UserActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> extends ActivityContextSupport<TM, TC>{
 		private String userId = null;
+
+		private UserActivityContextSupport(
+				final Class<TC> componentIdClass,
+				final String userId
+		) {
+			super( componentIdClass );
+			this.userId = userId;
+		}
+
+		public final String getUserId() {
+			return userId;
+		}
+	}
+
+	private class EuareSystemActivity extends SystemActivityContextSupport<EuareMessage, Euare>{
+		private EuareSystemActivity( ){ super( Euare.class ); }
+	}
+	
+	private class EuareUserActivity extends UserActivityContextSupport<EuareMessage, Euare> {
+	  private EuareUserActivity(final String userId){ super( Euare.class, userId ); }
+	}
+	
+	private class AutoScalingSystemActivity extends SystemActivityContextSupport<AutoScalingMessage, AutoScaling>{
+		private AutoScalingSystemActivity(){ super( AutoScaling.class ); }
+	}
+	
+	private class CloudWatchUserActivity extends UserActivityContextSupport<CloudWatchMessage, CloudWatch>{
 		private CloudWatchUserActivity(final String userId){
-			this.userId = userId;
-		}
-		
-		@Override
-		public String getUserId() {
-			return this.userId;
-		}
-
-		@Override
-		public DispatchingClient<CloudWatchMessage, CloudWatch> getClient() {
-			try{
-				final DispatchingClient<CloudWatchMessage, CloudWatch> client =
-					new DispatchingClient<>(this.getUserId(), CloudWatch.class);
-				client.init();
-				return client;
-			}catch(Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
+			super( CloudWatch.class, userId );
 		}
 	}
 	
-	private class DnsSystemActivity implements ActivityContext<DnsMessage, Dns> {
-
-		@Override
-		public String getUserId() {
-			try{
-				return Accounts.lookupSystemAdmin().getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-
-		@Override
-		public DispatchingClient<DnsMessage, Dns> getClient() {
-			try{
-				final DispatchingClient<DnsMessage, Dns> client
-					= new DispatchingClient<>(this.getUserId(), Dns.class);
-				client.init();
-				return client;
-			}catch(Exception e){
-				throw Exceptions.toUndeclared(e);
-			}
-		}
-		
+	private class DnsSystemActivity extends SystemActivityContextSupport<DnsMessage, Dns> {
+		private DnsSystemActivity() { super( Dns.class ); }
 	}
 	
-	private class EmpyreanSystemActivity implements ActivityContext<EmpyreanMessage, Empyrean>{
-
-		@Override
-		public String getUserId() {
-			try{
-				return Accounts.lookupSystemAdmin( ).getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-
-		@Override
-		public DispatchingClient<EmpyreanMessage, Empyrean> getClient() {
-			try{
-				final DispatchingClient<EmpyreanMessage, Empyrean> client =
-						new DispatchingClient<>(this.getUserId(),Empyrean.class);
-				client.init();
-				return client;
-			}catch(Exception e){
-				throw Exceptions.toUndeclared(e);
-			}
-		}
+	private class EmpyreanSystemActivity extends SystemActivityContextSupport<EmpyreanMessage, Empyrean>{
+		private EmpyreanSystemActivity() { super( Empyrean.class ); }
 	}
 	
-	private class EucalyptusSystemActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
-		@Override
-		public String getUserId(){
-			// TODO: SPARK: Impersonation?
-			try{
-				// ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
-				return Accounts.lookupSystemAdmin( ).getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-
-		@Override
-		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient(){
-			try {
-				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
-			    	  new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
-			    client.init();
-			    return client;
-			} catch ( Exception e ) {
-			    throw Exceptions.toUndeclared( e );
-			}
-		}
+	private class EucalyptusSystemActivity extends SystemActivityContextSupport<EucalyptusMessage, Eucalyptus>{
+		private EucalyptusSystemActivity() { super( Eucalyptus.class ); }
 	}
 
-	private class EucalyptusBaseSystemActivity implements ActivityContext<BaseMessage, Eucalyptus>{
-		@Override
-		public String getUserId(){
-			try{
-				// ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
-				return Accounts.lookupSystemAdmin( ).getUserId();
-			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-
-		@Override
-		public DispatchingClient<BaseMessage, Eucalyptus> getClient(){
-			try {
-				final DispatchingClient<BaseMessage, Eucalyptus> client =
-						new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
-			    client.init();
-			    return client;
-			} catch ( Exception e ) {
-				throw Exceptions.toUndeclared( e );
-			}
-		}
-	}
-
-	private class EucalyptusUserActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
-		private String userId = null;
+	private class EucalyptusUserActivity extends UserActivityContextSupport<EucalyptusMessage, Eucalyptus>{
 		private EucalyptusUserActivity(final String userId){
-			this.userId = userId;
-		}
-		
-		@Override
-		public String getUserId() {
-			// TODO Auto-generated method stub
-			return this.userId;
-		}
-
-		@Override
-		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
-			// TODO Auto-generated method stub
-			try{
-				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
-					new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
-				client.init();
-				return client;
-			}catch(Exception e){
-				throw Exceptions.toUndeclared(e);
-			}
-		}
-		
-	}
-	
-	public List<String> launchInstances(final String availabilityZone, final String imageId, 
-			final String instanceType, final int numInstances){
-		return launchInstances(availabilityZone, imageId, instanceType, null,  null, numInstances);
-	}
-	
-	public List<String> launchInstances(final String availabilityZone, final String imageId, 
-				final String instanceType, String groupName, final String userData, final int numInstances){
-		LOG.info("launching instances at zone="+availabilityZone+", imageId="+imageId+", group="+groupName);
-		final EucalyptusLaunchInstanceTask launchTask 
-			= new EucalyptusLaunchInstanceTask(availabilityZone, imageId, instanceType, numInstances);
-		if(userData!=null)
-			launchTask.setUserData(userData);
-		if(groupName != null)
-			launchTask.setSecurityGroup(groupName);
-		final CheckedListenableFuture<Boolean> result = launchTask.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				final List<String> instances = launchTask.getInstanceIds();
-				return instances;
-			}else
-				throw new EucalyptusActivityException("failed to launch the instance");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
+			super( Eucalyptus.class, userId );
 		}
 	}
-	
-	public List<String> terminateInstances(final List<String> instances){
-		LOG.info(String.format("terminating %d instances", instances.size()));
-		if(instances.size() <=0)
-			return instances;
-		
-		final EucalyptusTerminateInstanceTask terminateTask = new EucalyptusTerminateInstanceTask(instances);
-		final CheckedListenableFuture<Boolean> result = terminateTask.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				final List<String> terminated = terminateTask.getTerminatedInstances();
-				return terminated;
-			}else
-				throw new EucalyptusActivityException("failed to terminate the instances");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
 	
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		final CheckedListenableFuture<Boolean> result = describeTask.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				final List<RunningInstancesItemType> describe = describeTask.getResult();
-				return describe;
-			}else
-				throw new EucalyptusActivityException("failed to describe the instances");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf( describeTask, new EucalyptusSystemActivity(), "failed to describe the instances" );
 	}
 
 	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		final CheckedListenableFuture<Boolean> result = describeTask.dispatch(new EucalyptusUserActivity(userId));
-
-		try{
-			if(result.get()){
-				final List<RunningInstancesItemType> describe = describeTask.getResult();
-				return describe;
-			}else
-				throw new EucalyptusActivityException("failed to describe the instances");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf( describeTask, new EucalyptusUserActivity(userId), "failed to describe the instances" );
 	}
 	
 	public List<ServiceStatusType> describeServices(final String componentType){
 		//LOG.info("calling describe-services -T "+componentType);
 		final EucalyptusDescribeServicesTask serviceTask = new EucalyptusDescribeServicesTask(componentType);
-		final CheckedListenableFuture<Boolean> result = serviceTask.dispatch(new EmpyreanSystemActivity());
-		try{
-			if(result.get()){
-				return serviceTask.getServiceDetais();
-			}else
-				throw new EucalyptusActivityException("failed to describe services");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf( serviceTask, new EmpyreanSystemActivity(), "failed to describe services" );
 	}
 	
-	public List<VmTypeDetails> describeVMTypes(){
-		final EucalyptusDescribeVMTypesTask task = new EucalyptusDescribeVMTypesTask();
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusBaseSystemActivity());
-		try{
-			if(result.get()){
-				final List<VmTypeDetails> describe = task.getVMTypes();
-				return describe;
-			}else
-				throw new EucalyptusActivityException("failed to describe the vm types");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-
-	}
-
 	public List<ClusterInfoType> describeAvailabilityZones(boolean verbose){
-		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask(verbose);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				final List<ClusterInfoType> describe = task.getAvailabilityZones();
-				return describe;
-			}else
-				throw new EucalyptusActivityException("failed to describe the availability zones");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-
+		return resultOf(
+				new EucalyptusDescribeAvailabilityZonesTask(verbose),
+				new EucalyptusSystemActivity(),
+				"failed to describe the availability zones"
+		);
 	}
 
-	public void createSecurityGroup(String groupName, String groupDesc){
+	public void createSystemSecurityGroup( String groupName, String groupDesc ){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get() && task.getGroupId()!=null){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create the group "+groupName);
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult( task, new EucalyptusSystemActivity(), "failed to create the group "+groupName );
 	}
 	
-	public void deleteSecurityGroup(String groupName){
+	public void deleteSystemSecurityGroup( String groupName ){
 		final EucalyptusDeleteGroupTask task = new EucalyptusDeleteGroupTask(groupName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete the group "+groupName);
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+		checkResult( task, new EucalyptusSystemActivity(), "failed to delete the group "+groupName );
 	}
 	
-	public List<SecurityGroupItemType> describeSecurityGroups(List<String> groupNames){
-		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(groupNames);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusActivityException("failed to describe security groups");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
+		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null,null);
+		return resultOf( task, new EucalyptusSystemActivity(), "failed to describe security groups" );
 	}
 	
-	public void authorizeSecurityGroup(String groupName, String protocol, int portNum){
-		final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupName, protocol, portNum);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException(String.format("failed to authorize:%s, %s, %d ", groupName, protocol, portNum));
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
+		final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupNameOrId, protocol, portNum);
+		checkResult(
+				task,
+				new EucalyptusSystemActivity(),
+				String.format("failed to authorize:%s, %s, %d ", groupNameOrId, protocol, portNum)
+		);
 	}
 	
-	public void revokeSecurityGroup(String groupName, String protocol, int portNum){
+	public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum ){
 		final EucalyptusRevokeIngressRuleTask task = new EucalyptusRevokeIngressRuleTask(groupName, protocol, portNum);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException(String.format("failed to revoke:%s, %s, %d ", groupName, protocol, portNum));
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+		checkResult(
+				task,
+				new EucalyptusSystemActivity(),
+				String.format("failed to revoke:%s, %s, %d ", groupName, protocol, portNum)
+		);
 	}
-	
-	
+
+	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( String userId, String vpcId, String groupNameFilter ){
+		final EucalyptusDescribeSecurityGroupTask task =
+				new EucalyptusDescribeSecurityGroupTask( null, null, Lists.newArrayList( groupNameFilter ), vpcId );
+		return resultOf( task, new EucalyptusUserActivity( userId ), "failed to describe security groups" );
+	}
+
+	public void createUserSecurityGroup( String userId, String groupName, String groupDesc ){
+		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask( groupName, groupDesc );
+		checkResult( task, new EucalyptusUserActivity( userId ), "failed to create the group "+groupName );
+	}
+
 	public void createARecord(String zone, String name){
 		final DnsCreateNameRecordTask task = new DnsCreateNameRecordTask(zone, name);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create multi A record ");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+		checkResult(
+				task,
+				new DnsSystemActivity(),
+				"failed to create multi A record "
+		);
 	}
 	
 	public void addARecord(String zone, String name, String address){
 		final DnsAddARecordTask task = new DnsAddARecordTask(zone, name, address);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to add A record ");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		} 
+		checkResult(
+				task,
+				new DnsSystemActivity(),
+				"failed to add A record "
+		);
 	}
 	
 	public void removeARecord(String zone, String name, String address){
 		final DnsRemoveARecordTask task = new DnsRemoveARecordTask(zone, name, address);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to remove A record ");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}  
+		checkResult(
+				task,
+				new DnsSystemActivity(),
+				"failed to remove A record "
+		);
 	}
 	
 	public void removeMultiARecord(String zone, String name){
 		final DnsRemoveMultiARecordTask task = new DnsRemoveMultiARecordTask(zone, name);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new DnsSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to remove multi A records ");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}  
+		checkResult(
+				task,
+				new DnsSystemActivity(),
+				"failed to remove multi A records "
+		);
 	}
 	
 	public void putCloudWatchMetricData(final String userId, final String namespace, final MetricData data){
 		final CloudWatchPutMetricDataTask task = new CloudWatchPutMetricDataTask(namespace, data);
-
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new CloudWatchUserActivity(userId));
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to remove multi A records");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				task,
+				new CloudWatchUserActivity(userId),
+				"failed to put metric data"
+		);
 	}
 	
-	public void createLaunchConfiguration(final String imageId, final String instanceType, final String instanceProfileName, final String launchConfigName,
-			final String securityGroup, final String keyName, final String userData){
+	public void createLaunchConfiguration(
+		final String imageId,
+		final String instanceType,
+		final String instanceProfileName,
+		final String launchConfigName,
+		final Collection<String> securityGroupNamesOrIds,
+		final String keyName,
+		final String userData,
+		final boolean associatePublicIp
+	){
 		final AutoScalingCreateLaunchConfigTask task = 
-				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroup, keyName, userData);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create launch configuration");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds, keyName, userData, associatePublicIp);
+		checkResult(
+				task,
+				new AutoScalingSystemActivity( ),
+				"failed to create launch configuration"
+		);
 	}
 	
-	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final int capacity, final String launchConfigName, 
-			final String tagKey, final String tagValue){
+	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final String vpcZoneIdentifier,
+			final int capacity, final String launchConfigName, final String tagKey, final String tagValue){
 		final AutoScalingCreateGroupTask task =
-				new AutoScalingCreateGroupTask(groupName, availabilityZones, capacity, launchConfigName, tagKey, tagValue);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create autoscaling group");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+				new AutoScalingCreateGroupTask(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue);
+		checkResult(
+				task,
+				new AutoScalingSystemActivity( ),
+				"failed to create autoscaling group"
+		);
 	}
 	
 	public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName){
-		final AutoScalingDescribeLaunchConfigsTask task =
-				new AutoScalingDescribeLaunchConfigsTask(launchConfigName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get() && task.getResult()!=null){
-				return task.getResult();
-			}else
-				throw new EucalyptusActivityException("failed to describe launch configuration");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new AutoScalingDescribeLaunchConfigsTask(launchConfigName),
+				new AutoScalingSystemActivity(),
+				"failed to describe launch configuration"
+		);
 	}
 	
 	public void deleteLaunchConfiguration(final String launchConfigName){
-		final AutoScalingDeleteLaunchConfigTask task =
-				new AutoScalingDeleteLaunchConfigTask(launchConfigName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete launch configuration");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new AutoScalingDeleteLaunchConfigTask(launchConfigName),
+				new AutoScalingSystemActivity( ),
+				"failed to delete launch configuration"
+		);
 	}
 	
 	public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances){
-		final AutoScalingDeleteGroupTask task = 
-				new AutoScalingDeleteGroupTask(groupName, terminateInstances);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete autoscaling group");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new AutoScalingDeleteGroupTask(groupName, terminateInstances),
+				new AutoScalingSystemActivity( ),
+				"failed to delete autoscaling group"
+		);
 	}
 	
 	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups(final List<String> groupNames){
-		final AutoScalingDescribeGroupsTask task =
-				new AutoScalingDescribeGroupsTask(groupNames);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return task.getResponse();
-			}else
-				throw new EucalyptusActivityException("failed to describe autoscaling groups");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new AutoScalingDescribeGroupsTask(groupNames),
+				new AutoScalingSystemActivity(),
+				"failed to describe autoscaling groups"
+		);
 	}
-	
+
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity){
 		updateAutoScalingGroup(groupName, zones, capacity, null);
 	}
 	
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity, final String launchConfigName){
-		final AutoScalingUpdateGroupTask task=
-				new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to update autoscaling group");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
-	public void setAutoScalingDesiredCapacity(final String groupName, final int capacity) {
-	  final AutoScalingSetDesiredCapacityTask task =
-	      new AutoScalingSetDesiredCapacityTask(groupName, capacity);
-	  final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-    try{
-      if(result.get()){
-        return;
-      }else
-        throw new EucalyptusActivityException("failed to set autoscaling group capacity");
-    }catch(Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
+		checkResult(
+				new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName),
+				new AutoScalingSystemActivity( ),
+				"failed to update autoscaling group"
+		);
 	}
 	
 	public List<RoleType> listRoles(final String pathPrefix){
-		final EuareListRolesTask task = 
-				new EuareListRolesTask(pathPrefix);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return task.getRoles();
-			}else
-				throw new EucalyptusActivityException("failed to list IAM roles");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EuareListRolesTask(pathPrefix),
+				new EuareSystemActivity(),
+				"failed to list IAM roles"
+		);
 	}
 	
 	public RoleType createRole(final String roleName, final String path, final String assumeRolePolicy){
-		final EuareCreateRoleTask task =
-				new EuareCreateRoleTask(roleName, path, assumeRolePolicy);
-
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return task.getRole();
-			}else
-				throw new EucalyptusActivityException("failed to create IAM role");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EuareCreateRoleTask(roleName, path, assumeRolePolicy),
+				new EuareSystemActivity(),
+				"failed to create IAM role"
+		);
 	}
 	
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
-		final EucaDescribeKeyPairsTask task =
-				new EucaDescribeKeyPairsTask(keyNames);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusActivityException("failed to describe keypairs");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EucaDescribeKeyPairsTask(keyNames),
+				new EucalyptusSystemActivity(),
+				"failed to describe keypairs"
+		);
 	}
-	
-	public ServerCertificateType getServerCertificate(final String userId, final String certName){
-	  final EuareGetServerCertificateTask task =
-	      new EuareGetServerCertificateTask(certName);
-	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareUserActivity(userId));
-	  try{
-	    if(result.get()){
-	      return task.getServerCertificate();
-	    }else
-	      throw new EucalyptusActivityException("failed to get server certificate");
-	  }catch(Exception ex){
-	    throw Exceptions.toUndeclared(ex);
-	  }
+
+	public List<SecurityGroupItemType> describeUserSecurityGroupsById(
+			final String userId,
+			final String vpcId,
+			final Collection<String> securityGroupIds ){
+		return resultOf(
+				new EucaDescribeSecurityGroupsTask( vpcId, securityGroupIds ),
+				new EucalyptusUserActivity( userId ),
+				"failed to describe security groups"
+		);
+	}
+
+	public void modifySecurityGroups(
+			final String instanceId,
+			final Collection<String> securityGroupIds
+	) {
+		checkResult(
+				new EucalyptusModifySecurityGroupsTask( instanceId, securityGroupIds ),
+				new EucalyptusSystemActivity( ),
+				"failed to modify security groups"
+		);
+	}
+
+	public List<VpcType> describeVpcs(final Collection<String> vpcIds ){
+		return resultOf(
+				new EucaDescribeVpcsTask( vpcIds ),
+				new EucalyptusSystemActivity( ),
+				"failed to describe vpcs"
+		);
+	}
+
+	public Optional<VpcType> defaultVpc( final String userId ) {
+		return Iterables.tryFind( resultOf(
+				new EucaDescribeVpcsTask( true ),
+				new EucalyptusUserActivity( userId ),
+				"failed to describe default vpc"
+		), Predicates.alwaysTrue() );
+	}
+
+	public List<SubnetType> describeSubnets(final Collection<String> subnetIds ){
+		return resultOf(
+				new EucaDescribeSubnetsTask( subnetIds ),
+				new EucalyptusSystemActivity(),
+				"failed to describe subnets"
+		);
+	}
+
+
+	public List<SubnetType> describeSubnetsByZone(
+			final String vpcId,
+			final Boolean defaultSubnet,
+			final Collection<String> zones ){
+		return resultOf(
+				new EucaDescribeSubnetsTask( vpcId, defaultSubnet, zones ),
+				new EucalyptusSystemActivity(),
+				"failed to describe subnets"
+		);
+	}
+
+	public List<InternetGatewayType> describeInternetGateways(final Collection<String> vpcIds ){
+		return resultOf(
+				new EucaDescribeInternetGatewaysTask(vpcIds),
+				new EucalyptusSystemActivity( ),
+				"failed to describe internet gateways"
+		);
+	}
+
+  public ServerCertificateType getServerCertificate(final String userId, final String certName){
+		return resultOf(
+				new EuareGetServerCertificateTask(certName),
+				new EuareUserActivity(userId),
+				"failed to get server certificate"
+		);
 	}
 	
 	public void deleteRole(final String roleName){
-		final EuareDeleteRoleTask task =
-				new EuareDeleteRoleTask(roleName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete IAM role");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new EuareDeleteRoleTask(roleName),
+				new EuareSystemActivity( ),
+				"failed to delete IAM role"
+		);
 	}
 	
 	public List<InstanceProfileType> listInstanceProfiles(String pathPrefix){
-		final EuareListInstanceProfilesTask task =
-				new EuareListInstanceProfilesTask(pathPrefix);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return task.getInstanceProfiles();
-			}else
-				throw new EucalyptusActivityException("failed to delete IAM role");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EuareListInstanceProfilesTask(pathPrefix),
+				new EuareSystemActivity(),
+				"failed to list IAM instance profile"
+		);
 	}
 	
 	public InstanceProfileType createInstanceProfile(String profileName, String path){
-		final EuareCreateInstanceProfileTask task =
-				new EuareCreateInstanceProfileTask(profileName, path);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return task.getInstanceProfile();
-			}else
-				throw new EucalyptusActivityException("failed to create IAM instance profile");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EuareCreateInstanceProfileTask(profileName, path),
+				new EuareSystemActivity(),
+				"failed to create IAM instance profile"
+		);
 	}
 	
 	public void deleteInstanceProfile(String profileName){
-		final EuareDeleteInstanceProfileTask task =
-				new EuareDeleteInstanceProfileTask(profileName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete IAM instance profile");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new EuareDeleteInstanceProfileTask(profileName),
+				new EuareSystemActivity( ),
+				"failed to delete IAM instance profile"
+		);
 	}
 	
 	public void addRoleToInstanceProfile(String instanceProfileName, String roleName){
-		final EuareAddRoleToInstanceProfileTask task =
-				new EuareAddRoleToInstanceProfileTask(instanceProfileName, roleName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to add role to the instance profile");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new EuareAddRoleToInstanceProfileTask(instanceProfileName, roleName),
+				new EuareSystemActivity( ),
+				"failed to add role to the instance profile"
+		);
 	}
 	
 	public void removeRoleFromInstanceProfile(String instanceProfileName, String roleName){
-	  final EuareRemoveRoleFromInstanceProfileTask task =
-	      new EuareRemoveRoleFromInstanceProfileTask(instanceProfileName, roleName);
-	   final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-	    try{
-	      if(result.get()){
-	        return;
-	      }else
-	        throw new EucalyptusActivityException("failed to remove role from the instance profile");
-	    }catch(Exception ex){
-	      throw Exceptions.toUndeclared(ex);
-	    } 
+		checkResult(
+				new EuareRemoveRoleFromInstanceProfileTask(instanceProfileName, roleName),
+				new EuareSystemActivity( ),
+				"failed to remove role from the instance profile"
+		);
 	}
 	
 	public List<String> listRolePolicies(final String roleName){
-	  final EuareListRolePoliciesTask task =
-	      new EuareListRolePoliciesTask(roleName);
-	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-    try{
-      if(result.get()){
-        return task.getResult();
-      }else
-        throw new EucalyptusActivityException("failed to list role's policies");
-    }catch(Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
+		return resultOf(
+				new EuareListRolePoliciesTask(roleName),
+				new EuareSystemActivity(),
+				"failed to list role's policies"
+		);
 	}
 	
 	public GetRolePolicyResult getRolePolicy(String roleName, String policyName){
-		final EuareGetRolePolicyTask task =
-				new EuareGetRolePolicyTask(roleName, policyName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusActivityException("failed to get role's policy");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		return resultOf(
+				new EuareGetRolePolicyTask(roleName, policyName),
+				new EuareSystemActivity(),
+				"failed to get role's policy"
+		);
 	}
 	
 	public void putRolePolicy(String roleName, String policyName, String policyDocument){
-		final EuarePutRolePolicyTask task = 
-				new EuarePutRolePolicyTask(roleName, policyName, policyDocument);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to put role's policy");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new EuarePutRolePolicyTask(roleName, policyName, policyDocument),
+				new EuareSystemActivity( ),
+				"failed to put role's policy"
+		);
 	}
 	
 	public void deleteRolePolicy(String roleName, String policyName){
-		final EuareDeleteRolePolicyTask task =
-				new EuareDeleteRolePolicyTask(roleName, policyName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete role's policy");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
+		checkResult(
+				new EuareDeleteRolePolicyTask(roleName, policyName),
+				new EuareSystemActivity( ),
+				"failed to delete role's policy"
+		);
 	}
 	
 	public List<ImageDetails> describeImages(final List<String> imageIds){
-		final EucaDescribeImagesTask task =
-				new EucaDescribeImagesTask(imageIds);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusActivityException("failed to describe keypairs");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);	
-		}
+		return resultOf(
+				new EucaDescribeImagesTask(imageIds),
+				new EucalyptusSystemActivity(),
+				"failed to describe images"
+		);
 	}
 	
 	public void createTags(final String tagKey, final String tagValue, final List<String> resources){
-		final EucaCreateTagsTask task =
-				new EucaCreateTagsTask(tagKey, tagValue, resources);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create tags");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);	
-		}
+		checkResult(
+				new EucaCreateTagsTask(tagKey, tagValue, resources),
+				new EucalyptusSystemActivity( ),
+				"failed to create tags"
+		);
 	}
 	
 	public void deleteTags(final String tagKey, final String tagValue, final List<String> resources){
-		final EucaDeleteTagsTask task = 
-				new EucaDeleteTagsTask(tagKey, tagValue, resources);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete tags");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);	
-		}
+		checkResult(
+				new EucaDeleteTagsTask(tagKey, tagValue, resources),
+				new EucalyptusSystemActivity( ),
+				"failed to delete tags"
+		);
 	}
 	
-	public void createOrUpdateAutoscalingTags(final String tagKey, final String tagValue, final String asgName){
-		final AutoscalingCreateOrUpdateTagsTask task =
-				new AutoscalingCreateOrUpdateTagsTask(tagKey, tagValue, asgName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to create/update autoscaling tags");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);	
-		}
-	}
-	
-	public void deleteAutoscalingTags(final String tagKey, final String tagValue, final String asgName){
-		final AutoscalingDeleteTagsTask task =
-				new AutoscalingDeleteTagsTask(tagKey, tagValue, asgName);
-		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
-		try{
-			if(result.get()){
-				return;
-			}else
-				throw new EucalyptusActivityException("failed to delete autoscaling tags");
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared(ex);	
-		}
-	}
-	
-	private class EucaDescribeImagesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<ImageDetails>> {
 		private List<String> imageIds = null;
-		private List<ImageDetails> result = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
 			this.imageIds = imageIds;
 		}
 		
-		private DescribeImagesType describeImages(){
+		DescribeImagesType getRequest(){
 			final DescribeImagesType req = new DescribeImagesType();
 			if(this.imageIds!=null && this.imageIds.size()>0){
-				req.setImagesSet(new ArrayList(imageIds));
+				req.setImagesSet(new ArrayList<>(imageIds));
 			}
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(describeImages(), callback);				
-		}
 
 		@Override
-		void dispatchSuccess(ActivityContext<EucalyptusMessage, Eucalyptus> context, 
-				EucalyptusMessage response) {
+		List<ImageDetails> extractResult(EucalyptusMessage response) {
 			final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
-			result = resp.getImagesSet();			
-		}
-		
-		List<ImageDetails> getResult(){
-			return this.result;
+			return resp.getImagesSet();
 		}
 	}
-	
-	private class AutoscalingDeleteTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
-		private String tagKey = null;
-		private String tagValue = null;
-		private String asgName = null;
-		
-		private AutoscalingDeleteTagsTask(final String tagKey, final String tagValue, final String asgName){
-			this.tagKey = tagKey;
-			this.tagValue = tagValue;
-			this.asgName = asgName;
-		}
-		
-		private com.eucalyptus.autoscaling.common.msgs.DeleteTagsType deleteTags(){
-			final com.eucalyptus.autoscaling.common.msgs.DeleteTagsType req = new com.eucalyptus.autoscaling.common.msgs.DeleteTagsType();
-			final Tags tags = new Tags();
-			final TagType tag = new TagType();
-			tag.setKey(this.tagKey);
-			tag.setValue(this.tagValue);
-			tag.setPropagateAtLaunch(true);
-			tag.setResourceType("auto-scaling-group");
-			tag.setResourceId(this.asgName);
-			tags.setMember(Lists.newArrayList(tag));
-			req.setTags(tags);
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(deleteTags(), callback);	
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType resp = (com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType) response;
-		}	
-	}
-	
-	private class AutoscalingCreateOrUpdateTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
-		private String tagKey = null;
-		private String tagValue = null;
-		private String asgName = null;
-		
-		private AutoscalingCreateOrUpdateTagsTask(final String tagKey, final String tagValue, final String asgName){
-			this.tagKey = tagKey;
-			this.tagValue = tagValue;
-			this.asgName = asgName;
-		}
-		
-		private CreateOrUpdateTagsType createOrUpdateTags(){
-			final CreateOrUpdateTagsType req = new CreateOrUpdateTagsType();
-			final Tags tags = new Tags();
-			final TagType tag = new TagType();
-			tag.setKey(this.tagKey);
-			tag.setValue(this.tagValue);
-			tag.setPropagateAtLaunch(true);
-			tag.setResourceType("auto-scaling-group");
-			tag.setResourceId(this.asgName);
-			tags.setMember(Lists.newArrayList(tag));
-			req.setTags(tags);
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(createOrUpdateTags(), callback);	
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final CreateOrUpdateTagsResponseType resp = (CreateOrUpdateTagsResponseType) response;			
-		}
-		
-	}
-	
 	
 	private class EucaDeleteTagsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
 		private String tagKey = null;
@@ -1176,7 +678,7 @@ public class EucalyptusActivityTasks {
 			this.resources = resources;
 		}
 		
-		private DeleteTagsType deleteTags(){
+		DeleteTagsType getRequest(){
 			final DeleteTagsType req = new DeleteTagsType();
 			req.setResourcesSet(Lists.newArrayList(this.resources));
 			final DeleteResourceTag tag = new DeleteResourceTag();
@@ -1184,22 +686,6 @@ public class EucalyptusActivityTasks {
 			tag.setValue(this.tagValue);
 			req.setTagSet(Lists.newArrayList(tag));
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(deleteTags(), callback);				
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
 		}
 	}
 	
@@ -1212,7 +698,7 @@ public class EucalyptusActivityTasks {
 			this.tagValue = tagValue;
 			this.resources = resources;
 		}
-		private CreateTagsType createTags(){
+		CreateTagsType getRequest(){
 			final CreateTagsType req = new CreateTagsType();
 			req.setResourcesSet(Lists.newArrayList(this.resources));
 			final ResourceTag tag = new ResourceTag();
@@ -1221,93 +707,170 @@ public class EucalyptusActivityTasks {
 			req.setTagSet(Lists.newArrayList(tag));
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(createTags(), callback);	
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final CreateTagsResponseType resp = (CreateTagsResponseType) response;
-		}
 	}
 	
-	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<DescribeKeyPairsResponseItemType>> {
 		private List<String> keyNames = null;
-		private List<DescribeKeyPairsResponseItemType> result = null;
-		private EucaDescribeKeyPairsTask(){}
-		private EucaDescribeKeyPairsTask(final String keyName){
-			this.keyNames = Lists.newArrayList(keyName);
-		}
 		private EucaDescribeKeyPairsTask(final List<String> keyNames){
 			this.keyNames = keyNames;
 		}
 		
-		private DescribeKeyPairsType describeKeyPairs(){
+		DescribeKeyPairsType getRequest(){
 			final DescribeKeyPairsType req = new DescribeKeyPairsType();
 			if(this.keyNames!=null){
-				req.setKeySet(new ArrayList<String>(this.keyNames));
+				req.setKeySet(new ArrayList<>(this.keyNames));
 			}
 			return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(describeKeyPairs(), callback);	
+		List<DescribeKeyPairsResponseItemType> extractResult(EucalyptusMessage response) {
+			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
+			return resp.getKeySet();
+		}
+	}
+
+
+	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SecurityGroupItemType>> {
+		private String vpcId = null;
+		private Collection<String> securityGroupIds = null;
+		private EucaDescribeSecurityGroupsTask( final String vpcId, final Collection<String> securityGroupIds){
+			this.vpcId = vpcId;
+			this.securityGroupIds = securityGroupIds;
+		}
+
+		DescribeSecurityGroupsType getRequest( ){
+			final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType( );
+			if ( vpcId != null ) {
+				req.getFilterSet( ).add( filter( "vpc-id", vpcId ) );
+			}
+			req.getFilterSet( ).add( filter( "group-id", securityGroupIds ) );
+			return req;
 		}
 
 		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
-			result = resp.getKeySet();
-		}
-		
-		List<DescribeKeyPairsResponseItemType> getResult(){
-			return result;
+		List<SecurityGroupItemType> extractResult( EucalyptusMessage response ) {
+			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
+			return resp.getSecurityGroupInfo( );
 		}
 	}
-	
-	private class EuareGetServerCertificateTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+
+	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<VpcType>> {
+		private Collection<String> vpcIds;
+		private final Boolean defaultVpc;
+		private EucaDescribeVpcsTask(final Boolean defaultVpc ) {
+			this( defaultVpc, null );
+		}
+		private EucaDescribeVpcsTask(final Collection<String> vpcIds){
+			this( null, vpcIds );
+		}
+		private EucaDescribeVpcsTask(final Boolean defaultVpc, final Collection<String> vpcIds){
+			this.defaultVpc = defaultVpc;
+			this.vpcIds = vpcIds;
+		}
+
+		EucalyptusMessage getRequest( ){
+			final DescribeVpcsType req = new DescribeVpcsType();
+			if(this.defaultVpc!=null){
+				req.getFilterSet().add( filter( "isDefault", String.valueOf( defaultVpc ) ) );
+			}
+			if(this.vpcIds!=null){
+				req.getFilterSet().add( filter( "vpc-id", vpcIds ) );
+			}
+			return req;
+		}
+
+		@Override
+		List<VpcType> extractResult( final EucalyptusMessage response ) {
+			final DescribeVpcsResponseType resp = (DescribeVpcsResponseType) response;
+			return resp.getVpcSet( ).getItem();
+		}
+	}
+
+	private class EucaDescribeSubnetsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SubnetType>> {
+		private String vpcId = null;
+		private Collection<String> subnetIds = null;
+		private Collection<String> zones = null;
+		private Boolean defaultSubnet = null;
+		private EucaDescribeSubnetsTask(final Collection<String> subnetIds){
+			this.subnetIds = subnetIds;
+		}
+		private EucaDescribeSubnetsTask(final String vpcId, final Boolean defaultSubnet, final Collection<String> zones){
+			this.vpcId = vpcId;
+			this.defaultSubnet = defaultSubnet;
+			this.zones = zones;
+		}
+
+		EucalyptusMessage getRequest( ){
+			final DescribeSubnetsType req = new DescribeSubnetsType();
+			req.setSubnetSet( new SubnetIdSetType(  ) );
+			req.getSubnetSet( ).getItem( ).add( new SubnetIdSetItemType() );
+			req.getSubnetSet( ).getItem( ).get( 0 ).setSubnetId( "verbose" );
+			if(this.vpcId!=null){
+				req.getFilterSet( ).add( filter( "vpc-id", vpcId ) );
+			}
+			if(this.subnetIds!=null){
+				req.getFilterSet( ).add( filter( "subnet-id", subnetIds ) );
+			}
+			if(this.zones!=null){
+				req.getFilterSet( ).add( filter( "availability-zone", zones ) );
+			}
+			if(this.defaultSubnet!=null){
+				req.getFilterSet( ).add( filter( "default-for-az", String.valueOf( this.defaultSubnet ) ) );
+			}
+			return req;
+		}
+
+		@Override
+		List<SubnetType> extractResult( final EucalyptusMessage response ) {
+			final DescribeSubnetsResponseType resp = (DescribeSubnetsResponseType) response;
+			return resp.getSubnetSet( ).getItem( );
+		}
+	}
+
+	private class EucaDescribeInternetGatewaysTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<InternetGatewayType>> {
+		private Collection<String> vpcIds = null;
+		private EucaDescribeInternetGatewaysTask(final Collection<String> vpcIds){
+			this.vpcIds = vpcIds;
+		}
+
+		EucalyptusMessage getRequest( ){
+			final DescribeInternetGatewaysType req = new DescribeInternetGatewaysType();
+			req.setInternetGatewayIdSet( new InternetGatewayIdSetType() );
+			req.getInternetGatewayIdSet().getItem( ).add( new InternetGatewayIdSetItemType() );
+			req.getInternetGatewayIdSet().getItem( ).get( 0 ).setInternetGatewayId( "verbose" );
+			if(this.vpcIds!=null){
+				req.getFilterSet( ).add( filter( "attachment.vpc-id", this.vpcIds ) );
+			}
+			return req;
+		}
+
+		@Override
+		List<InternetGatewayType> extractResult( final EucalyptusMessage response ) {
+			final DescribeInternetGatewaysResponseType resp = (DescribeInternetGatewaysResponseType) response;
+			return resp.getInternetGatewaySet( ).getItem( );
+		}
+	}
+
+	private class EuareGetServerCertificateTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, ServerCertificateType> {
 	  private String certName = null;
-	  private ServerCertificateType certificate = null;
+
 	  private EuareGetServerCertificateTask(final String certName){
 	    this.certName = certName;
 	  }
 	  
-	  private GetServerCertificateType getRequest(){
+	  GetServerCertificateType getRequest( ){
 	    final GetServerCertificateType req = new GetServerCertificateType();
 	    req.setServerCertificateName(this.certName);
 	    return req;
 	  }
 
     @Override
-    void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-        Checked<EuareMessage> callback) {
-      final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-      client.dispatch(getRequest(), callback); 
-    }
-
-    @Override
-    void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-        EuareMessage response) {
-      final GetServerCertificateResponseType resp = (GetServerCertificateResponseType) response;
-      if(resp.getGetServerCertificateResult()!= null)
-        this.certificate = resp.getGetServerCertificateResult().getServerCertificate();
-    }
-    
-    public ServerCertificateType getServerCertificate(){
-      return this.certificate;
+		ServerCertificateType extractResult( EuareMessage response ) {
+			final GetServerCertificateResponseType resp = (GetServerCertificateResponseType) response;
+			if(resp.getGetServerCertificateResult()!= null)
+				return resp.getGetServerCertificateResult().getServerCertificate();
+			return null;
     }
 	}
 	
@@ -1317,24 +880,11 @@ public class EucalyptusActivityTasks {
 			this.profileName = profileName;
 		}
 		
-		private DeleteInstanceProfileType deleteInstanceProfile(){
+		DeleteInstanceProfileType getRequest(){
 			final DeleteInstanceProfileType req = new DeleteInstanceProfileType();
 			req.setInstanceProfileName(this.profileName);
 			return req;
 		}
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(deleteInstanceProfile(), callback);	
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
-			final DeleteInstanceProfileResponseType resp = (DeleteInstanceProfileResponseType) response;
-		}
-		
 	}
 	
 	private class EuareAddRoleToInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
@@ -1346,24 +896,11 @@ public class EucalyptusActivityTasks {
 			this.roleName = roleName;
 		}
 		
-		private AddRoleToInstanceProfileType addRoleToInstanceProfile(){
+		AddRoleToInstanceProfileType getRequest(){
 			final AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
 			req.setRoleName(this.roleName);
 			req.setInstanceProfileName(this.instanceProfileName);
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(addRoleToInstanceProfile(), callback);	
-		}
-		
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {										
-			final AddRoleToInstanceProfileResponseType resp = (AddRoleToInstanceProfileResponseType) response;
 		}
 	}
 	
@@ -1376,100 +913,60 @@ public class EucalyptusActivityTasks {
 	    this.roleName = roleName;
 	  }
 	  
-	  private RemoveRoleFromInstanceProfileType removeRoleFromInstanceProfile(){
+	  RemoveRoleFromInstanceProfileType getRequest(){
 	    final RemoveRoleFromInstanceProfileType req = new RemoveRoleFromInstanceProfileType();
 	    req.setRoleName(this.roleName);
 	    req.setInstanceProfileName(this.instanceProfileName);
 	    return req;
 	  }
-	  
-	  @Override
-	  void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-	      Checked<EuareMessage> callback){
-	    final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-	    client.dispatch(removeRoleFromInstanceProfile(), callback);
-	  }
-	  
-	  @Override
-	  void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-	      EuareMessage response){
-	    final RemoveRoleFromInstanceProfileResponseType resp = (RemoveRoleFromInstanceProfileResponseType) response;
-	  }
 	}
 	
-	private class EuareListInstanceProfilesTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+	private class EuareListInstanceProfilesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<InstanceProfileType>> {
 		private String pathPrefix = null;
-		private List<InstanceProfileType> instanceProfiles = null;
 		private EuareListInstanceProfilesTask(final String pathPrefix){
 			this.pathPrefix = pathPrefix;
 		}
 		
-		private ListInstanceProfilesType listInstanceProfiles(){
+		ListInstanceProfilesType getRequest(){
 			final ListInstanceProfilesType req = new ListInstanceProfilesType();
 			req.setPathPrefix(this.pathPrefix);
 			return req;
 		}
 		
-		public List<InstanceProfileType> getInstanceProfiles(){
-			return this.instanceProfiles;
-		}
-
 		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(listInstanceProfiles(), callback);								
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
+		List<InstanceProfileType> extractResult(EuareMessage response) {
 			ListInstanceProfilesResponseType resp = (ListInstanceProfilesResponseType) response;
 			try{
-				instanceProfiles = resp.getListInstanceProfilesResult().getInstanceProfiles().getMember();
+				return resp.getListInstanceProfilesResult().getInstanceProfiles().getMember();
 			}catch(Exception  ex){
-				;
+				return null;
 			}
 		}
 	}
 	
-	private class EuareCreateInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+	private class EuareCreateInstanceProfileTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, InstanceProfileType>{
 		private String profileName = null;
 		private String path = null;
-		private InstanceProfileType instanceProfile = null;
 		private EuareCreateInstanceProfileTask(String profileName, String path){
 			this.profileName = profileName;
 			this.path = path;
 		}
 		
-		private CreateInstanceProfileType createInstanceProfile(){
+		CreateInstanceProfileType getRequest(){
 			final CreateInstanceProfileType req = new CreateInstanceProfileType();
 			req.setInstanceProfileName(this.profileName);
 			req.setPath(this.path);
 			return req;
 		}
 		
-		public InstanceProfileType getInstanceProfile(){
-			return this.instanceProfile;
-		}
-			
 		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(createInstanceProfile(), callback);					
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
+		InstanceProfileType extractResult(EuareMessage response) {
 			final CreateInstanceProfileResponseType resp = (CreateInstanceProfileResponseType) response;
 			try{
-				this.instanceProfile = resp.getCreateInstanceProfileResult().getInstanceProfile();
+				return resp.getCreateInstanceProfileResult().getInstanceProfile();
 			}catch(Exception ex){
-				;
+				return null;
 			}
-			
 		}
 	}
 	
@@ -1478,37 +975,25 @@ public class EucalyptusActivityTasks {
 		private EuareDeleteRoleTask(String roleName){
 			this.roleName = roleName;
 		}
-		private DeleteRoleType deleteRole(){
+		DeleteRoleType getRequest(){
 			final DeleteRoleType req = new DeleteRoleType();
 			req.setRoleName(this.roleName);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(deleteRole(), callback);			
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
-			final DeleteRoleResponseType resp = (DeleteRoleResponseType) response;
-		}
 	}
 	
-	private class EuareCreateRoleTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+	private class EuareCreateRoleTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, RoleType> {
 		String roleName = null;
 		String path = null;
 		String assumeRolePolicy = null;
-		private RoleType role = null;
+
 		private EuareCreateRoleTask(String roleName, String path, String assumeRolePolicy){
 			this.roleName = roleName;
 			this.path = path;
 			this.assumeRolePolicy = assumeRolePolicy;
 		}
-		private CreateRoleType createRole(){
+
+		CreateRoleType getRequest(){
 			final CreateRoleType req = new CreateRoleType();
 			req.setRoleName(this.roleName);
 			req.setPath(this.path);
@@ -1516,63 +1001,37 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 		
-		public RoleType getRole(){ 
-			return this.role;
-		}
-		
 		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(createRole(), callback);			
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
+		RoleType extractResult( EuareMessage response) {
 			CreateRoleResponseType resp = (CreateRoleResponseType) response;
 			try{
-				this.role = resp.getCreateRoleResult().getRole();
+				return resp.getCreateRoleResult().getRole();
 			}catch(Exception ex){
-				;
+				return null;
 			}			
 		}
-		
 	}
 	
-	private class EuareListRolesTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+	private class EuareListRolesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<RoleType>> {
 		private String pathPrefix = null;
-		private List<RoleType> roles = Lists.newArrayList();
-		
+
 		private EuareListRolesTask(String pathPrefix){
 			this.pathPrefix = pathPrefix;
 		}
 		
-		private ListRolesType listRoles(){
+		ListRolesType getRequest(){
 			final ListRolesType req = new ListRolesType();
 			req.setPathPrefix(this.pathPrefix);
 			return req;
 		}
 		
-		public List<RoleType> getRoles(){
-			return this.roles;
-		}
-		
 		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(listRoles(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
+		List<RoleType> extractResult(EuareMessage response) {
 			ListRolesResponseType resp = (ListRolesResponseType) response;
 			try{
-				this.roles = resp.getListRolesResult().getRoles().getMember();
+				return resp.getListRolesResult().getRoles().getMember();
 			}catch(Exception ex){
-				;
+				return null;
 			}
 		}
 	}
@@ -1588,7 +1047,7 @@ public class EucalyptusActivityTasks {
 			this.policyDocument = policyDocument;
 		}
 		
-		private PutRolePolicyType putRolePolicy(){
+		PutRolePolicyType getRequest(){
 			final PutRolePolicyType req = 
 					new PutRolePolicyType();
 			req.setRoleName(this.roleName);
@@ -1597,95 +1056,55 @@ public class EucalyptusActivityTasks {
 			
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(putRolePolicy(), callback);
-			
-		}
-		
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
-			final PutRolePolicyResponseType resp = (PutRolePolicyResponseType) response;
-		}
 	}
 	
-	private class EuareListRolePoliciesTask extends EucalyptusActivityTask<EuareMessage, Euare> {
-	  private String roleName = null;
-	  private List<String> policies = null;
-	  private EuareListRolePoliciesTask(final String roleName){
-	    this.roleName = roleName;
-	  }
-	  
-	  private ListRolePoliciesType listRolePolicies(){
-	    final ListRolePoliciesType req = new ListRolePoliciesType();
-	    req.setRoleName(this.roleName);
-	    return req;
-	  }
-	  
-    @Override
-    void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-        Checked<EuareMessage> callback) {
-      final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-      client.dispatch(listRolePolicies(), callback);
-    }
+	private class EuareListRolePoliciesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<String>> {
+		private String roleName = null;
+		private EuareListRolePoliciesTask(final String roleName){
+			this.roleName = roleName;
+		}
 
-    @Override
-    void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-        EuareMessage response) {
-      try{
-        final ListRolePoliciesResponseType resp = (ListRolePoliciesResponseType) response;
-        this.policies = resp.getListRolePoliciesResult().getPolicyNames().getMemberList();
-      }catch(final Exception ex){
-        this.policies = Lists.newArrayList();
-      }
-    }
-    
-    public List<String> getResult(){
-      return this.policies;
-    }
+		ListRolePoliciesType getRequest(){
+			final ListRolePoliciesType req = new ListRolePoliciesType();
+			req.setRoleName(this.roleName);
+			return req;
+		}
+
+		@Override
+		List<String> extractResult(EuareMessage response) {
+			try{
+				final ListRolePoliciesResponseType resp = (ListRolePoliciesResponseType) response;
+				return resp.getListRolePoliciesResult().getPolicyNames().getMemberList();
+			}catch(final Exception ex){
+				return Lists.newArrayList();
+			}
+		}
 	}
 	
-	private class EuareGetRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
+	private class EuareGetRolePolicyTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, GetRolePolicyResult> {
 		private String roleName = null;
 		private String policyName = null;
-		private GetRolePolicyResult result = null;
 		
 		private EuareGetRolePolicyTask(final String roleName, final String policyName){
 			this.roleName = roleName;
 			this.policyName = policyName;
 		}
 		
-		private GetRolePolicyType getRolePolicy(){
+		GetRolePolicyType getRequest(){
 			final GetRolePolicyType req = new GetRolePolicyType();
 			req.setRoleName(this.roleName);
 			req.setPolicyName(this.policyName);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(getRolePolicy(), callback);
-		}
 
 		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
+		GetRolePolicyResult extractResult( EuareMessage response) {
 		  try{
 		    final GetRolePolicyResponseType resp = (GetRolePolicyResponseType) response;
-		    this.result = resp.getGetRolePolicyResult();
+		    return resp.getGetRolePolicyResult();
 		  }catch(final Exception ex){
-		    ;
+		    return null;
 		  }
-		}
-		
-		GetRolePolicyResult getResult(){
-			return this.result;
 		}
 	}
 	
@@ -1698,56 +1117,12 @@ public class EucalyptusActivityTasks {
 			this.policyName = policyName;
 		}
 		
-		private DeleteRolePolicyType deleteRolePolicy(){
+		DeleteRolePolicyType getRequest(){
 			final DeleteRolePolicyType req = new DeleteRolePolicyType();
 			req.setRoleName(this.roleName);
 			req.setPolicyName(this.policyName);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
-				Checked<EuareMessage> callback) {
-			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(deleteRolePolicy(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
-				EuareMessage response) {
-			final DeleteRolePolicyResponseType resp = (DeleteRolePolicyResponseType) response;
-		}
-	}
-	
-	private class AutoScalingSetDesiredCapacityTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
-	  private String groupName = null;
-	  private Integer capacity = null;
-	  private AutoScalingSetDesiredCapacityTask(final String groupName, final Integer capacity){
-	    this.groupName = groupName;
-	    this.capacity = capacity;
-	  }
-	  
-	  private SetDesiredCapacityType setDesiredCapacity(){
-	    final SetDesiredCapacityType req = new SetDesiredCapacityType();
-	    req.setAutoScalingGroupName(groupName);
-	    req.setDesiredCapacity(this.capacity);
-	    return req;
-	  }
-	  
-    @Override
-    void dispatchInternal(
-        ActivityContext<AutoScalingMessage, AutoScaling> context,
-        Checked<AutoScalingMessage> callback) {
-      final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-      client.dispatch(setDesiredCapacity(), callback);
-    }
-    
-    @Override
-    void dispatchSuccess(
-        ActivityContext<AutoScalingMessage, AutoScaling> context,
-        AutoScalingMessage response) {
-      final SetDesiredCapacityResponseType resp = (SetDesiredCapacityResponseType) response;
-    }
 	}
 	
 	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
@@ -1764,9 +1139,9 @@ public class EucalyptusActivityTasks {
 			this.launchConfigName = launchConfig;
 		}
 		
-		private UpdateAutoScalingGroupType updateAutoScalingGroup(){
+		UpdateAutoScalingGroupType getRequest(){
 			final UpdateAutoScalingGroupType req = new UpdateAutoScalingGroupType();
-			req.setAutoScalingGroupName(this.groupName);
+			req.setAutoScalingGroupName( this.groupName );
 			
 			if(this.availabilityZones!=null && this.availabilityZones.size()>0){
 				AvailabilityZones zones = new AvailabilityZones();
@@ -1784,31 +1159,15 @@ public class EucalyptusActivityTasks {
 			}
 			return req;
 		}
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(updateAutoScalingGroup(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final UpdateAutoScalingGroupResponseType resp = (UpdateAutoScalingGroupResponseType) response;
-		}
-		
 	}
 	
-	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTaskWithResult<AutoScalingMessage, AutoScaling, DescribeAutoScalingGroupsResponseType> {
 		private List<String> groupNames = null;
-		private DescribeAutoScalingGroupsResponseType response = null;
 		private AutoScalingDescribeGroupsTask(final List<String> groupNames){
 			this.groupNames = groupNames;
 		}
 		
-		private DescribeAutoScalingGroupsType describeAutoScalingGroup(){
+		DescribeAutoScalingGroupsType getRequest( ){
 			final DescribeAutoScalingGroupsType req = new DescribeAutoScalingGroupsType();
 			final AutoScalingGroupNames names = new AutoScalingGroupNames();
 			names.setMember(Lists.<String>newArrayList());
@@ -1816,52 +1175,38 @@ public class EucalyptusActivityTasks {
 			req.setAutoScalingGroupNames(names);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(describeAutoScalingGroup(), callback);					
-		}
 
 		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			this.response = (DescribeAutoScalingGroupsResponseType) response;
-		}
-		
-		public DescribeAutoScalingGroupsResponseType getResponse(){
-			return this.response;
+		DescribeAutoScalingGroupsResponseType extractResult( final AutoScalingMessage response ) {
+			return (DescribeAutoScalingGroupsResponseType) response;
 		}
 	}
 	
 	private class AutoScalingCreateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private List<String> availabilityZones = null;
+		private String vpcZoneIdentifier;
 		private int capacity = 1;
 		private String launchConfigName = null;
 		private String tagKey = null;
 		private String tagValue = null;
 		
-		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, 
+		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, final String vpcZoneIdentifier,
 				final int capacity, final String launchConfig, final String tagKey, final String tagValue){
 			this.groupName = groupName;
 			this.availabilityZones = zones;
+			this.vpcZoneIdentifier = vpcZoneIdentifier;
 			this.capacity = capacity;
 			this.launchConfigName = launchConfig;
 			this.tagKey = tagKey;
 			this.tagValue = tagValue;
 		}
 		
-		private CreateAutoScalingGroupType createAutoScalingGroup(){
+		CreateAutoScalingGroupType getRequest(){
 			final CreateAutoScalingGroupType req = new CreateAutoScalingGroupType();
 			req.setAutoScalingGroupName(this.groupName);
-			AvailabilityZones zones = new AvailabilityZones();
-			zones.setMember(Lists.<String>newArrayList());
-			zones.getMember().addAll(this.availabilityZones);
-			req.setAvailabilityZones(zones);
+			req.setAvailabilityZones( new AvailabilityZones( this.availabilityZones ) );
+			req.setVpcZoneIdentifier( this.vpcZoneIdentifier );
 			req.setDesiredCapacity(this.capacity);
 			req.setMaxSize(this.capacity);
 			req.setMinSize(this.capacity);
@@ -1878,21 +1223,6 @@ public class EucalyptusActivityTasks {
 			req.setTags(tags);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(createAutoScalingGroup(), callback);			
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			CreateAutoScalingGroupResponseType resp = (CreateAutoScalingGroupResponseType) response;
-		}
 	}
 	
 	private class AutoScalingDeleteGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
@@ -1903,26 +1233,11 @@ public class EucalyptusActivityTasks {
 			this.terminateInstances = terminateInstances;
 		}
 		
-		private DeleteAutoScalingGroupType deleteAutoScalingGroup(){
+		DeleteAutoScalingGroupType getRequest(){
 			final DeleteAutoScalingGroupType req = new DeleteAutoScalingGroupType();
 			req.setAutoScalingGroupName(this.groupName);
 			req.setForceDelete(this.terminateInstances);
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(deleteAutoScalingGroup(), callback);			
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final DeleteAutoScalingGroupResponseType resp = (DeleteAutoScalingGroupResponseType) response;
 		}
 	}
 	
@@ -1932,36 +1247,20 @@ public class EucalyptusActivityTasks {
 			this.launchConfigName = launchConfigName;
 		}
 		
-		private DeleteLaunchConfigurationType deleteLaunchConfiguration(){
+		DeleteLaunchConfigurationType getRequest(){
 			final DeleteLaunchConfigurationType req = new DeleteLaunchConfigurationType();
 			req.setLaunchConfigurationName(this.launchConfigName);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(deleteLaunchConfiguration(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final DeleteLaunchConfigurationResponseType resp = (DeleteLaunchConfigurationResponseType) response;
-		}
 	}
 
-	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTaskWithResult<AutoScalingMessage, AutoScaling, LaunchConfigurationType> {
 		private String launchConfigName = null;
-		private LaunchConfigurationType result = null;
 		private AutoScalingDescribeLaunchConfigsTask(final String launchConfigName){
 			this.launchConfigName = launchConfigName;
 		}
 		
-		private DescribeLaunchConfigurationsType describeLaunchConfigurations(){
+		DescribeLaunchConfigurationsType getRequest(){
 			final DescribeLaunchConfigurationsType req = new DescribeLaunchConfigurationsType();
 			final LaunchConfigurationNames names = new LaunchConfigurationNames();
 			names.setMember(Lists.newArrayList(this.launchConfigName));
@@ -1970,81 +1269,50 @@ public class EucalyptusActivityTasks {
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(describeLaunchConfigurations(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
+		LaunchConfigurationType extractResult( AutoScalingMessage response) {
 			final DescribeLaunchConfigurationsResponseType resp = (DescribeLaunchConfigurationsResponseType) response;
 			try{
-				this.result = 
-						resp.getDescribeLaunchConfigurationsResult().getLaunchConfigurations().getMember().get(0);
+				return resp.getDescribeLaunchConfigurationsResult().getLaunchConfigurations().getMember().get(0);
 			}catch(final Exception ex){
 				LOG.error("Launch configuration is not found from the response");
+				return null;
 			}
-		}
-		
-		private LaunchConfigurationType getResult(){
-			return this.result;
 		}
 	}
 	
 	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
-		private String imageId=null;
-		private String instanceType = null;
-		private String instanceProfileName = null;
-		private String launchConfigName = null;
-		private String securityGroup = null;
-		private String keyName = null;
-		private String userData = null;
+		private final String imageId;
+		private final String instanceType;
+		private final String instanceProfileName;
+		private final String launchConfigName;
+		private final Collection<String> securityGroupNamesOrIds;
+		private final String keyName;
+		private final String userData;
+		private final boolean associatePublicIp;
 		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, String instanceProfileName,
-				final String launchConfigName, final String sgroupName, final String keyName, final String userData){
+				final String launchConfigName, final Collection<String> securityGroupNamesOrIds, final String keyName, final String userData,
+				final boolean associatePublicIp){
 			this.imageId = imageId;
 			this.instanceType = instanceType;
 			this.instanceProfileName = instanceProfileName;
 			this.launchConfigName = launchConfigName;
-			this.securityGroup = sgroupName;
+			this.securityGroupNamesOrIds = securityGroupNamesOrIds;
 			this.keyName = keyName; 
 			this.userData = userData;
+			this.associatePublicIp = associatePublicIp;
 		}
 		
-		private CreateLaunchConfigurationType createLaunchConfiguration(){
+		CreateLaunchConfigurationType getRequest(){
 			final CreateLaunchConfigurationType req = new CreateLaunchConfigurationType();
 			req.setImageId(this.imageId);
 			req.setInstanceType(this.instanceType);
-			if(this.instanceProfileName!=null)
-				req.setIamInstanceProfile(this.instanceProfileName);
-			if(this.keyName!=null)
-				req.setKeyName(this.keyName);
-			
+			req.setIamInstanceProfile(this.instanceProfileName);
+			req.setKeyName(this.keyName);
 			req.setLaunchConfigurationName(this.launchConfigName);
-			SecurityGroups groups = new SecurityGroups();
-			groups.setMember(Lists.<String>newArrayList());
-			groups.getMember().add(this.securityGroup);
-			req.setSecurityGroups(groups);
+			req.setSecurityGroups( new SecurityGroups( this.securityGroupNamesOrIds ) );
 			req.setUserData(userData);
+			req.setAssociatePublicIpAddress( associatePublicIp ? Boolean.TRUE : null );
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
-			client.dispatch(createLaunchConfiguration(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScaling> context,
-				AutoScalingMessage response) {
-			final CreateLaunchConfigurationResponseType resp = (CreateLaunchConfigurationResponseType) response;
 		}
 	}
 
@@ -2056,128 +1324,52 @@ public class EucalyptusActivityTasks {
 			this.metricData = data;
 		}
 		
-		private PutMetricDataType putMetricData(){
+		PutMetricDataType getRequest(){
 			final PutMetricDataType request = new PutMetricDataType();
 			request.setNamespace(this.namespace);
 			request.setMetricData(this.metricData);
 			return request;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<CloudWatchMessage, CloudWatch> context,
-				Checked<CloudWatchMessage> callback) {
-			final DispatchingClient<CloudWatchMessage, CloudWatch> client = context.getClient();
-			client.dispatch(putMetricData(), callback);
-			
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<CloudWatchMessage, CloudWatch> context,
-				CloudWatchMessage response) {
-			// TODO Auto-generated method stub
-			final PutMetricDataResponseType resp = (PutMetricDataResponseType) response;
-		}
-		
 	}
 
 	
-	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-		private List<ClusterInfoType> zones = null; 
+	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<ClusterInfoType>> {
 		private boolean verbose = false;
 		private EucalyptusDescribeAvailabilityZonesTask(boolean verbose){
 			this.verbose = verbose;
 		}
 		
-		private DescribeAvailabilityZonesType describeAvailabilityZones(){
+		DescribeAvailabilityZonesType getRequest(){
 			final DescribeAvailabilityZonesType req = new DescribeAvailabilityZonesType();
 			if(this.verbose){
 				req.setAvailabilityZoneSet(Lists.newArrayList("verbose"));
 			}
-		    return req;
+			return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage,Eucalyptus> client = context.getClient();
-			client.dispatch(describeAvailabilityZones(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context, EucalyptusMessage response) {
-			// TODO Auto-generated method stub
+		List<ClusterInfoType> extractResult(EucalyptusMessage response) {
 			final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
-			zones = resp.getAvailabilityZoneInfo();
-		}
-		
-		public List<ClusterInfoType> getAvailabilityZones(){
-			return this.zones;
+			return resp.getAvailabilityZoneInfo();
 		}
 	}
 
-	private class EucalyptusDescribeVMTypesTask extends EucalyptusActivityTask<BaseMessage, Eucalyptus> {
-		private List<VmTypeDetails> types = null;
-
-		private DescribeInstanceTypesType describeVMTypes(){
-			final DescribeInstanceTypesType req = new DescribeInstanceTypesType();
-		    return req;
-		}
-
-		@Override
-		void dispatchInternal(
-				ActivityContext<BaseMessage, Eucalyptus> context,
-				Checked<BaseMessage> callback) {
-			final DispatchingClient<BaseMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(describeVMTypes(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<BaseMessage, Eucalyptus> context, BaseMessage response) {
-			final DescribeInstanceTypesResponseType resp = (DescribeInstanceTypesResponseType) response;
-			this.types = resp.getInstanceTypeDetails();
-		}
-
-		public List<VmTypeDetails> getVMTypes(){
-			return this.types;
-		}
-	}
-
-	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTask<EmpyreanMessage, Empyrean> {
+	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTaskWithResult<EmpyreanMessage, Empyrean,List<ServiceStatusType>> {
 		private String componentType = null;
-		private List<ServiceStatusType> services = null; 
 		private EucalyptusDescribeServicesTask(final String componentType){
 			this.componentType = componentType;
 		}
 		
-		private DescribeServicesType describeServices(){
+		DescribeServicesType getRequest(){
 			final DescribeServicesType req = new DescribeServicesType();
 		    req.setByServiceType(this.componentType);
 		    return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<EmpyreanMessage, Empyrean> context,
-				Checked<EmpyreanMessage> callback) {
-			final DispatchingClient<EmpyreanMessage,Empyrean> client = context.getClient();
-			client.dispatch(describeServices(), callback);
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EmpyreanMessage, Empyrean> context, EmpyreanMessage response) {
-			// TODO Auto-generated method stub
+		List<ServiceStatusType> extractResult(EmpyreanMessage response) {
 			final DescribeServicesResponseType resp = (DescribeServicesResponseType) response;
-			this.services = resp.getServiceStatuses();
-		}
-		
-		public List<ServiceStatusType> getServiceDetais(){
-			return this.services;
+			return resp.getServiceStatuses();
 		}
 	}
 		
@@ -2190,27 +1382,12 @@ public class EucalyptusActivityTasks {
 			this.zone = zone;
 			this.name = name;
 		}
-		private CreateMultiARecordType createNameRecord(){
+		CreateMultiARecordType getRequest(){
 			final CreateMultiARecordType req = new CreateMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
 			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
-				Checked<DnsMessage> callback) {
-
-			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
-			client.dispatch(createNameRecord(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
-				DnsMessage response) {
-			// TODO Auto-generated method stub
-			final CreateMultiARecordResponseType resp = (CreateMultiARecordResponseType) response;
 		}
 	}
 	
@@ -2224,28 +1401,13 @@ public class EucalyptusActivityTasks {
 			this.name = name;
 			this.address = address;
 		}
-		private AddMultiARecordType addARecord(){
+		AddMultiARecordType getRequest(){
 			final AddMultiARecordType req = new AddMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
 			req.setAddress(this.address);
 			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
-				Checked<DnsMessage> callback) {
-
-			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
-			client.dispatch(addARecord(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
-				DnsMessage response) {
-			// TODO Auto-generated method stub
-			final AddMultiARecordResponseType resp = (AddMultiARecordResponseType) response;
 		}
 	}
 	
@@ -2259,27 +1421,12 @@ public class EucalyptusActivityTasks {
 			this.name = name;
 			this.address = address;
 		}
-		private RemoveMultiARecordType removeARecord(){
+		RemoveMultiARecordType getRequest(){
 			final RemoveMultiARecordType req = new RemoveMultiARecordType();
 			req.setZone(this.zone);
 			req.setName(this.name);
 			req.setAddress(this.address);
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
-				Checked<DnsMessage> callback) {
-
-			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
-			client.dispatch(removeARecord(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
-				DnsMessage response) {
-			// TODO Auto-generated method stub
-			final RemoveMultiARecordResponseType resp = (RemoveMultiARecordResponseType) response;
 		}
 	}
 	
@@ -2291,173 +1438,81 @@ public class EucalyptusActivityTasks {
 			this.zone = zone;
 			this.name = name;
 		}
-		private RemoveMultiANameType removeARecord(){
+		RemoveMultiANameType getRequest(){
 			final RemoveMultiANameType req = new RemoveMultiANameType();
 			req.setZone(this.zone);
 			req.setName(this.name);
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(ActivityContext<DnsMessage, Dns> context,
-				Checked<DnsMessage> callback) {
-
-			final DispatchingClient<DnsMessage, Dns> client = context.getClient();
-			client.dispatch(removeARecord(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(ActivityContext<DnsMessage, Dns> context,
-				DnsMessage response) {
-			// TODO Auto-generated method stub
-			final RemoveMultiANameResponseType resp = (RemoveMultiANameResponseType) response;
-		}
 	}
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
-		private final AtomicReference<List<RunningInstancesItemType>> result =
-				new AtomicReference<List<RunningInstancesItemType>>();
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId){
 			this.instanceIds = instanceId;
 		}
-		private DescribeInstancesType describeInstances(){
+		DescribeInstancesType getRequest(){
 			final DescribeInstancesType req = new DescribeInstancesType();
 			req.setInstancesSet(Lists.newArrayList(this.instanceIds));
 			return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(describeInstances(), callback);			
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
+		List<RunningInstancesItemType> extractResult( EucalyptusMessage response) {
 			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
 			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
 			for(final ReservationInfoType res : resp.getReservationSet()){
 				resultInstances.addAll(res.getInstancesSet());
 			}
-			this.result.set(resultInstances);
-		}
-		
-		public List<RunningInstancesItemType> getResult(){
-			return this.result.get();
-		}
-	}
-	
-	private class EucalyptusTerminateInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
-		private final List<String> instanceIds;
-		private final AtomicReference<List<String>> terminatedIds = new AtomicReference<List<String>>();
-		private EucalyptusTerminateInstanceTask(final List<String> instanceId){
-			this.instanceIds = instanceId;
-		}
-		private TerminateInstancesType terminateInstances(){
-			final TerminateInstancesType req = new TerminateInstancesType();
-			req.setInstancesSet(Lists.newArrayList(this.instanceIds));
-			return req;
-		}
-		 
-		@Override
-		void dispatchInternal( ActivityContext<EucalyptusMessage,Eucalyptus> context, Callback.Checked<EucalyptusMessage> callback){
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(terminateInstances(), callback);
-		}
-		    
-		
-		@Override
-		void dispatchSuccess( ActivityContext<EucalyptusMessage,Eucalyptus> context, EucalyptusMessage response ){
-			TerminateInstancesResponseType resp = (TerminateInstancesResponseType) response;
-			this.terminatedIds.set(Lists.transform(resp.getInstancesSet(), 
-					new Function<TerminateInstancesItemType, String>(){
-						@Override
-						public String apply(TerminateInstancesItemType item){
-							return item.getInstanceId();
-						}
-					}));
-		}
-		
-		List<String> getTerminatedInstances(){
-			return this.terminatedIds.get();
+			return resultInstances;
 		}
 	}
 	
 	//SPARK: TODO: SYSTEM, STATIC MODE?
-	private class EucalyptusCreateGroupTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, String> {
 		private String groupName = null;
 		private String groupDesc = null;
-		private String groupId = null;
 		EucalyptusCreateGroupTask(String groupName, String groupDesc){
 			this.groupName = groupName;
 			this.groupDesc = groupDesc;
 		}
-		private CreateSecurityGroupType createSecurityGroup(){
+		CreateSecurityGroupType getRequest(){
 			final CreateSecurityGroupType req = new CreateSecurityGroupType();
 			req.setGroupName(this.groupName);
 			req.setGroupDescription(this.groupDesc);
 			return req;
 		}
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(createSecurityGroup(), callback);			
-		}
 
 		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
+		String extractResult(EucalyptusMessage response) {
 			final CreateSecurityGroupResponseType resp = (CreateSecurityGroupResponseType) response;
-			this.groupId = resp.getGroupId();
-		}
-		
-		public String getGroupId(){
-			return this.groupId;
+			return resp.getGroupId();
 		}
 	}
 	
 	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-		String groupName=null;
+		String groupNameOrId=null;
 		String protocol = null;
 		int portNum = 1;
 		
-		EucalyptusAuthorizeIngressRuleTask(String groupName, String protocol, int portNum){
+		EucalyptusAuthorizeIngressRuleTask(String groupNameOrId, String protocol, int portNum){
+			this.groupNameOrId = groupNameOrId;
 			this.protocol=protocol;
-			this.groupName = groupName;
 			this.portNum = portNum;
 		}
-		private AuthorizeSecurityGroupIngressType authorize(){
-			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType();
-			req.setGroupName(this.groupName);
+		AuthorizeSecurityGroupIngressType getRequest(){
+			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType( );
+			if ( this.groupNameOrId.matches( "sg-[0-9a-fA-F]{8}" ) ) {
+				req.setGroupId( this.groupNameOrId );
+			} else {
+				req.setGroupName( this.groupNameOrId );
+			}
 			IpPermissionType perm = new IpPermissionType();
 			perm.setFromPort(this.portNum);
 			perm.setToPort(this.portNum);
-			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( "0.0.0.0/0" ) ) );
+			perm.setCidrIpRanges( Collections.singleton( "0.0.0.0/0" ) );
 			perm.setIpProtocol(this.protocol); // udp too?
-			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			req.getIpPermissions( ).add( perm );
 			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(authorize(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final AuthorizeSecurityGroupIngressResponseType resp = (AuthorizeSecurityGroupIngressResponseType) response;
 		}
 	}
 	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
@@ -2469,7 +1524,7 @@ public class EucalyptusActivityTasks {
 			this.protocol = protocol;
 			this.portNum = portNum;
 		}
-		private RevokeSecurityGroupIngressType revoke(){
+		RevokeSecurityGroupIngressType getRequest(){
 			RevokeSecurityGroupIngressType req = new RevokeSecurityGroupIngressType();
 			req.setGroupName(this.groupName);
 			IpPermissionType perm = new IpPermissionType();
@@ -2480,21 +1535,6 @@ public class EucalyptusActivityTasks {
 			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
 			return req;
 		}
-		
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(revoke(), callback);						
-		}
-
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final RevokeSecurityGroupIngressResponseType resp = (RevokeSecurityGroupIngressResponseType) response;
-		}
 	}
 	
 	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
@@ -2502,173 +1542,187 @@ public class EucalyptusActivityTasks {
 		EucalyptusDeleteGroupTask(String groupName){
 			this.groupName = groupName;
 		}
-		private DeleteSecurityGroupType deleteSecurityGroup(){
+		DeleteSecurityGroupType getRequest(){
 			final DeleteSecurityGroupType req = new DeleteSecurityGroupType();
 			req.setGroupName(this.groupName);
 			return req;
 		}
-		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(deleteSecurityGroup(), callback);			
-		}
-		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final DeleteSecurityGroupResponseType resp = (DeleteSecurityGroupResponseType) response;
-		}
 	}
 	
-	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
-		private List<String> groups = null;
-		private List<SecurityGroupItemType> result = null;
-		EucalyptusDescribeSecurityGroupTask(final List<String> groups){
-			this.groups = groups;
+	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SecurityGroupItemType>>{
+		@Nullable private List<String> groupIds = null;
+		@Nullable private List<String> groupNames = null;
+		@Nullable private List<String> groupNameFilters = null;
+		@Nullable private String vpcId = null;
+
+		EucalyptusDescribeSecurityGroupTask(
+				@Nullable final List<String> groupIds,
+				@Nullable final List<String> groupNames,
+				@Nullable final List<String> groupNameFilters,
+				@Nullable final String vpcId ){
+			this.groupIds = groupIds;
+			this.groupNames = groupNames;
+			this.groupNameFilters = groupNameFilters;
+			this.vpcId = vpcId;
 		}
-		
-		
-		private DescribeSecurityGroupsType describeSecurityGroups(){
-			final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType();
-			req.setSecurityGroupSet(Lists.newArrayList(this.groups));
+
+		DescribeSecurityGroupsType getRequest( ) {
+			final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType( );
+			if ( groupIds != null && !groupIds.isEmpty( ) ) {
+				req.getFilterSet().add( filter( "group-id", groupIds ) );
+			}
+			if ( groupNames != null && !groupNames.isEmpty( ) ) {
+				req.setSecurityGroupSet( Lists.newArrayList( groupNames ) );
+			}
+			if ( groupNameFilters != null && !groupNameFilters.isEmpty( ) ) {
+				req.getFilterSet().add( filter( "group-name", groupNameFilters ) );
+			}
+			if ( vpcId != null ) {
+				req.getFilterSet().add( filter( "vpc-id", vpcId ) );
+			}
 			return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
-			client.dispatch(describeSecurityGroups(), callback);			
+		List<SecurityGroupItemType> extractResult(EucalyptusMessage response) {
+			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
+			return resp.getSecurityGroupInfo();
+		}
+	}
+
+	private class EucalyptusModifySecurityGroupsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+		private final String instanceId;
+		private final Collection<String> securityGroupIds;
+
+		EucalyptusModifySecurityGroupsTask(
+				final String instanceId,
+				final Collection<String> securityGroupIds
+		) {
+			this.instanceId = instanceId;
+			this.securityGroupIds = securityGroupIds;
 		}
 
 		@Override
-		void dispatchSuccess(
-				ActivityContext<EucalyptusMessage, Eucalyptus> context,
-				EucalyptusMessage response) {
-			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
-			this.result = resp.getSecurityGroupInfo();
-		}
-	
-		public List<SecurityGroupItemType> getResult(){
-			return this.result;
+		EucalyptusMessage getRequest( ) {
+			final ModifyInstanceAttributeType modifyInstanceAttribute = new ModifyInstanceAttributeType( );
+			modifyInstanceAttribute.setInstanceId( instanceId );
+			modifyInstanceAttribute.setGroupIdSet( new GroupIdSetType( ) );
+			for ( final String securityGroupId : securityGroupIds ) {
+				final SecurityGroupIdSetItemType id = new SecurityGroupIdSetItemType( );
+				id.setGroupId( securityGroupId );
+				modifyInstanceAttribute.getGroupIdSet().getItem().add( id );
+			}
+			return modifyInstanceAttribute;
 		}
 	}
-	
-	private class EucalyptusLaunchInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-		private final String availabilityZone;
-		private final String imageId;
-		private final String instanceType;
-		private String userData;
-		private String groupName;
-		private int numInstances = 1;
-		private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
-		    Collections.<String>emptyList()
-	    );
 
-		private EucalyptusLaunchInstanceTask(final String availabilityZone, final String imageId, 
-				final String instanceType, int numInstances) {
-			this.availabilityZone = availabilityZone;
-			this.imageId = imageId;
-			this.instanceType = instanceType;
-			this.numInstances = numInstances;
-		}
-
-	    private RunInstancesType runInstances( )
-	    {
-	    	OwnerFullName systemAcct = AccountFullName.getInstance(Principals.systemAccount( ));
-	     	LOG.info("runInstances with zone="+availabilityZone+", account="+systemAcct);
-	     		       	
-		    final RunInstancesType runInstances = new RunInstancesType( );
-		    runInstances.setImageId( imageId );
-		    runInstances.setInstanceType( instanceType );
-		    if( groupName != null ) {
-		    	runInstances.setSecurityGroups( Lists.newArrayList( new GroupItemType(groupName,null) ) ); // Name or ID can be passed as ID
-		    }
-		    if(availabilityZone != null)
-		    	runInstances.setAvailabilityZone( availabilityZone );
-		    runInstances.setMinCount( Math.max( 1, numInstances ) );
-		    runInstances.setMaxCount( Math.max( 1, numInstances ) );
-		    runInstances.setUserData( userData );
-		    return runInstances;
-	    }
-	    
-	    @Override
-	    void dispatchInternal( final ActivityContext<EucalyptusMessage, Eucalyptus> context,
-	                           final Callback.Checked<EucalyptusMessage> callback ) {
-	      final DispatchingClient<EucalyptusMessage,Eucalyptus> client = context.getClient();
-	      client.dispatch( runInstances( ), callback );
-	    }
-
-	    @Override
-	    void dispatchSuccess( final ActivityContext<EucalyptusMessage, Eucalyptus> context,
-	                          final EucalyptusMessage response ) {
-	      final List<String> instanceIds = Lists.newArrayList();
-	      RunInstancesResponseType resp = (RunInstancesResponseType) response;
-	      for ( final RunningInstancesItemType item : resp.getRsvInfo().getInstancesSet() ) {
-	        instanceIds.add( item.getInstanceId() );
-	      }
-
-	      this.instanceIds.set( ImmutableList.copyOf( instanceIds ) );
-	    }
-	    
-	    void setUserData(String userData){
-	    	this.userData = userData;
-	    }
-	    
-	    void setSecurityGroup(String groupName){
-	    	this.groupName = groupName;
-	    }
-	    List<String> getInstanceIds() {
-	      return instanceIds.get();
-	    }
-	    
-	    
+	private static Filter filter( final String name, String value ) {
+		return filter( name, Collections.singleton( value ) );
 	}
-	
+
+	private static Filter filter( final String name, final Iterable<String> values ) {
+		final Filter filter = new Filter( );
+		filter.setName( name );
+		filter.setValueSet( Lists.newArrayList( values ) );
+		return filter;
+	}
+
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{
-	    private volatile boolean dispatched = false;
+		protected EucalyptusActivityTask(){}
+
+		final CheckedListenableFuture<Boolean> dispatch( final ActivityContext<TM,TC> context ) {
+			try {
+				final CheckedListenableFuture<Boolean> future = Futures.newGenericeFuture();
+				dispatchInternal( context, new Callback.Checked<TM>(){
+					@Override
+					public void fireException( final Throwable throwable ) {
+						try {
+							dispatchFailure( context, throwable );
+						} finally {
+							future.set( false );
+						}
+					}
+
+					@Override
+					public void fire( final TM response ) {
+						try {
+							dispatchSuccess( context, response );
+						} finally {
+							future.set( true );
+						}
+					}
+				} );
+				return future;
+			} catch ( Exception e ) {
+				LOG.error( e, e );
+			}
+			return Futures.predestinedFuture( false );
+		}
 	
-	    protected EucalyptusActivityTask(){}
-	
-	    final CheckedListenableFuture<Boolean> dispatch( final ActivityContext<TM,TC> context ) {
-	      try {
-	        final CheckedListenableFuture<Boolean> future = Futures.newGenericeFuture();
-	        dispatchInternal( context, new Callback.Checked<TM>(){
-	          @Override
-	          public void fireException( final Throwable throwable ) {
-	            try {
-	              dispatchFailure( context, throwable );
-	            } finally {
-	              future.set( false );
-	            }
-	          }
-	
-	          @Override
-	          public void fire( final TM response ) {
-	            try {
-	              dispatchSuccess( context, response );
-	            } finally {
-	              future.set( true );
-	            }
-	          }
-	        } );
-	        dispatched = true;
-	        return future;
-	      } catch ( Exception e ) {
-	        LOG.error( e, e );
-	      }
-	      return Futures.predestinedFuture( false );
-	    }
-	
-	    abstract void dispatchInternal( ActivityContext<TM,TC> context, Callback.Checked<TM> callback );
-	
-	    void dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
-	      LOG.error( "Loadbalancer activity error", throwable );
-	    }
-	
-	    abstract void dispatchSuccess( ActivityContext<TM,TC> context, TM response );
+		/**
+		 * Build the request message
+		 */
+		abstract TM getRequest( );
+
+		final void dispatchInternal( final ActivityContext<TM,TC> context, final Callback.Checked<TM> callback) {
+			final DispatchingClient<TM, TC> client = context.getClient( );
+			client.dispatch( getRequest( ), callback );
+		}
+
+		void dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
+			LOG.error( "Loadbalancer activity error", throwable );
+		}
+
+		void dispatchSuccess( ActivityContext<TM,TC> context, TM response ){ }
+	}
+
+	private abstract class EucalyptusActivityTaskWithResult<TM extends BaseMessage, TC extends ComponentId, R>
+			extends EucalyptusActivityTask<TM,TC> {
+		private final AtomicReference<R> r = new AtomicReference<>( );
+
+		/**
+		 * Extract/construct the result from the response message
+		 */
+		abstract R extractResult( TM response );
+
+		final R getResult( ) {
+			return r.get( );
+		}
+
+		@Override
+		void dispatchSuccess( final ActivityContext<TM,TC> context, final TM response) {
+			r.set( extractResult( response ) );
+		}
+	}
+
+	private <TM extends BaseMessage, TC extends ComponentId> void checkResult(
+			final EucalyptusActivityTask<TM,TC> task,
+			final ActivityContext<TM,TC> context,
+			final String errorMessage
+	) {
+		final CheckedListenableFuture<Boolean> result = task.dispatch( context );
+		try{
+			if ( !result.get( ) ) {
+				throw new EucalyptusActivityException( errorMessage );
+			}
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+
+	private <TM extends BaseMessage, TC extends ComponentId, R> R resultOf(
+			final EucalyptusActivityTaskWithResult<TM,TC,R> task,
+			final ActivityContext<TM,TC> context,
+			final String errorMessage
+	) {
+		final CheckedListenableFuture<Boolean> result = task.dispatch( context );
+		try{
+			if (result.get() ){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException( errorMessage );
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
 	}
 }
