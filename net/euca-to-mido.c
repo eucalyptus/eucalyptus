@@ -2281,7 +2281,6 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
     }
     // meta tap
 
-    //#if 0
     // find the interface mapping
     found = 0;
     for (i = 0; i < mido->max_hosts && !found; i++) {
@@ -2314,11 +2313,12 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
             rc = mido_link_host_port(&(vpcsubnet->midos[VPCBR_METAHOST]), tapiface, &(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_METAPORT]));
             if (rc) {
                 LOGERROR("cannot link port to host interface: check midonet health\n");
-                return (1);
+		ret = 1;
             }
         }
     }
-    //#endif
+    EUCA_FREE(tapiface);
+
     return (ret);
 }
 
