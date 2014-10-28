@@ -170,7 +170,7 @@ public class LVMWrapper {
 
 	public static boolean logicalVolumeExists(String lvName) {
 		boolean success = false;
-		String returnValue = SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName});
+		String returnValue = SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName}, true);
 		if(returnValue.length() > 0) {
 			success = true;
 		}

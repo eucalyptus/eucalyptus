@@ -189,7 +189,17 @@ public class SystemUtil {
     LOG.debug( "Ended concurrent op: " + Joiner.on( " " ).join( command ) );
   }
   
-	public static String run(String[] command) {
+  public static String run(String[] command) {
+    return run(command, false);
+  }
+
+  /**
+   * Executes an command and return its output.
+   * @param command command to execute
+   * @param failurePossible pass true if failure to execute command (an exit code != 0) is a valid outcome
+   * @return
+   */
+  public static String run(String[] command, boolean failurePossible) {
     boolean hasTicket = maybeRestrictedOp( command );
 		try 
 		{
@@ -207,11 +217,14 @@ public class SystemUtil {
 			int returnValue = proc.waitFor();
 			output.join();
 			if(returnValue != 0) {
-				throw new EucalyptusCloudException(error.getReturnValue());
+				if (failurePossible)
+				  return "";
+				else
+				  throw new EucalyptusCloudException(error.getReturnValue());
 			}
 			return output.getReturnValue();
 		} catch (Exception t) {
-			LOG.error(t, t);
+  		    LOG.error(t, t);
 		} finally {
 		  if ( hasTicket ) releaseRestrictedOp( command );
 		}
