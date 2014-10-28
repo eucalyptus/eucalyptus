@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.database.activities;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -48,6 +50,7 @@ import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -59,17 +62,21 @@ import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.PersistenceContexts;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
-
 /**
  * @author Sang-Min Park
  *
@@ -725,6 +732,123 @@ import com.google.common.net.HostSpecifier;
      }
      
      return Lists.newArrayList(configuredZones);
+   }
+   
+   public static class RemoteDatabaseChecker implements EventListener<ClockTick> {
+     static final int CHECK_EVERY_SECONDS = 60;
+     static Date lastChecked = null;
+     public static void register( ) {
+           Listeners.register( ClockTick.class, new RemoteDatabaseChecker() );
+     }
+
+     @Override
+     public void fireEvent(ClockTick event) {
+       if (!( Bootstrap.isFinished() &&
+                 Topology.isEnabledLocally( Eucalyptus.class ) )) 
+         return;
+       if ( Topology.isEnabled(Reporting.class))
+         return;
+       
+       if (lastChecked == null ) {
+         lastChecked = new Date();
+       } else {
+         int elapsedSec = (int)(((new Date()).getTime() - lastChecked.getTime())/1000.0);
+         if(elapsedSec < CHECK_EVERY_SECONDS) {
+           return;
+         }
+         lastChecked = new Date();
+       }
+       
+       try{
+         final ConfigurableProperty hostProp = 
+             PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+         if("localhost".equals(hostProp.getValue()))
+           return;
+       }catch(final Exception ex){
+         return;
+       }
+       
+       // describe autoscaling group and finds the instances
+       final List<String> instances = Lists.newArrayList();
+       String asgName = null;
+       try{
+        final List<TagDescription> tags = AutoScalingClient.getInstance().describeAutoScalingTags(null); 
+        for(final TagDescription tag : tags){
+          if(DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+            asgName = tag.getResourceId();
+            break;
+          }
+        }
+       }catch(final Exception ex){
+         return; // ASG not created yet; do nothing.
+       }
+       if(asgName==null)
+         return;
+
+       AutoScalingGroupType asgType = null;
+       try{
+         final DescribeAutoScalingGroupsResponseType resp = 
+             AutoScalingClient.getInstance().describeAutoScalingGroups(null, Lists.newArrayList(asgName));
+         if(resp.getDescribeAutoScalingGroupsResult() != null && 
+             resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
+             resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
+             resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
+           asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+         }
+         
+         if(asgType.getInstances()!=null && asgType.getInstances().getMember()!=null)
+           instances.addAll( Collections2.transform(asgType.getInstances().getMember(), new Function<Instance, String>(){
+            @Override
+            public String apply(Instance arg0) {
+              return arg0.getInstanceId();
+            }
+           }));
+       }catch(final Exception ex){
+         LOG.warn("Can't find autoscaling group named "+asgName);
+         return;
+       }       
+       
+       // get the ip address of the running instance
+       final List<String> runningIps = Lists.newArrayList();
+       try{
+         final List<RunningInstancesItemType> ec2Instances = Ec2Client.getInstance().describeInstances(null, instances );
+         for(final RunningInstancesItemType inst : ec2Instances ) {
+           if ("running".equals(inst.getStateName())){
+             runningIps.add(inst.getIpAddress());
+           }
+         }
+       }catch(final Exception ex){
+         LOG.warn("Can't get the ip address of the running instance", ex);
+         return;
+       }
+       if (runningIps.size()>1) {
+         LOG.warn("There are more than 1 instances running remote databases."); 
+       }else if (runningIps.size()==0) {
+         return;
+       }
+       
+       final String instanceIp = runningIps.get(0);
+       if (instanceIp == null || instanceIp.length()<=0){
+         LOG.warn("Invalid IP address for the instance running remote databases.");
+         return;
+       }
+
+       // see if the ip address matches with the property
+       // if not update the property
+       try{
+         final ConfigurableProperty hostProp = 
+             PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+         final String curHost = hostProp.getValue();
+         if("localhost".equals(curHost))
+           return;
+         else if ( ! instanceIp.equals(curHost)) {
+           hostProp.setValue(instanceIp);
+           LOG.info("Updated the property cloud.db.appendonlyhost to " + instanceIp);
+         }
+       }catch(final Exception ex) {
+         LOG.error("Failed to update the property: cloud.db.appendonlyhost", ex);
+       }
+     }
    }
 
 }
