@@ -7,7 +7,7 @@ import org.apache.log4j.Logger;
 
 import com.ceph.rados.IoCTX;
 import com.ceph.rados.Rados;
-import com.ceph.rados.RadosException;
+import com.ceph.rados.exceptions.RadosException;
 import com.ceph.rbd.Rbd;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;

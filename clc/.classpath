@@ -229,6 +229,6 @@
 	<classpathentry kind="lib" path="lib/jackson-annotations-2.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.1.1.jar"/>
-	<classpathentry kind="lib" path="lib/rados-0.1.4.jar"/>
+	<classpathentry kind="lib" path="lib/rados-1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -576,6 +576,7 @@ public class SANManager implements LogicalStorageManager {
 				deleteEntity = true;
 			} else {
 				LOG.warn("Failed to delete backend snapshot " +  sanSnapshotId + " mapping to " + snapshotId);
+				throw new EucalyptusCloudException("Failed to delete " + snapshotId + " on storage backend");
 			}
 		}
 		
@@ -585,7 +586,8 @@ public class SANManager implements LogicalStorageManager {
 				Entities.delete(snapInfo);
                 tran.commit();
 			} catch (TransactionException | NoSuchElementException ex) {
-				LOG.error(snapshotId + ": Failed to delete database entity post snapshot deletion", ex);
+				LOG.error("Failed to delete database entity post deletion for " + snapshotId, ex);
+				throw new EucalyptusCloudException("Failed to delete database entity post deletion for " + snapshotId, ex);
 			}
 		} 
 	}
@@ -610,8 +612,11 @@ public class SANManager implements LogicalStorageManager {
 				Entities.delete(snapInfo);
                 tran.commit();
 			} catch (TransactionException | NoSuchElementException ex) {
-				LOG.error(volumeId + ": Failed to delete database entity post volume deletion", ex);
+				LOG.error("Failed to delete database entity post deletion for " + volumeId, ex);
+				throw new EucalyptusCloudException("Failed to delete database entity post deletion for " + volumeId, ex);
 			}
+		} else {
+			throw new EucalyptusCloudException("Failed to delete " + volumeId + " on storage backend");
 		}
 	}
 

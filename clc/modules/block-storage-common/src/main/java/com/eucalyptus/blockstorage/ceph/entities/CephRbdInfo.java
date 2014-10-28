@@ -78,6 +78,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
 import com.google.common.base.Strings;
@@ -94,11 +95,14 @@ public class CephRbdInfo extends AbstractPersistent {
 
 	public static final String POOL_IMAGE_DELIMITER = "/";
 	public static final String IMAGE_SNAPSHOT_DELIMITER = "@";
+	public static final String SNAPSHOT_ON_PREFIX = "sp-on-";
+	public static final String SNAPSHOT_FOR_PREFIX = "sp-for-";
 
 	private static final String DEFAULT_CEPH_USER = "eucalyptus";
 	private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";
 	private static final String DEFAULT_CEPH_CONFIG_FILE = "/etc/ceph/ceph.conf";
 	private static final String DEFAULT_POOL = "rbd";
+	private static final String DELETED_IMAGE_COMMON_PREFIX = "edi-";
 
 	@ConfigurableIdentifier
 	@Column(name = "cluster_name", unique = true)
@@ -122,6 +126,8 @@ public class CephRbdInfo extends AbstractPersistent {
 	private String cephSnapshotPools;
 	@Column(name = "virsh_secret")
 	private String virshSecret;
+	@Column(name = "deleted_image_prefix")
+	private String deletedImagePrefix;
 
 	public CephRbdInfo() {
 		this.clusterName = StorageProperties.NAME;
@@ -183,6 +189,14 @@ public class CephRbdInfo extends AbstractPersistent {
 		this.virshSecret = virshSecret;
 	}
 
+	public String getDeletedImagePrefix() {
+		return deletedImagePrefix;
+	}
+
+	public void setDeletedImagePrefix(String deletedImagePrefix) {
+		this.deletedImagePrefix = deletedImagePrefix;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -218,6 +232,9 @@ public class CephRbdInfo extends AbstractPersistent {
 	public void checkPrePersist() {
 		if (Strings.isNullOrEmpty(virshSecret)) {
 			virshSecret = UUID.randomUUID().toString();
+		}
+		if (Strings.isNullOrEmpty(deletedImagePrefix)) {
+			deletedImagePrefix = Crypto.generateAlphanumericId(8, DELETED_IMAGE_COMMON_PREFIX) + '-';
 		}
 	}
 

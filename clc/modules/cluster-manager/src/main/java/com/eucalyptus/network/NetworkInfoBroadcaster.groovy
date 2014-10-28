@@ -211,7 +211,7 @@ class NetworkInfoBroadcaster {
     }
 
     final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.xml.temp" )
-    if ( !newView.delete( ) ) logger.warn( "Error deleting stale network view ${newView.getAbsolutePath()}" )
+    if ( newView.exists( ) && !newView.delete( ) ) logger.warn( "Error deleting stale network view ${newView.getAbsolutePath()}" )
     GFiles.write( networkInfo, newView, Charsets.UTF_8 )
     JFiles.move( newView.toPath( ), BaseDirectory.RUN.getChildFile( "global_network_info.xml" ).toPath( ), StandardCopyOption.REPLACE_EXISTING )
 
