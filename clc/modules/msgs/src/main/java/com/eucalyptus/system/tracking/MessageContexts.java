@@ -44,8 +44,8 @@ public class MessageContexts {
   
   private static Cache<String, List<MessageCache>> correlationIds =
       CacheBuilder.newBuilder()
-      .maximumSize(1000)
-      .expireAfterAccess(10, TimeUnit.MINUTES)
+      .maximumSize(3000)
+      .expireAfterAccess(1, TimeUnit.HOURS)
       .build();
   
   public static synchronized void remember(final String resourceId, final Class<? extends BaseMessage> msgType, BaseMessage message) {
