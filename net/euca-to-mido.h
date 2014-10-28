@@ -52,7 +52,7 @@ typedef struct mido_core_t {
 } mido_core;
 
 typedef struct mido_config_t {
-    char *ext_rthostname, *ext_rtaddr, *ext_rtiface, *ext_pubnw, *ext_pubgwip, *eucahome;
+    char *ext_eucanetdhostname, *ext_rthostname, *ext_rtaddr, *ext_rtiface, *ext_pubnw, *ext_pubgwip, *eucahome;
     u32 int_rtnw, int_rtaddr, enabledCLCIp;
     int int_rtsn;
     midoname *hosts, *routers, *bridges, *chains, *brports, *rtports, *ipaddrgroups;
@@ -70,8 +70,8 @@ int set_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 
-int initialize_mido(mido_config * mido, char *eucahome, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork,
-                    char *int_rtslashnet);
+int initialize_mido(mido_config * mido, char *eucahome, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip,
+                    char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 
 int populate_mido_core(mido_config * mido, mido_core * midocore);

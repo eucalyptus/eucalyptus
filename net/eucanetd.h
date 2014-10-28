@@ -123,6 +123,7 @@ typedef struct eucanetdConfig_t {
     char pubInterface[32];
     char privInterface[32];
     char dhcpDaemon[EUCA_MAX_PATH];
+    char midoeucanetdhost[HOSTNAME_SIZE];
     char midogwhost[HOSTNAME_SIZE];
     char midogwip[HOSTNAME_SIZE];
     char midogwiface[HOSTNAME_SIZE];

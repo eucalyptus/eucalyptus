@@ -1540,8 +1540,8 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
     return (ret);
 }
 
-int initialize_mido(mido_config * mido, char *eucahome, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip, char *int_rtnetwork,
-                    char *int_rtslashnet)
+int initialize_mido(mido_config * mido, char *eucahome, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip,
+                    char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
 
@@ -1551,6 +1551,7 @@ int initialize_mido(mido_config * mido, char *eucahome, char *ext_rthostname, ch
     bzero(mido, sizeof(mido_config));
 
     mido->eucahome = strdup(eucahome);
+    mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
     mido->ext_rthostname = strdup(ext_rthostname);
     mido->ext_rtaddr = strdup(ext_rtaddr);
     mido->ext_rtiface = strdup(ext_rtiface);
@@ -1668,7 +1669,7 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
 
     found = 0;
     for (i = 0; i < mido->max_hosts && !found; i++) {
-        if (strstr(mido->hosts[i].name, "a-35.qa1")) {
+        if (strstr(mido->hosts[i].name, mido->ext_eucanetdhostname)) {
             mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->hosts[i]));
             found = 1;
         }
@@ -2035,6 +2036,7 @@ int free_mido_config(mido_config * mido)
 
     EUCA_FREE(mido->eucahome);
 
+    EUCA_FREE(mido->ext_eucanetdhostname);
     EUCA_FREE(mido->ext_rthostname);
     EUCA_FREE(mido->ext_rtaddr);
     EUCA_FREE(mido->ext_rtiface);
@@ -2284,7 +2286,7 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
     // find the interface mapping
     found = 0;
     for (i = 0; i < mido->max_hosts && !found; i++) {
-        if (strstr(mido->hosts[i].name, "a-35.qa1")) {
+        if (strstr(mido->hosts[i].name, mido->ext_eucanetdhostname)) {
             mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->hosts[i]));
             found = 1;
         }
@@ -2313,7 +2315,7 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
             rc = mido_link_host_port(&(vpcsubnet->midos[VPCBR_METAHOST]), tapiface, &(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_METAPORT]));
             if (rc) {
                 LOGERROR("cannot link port to host interface: check midonet health\n");
-		ret = 1;
+                ret = 1;
             }
         }
     }
