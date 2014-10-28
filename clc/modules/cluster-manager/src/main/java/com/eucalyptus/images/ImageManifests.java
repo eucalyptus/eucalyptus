@@ -76,7 +76,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.amazonaws.services.s3.model.AccessControlList;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
@@ -99,7 +98,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
@@ -110,34 +108,6 @@ import com.google.common.collect.Lists;
 public class ImageManifests {
   private static Logger LOG = Logger.getLogger( ImageManifests.class );
 
-    static boolean verifyBucketAcl( String bucketName ) {
-        Context ctx = Contexts.lookup( );
-        try {
-            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
-            AccessControlList acl = s3Client.getBucketAcl(bucketName);
-            String ownerId = acl.getOwner( ).getId();
-            return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerId ) || ctx.getUserFullName( ).getUserId( ).equals( ownerId );
-        } catch ( Exception ex ) {
-            LOG.trace( ex, ex );
-            LOG.debug("Failed verifying bucket acl for bucket " + bucketName, ex );
-        }
-        return false;
-    }
-  
-  private static boolean verifyManifestSignature( final X509Certificate cert, final String signature, String pad ) {
-    Signature sigVerifier;
-    try {
-      sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      PublicKey publicKey = cert.getPublicKey( );
-      sigVerifier.initVerify( publicKey );
-      sigVerifier.update( ( pad ).getBytes( ) );
-      return sigVerifier.verify( hexToBytes( signature ) );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      return false;
-    }
-  }
-  
   private static byte[] hexToBytes( String data ) {
     int k = 0;
     byte[] results = new byte[data.length( ) / 2];
@@ -150,13 +120,17 @@ public class ImageManifests {
     return results;
   }
   
-  static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
-      try {
-          EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true));
-          return s3Client.getObjectContent(bucketName, objectName);
-      } catch ( Exception e ) {
-          throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
+  static String requestManifestData( String bucketName, String objectName ) throws EucalyptusCloudException {
+    try {
+      try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client( Accounts.lookupAwsExecReadAdmin(true) ) ) {
+        return s3Client.getObjectContent(
+            bucketName,
+            objectName,
+            ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
       }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
+    }
   }
   
   public static class ManifestDeviceMapping {
@@ -170,15 +144,6 @@ public class ImageManifests {
     DeviceMappingType type;
     String            virtualName;
     String            deviceName;
-    
-    public DeviceMapping generateRealMapping( ImageInfo parent ) {
-      if ( DeviceMappingType.ephemeral.equals( type ) ) {
-        return new EphemeralDeviceMapping( parent, deviceName, virtualName );
-      } else {// if( DeviceMappingType.root.equals( type ) || DeviceMappingType.swap.equals( type )
-// ) {
-        return new DeviceMapping( parent, type, deviceName, virtualName );
-      }
-    }
   }
   
   public static class ImageManifest {
@@ -251,7 +216,7 @@ public class ImageManifests {
       } else if  ( ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
-      this.manifest = ImageManifests.requestManifestData( ctx.getUserFullName( ), bucketName, manifestKey );
+      this.manifest = ImageManifests.requestManifestData( bucketName, manifestKey );
       try {
         DocumentBuilder builder = XMLParser.getDocBuilder( );
         this.inputSource = builder.parse( new ByteArrayInputStream( this.manifest.getBytes( ) ) );

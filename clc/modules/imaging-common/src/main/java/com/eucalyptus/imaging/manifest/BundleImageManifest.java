@@ -53,13 +53,13 @@ public enum BundleImageManifest implements ImageManifest {
 	}
 
 	@Override
-	public String getManifest(String location) throws EucalyptusCloudException {
+	public String getManifest(String location, int maximumSize ) throws EucalyptusCloudException {
 		String cleanLocation = location.replaceAll( "^/*", "" );
 		int index = cleanLocation.indexOf( '/' );
 		String bucketName = cleanLocation.substring( 0, index );
 		String manifestKey = cleanLocation.substring( index + 1 );
-		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin()) ) {
-				return s3Client.getObjectContent(bucketName, manifestKey);
+		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client( Accounts.lookupSystemAdmin( ) ) ) {
+				return s3Client.getObjectContent(bucketName, manifestKey, maximumSize);
 		} catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
 		}

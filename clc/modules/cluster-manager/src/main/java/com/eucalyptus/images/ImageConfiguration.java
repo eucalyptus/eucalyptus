@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -79,8 +78,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -116,8 +113,12 @@ public class ImageConfiguration extends AbstractPersistent {
   
   @ConfigurableField( displayName = "max_image_size_gb", description = "The maximum registerable image size in GB")
   @Column( name = "max_image_size_gb")
-  private Integer		maxImageSizeGb;
-  
+  private Integer       maxImageSizeGb;
+
+  @ConfigurableField( displayName = "max_manifest_size", description = "The maximum allowed image manifest size in bytes")
+  @Column( name = "max_manifest_size_b")
+  private Integer       maxManifestSizeBytes;
+
   public ImageConfiguration( ) {
     super( );
   }
@@ -151,7 +152,11 @@ public class ImageConfiguration extends AbstractPersistent {
     }
     
     if ( this.maxImageSizeGb == null) {
-    	this.maxImageSizeGb = DEFAULT_MAX_IMAGE_SIZE_GB;
+      this.maxImageSizeGb = DEFAULT_MAX_IMAGE_SIZE_GB;
+    }
+
+    if ( this.maxManifestSizeBytes == null ) {
+      this.maxManifestSizeBytes = 1024 * 1024 * 5; // 5MiB
     }
   }
   
@@ -162,7 +167,15 @@ public class ImageConfiguration extends AbstractPersistent {
   public void setMaxImageSizeGb(Integer maxImageSize) {
 	  this.maxImageSizeGb = maxImageSize;
   }
-  
+
+  public Integer getMaxManifestSizeBytes( ) {
+    return maxManifestSizeBytes;
+  }
+
+  public void setMaxManifestSizeBytes( final Integer maxManifestSizeBytes ) {
+    this.maxManifestSizeBytes = maxManifestSizeBytes;
+  }
+
   public Boolean getDefaultVisibility( ) {
     return this.defaultVisibility;
   }

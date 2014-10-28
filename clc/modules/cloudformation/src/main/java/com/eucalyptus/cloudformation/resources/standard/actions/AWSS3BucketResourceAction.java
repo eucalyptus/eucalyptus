@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,36 +123,37 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
         String bucketName = action.info.getPhysicalResourceId();
-        if (action.properties.getAccessControl() != null) {
-          s3c.setBucketAcl(bucketName, CannedAccessControlList.valueOf(action.properties.getAccessControl()));
-        }
-        if (action.properties.getCorsConfiguration() != null) {
-          s3c.setBucketCrossOriginConfiguration(bucketName, action.convertCrossOriginConfiguration(action.properties.getCorsConfiguration()));
-        }
-        if (action.properties.getLifecycleConfiguration() != null) {
-          s3c.setBucketLifecycleConfiguration(bucketName, action.convertLifecycleConfiguration(action.properties.getLifecycleConfiguration()));
-        }
-        if (action.properties.getLoggingConfiguration() != null) {
-          s3c.setBucketLoggingConfiguration(action.convertLoggingConfiguration(bucketName, action.properties.getLoggingConfiguration()));
-        }
-        if (action.properties.getNotificationConfiguration() != null) {
-          s3c.setBucketNotificationConfiguration(bucketName, action.convertNotificationConfiguration(action.properties.getNotificationConfiguration()));
-        }
-        List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(action.info, action.getStackEntity());
-        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
-          TagHelper.checkReservedCloudFormationResourceTemplateTags(action.properties.getTags());
-          tags.addAll(action.properties.getTags()); // TODO: can we do aws: tags?
-        }
-        s3c.setBucketTaggingConfiguration(bucketName, action.convertTags(tags));
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+          if ( action.properties.getAccessControl() != null ) {
+            s3c.setBucketAcl( bucketName, CannedAccessControlList.valueOf( action.properties.getAccessControl() ) );
+          }
+          if ( action.properties.getCorsConfiguration() != null ) {
+            s3c.setBucketCrossOriginConfiguration( bucketName, action.convertCrossOriginConfiguration( action.properties.getCorsConfiguration() ) );
+          }
+          if ( action.properties.getLifecycleConfiguration() != null ) {
+            s3c.setBucketLifecycleConfiguration( bucketName, action.convertLifecycleConfiguration( action.properties.getLifecycleConfiguration() ) );
+          }
+          if ( action.properties.getLoggingConfiguration() != null ) {
+            s3c.setBucketLoggingConfiguration( action.convertLoggingConfiguration( bucketName, action.properties.getLoggingConfiguration() ) );
+          }
+          if ( action.properties.getNotificationConfiguration() != null ) {
+            s3c.setBucketNotificationConfiguration( bucketName, action.convertNotificationConfiguration( action.properties.getNotificationConfiguration() ) );
+          }
+          List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags( action.info, action.getStackEntity() );
+          if ( action.properties.getTags() != null && !action.properties.getTags().isEmpty() ) {
+            TagHelper.checkReservedCloudFormationResourceTemplateTags( action.properties.getTags() );
+            tags.addAll( action.properties.getTags() ); // TODO: can we do aws: tags?
+          }
+          s3c.setBucketTaggingConfiguration( bucketName, action.convertTags( tags ) );
 
-        if (action.properties.getVersioningConfiguration() != null) {
-          s3c.setBucketVersioningConfiguration(action.convertVersioningConfiguration(bucketName, action.properties.getVersioningConfiguration()));
-        }
-        // TODO: website configuration throws an error if called (currently)
-        if (action.properties.getWebsiteConfiguration() != null) {
-          s3c.setBucketWebsiteConfiguration(bucketName, action.convertWebsiteConfiguration(action.properties.getWebsiteConfiguration()));
+          if ( action.properties.getVersioningConfiguration() != null ) {
+            s3c.setBucketVersioningConfiguration( action.convertVersioningConfiguration( bucketName, action.properties.getVersioningConfiguration() ) );
+          }
+          // TODO: website configuration throws an error if called (currently)
+          if ( action.properties.getWebsiteConfiguration() != null ) {
+            s3c.setBucketWebsiteConfiguration( bucketName, action.convertWebsiteConfiguration( action.properties.getWebsiteConfiguration() ) );
+          }
         }
         String domainName = null;
         if ((serviceURI.getPath() == null || serviceURI.getPath().replace("/","").isEmpty())) {
@@ -181,8 +182,9 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         if (action.info.getPhysicalResourceId() == null) return action;
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-        s3c.deleteBucket(action.info.getPhysicalResourceId());
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+          s3c.deleteBucket(action.info.getPhysicalResourceId());
+        }
         return action;
       }
 

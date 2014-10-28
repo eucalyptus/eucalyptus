@@ -47,6 +47,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.common.UrlValidator;
@@ -590,7 +591,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       // avoid TCP's CLOSE_WAIT  
       method.setRequestHeader("Connection", "close");
       client.executeMethod(method);
-      manifest = method.getResponseBodyAsString();
+      manifest = method.getResponseBodyAsString( ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
       if (manifest == null) {
         return false;
       }else if (manifest.contains("<Code>NoSuchKey</Code>") || manifest.contains("The specified key does not exist")){
