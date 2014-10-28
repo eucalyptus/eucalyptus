@@ -1773,156 +1773,166 @@ public class BlockStorageController {
         return reply;
     }
 
-    //TODO: This is a mess. Transactional access should be handled at a lower level
-    //instead of multiple calls to EntityWrapper. It is error prone and hard to enforce correctly closed transactions
-    public static class VolumeDeleterTask extends CheckerTask {
-        private final AtomicBoolean running = new AtomicBoolean( false );
+	public static class VolumeDeleterTask extends CheckerTask {
 
-        public VolumeDeleterTask() {
-            this.name = "VolumeDeleter";
-        }
+		public VolumeDeleterTask() {
+			this.name = "VolumeDeleter";
+		}
 
-        @Override
-        public void run() {
-            if ( running.compareAndSet( false, true ) ) try {
-                EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-                try {
-                    //Check if deleted volumes need to expire
-                    VolumeInfo searchVolume = new VolumeInfo();
-                    searchVolume.setStatus(StorageProperties.Status.deleted.toString());
-                    List<VolumeInfo> deletedVolumes = db.query(searchVolume);
-                    for (VolumeInfo deletedVolume : deletedVolumes) {
-                        if(deletedVolume.cleanupOnDeletion()) {
-                            LOG.info("Volume deletion time expired for: " + deletedVolume.getVolumeId() + " ...cleaning up.");
-                            db.delete(deletedVolume);
-                        }
-                    }
-                    db.commit();
-                    db = StorageProperties.getEntityWrapper();
-                    searchVolume = new VolumeInfo();
-                    searchVolume.setStatus(StorageProperties.Status.deleting.toString());
-                    List<VolumeInfo> volumes = db.query(searchVolume);
-                    db.rollback();
-                    for (VolumeInfo vol : volumes) {
-                        //Do separate transaction for each volume so we don't
-                        // keep the transaction open for a long time
-                        db = StorageProperties.getEntityWrapper();
-                        try {
-                            vol = db.getUnique(vol);
-                            final String volumeId = vol.getVolumeId();
-                            LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
-                            if(Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {
-                                @Override
-                                public boolean apply(VolumeToken token) {
-                                    //Return true if attachment is valid or export exists.
-                                    try {
-                                        return token.hasActiveExports();
-                                    } catch(EucalyptusCloudException e) {
-                                        LOG.warn("Failure checking for active exports for volume " + volumeId);
-                                        return false;
-                                    }
-                                }
-                            })) {
-                                //Exports exists... try un exporting the volume before deleting.
-                                LOG.info("Volume: " + volumeId + " found to be exported. Detaching volume from all hosts");
-                                try {
-                                    Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
-                                } catch(Exception e) {
-                                    LOG.error("Failed to fully detach volume " + volumeId, e);
-                                }
-                            }
+		@Override
+		public void run() {
+			VolumeInfo searchVolume = new VolumeInfo();
+			searchVolume.setStatus(StorageProperties.Status.deleted.toString());
 
-                            LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
-                            try {
-                                blockManager.deleteVolume(volumeId);
-                            } catch (EucalyptusCloudException e) {
-                                LOG.error(e, e);
-                                continue;
-                            }
-                            vol.setStatus(StorageProperties.Status.deleted.toString());
-                            vol.setDeletionTime(new Date());
-                            EucaSemaphoreDirectory.removeSemaphore(volumeId);
-                            db.commit();
-                        } catch(Exception e) {
-                            LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
-                            LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
-                        } finally {
-                            db.rollback();
-                        }
-                    }
-                } catch(Exception e) {
-                    LOG.error("Failed during delete task.",e);
-                }
-            } finally {
-                running.set( false );
-            } else {
-                LOG.warn( "Skipping task (busy)" );
-            }
-        }
-    }
+			// Check if deleted volumes have expired and remove them
+			try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
+				List<VolumeInfo> deletedVolumes = Entities.query(searchVolume);
+				for (VolumeInfo deletedVolume : deletedVolumes) {
+					if (deletedVolume.cleanupOnDeletion()) {
+						LOG.info("Volume deletion time expired for: " + deletedVolume.getVolumeId() + " ...cleaning up.");
+						Entities.delete(deletedVolume);
+					}
+				}
+				tran.commit();
+			} catch (Exception e) {
+				LOG.error("Failed during clean up of expired volume records", e);
+			}
 
-    public static class SnapshotDeleterTask extends CheckerTask {
+			// Look for volumes marked for deltion and delete them
+			searchVolume = new VolumeInfo();
+			searchVolume.setStatus(StorageProperties.Status.deleting.toString());
+			List<VolumeInfo> volumesToBeDeleted = null;
+			try {
+				volumesToBeDeleted = Transactions.findAll(searchVolume);
+			} catch (Exception e) {
+				LOG.error("Failed to lookup volumes marked for deletion", e);
+				return;
+			}
 
-        public SnapshotDeleterTask() {
-            this.name = "SnapshotDeleter";
-        }
-
-        private S3SnapshotTransfer mock;
-        public SnapshotDeleterTask(S3SnapshotTransfer mock) {
-            this.mock = mock;
-        }
-
-        @Override
-        public void run() {
-            TransactionResource tran = Entities.transactionFor(SnapshotInfo.class);
-            SnapshotInfo searchSnap = new SnapshotInfo();
-            searchSnap.setStatus(StorageProperties.Status.deleting.toString());
-            List<SnapshotInfo> snapshots = Entities.query(searchSnap);
-            tran.commit();
-            S3SnapshotTransfer snapshotTransfer = null;
-            for (SnapshotInfo snap : snapshots) {
-                String snapshotId = snap.getSnapshotId();
-                LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
-                try {
-                    blockManager.deleteSnapshot(snapshotId);
-                } catch (EucalyptusCloudException e1) {
-                    LOG.error(e1);
-                    continue;
-                }
-                SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-
-                SnapshotInfo foundSnapshotInfo;
-                try (TransactionResource tran2 = Entities.transactionFor(SnapshotInfo.class)) {
-                    foundSnapshotInfo = Entities.uniqueResult(snapInfo);
-                    foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
-                    tran2.commit();
-                } catch (TransactionException | NoSuchElementException e) {
-                    LOG.error(e);
-                    continue;
-                }
-                
-				if (StringUtils.isNotBlank(foundSnapshotInfo.getSnapshotLocation())) {
-					try {
-						String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
-						if (snapshotTransfer == null) {
-							if (mock == null) {
-								snapshotTransfer = new S3SnapshotTransfer();
-							} else {
-								snapshotTransfer = mock;
+			if (volumesToBeDeleted != null && !volumesToBeDeleted.isEmpty()) {
+				for (VolumeInfo vol : volumesToBeDeleted) {
+					// Do separate transaction for each volume so we don't
+					// keep the transaction open for a long time
+					try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
+						vol = Entities.uniqueResult(vol);
+						final String volumeId = vol.getVolumeId();
+						LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
+						if (Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {
+							@Override
+							public boolean apply(VolumeToken token) {
+								// Return true if attachment is valid or export exists.
+								try {
+									return token.hasActiveExports();
+								} catch (EucalyptusCloudException e) {
+									LOG.warn("Failure checking for active exports for volume " + volumeId);
+									return false;
+								}
+							}
+						})) {
+							// Exports exists... try un exporting the volume before deleting.
+							LOG.info("Volume: " + volumeId + " found to be exported. Detaching volume from all hosts");
+							try {
+								Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
+							} catch (Exception e) {
+								LOG.error("Failed to fully detach volume " + volumeId, e);
 							}
 						}
-						snapshotTransfer.setSnapshotId(snapshotId);
-						snapshotTransfer.setBucketName(names[0]);
-						snapshotTransfer.setKeyName(names[1]);
-						snapshotTransfer.delete();
+
+						LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
+						try {
+							blockManager.deleteVolume(volumeId);
+						} catch (EucalyptusCloudException e) {
+							LOG.debug("Failed to delete " + volumeId, e);
+							LOG.warn("Unable to delete " + volumeId + ". Will retry later");
+							continue;
+						}
+						vol.setStatus(StorageProperties.Status.deleted.toString());
+						vol.setDeletionTime(new Date());
+						EucaSemaphoreDirectory.removeSemaphore(volumeId); // who put it there ?
+						tran.commit();
 					} catch (Exception e) {
-						LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+						LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
+						LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
 					}
-				} else {
-					LOG.debug("Snapshot location missing for " + snapshotId + ". Skipping deletion from ObjectStorageGateway");
 				}
-            }
-        }
-    }
+			} else {
+				LOG.trace("No volumes marked for deletion");
+			}
+		}
+	}
+
+	public static class SnapshotDeleterTask extends CheckerTask {
+
+		public SnapshotDeleterTask() {
+			this.name = "SnapshotDeleter";
+		}
+
+		private S3SnapshotTransfer mock;
+
+		public SnapshotDeleterTask(S3SnapshotTransfer mock) {
+			this.mock = mock;
+		}
+
+		@Override
+		public void run() {
+			SnapshotInfo searchSnap = new SnapshotInfo();
+			searchSnap.setStatus(StorageProperties.Status.deleting.toString());
+			List<SnapshotInfo> snapshotsToBeDeleted = null;
+			try {
+				snapshotsToBeDeleted = Transactions.findAll(searchSnap);
+			} catch (Exception e) {
+				LOG.error("Failed to lookup snapshots marked for deletion", e);
+				return;
+			}
+			if (snapshotsToBeDeleted != null && !snapshotsToBeDeleted.isEmpty()) {
+				S3SnapshotTransfer snapshotTransfer = null;
+				for (SnapshotInfo snap : snapshotsToBeDeleted) {
+					String snapshotId = snap.getSnapshotId();
+					LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
+					try {
+						blockManager.deleteSnapshot(snapshotId);
+					} catch (EucalyptusCloudException e1) {
+						LOG.debug("Failed to delete " + snapshotId, e1);
+						LOG.warn("Unable to delete " + snapshotId + ". Will retry later");
+						continue;
+					}
+					SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+
+					SnapshotInfo foundSnapshotInfo;
+					try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
+						foundSnapshotInfo = Entities.uniqueResult(snapInfo);
+						foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
+						tran.commit();
+					} catch (TransactionException | NoSuchElementException e) {
+						LOG.error(e);
+						continue;
+					}
+
+					if (StringUtils.isNotBlank(foundSnapshotInfo.getSnapshotLocation())) {
+						try {
+							String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
+							if (snapshotTransfer == null) {
+								if (mock == null) {
+									snapshotTransfer = new S3SnapshotTransfer();
+								} else {
+									snapshotTransfer = mock;
+								}
+							}
+							snapshotTransfer.setSnapshotId(snapshotId);
+							snapshotTransfer.setBucketName(names[0]);
+							snapshotTransfer.setKeyName(names[1]);
+							snapshotTransfer.delete();
+						} catch (Exception e) {
+							LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+						}
+					} else {
+						LOG.debug("Snapshot location missing for " + snapshotId + ". Skipping deletion from ObjectStorageGateway");
+					}
+				}
+			} else {
+				LOG.trace("No snapshots marked for deletion");
+			}
+		}
+	}
 
 }
