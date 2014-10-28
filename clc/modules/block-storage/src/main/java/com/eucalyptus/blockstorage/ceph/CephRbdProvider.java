@@ -62,6 +62,12 @@
 package com.eucalyptus.blockstorage.ceph;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -69,6 +75,8 @@ import com.ceph.rbd.Rbd;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
+import com.eucalyptus.blockstorage.ceph.exceptions.CannotDeleteCephImageException;
+import com.eucalyptus.blockstorage.ceph.exceptions.CephImageNotFoundException;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.san.common.SANManager;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
@@ -85,9 +93,11 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 public class CephRbdProvider implements SANProvider {
 
 	private static final Logger LOG = Logger.getLogger(CephRbdProvider.class);
+	private static final Logger LOGD = Logger.getLogger(CephRbdImageDeleter.class);
 
 	private CephRbdAdapter rbdService;
 	private CephRbdInfo cachedConfig;
+	private static ScheduledExecutorService deletionService;
 
 	@Override
 	public void initialize() {
@@ -100,6 +110,7 @@ public class CephRbdProvider implements SANProvider {
 	public void configure() throws EucalyptusCloudException {
 		CephRbdInfo cephInfo = CephRbdInfo.getStorageInfo();
 		initializeRbdService(cephInfo);
+		initializeDeletionService();
 	}
 
 	private void initializeRbdService(CephRbdInfo info) {
@@ -114,8 +125,16 @@ public class CephRbdProvider implements SANProvider {
 			// operation
 			rbdService.setCephConfig(cachedConfig);
 		}
-		
+
 		// TODO Some way to check connectivity to ceph cluster
+	}
+
+	private void initializeDeletionService() {
+		if (deletionService != null) {
+			deletionService.shutdownNow();
+		}
+		deletionService = Executors.newScheduledThreadPool(1);
+		deletionService.scheduleWithFixedDelay(new CephRbdImageDeleter(), 60, 60, TimeUnit.SECONDS);
 	}
 
 	@Override
@@ -127,15 +146,19 @@ public class CephRbdProvider implements SANProvider {
 		} else {
 			// Nothing to do here
 		}
+
+		if (deletionService == null || deletionService.isTerminated() || deletionService.isShutdown()) {
+			initializeDeletionService();
+		}
 	}
 
 	@Override
 	public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException {
 		String iqn = null;
 		if (size > snapSize) {
-			iqn = rbdService.cloneAndResizeImage(snapshotId, null, volumeId, Long.valueOf(size * StorageProperties.GB));
+			iqn = rbdService.cloneAndResizeImage(snapshotId, CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId, volumeId, Long.valueOf(size * StorageProperties.GB));
 		} else {
-			iqn = rbdService.cloneAndResizeImage(snapshotId, null, volumeId, null);
+			iqn = rbdService.cloneAndResizeImage(snapshotId, CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId, volumeId, null);
 		}
 		return iqn;
 	}
@@ -160,7 +183,7 @@ public class CephRbdProvider implements SANProvider {
 
 	@Override
 	public String getVolumeConnectionString(String volumeId) {
-		return CephRbdInfo.getStorageInfo().getVirshSecret() + ","; // <virsh secret uuid>,<empty path>
+		return CephRbdInfo.getStorageInfo().getVirshSecret() + ",,,"; // <virsh secret uuid>,<empty path>
 	}
 
 	@Override
@@ -171,9 +194,11 @@ public class CephRbdProvider implements SANProvider {
 	}
 
 	@Override
-	public boolean deleteVolume(String volumeName) {
+	public boolean deleteVolume(String volumeId) {
 		try {
-			rbdService.deleteImage(volumeName);
+			rbdService.renameImage(volumeId, cachedConfig.getDeletedImagePrefix() + volumeId);
+		} catch (CephImageNotFoundException e) {
+			return true;
 		} catch (EucalyptusCephException e) {
 			return false;
 		}
@@ -189,7 +214,9 @@ public class CephRbdProvider implements SANProvider {
 	@Override
 	public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated) {
 		try {
-			rbdService.deleteImage(snapshotId);
+			rbdService.renameImage(snapshotId, cachedConfig.getDeletedImagePrefix() + snapshotId);
+		} catch (CephImageNotFoundException e) {
+			return true;
 		} catch (EucalyptusCephException e) {
 			return false;
 		}
@@ -208,7 +235,12 @@ public class CephRbdProvider implements SANProvider {
 
 	@Override
 	public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException {
-
+		if (iqn.contains(",")) { // iqn is in format "image/pool,image/pool"
+			// This could be the case when EBS snapshot from another cluster is being setup on this cluster for the first time
+			// Create a snapshot on the image as one might not exist
+			String snapshotPoint = CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId;
+			rbdService.createSnapshot(snapshotId, snapshotPoint);
+		}
 	}
 
 	@Override
@@ -260,7 +292,9 @@ public class CephRbdProvider implements SANProvider {
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-
+		if (deletionService != null && !deletionService.isShutdown()) {
+			deletionService.shutdownNow();
+		}
 	}
 
 	@Override
@@ -286,8 +320,8 @@ public class CephRbdProvider implements SANProvider {
 	}
 
 	@Override
-	public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException {
-		String snapshotPoint = "sp-" + volumeId;
+	public String createSnapshotPoint(String parentVolumeId, String snapshotId) throws EucalyptusCloudException {
+		String snapshotPoint = CephRbdInfo.SNAPSHOT_FOR_PREFIX + snapshotId;
 		rbdService.createSnapshot(parentVolumeId, snapshotPoint);
 		return snapshotPoint;
 	}
@@ -324,5 +358,35 @@ public class CephRbdProvider implements SANProvider {
 	@Override
 	public String getProviderName() {
 		return "ceph";
+	}
+
+	class CephRbdImageDeleter implements Runnable {
+		
+		@Override
+		public void run() {
+			try {
+				Set<String> poolSet = new HashSet<String>(Arrays.asList(cachedConfig.getCephVolumePools().split(",")));
+				poolSet.addAll(Arrays.asList(cachedConfig.getCephSnapshotPools().split(",")));
+
+				for (final String pool : poolSet) { // Cycle through all pools
+
+					for (String image : rbdService.listPool(pool)) {
+						if (image.startsWith(cachedConfig.getDeletedImagePrefix())) { // List images in each pool and try deleting the images with delete prefix
+							LOGD.debug("Image " + image + " was marked for deletion, cleaning it up");
+							try {
+								rbdService.deleteImage(image, pool);
+							} catch (CannotDeleteCephImageException e) {
+								LOGD.debug("Will retry deleting image " + image + " when it has no clones/children");
+							} catch (Exception e) {
+								LOGD.warn("Failed to delete image " + image + ". Will keep retrying");
+							}
+						}
+					}
+
+				}
+			} catch (Exception e) {
+				LOG.warn("Caught error during clean up of deleted images", e);
+			}
+		}
 	}
 }
