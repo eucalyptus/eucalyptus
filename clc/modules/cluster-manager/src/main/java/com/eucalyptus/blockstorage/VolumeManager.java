@@ -387,9 +387,6 @@ public class VolumeManager {
     final String instanceId = normalizeInstanceIdentifier( request.getInstanceId() );
     final Context ctx = Contexts.lookup( );
     
-    if (  deviceName == null || deviceName.endsWith( "sda" ) || !validateDeviceName( deviceName ) ) {
-      throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
-    }
     VmInstance vm = null;
     try {
       vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
@@ -404,6 +401,11 @@ public class VolumeManager {
                                      + vm.getInstanceId( )
                                      + " "
                                      + vm.getMigrationTask( ) );
+    }
+
+    // allow adding root device to stopped VM
+    if (  deviceName == null || (deviceName.endsWith( "sda" ) && !VmState.STOPPED.equals(vm.getState()) ) || !validateDeviceName( deviceName ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
     }
 
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
@@ -466,9 +468,14 @@ public class VolumeManager {
     request.setRemoteDevice(token);
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    vm.addTransientVolume( deviceName, token, volume );
-    final VolumeAttachCallback cb = new VolumeAttachCallback( request );
-    AsyncRequests.newRequest( cb ).dispatch( ccConfig );
+    if ( deviceName.endsWith( "sda" ) && VmState.STOPPED.equals( vm.getState() ) ) {
+      vm.addRootVolumeToStoppedInstance( token, volume );
+    } else
+      vm.addTransientVolume( deviceName, token, volume );
+    if ( !VmState.STOPPED.equals( vm.getState() ) ) { // any other states that should not accept attach request?
+      final VolumeAttachCallback cb = new VolumeAttachCallback( request );
+      AsyncRequests.newRequest( cb ).dispatch( ccConfig );
+    }
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )

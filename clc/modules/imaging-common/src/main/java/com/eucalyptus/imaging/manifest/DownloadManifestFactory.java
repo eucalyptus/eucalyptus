@@ -86,11 +86,10 @@ public class DownloadManifestFactory {
 
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
-	 * @param baseManifestLocation location of the base manifest file
+	 * @param baseManifest the base manifest
 	 * @param keyToUse public key that used for encryption
 	 * @param manifestName name for generated manifest file
 	 * @param expirationHours expiration policy in hours for pre-signed URLs
-	 * @param manifestType what kind of manifest 
 	 * @return pre-signed URL that can be used to download generated manifest
 	 * @throws DownloadManifestException
 	 */
@@ -105,7 +104,7 @@ public class DownloadManifestFactory {
 
 			// check if download-manifest already exists
 			if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
-				LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created and has not expired. Skipping creation");
+				LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is already created and has not expired. Skipping creation");
 				URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
 						DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
 				return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());

@@ -117,11 +117,12 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
-        ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
-        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-        String bucketName = objectNode.get("bucket").textValue();
-        s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)));
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
+          ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
+          if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
+          String bucketName = objectNode.get("bucket").textValue();
+          s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)));
+        }
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -140,19 +141,20 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
         if (action.info.getPhysicalResourceId() == null) return action;
-        final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials());
-        ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
-        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-        String bucketName = objectNode.get("bucket").textValue();
-        String keyName = objectNode.get("key").textValue();
-        if (!s3c.doesBucketExist(bucketName)) {
-          return action;
-        }
-        VersionListing versionListing = s3c.listVersions(bucketName,"");
-        // delete all items under the buckey/key
-        for (S3VersionSummary versionSummary: versionListing.getVersionSummaries()) {
-          if (versionSummary.getKey().equals(keyName)) {
-            s3c.deleteVersion(versionSummary.getBucketName(), versionSummary.getKey(), versionSummary.getVersionId());
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
+          ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
+          if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
+          String bucketName = objectNode.get("bucket").textValue();
+          String keyName = objectNode.get("key").textValue();
+          if (!s3c.doesBucketExist(bucketName)) {
+            return action;
+          }
+          VersionListing versionListing = s3c.listVersions(bucketName,"");
+          // delete all items under the buckey/key
+          for (S3VersionSummary versionSummary: versionListing.getVersionSummaries()) {
+            if (versionSummary.getKey().equals(keyName)) {
+              s3c.deleteVersion(versionSummary.getBucketName(), versionSummary.getKey(), versionSummary.getVersionId());
+            }
           }
         }
         return action;

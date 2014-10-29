@@ -494,7 +494,10 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       final MachineImageInfo machineImage = LookupMachine.INSTANCE.apply(imageId);
       try{
         final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile(machineImage.getRunManifestLocation(), BundleImageManifest.INSTANCE ), 
+            new ImageManifestFile(
+                machineImage.getRunManifestLocation( ),
+                BundleImageManifest.INSTANCE,
+                ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( )  ),
             partition.getNodeCertificate().getPublicKey(), reservationId);
         LOG.debug(String.format("Generated download manifest for instance %s", instance.getDisplayName()));
       }catch(final Exception ex){

@@ -157,6 +157,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -1785,18 +1786,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    *
    */
-  public void setState( final VmState stopping, final Reason reason, final String... extra ) {
-    
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+  public void setState( final VmState newState, final Reason reason, final String... extra ) {
+    try (TransactionResource db = Entities.transactionFor( VmInstance.class )) {
       final VmInstance entity = Entities.merge( this );
-      entity.runtimeState.setState( stopping, reason, extra );
+      entity.runtimeState.setState( newState, reason, extra );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw Exceptions.toUndeclared( ex );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1861,7 +1858,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } catch ( final NoSuchElementException ex ) {
         volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
         db.commit( );
-        if(volumeAttachment != null) {
+        // allow detachment of volumes from stopped instance EUCA-5033
+        if(volumeAttachment != null && !VmState.STOPPED.equals(entity.getState()) ) {
   		  throw new NonTransientVolumeException( volumeId + " is associated with boot from EBS instance " + entity.getInstanceId() + " at launch time.");
   		}
       }
@@ -1875,9 +1873,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 	}
   }
   
-  /**
-   *
-   */
   public void addTransientVolume( final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
       public Volume apply( final Volume input ) {
@@ -1893,6 +1888,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
+  public void addRootVolumeToStoppedInstance( final String remoteDevice, final Volume vol ) {
+    final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
+      public Volume apply( final Volume input ) {
+	    final VmInstance entity = Entities.merge( VmInstance.this );
+	    final Volume volEntity = Entities.merge( vol );
+	    VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, volEntity.getDisplayName( ), Images.DEFAULT_ROOT_DEVICE,
+	      remoteDevice, AttachmentState.attached.name( ), new Date( ), Boolean.TRUE, Boolean.TRUE );
+	    volEntity.setState( State.BUSY );
+	    entity.getBootRecord().getPersistentVolumes().add( attachVol );
+	    return volEntity;
+	  }
+    };
+	Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
+  }
+
   public void addPersistentVolume( final String deviceName, final Volume vol, final Boolean isRootDevice ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
       public Volume apply( final Volume input ) {
@@ -1976,11 +1986,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    *
    */
   public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+    try(TransactionResource db = Entities.transactionFor( VmInstance.class )) {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Volumes.lookup( null, volumeId );
-      final VmVolumeAttachment ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
+      VmVolumeAttachment ret;
+      try {
+        ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
+      } catch (NoSuchElementException ex) {
+        // EUCA-5033 allow volume detachment from stopped instances
+        if ( VmState.STOPPED.equals(entity.getState()) ) {
+          ret = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
+          entity.getBootRecord( ).getPersistentVolumes( ).remove(ret);
+        } else
+          throw ex;
+      }
       if ( State.BUSY.equals( volEntity.getState( ) ) ) {
         volEntity.setState( State.EXTANT );
       }
@@ -1989,8 +2008,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -2042,8 +2059,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         if ( !Entities.isPersistent( VmInstance.this ) ) {
           throw new TransientEntityException( this.toString( ) );
         } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
+          try(TransactionResource db = Entities.transactionFor( VmInstance.class )) {
             final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
               final BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
@@ -2072,8 +2088,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
-          } finally {
-            if ( db.isActive() ) db.rollback();
           }
         }
         return true;

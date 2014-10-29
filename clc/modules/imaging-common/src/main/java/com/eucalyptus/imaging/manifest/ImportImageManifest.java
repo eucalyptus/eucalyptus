@@ -61,14 +61,14 @@ public enum ImportImageManifest implements ImageManifest {
 	}
 
 	@Override
-	public String getManifest(String location) throws EucalyptusCloudException {
+	public String getManifest(String location, int maximumSize) throws EucalyptusCloudException {
 		HttpClient client = new HttpClient();
 		client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
 		GetMethod method = new GetMethod(location);
 		String s = null;
 		try {
 			client.executeMethod(method);
-			s = method.getResponseBodyAsString();
+			s = method.getResponseBodyAsString(maximumSize);
 			if (s == null) {
 				throw new EucalyptusCloudException("Can't download manifest from " + location + " content is null");
 			}

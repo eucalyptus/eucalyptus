@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -249,8 +249,7 @@ public class Bundles {
   }
 
   static void deleteBucket(final User user, String bucketName, boolean deleteObject) throws ComputeException {
-    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
-    try{
+    try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
       final List<Bucket> buckets = s3c.listBuckets();
       boolean bucketFound = false;
       for(final Bucket bucket : buckets){

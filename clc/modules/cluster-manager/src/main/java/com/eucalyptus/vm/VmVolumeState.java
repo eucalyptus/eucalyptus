@@ -79,6 +79,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 
+import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
@@ -223,6 +225,12 @@ public class VmVolumeState {
       }
     }
     for ( String volId : remoteOnly ) {
+      try {
+        Volumes.lookup( null, volId );
+      } catch ( NoSuchElementException e ) {
+        LOG.error("Invalid volume id " + volId + " passed from back-end");
+        continue; // Throw an error up?
+      }
       try {
         VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
         final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );

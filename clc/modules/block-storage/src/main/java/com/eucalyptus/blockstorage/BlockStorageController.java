@@ -1160,7 +1160,7 @@ public class BlockStorageController {
                     }
 
                     try {
-                        LOG.debug("Unexporting volume " + volumeId + "from all hosts");
+                        LOG.debug("Unexporting volume " + volumeId + " from all hosts");
                         blockManager.unexportVolumeFromAll(volumeId);
                     } catch (EucalyptusCloudException ex) {
                         LOG.error("Detaching volume " + volumeId + " from all hosts failed",ex);
