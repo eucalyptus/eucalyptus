@@ -2461,6 +2461,7 @@ char *create_corrid(const char *id)
     // correlation_id = [prefix(36)::new_id(36)]
     if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
         char *newid = system_output("uuidgen");
+        newid[strlen(newid)-1] = '\0';
         memset(hex_id, '\0', 8);
         strncpy(hex_id, strstr(id, "::") + 11, 4);
         hex_val = strtol(hex_id, NULL, 16);
@@ -2718,14 +2719,20 @@ int main(int argc, char **argv)
     }
 
     printf("Testing correlation id creation\n");
-    char *new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0005-4cec-a11a-5c2c6a42134c");
-    printf("Created correlation ID: %s\n", new_corr_id);
-    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0051-4cec-a11a-5c2c6a42134c");
-    printf("Created correlation ID: %s\n", new_corr_id);
-    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-0501-4cec-a11a-5c2c6a42134c");
-    printf("Created correlation ID: %s\n", new_corr_id);
-    new_corr_id = create_corrid("9db36718-0464-4d76-97d0-19f8dd970f6f::a2f43f71-ffff-4cec-a11a-5c2c6a42134c");
-    printf("Created correlation ID: %s\n", new_corr_id);
+    char corr_id_arg [128];
+    for (int i=0; i<100; i++){ 
+       memset(corr_id_arg, '\0', 128);
+       char *prefix = system_output("uuidgen");
+       char *postfix = system_output("uuidgen");
+       prefix[strlen(prefix)-1] = '\0';
+       postfix[strlen(postfix)-1] = '\0';
+       snprintf(corr_id_arg, 128, "%s::%s", prefix, postfix) ;
+       EUCA_FREE(prefix);
+       EUCA_FREE(postfix);
+       char *new_corr_id = create_corrid(corr_id_arg);
+       printf("%s --> %s\n", corr_id_arg, new_corr_id);
+       EUCA_FREE(new_corr_id);
+    }
 
     // We're testing the euca_execlp() API.
     printf("Testing euca_execlp() in misc.c\n");
