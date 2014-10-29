@@ -31,6 +31,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.ImageManifest;
 import com.eucalyptus.imaging.common.ImportDiskImageDetail;
@@ -58,7 +59,7 @@ public abstract class AbstractTaskScheduler {
   private PublicKey imagingServiceKey = null;
   private String imagingServiceCertArn = null;
   
-  public enum WorkerTaskType { import_volume, convert_image };
+  public enum WorkerTaskType { import_volume, convert_image }
   
   public static class WorkerTask {
     String importTaskId = null;
@@ -80,7 +81,7 @@ public abstract class AbstractTaskScheduler {
       return this.importTaskType;
     }
     
-    public void setVoumeTask(final VolumeTask volumeTask){
+    public void setVolumeTask( final VolumeTask volumeTask ){
       this.volumeTask = volumeTask;
     }
     
@@ -139,8 +140,10 @@ public abstract class AbstractTaskScheduler {
               final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
               manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
               final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-              final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket, key),
-                  BundleImageManifest.INSTANCE);
+              final ImageManifestFile manifestFile = new ImageManifestFile(
+                  String.format("%s/%s", bucket, key),
+                  BundleImageManifest.INSTANCE,
+                  ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
               String manifestName = String.format("%s-%s-%s", imagingTask.getDisplayName(),
                   conversionTask.getImportDisk().getConvertedImage().getPrefix(),
                   image.getFormat());
@@ -174,9 +177,13 @@ public abstract class AbstractTaskScheduler {
           if(volumeTask.getDownloadManifestUrl().size() == 0){
             try{
               manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                  new ImageManifestFile(volumeTask.getImportManifestUrl(),
-                      ImportImageManifest.INSTANCE ),
-                      null, volumeTask.getDisplayName(), 1);
+                  new ImageManifestFile(
+                      volumeTask.getImportManifestUrl(),
+                      ImportImageManifest.INSTANCE,
+                      ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
+                  null,
+                  volumeTask.getDisplayName( ),
+                  1 );
             }catch(final InvalidBaseManifestException ex){
               ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
               throw new EucalyptusCloudException("Failed to generate download manifest", ex);
@@ -191,7 +198,7 @@ public abstract class AbstractTaskScheduler {
           im.setFormat(volumeTask.getFormat());
           vt.setImageManifestSet(Lists.newArrayList(im));
           vt.setVolumeId(volumeTask.getVolumeId());
-          newTask.setVoumeTask(vt);
+          newTask.setVolumeTask( vt );
         }else if (nextTask instanceof ImportInstanceImagingTask){
           final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
           for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
@@ -205,9 +212,13 @@ public abstract class AbstractTaskScheduler {
                 try{
                   String manifestName = String.format("%s-%s", nextTask.getDisplayName(), volume.getVolume().getId());
                   manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                      new ImageManifestFile(importManifestUrl,
-                          ImportImageManifest.INSTANCE ),
-                          null, manifestName, 1);
+                      new ImageManifestFile(
+                          importManifestUrl,
+                          ImportImageManifest.INSTANCE,
+                          ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
+                      null,
+                      manifestName,
+                      1 );
                   ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
                 }catch(final InvalidBaseManifestException ex){
                   ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
@@ -221,7 +232,7 @@ public abstract class AbstractTaskScheduler {
               im.setFormat(volume.getImage().getFormat());
               vt.setImageManifestSet(Lists.newArrayList(im));
               vt.setVolumeId(volume.getVolume().getId());
-              newTask.setVoumeTask(vt);
+              newTask.setVolumeTask( vt );
               break;
             }
           }

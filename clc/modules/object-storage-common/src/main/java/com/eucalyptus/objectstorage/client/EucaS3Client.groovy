@@ -25,13 +25,14 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
-import com.amazonaws.services.s3.model.S3Object
 import com.amazonaws.services.s3.model.S3ObjectInputStream
 import com.amazonaws.util.Md5Utils
 import com.eucalyptus.auth.principal.User
 import com.eucalyptus.util.EucalyptusCloudException
 import groovy.transform.CompileStatic
 import org.apache.xml.security.utils.Base64
+
+import java.nio.charset.StandardCharsets
 
 /**
  * This is how any internal eucalyptus component should get an s3 client and use it for object-storage access.
@@ -84,22 +85,18 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
         this.s3Client.setEndpoint(GenericS3ClientFactory.getRandomOSGUri().toASCIIString());
     }
 
-    public String getObjectContent(String bucket, String key) {
-        S3ObjectInputStream contentStream = null;
-        byte[] buffer = new byte[10*1024]; //10k buffer
-        int readBytes;
-        ByteArrayOutputStream contentBytes = new ByteArrayOutputStream(buffer.length);
-        try {
-            S3Object manifest = s3Client.getObject(bucket, key);
-            contentStream = manifest.getObjectContent();
-            while((readBytes = contentStream.read(buffer)) > 0) {
-                contentBytes.write(buffer, 0, readBytes);
-            }
-            return contentBytes.toString("UTF-8");
-        } finally {
-            if(contentStream != null) {
-                contentStream.close();
-            }
+    public String getObjectContent( String bucket, String key, int maximumSize ) {
+        final byte[] buffer = new byte[10*1024]; //10k buffer
+        s3Client.getObject(bucket, key).getObjectContent( ).withStream{ S3ObjectInputStream contentStream ->
+          final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream(buffer.length);
+          int readBytes;
+          while( (readBytes = contentStream.read( buffer ) ) > 0 ) {
+            contentBytes.write( buffer, 0, readBytes );
+          }
+          if ( contentBytes.size( ) > maximumSize ) {
+            throw new IOException( "Maximum size exceeded for ${bucket}/${key}" )
+          }
+          contentBytes.toString( StandardCharsets.UTF_8.name( ) );
         }
     }
 
@@ -112,7 +109,7 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
      * @throws EucalyptusCloudException
      */
     public String putObjectContent(String bucket, String key, String content, Map<String, String> metadata) {
-        byte[] contentBytes = content.getBytes("UTF-8");
+        byte[] contentBytes = content.getBytes( StandardCharsets.UTF_8 );
         byte[] md5 = Md5Utils.computeMD5Hash(contentBytes);
         ObjectMetadata objMetadata = new ObjectMetadata();
         if(metadata != null) {

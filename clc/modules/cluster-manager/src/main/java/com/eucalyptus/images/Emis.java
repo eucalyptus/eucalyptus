@@ -64,6 +64,7 @@ package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
@@ -90,6 +91,7 @@ import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.vm.VmInstance;
@@ -175,8 +177,9 @@ public class Emis {
     }
   }
   
-  public enum LookupMachine implements Function<String, MachineImageInfo> {
+  public enum LookupMachine implements NonNullFunction<String, MachineImageInfo> {
     INSTANCE;
+    @Nonnull
     @Override
     public MachineImageInfo apply( final String identifier ) {
       final EntityTransaction db = Entities.get( MachineImageInfo.class );
@@ -197,8 +200,9 @@ public class Emis {
     }
   }
   
-  public enum LookupKernel implements Function<String, KernelImageInfo> {
+  public enum LookupKernel implements NonNullFunction<String, KernelImageInfo> {
     INSTANCE;
+    @Nonnull
     @Override
     public KernelImageInfo apply( final String identifier ) {
       final EntityTransaction db = Entities.get( KernelImageInfo.class );
@@ -219,8 +223,9 @@ public class Emis {
     }
   }
   
-  public enum LookupRamdisk implements Function<String, RamdiskImageInfo> {
+  public enum LookupRamdisk implements NonNullFunction<String, RamdiskImageInfo> {
     INSTANCE;
+    @Nonnull
     @Override
     public RamdiskImageInfo apply( final String identifier ) {
       final EntityTransaction db = Entities.get( RamdiskImageInfo.class );
@@ -309,14 +314,22 @@ public class Emis {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId);
+                new ImageManifestFile(
+                    this.getKernel( ).getManifestLocation( ),
+                    BundleImageManifest.INSTANCE,
+                    ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
+                partition.getNodeCertificate().getPublicKey( ),
+                this.getKernel( ).getDisplayName( ) + "-" + reservationId );
             vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId);
+                new ImageManifestFile(
+                    this.getRamdisk( ).getManifestLocation( ),
+                    BundleImageManifest.INSTANCE,
+                    ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
+                partition.getNodeCertificate().getPublicKey( ),
+                this.getRamdisk( ).getDisplayName( ) + "-" + reservationId );
             vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
@@ -332,8 +345,12 @@ public class Emis {
             manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
           }else{
             manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), reservationId);
+                new ImageManifestFile(
+                    ((StaticDiskImage) this.getMachine( )).getRunManifestLocation( ),
+                    BundleImageManifest.INSTANCE,
+                    ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
+                partition.getNodeCertificate( ).getPublicKey( ),
+                reservationId );
           }
           vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
         }

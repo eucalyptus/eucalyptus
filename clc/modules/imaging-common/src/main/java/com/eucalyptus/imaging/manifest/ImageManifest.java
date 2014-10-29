@@ -32,7 +32,7 @@ public interface ImageManifest {
 	
 	String getSizePath();
 
-	String getManifest(String location) throws EucalyptusCloudException;
+	String getManifest(String location, int maximumSize) throws EucalyptusCloudException;
 
 	String getBaseBucket(String location);
 }

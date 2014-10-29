@@ -24,10 +24,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class ImageManifestFile {
 	private final ImageManifest manifestType;
 	private final String location;
+	private final int manifestSizeLimit;
 	
-	public ImageManifestFile(String location, ImageManifest type) {
+	public ImageManifestFile(String location, ImageManifest type, int manifestSizeLimit) {
 		this.manifestType = type;
 		this.location = location;
+		this.manifestSizeLimit = manifestSizeLimit;
 	}
 
 	public ImageManifest getManifestType() {
@@ -36,10 +38,14 @@ public class ImageManifestFile {
 	}
 
 	public String getManifest() throws EucalyptusCloudException {
-		return manifestType.getManifest(this.location);
+		return manifestType.getManifest(this.location, this.manifestSizeLimit);
 	}
 
 	public String getBaseBucket() throws EucalyptusCloudException {
 		return manifestType.getBaseBucket(this.location);
+	}
+
+	public int getManifestSizeLimit() {
+		return manifestSizeLimit;
 	}
 }

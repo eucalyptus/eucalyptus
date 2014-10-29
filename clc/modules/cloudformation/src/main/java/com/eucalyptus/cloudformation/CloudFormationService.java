@@ -331,7 +331,10 @@ public class CloudFormationService {
       if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
         throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
       }
-      return eucaS3Client.getObjectContent(bucketAndKey.getBucket(), bucketAndKey.getKey());
+      return eucaS3Client.getObjectContent(
+          bucketAndKey.getBucket( ),
+          bucketAndKey.getKey( ),
+          (int) Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES );
     } catch (Exception ex) {
       LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getKey());
       LOG.debug(ex, ex);
