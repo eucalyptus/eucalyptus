@@ -57,13 +57,18 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
 
     dorun = 0;
     snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_localproxy.pid", mido->eucahome);
-    pidstr = file2str(pidfile);
-    if (pidstr) {
+    if (!check_file(pidfile)) {
+      pidstr = file2str(pidfile);
+      if (pidstr) {
         npid = atoi(pidstr);
-    } else {
+      } else {
         npid = 0;
+      }
+      EUCA_FREE(pidstr);
+    } else {
+      npid = 0;
     }
-    EUCA_FREE(pidstr);
+
 
     if (mode == 0) {
         if (npid > 1) {
@@ -99,13 +104,17 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
         if (strlen(mido->vpcs[i].name)) {
             dorun = 0;
             snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
-            pidstr = file2str(pidfile);
-            if (pidstr) {
+	    if (!check_file(pidfile)) {
+	      pidstr = file2str(pidfile);
+	      if (pidstr) {
                 npid = atoi(pidstr);
-            } else {
+	      } else {
                 npid = 0;
-            }
-            EUCA_FREE(pidstr);
+	      }
+	      EUCA_FREE(pidstr);
+	    } else {
+	      npid = 0;
+	    }
 
             if (mode == 0) {
                 if (npid > 1) {
@@ -384,17 +393,23 @@ int do_midonet_populate(mido_config * mido)
         LOGERROR("could not populate midonet core (eucabr, eucart): check midonet health\n");
         return (1);
     }
-    // create the core (only the things that aren't already there)
-    rc = create_mido_core(mido, mido->midocore);
-    if (rc) {
+
+    if (mido->setupcore) {
+      // create the core (only the things that aren't already there)
+      rc = create_mido_core(mido, mido->midocore);
+      if (rc) {
         LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
         return (1);
+      }
+    } else {
+      LOGDEBUG("skipping the create of midocore (see MIDOSETUPCORE parameter in eucalyptus.conf)\n");
     }
+
     // pattern 
     // - find all VPC routers (and populate VPCs)
     // - for each VPC, find all subnets (and populate subnets)
     // - for each VPC, for each subnet, find all instances (and populate instances)
-
+    
     // VPCs
     for (i = 0; i < mido->max_routers; i++) {
         LOGDEBUG("inspecting mido router '%s'\n", mido->routers[i].name);
@@ -535,7 +550,11 @@ int do_midonet_teardown(mido_config * mido)
         delete_mido_vpc_secgroup(&(mido->vpcsecgroups[i]));
     }
 
-    delete_mido_core(mido, mido->midocore);
+    if (mido->setupcore) {
+      delete_mido_core(mido, mido->midocore);
+    } else {
+      LOGDEBUG("skipping the delete of midocore (see MIDOSETUPCORE param in eucalyptus.conf)\n");
+    }
 
     free_mido_config(mido);
 
@@ -608,12 +627,13 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             snprintf(vpc->name, 16, "%s", gnivpc->name);
             get_next_router_id(mido, &(vpc->rtid));
         }
+
         rc = create_mido_vpc(mido, mido->midocore, vpc);
         if (rc) {
             LOGERROR("failed to create VPC '%s': check midonet health\n", gnivpc->name);
         }
+	vpc->gnipresent = 1;
 
-        vpc->gnipresent = 1;
 
         // do subnets
         for (j = 0; j < gnivpc->max_subnets; j++) {
@@ -703,6 +723,14 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             LOGERROR("cannot connect instance to midonet: check midonet health\n");
                         } else {
                             char *strptra = NULL;
+
+			    strptra = hex2dot(gniinstance->privateIp);
+			    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), strptra, NULL);
+			    if (rc) {
+			      LOGERROR("cannot add instance private IP to ip-address-group: check midonet health\n");
+			    }
+			    EUCA_FREE(strptra);
+
                             strptra = hex2dot(gniinstance->publicIp);
                             LOGINFO("setting up floating IP '%s' for instance '%s'\n", strptra, vpcinstance->name);
                             EUCA_FREE(strptra);
@@ -1006,18 +1034,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         //    ret = 1;
     }
 
-    if (0) {
-        // if debugging
-        for (i = 0; i < mido->max_vpcs; i++) {
-            delete_mido_vpc(mido, &(mido->vpcs[i]));
-        }
-        delete_mido_core(mido, mido->midocore);
-
-        gni_free(gni);
-        free_mido_config(mido);
-
-        exit(0);
-    }
     return (0);
 }
 
@@ -1540,7 +1556,7 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
     return (ret);
 }
 
-int initialize_mido(mido_config * mido, char *eucahome, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip,
+int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip,
                     char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
@@ -1551,6 +1567,12 @@ int initialize_mido(mido_config * mido, char *eucahome, char *ext_eucanetdhostna
     bzero(mido, sizeof(mido_config));
 
     mido->eucahome = strdup(eucahome);
+
+    mido->setupcore = 1;
+    if (setupcore && (strlen(setupcore) > 0) && (!strcmp(setupcore, "N") || !strcmp(setupcore, "n"))) {
+      mido->setupcore = 0;
+    }
+
     mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
     mido->ext_rthostname = strdup(ext_rthostname);
     mido->ext_rtaddr = strdup(ext_rtaddr);
@@ -2471,13 +2493,15 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
 int delete_mido_core(mido_config * mido, mido_core * midocore)
 {
     int rc;
-    //  rc = mido_unlink_host_port(&(midocore->midos[GWHOST]), &(midocore->midos[EUCART_GWPORT]));
+
     rc = mido_unlink_host_port(&(midocore->midos[GWHOST]), &(midocore->midos[EUCART_GWPORT]));
     sleep(1);
-    //  rc = mido_delete_bridge(&(midocore->midos[EUCABR]));
+
     rc = mido_delete_bridge(&(midocore->midos[EUCABR]));
     sleep(1);
+
     rc = mido_delete_router(&(midocore->midos[EUCART]));
+    sleep(1);
 
     rc = delete_mido_meta_core(mido);
 
