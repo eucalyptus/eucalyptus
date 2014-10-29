@@ -92,9 +92,9 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
           int readBytes;
           while( (readBytes = contentStream.read( buffer ) ) > 0 ) {
             contentBytes.write( buffer, 0, readBytes );
-          }
-          if ( contentBytes.size( ) > maximumSize ) {
-            throw new IOException( "Maximum size exceeded for ${bucket}/${key}" )
+            if ( contentBytes.size( ) > maximumSize ) {
+              throw new IOException( "Maximum size exceeded for ${bucket}/${key}" )
+            }
           }
           contentBytes.toString( StandardCharsets.UTF_8.name( ) );
         }
