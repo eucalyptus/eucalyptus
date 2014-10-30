@@ -66,6 +66,8 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Date;
+
 import javax.security.auth.x500.X500Principal;
 
 public interface CertificateProvider extends BaseSecurityProvider {
@@ -86,6 +88,7 @@ public interface CertificateProvider extends BaseSecurityProvider {
    * @return
    */
   public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey );
+  public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter );
   public abstract X509Certificate generateCertificate( KeyPair keys, String userName );
   public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn );
 

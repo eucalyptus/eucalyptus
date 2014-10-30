@@ -156,9 +156,22 @@ public class ImagingServiceProperties {
       type = ConfigurableFieldType.BOOLEAN)
   public static Boolean IMAGING_WORKER_HEALTHCHECK = true;
   
-  
+  @ConfigurableField( displayName="imaging_worker_vm_expiration_days",
+      description = "the days after which imaging work VMs expire",
+      initial = "180",
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE, 
+      changeListener = VmExpirationDaysChangeListener.class)
+  public static String IMAGING_WORKER_VM_EXPIRATION_DAYS = "180";
+ 
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
-  public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
+
+  public static String getCredentialsString() {
+    final String credStr = String.format("euca-%s:expiration_day=%s;",
+        B64.standard.encString("setup-credential"), IMAGING_WORKER_VM_EXPIRATION_DAYS);
+    return credStr;
+  }
+  
   
   @Provides(ImagingBackend.class)
   @RunDuring(Bootstrap.Stage.Final)
@@ -399,6 +412,18 @@ public class ImagingServiceProperties {
     }
   }
   
+  public static class VmExpirationDaysChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final int newExp = Integer.parseInt(newValue);
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type");
+      }      
+    }
+  }
+  
   public static String getWorkerUserData(String ntpServer, String logServer, String logServerPort) {
     Map<String,String> kvMap = new HashMap<String,String>();
     if(ntpServer != null)
@@ -553,21 +578,21 @@ public class ImagingServiceProperties {
           String newUserdata = lc.getUserData();
           if(ntpServers!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-                    ImagingServiceProperties.CREDENTIALS_STR,
+                    ImagingServiceProperties.getCredentialsString(),
                     getWorkerUserData(ntpServers,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServer!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-            		ImagingServiceProperties.CREDENTIALS_STR,
+            		ImagingServiceProperties.getCredentialsString(),
             		getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         logServer,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
           if(logServerPort!=null ){
             newUserdata = B64.standard.encString(String.format("%s\n%s",
-            		ImagingServiceProperties.CREDENTIALS_STR,
+            		ImagingServiceProperties.getCredentialsString(),
                     getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                         ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                         logServerPort)));

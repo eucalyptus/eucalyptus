@@ -68,6 +68,7 @@ import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -90,6 +91,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
@@ -310,33 +312,44 @@ public class ClusterAllocator implements Runnable {
     }catch(final AuthException ex){
       return;
     }
+    if (allocInfo.getUserData() == null || allocInfo.getUserData().length<=0)
+      return;
+    
     // determine if credential setup is requested
-    if(allocInfo.getUserData()==null || 
-        allocInfo.getUserData().length< VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length())
+    final String userData = new String(allocInfo.getUserData());
+    if(! VmInstances.VmSpecialUserData.apply(userData))
       return;
-    String userData = new String(allocInfo.getUserData(), 0, 
-        VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length());
-    if(!userData.startsWith(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString()))
-      return;
-    userData = new String(allocInfo.getUserData());
+    
     String payload = null;
-    if(userData.length()> VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()) {
-        payload=userData.substring(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()).trim();
-    } 
+    int expirationDays = 180;
+    try{
+      final VmInstances.VmSpecialUserData specialData = new VmInstances.VmSpecialUserData(userData);
+      if(! VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.equals(specialData.getKey() ))
+        return;
+      final String strExpDay = specialData.getArgValue("expiration_day");
+      if (strExpDay != null )
+        expirationDays = Integer.parseInt(strExpDay);
+      payload = specialData.getPayload();
+    }catch(final Exception ex) {
+      LOG.error("Failed to parse VM user data", ex);
+      return;
+    }
+   
     this.allocInfo.setUserDataAsString( payload );
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();
       final X509Certificate kpCert = Certs.generateCertificate(kp, 
           String.format("Certificate-for-%s/%s", this.allocInfo.getOwnerFullName().getAccountName(),  
-              this.allocInfo.getOwnerFullName().getUserName()));
+              this.allocInfo.getOwnerFullName().getUserName()), 
+              DateUtils.addDays(Calendar.getInstance().getTime(), expirationDays));
       
       // call iam:signCertificate with the pub key
       final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
       req.setCertificate(b64PubKey);
-      
+           
       final SignCertificateResponseType resp= AsyncRequests.sendSync( euare, req );
       final String token = resp.getSignCertificateResult().getSignature(); //in Base64
       
@@ -375,8 +388,8 @@ public class ClusterAllocator implements Runnable {
       X509Certificate eucalyptusCert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
       final String b64EucalyptusPubkey = B64.standard.encString( PEMFiles.getBytes( eucalyptusCert ) );
 
-      // EUCALYPTUS's pubkey, EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED),
-      // SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
+      // EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED),
+      // SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED), EUCALYPTUS's pubkey
       // each field all in B64
       final String credential = String.format("%s\n%s\n%s\n%s\n%s\n%s",
           b64EuarePubkey,

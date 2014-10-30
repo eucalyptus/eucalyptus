@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.activities;
 
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -139,6 +140,18 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 					throw new ConfigurablePropertyException("Could not change key name", e);
 			    }
 			}
+	}
+	
+	public static class ElbVmExpirationDaysChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final int newExp = Integer.parseInt(newValue);
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type");
+      }
+    }
 	}
 	
 	private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
@@ -334,6 +347,15 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	    changeListener = ElbAppCookieDurationChangeListener.class)
 	public static String LOADBALANCER_APP_COOKIE_DURATION = "24";
 	
+	@ConfigurableField( displayName = "loadbalancer_vm_expiration_days",
+      description = "the days after which the loadbalancer Vms expire",
+      initial = "365", // 1 year by default 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbVmExpirationDaysChangeListener.class)
+  public static String LOADBALANCER_VM_EXPIRATION_DAYS = "365";
+  
+	
 	@Provides(LoadBalancingBackend.class)
 	@RunDuring(Bootstrap.Stage.Final)
 	@DependsLocal(LoadBalancingBackend.class)
@@ -511,9 +533,13 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				}
 				final String keyName =
 						LOADBALANCER_VM_KEYNAME!=null && LOADBALANCER_VM_KEYNAME.length()>0 ? LOADBALANCER_VM_KEYNAME : null;
+					
+				final String credStr = String.format("euca-%s:expiration_day=%s;",
+				    B64.standard.encString("setup-credential"), LOADBALANCER_VM_EXPIRATION_DAYS);
+
 				final String userData = B64.standard.encString(String.format("%s\n%s",
-						"euca-"+B64.standard.encString("setup-credential"),
-						userDataBuilder.build()));
+				    credStr,
+				    userDataBuilder.build()));
 
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
 						launchConfigName, securityGroupNamesOrIds, keyName, userData, !zoneToSubnetIdMap.isEmpty( ) );
