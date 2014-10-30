@@ -126,7 +126,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
@@ -295,7 +294,6 @@ public class ClusterAllocator implements Runnable {
           VmInstances.stopped( vm );
         } else {
           VmInstances.terminated( vm );
-          VmInstances.terminated( vm );
         }
       } catch ( final Exception e1 ) {
         LOG.error( e1 );
@@ -395,7 +393,7 @@ public class ClusterAllocator implements Runnable {
 
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
-    
+
     if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
       List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
       final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
