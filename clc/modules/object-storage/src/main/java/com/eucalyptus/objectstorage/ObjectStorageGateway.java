@@ -1014,7 +1014,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 }
 
                 //Marshal into a string
-                aclString = S3AccessControlledEntity.marshallAcpToString(request.getAccessControlPolicy());
+                try {
+                    aclString = S3AccessControlledEntity.marshallAcpToString(request.getAccessControlPolicy());
+                }
+                catch (Exception e) {
+                    throw new MalformedACLErrorException(request.getBucket() + "/" + request.getKey() + "?acl");
+                }
                 if(Strings.isNullOrEmpty(aclString)) {
                     throw new MalformedACLErrorException(request.getBucket() + "/" + request.getKey() + "?acl");
                 }
@@ -1030,6 +1035,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
             return reply;
         } catch(Exception e) {
             LOG.error("Internal error during PUT object?acl for object " + request.getBucket() + "/" + request.getKey(), e);
+            if (e instanceof MalformedACLErrorException) {
+                throw new MalformedACLErrorException(request.getBucket() + "/" + request.getKey() + "?acl");
+            }
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
     }

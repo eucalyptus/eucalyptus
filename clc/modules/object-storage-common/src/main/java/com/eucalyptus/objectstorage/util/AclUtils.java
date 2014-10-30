@@ -25,6 +25,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -33,7 +34,10 @@ import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
@@ -480,4 +484,129 @@ public class AclUtils {
 
         return acPolicy;
     }
+
+    /**
+     * Checks grants and transforms grantees into canonicalId from eucalyptus account id or email address
+     *
+     * @param acl
+     * @return
+     */
+    public static AccessControlList scrubAcl(AccessControlList acl ) {
+        AccessControlList scrubbed = new AccessControlList();
+        if (acl == null || acl.getGrants() == null || acl.getGrants().size() == 0) {
+            return scrubbed;
+        }
+
+        String canonicalId = null;
+        Grantee grantee;
+        CanonicalUser canonicalUser;
+        Group group;
+        String email;
+
+        for (Grant g : acl.getGrants()) {
+            grantee = g.getGrantee();
+            if (grantee == null) {
+                continue; //skip, no grantee
+            } else {
+                canonicalUser = grantee.getCanonicalUser();
+                group = grantee.getGroup();
+                email = grantee.getEmailAddress();
+            }
+
+            canonicalId = canonicalUser == null ? null : resolveCanonicalId(canonicalUser.getID()) ;
+            if (canonicalId == null) {
+                try {
+                    User user = Accounts.lookupUserByEmailAddress(email);
+                    if (user != null && user.isAccountAdmin() && user.getAccount() != null) {
+                        canonicalId = user.getAccount().getCanonicalId();
+                    }
+                }
+                catch (AuthException authEx) {
+                    // no-op, we'll check the group
+                }
+            }
+            if (canonicalId == null && group != null && !Strings.isNullOrEmpty(group.getUri())) {
+                ObjectStorageProperties.S3_GROUP foundGroup = AclUtils.getGroupFromUri(group.getUri());
+                if (foundGroup == null) {
+                    throw new NoSuchElementException("URI: " + group.getUri() + " not found in group map");
+                }
+                //Group URI, use as canonicalId for now.
+                canonicalId = group.getUri();
+            }
+
+            if (canonicalId == null) {
+                throw new NoSuchElementException("No canonicalId found for grant: " + g.toString());
+            }
+            else {
+                if (grantee.getCanonicalUser() == null ) {
+                    grantee.setCanonicalUser( new CanonicalUser(canonicalId, "") );
+                }
+                else {
+                    grantee.getCanonicalUser().setID(canonicalId);
+                }
+            }
+        }
+
+        return acl;
+    }
+
+    private static interface CanonicalIdChecker {
+        String check(String id);
+    }
+
+    private static List<CanonicalIdChecker> canonicalIdCheckers = Lists.newArrayList(
+
+            new CanonicalIdChecker() {
+                // is it a canonicalId?
+                @Override
+                public String check(String id) {
+                    try {
+                        Account account = Accounts.lookupAccountByCanonicalId(id);
+                        return account.getCanonicalId();
+                    } catch (AuthException authEx) {
+                        return null;
+                    }
+                }
+            },
+
+            new CanonicalIdChecker() {
+                // is it a eucalyptus account id?
+                @Override
+                public String check(String id) {
+                    try {
+                        Account account = Accounts.lookupAccountById(id);
+                        return account.getCanonicalId();
+                    } catch (AuthException authEx) {
+                        return null;
+                    }
+                }
+            },
+
+            new CanonicalIdChecker() {
+                // is it an email address?
+                @Override
+                public String check(String id) {
+                    try {
+                        User user = Accounts.lookupUserByEmailAddress(id);
+                        if (user.isAccountAdmin()) {
+                            return user.getAccount().getCanonicalId();
+                        }
+                        return null;
+                    } catch (AuthException authEx) {
+                        return null;
+                    }
+                }
+            });
+
+    public static String resolveCanonicalId(final String inputCanonicalId) {
+        String resultCanonicalId = null;
+        for (CanonicalIdChecker checker : canonicalIdCheckers) {
+            resultCanonicalId = checker.check(inputCanonicalId);
+            if (resultCanonicalId != null) {
+                return resultCanonicalId;
+            }
+        }
+        return null;
+    }
+
 }
