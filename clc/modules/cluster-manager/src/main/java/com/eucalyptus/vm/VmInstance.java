@@ -2548,14 +2548,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getBootRecord( ).getSshKeyPair( );
   }
   
-  public void release( ) {
-    try {
-      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-  }
-  
   public String getVirtualizationType( ) {
     return this.getBootRecord( ).getDisplayVirtualizationType( ).toString( );
   }
