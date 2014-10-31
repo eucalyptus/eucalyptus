@@ -19,10 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.imaging.common;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -41,30 +37,4 @@ import com.eucalyptus.component.id.Eucalyptus;
 @Description( "Eucalyptus imaging service" )
 public class Imaging extends ComponentId {
   private static final long serialVersionUID = 1L;
-  
-  @Override
-  public Boolean isCloudLocal() {
-    return Boolean.TRUE;
-  }
-
-  @Override
-  public boolean isDistributedService() {
-    return true;
-  }
-
-  @Override
-  public boolean isRegisterable() {
-    return false;
-  }
-
-  /**
-   * This forces the service to be co-located with the ENABLED cloud controller.
-   */
-  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-  @Provides( Imaging.class )
-  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
-    public ColocationBootstrapper( ) {
-      super( Imaging.class );
-    }    
-  }
 }
