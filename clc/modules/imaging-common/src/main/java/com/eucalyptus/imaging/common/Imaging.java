@@ -25,13 +25,11 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
-import com.eucalyptus.component.id.Eucalyptus;
-
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @PublicService
-@Partition( value = Eucalyptus.class, manyToOne = true )
+@Partition( value = Imaging.class, manyToOne = true )
 @FaultLogPrefix( "cloud" )
 @PolicyVendor("eucaimaging")
 @Description( "Eucalyptus imaging service" )
