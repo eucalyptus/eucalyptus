@@ -155,12 +155,6 @@ public interface Subnets extends Lister<Subnet> {
         return subnet.getNetworkAclAssociationId( );
       }
     },
-    ROUTE_TABLE_ASSOCIATION_ID {
-      @Override
-      public String apply( final Subnet subnet ){
-        return subnet.getRouteTableAssociationId( );
-      }
-    },
     STATE {
       @Override
       public String apply( final Subnet subnet ){

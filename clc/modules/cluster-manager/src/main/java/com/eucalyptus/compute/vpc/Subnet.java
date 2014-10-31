@@ -28,6 +28,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
@@ -66,7 +67,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
   public static Subnet create( final OwnerFullName owner,
                                final Vpc vpc,
                                final NetworkAcl networkAcl,
-                               final RouteTable routeTable,
                                final String name,
                                final String cidr,
                                final String availabilityZone ) {
@@ -74,8 +74,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     subnet.setVpc( vpc );
     subnet.setNetworkAcl( networkAcl );
     subnet.setNetworkAclAssociationId( ResourceIdentifiers.generateString( "aclassoc" ) );
-    subnet.setRouteTable( routeTable );
-    subnet.setRouteTableAssociationId( ResourceIdentifiers.generateString( "rtbassoc" ) );
     subnet.setCidr( cidr );
     subnet.setAvailabilityZone( availabilityZone );
     subnet.setAvailableIpAddressCount( usableAddressesForSubnet( cidr ) );
@@ -105,12 +103,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     return subnet;
   }
 
-  public static Subnet exampleWithRouteTableAssociation( final OwnerFullName owner, final String associationId ) {
-    final Subnet subnet = new Subnet( owner, null );
-    subnet.setRouteTableAssociationId( associationId );
-    return subnet;
-  }
-
   public static Subnet exampleWithNetworkAclAssociation( final OwnerFullName owner, final String associationId ) {
     final Subnet subnet = new Subnet( owner, null );
     subnet.setNetworkAclAssociationId( associationId );
@@ -130,14 +122,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
   @Column( name = "metadata_nacl_association_id", nullable = false, unique = true )
   private String networkAclAssociationId;
 
-  @ManyToOne( optional = false )
-  @JoinColumn( name = "metadata_route_table_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private RouteTable routeTable;
-
-  @Column( name = "metadata_rtbl_association_id", nullable = false, unique = true )
-  private String routeTableAssociationId;
-
   @Column( name = "metadata_cidr", nullable = false )
   private String cidr;
 
@@ -152,6 +136,9 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   @Column( name = "metadata_map_public_ip", nullable = false )
   private Boolean mapPublicIpOnLaunch;
+
+  @OneToOne( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "subnet" )
+  private RouteTableAssociation routeTableAssociation;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "subnet" )
   private Collection<SubnetTag> tags;
@@ -177,14 +164,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     this.vpc = vpc;
   }
 
-  public RouteTable getRouteTable( ) {
-    return routeTable;
-  }
-
-  public void setRouteTable( final RouteTable routeTable ) {
-    this.routeTable = routeTable;
-  }
-
   public NetworkAcl getNetworkAcl( ) {
     return networkAcl;
   }
@@ -199,14 +178,6 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   public void setNetworkAclAssociationId( final String networkAclAssociationId ) {
     this.networkAclAssociationId = networkAclAssociationId;
-  }
-
-  public String getRouteTableAssociationId( ) {
-    return routeTableAssociationId;
-  }
-
-  public void setRouteTableAssociationId( final String routeTableAssociationId ) {
-    this.routeTableAssociationId = routeTableAssociationId;
   }
 
   public String getCidr( ) {

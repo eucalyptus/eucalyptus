@@ -35,6 +35,7 @@ import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -73,6 +74,10 @@ public interface RouteTables extends Lister<RouteTable> {
                               String key,
                               Callback<RouteTable> updateCallback ) throws VpcMetadataException;
 
+  <T> T updateByAssociationId( String associationId,
+                               OwnerFullName ownerFullName,
+                               Function<RouteTable,T> updateTransform ) throws VpcMetadataException;
+
   @TypeMapper
   public enum RouteTableToRouteTableTypeTransform implements Function<RouteTable, RouteTableType> {
     INSTANCE;
@@ -83,10 +88,10 @@ public interface RouteTables extends Lister<RouteTable> {
       return routeTable == null ?
           null :
           new RouteTableType(
-              routeTable.getDisplayName( ),
-              routeTable.getVpc( ).getDisplayName( ),
+              routeTable.getDisplayName(),
+              routeTable.getVpc().getDisplayName(),
               Collections2.transform( routeTable.getRoutes(), RouteToRouteType.INSTANCE ),
-              Collections2.transform( routeTable.getSubnets( ), SubnetToRouteTableAssociationType.INSTANCE )
+              Collections2.transform( routeTable.getRouteTableAssociations(), RouteTableAssociationToAssociationType.INSTANCE )
           );
     }
   }
@@ -101,28 +106,28 @@ public interface RouteTables extends Lister<RouteTable> {
       return route == null ?
           null :
           new RouteType(
-            route.getDestinationCidr( ),
+            route.getDestinationCidr(),
             Optional.fromNullable( route.getInternetGateway( ) ).transform( CloudMetadatas.toDisplayName( ) ).or( "local" ),
-            Objects.toString( route.getState( ), null ),
+            Objects.toString( route.getState(), null ),
             Objects.toString( route.getOrigin(), null )
           );
     }
   }
 
   @TypeMapper
-  public enum SubnetToRouteTableAssociationType implements Function<Subnet,RouteTableAssociationType> {
+  public enum RouteTableAssociationToAssociationType implements Function<RouteTableAssociation,RouteTableAssociationType> {
     INSTANCE;
 
     @Nullable
     @Override
-    public RouteTableAssociationType apply( @Nullable final Subnet subnet ) {
-      return subnet == null ?
+    public RouteTableAssociationType apply( @Nullable final RouteTableAssociation association ) {
+      return association == null ?
           null :
           new RouteTableAssociationType(
-              subnet.getRouteTableAssociationId(),
-              subnet.getRouteTable().getDisplayName( ),
-              subnet.getDisplayName( ),
-              subnet.getRouteTable().getMain()
+              association.getAssociationId( ),
+              association.getRouteTableId( ),
+              association.getSubnetId( ),
+              association.getMain( )
           );
     }
   }
@@ -132,9 +137,9 @@ public interface RouteTables extends Lister<RouteTable> {
       super( builderFor( RouteTable.class )
               .withTagFiltering( RouteTableTag.class, "routeTable" )
               .withStringSetProperty( "association.route-table-association-id", FilterStringSetFunctions.ASSOCIATION_ID )
-              .withStringProperty( "association.route-table-id", FilterStringFunctions.ASSOCIATION_ROUTE_TABLE_ID )
+              .withStringSetProperty( "association.route-table-id", FilterStringSetFunctions.ASSOCIATION_ROUTE_TABLE_ID )
               .withStringSetProperty( "association.subnet-id", FilterStringSetFunctions.ASSOCIATION_SUBNET_ID )
-              .withBooleanProperty( "association.main", FilterBooleanFunctions.ASSOCIATION_MAIN )
+              .withBooleanSetProperty( "association.main", FilterBooleanSetFunctions.ASSOCIATION_MAIN )
               .withStringSetProperty( "route.destination-cidr-block", FilterStringSetFunctions.ROUTE_DESTINATION_CIDR )
               .withStringSetProperty( "route.gateway-id", FilterStringSetFunctions.ROUTE_GATEWAY_ID )
               .withUnsupportedProperty( "route.instance-id" )
@@ -143,11 +148,13 @@ public interface RouteTables extends Lister<RouteTable> {
               .withStringSetProperty( "route.state", FilterStringSetFunctions.ROUTE_STATE )
               .withStringProperty( "route-table-id", CloudMetadatas.toDisplayName() )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
-              .withPersistenceAlias( "subnets", "subnets" )
+              .withPersistenceAlias( "routeTableAssociations", "routeTableAssociations" )
               .withPersistenceAlias( "routes", "routes" )
               .withPersistenceAlias( "vpc", "vpc" )
-              .withPersistenceFilter( "association.route-table-association-id", "subnets.routeTableAssociationId" )
-              .withPersistenceFilter( "association.subnet-id", "subnets.displayName" )
+              .withPersistenceFilter( "association.route-table-association-id", "routeTableAssociations.associationId" )
+              .withPersistenceFilter( "association.route-table-id", "routeTableAssociations.routeTableId" )
+              .withPersistenceFilter( "association.subnet-id", "routeTableAssociations.subnetId" )
+              .withPersistenceFilter( "association.main", "routeTableAssociations.main", PersistenceFilter.Type.Boolean )
               .withPersistenceFilter( "route.destination-cidr-block", "routes.destinationCidr" )
               .withPersistenceFilter( "route.gateway-id", "routes.destinationCidr" )
               .withPersistenceFilter( "route.origin", "routes.origin", Enums.valueOfFunction( Route.RouteOrigin.class ) )
@@ -159,16 +166,10 @@ public interface RouteTables extends Lister<RouteTable> {
   }
 
   public enum FilterStringFunctions implements Function<RouteTable, String> {
-    ASSOCIATION_ROUTE_TABLE_ID {
-      @Override
-      public String apply( final RouteTable routeTable ) {
-        return routeTable.getSubnets( ).isEmpty( ) ? null : routeTable.getDisplayName( );
-      }
-    },
     VPC_ID {
       @Override
       public String apply( final RouteTable routeTable ) {
-        return routeTable.getVpc( ).getDisplayName( );
+        return routeTable.getVpc( ).getDisplayName();
       }
     },
   }
@@ -200,26 +201,23 @@ public interface RouteTables extends Lister<RouteTable> {
     },
   }
 
-  public enum FilterBooleanFunctions implements Function<RouteTable, Boolean> {
-    ASSOCIATION_MAIN {
-      @Override
-      public Boolean apply( final RouteTable routeTable ) {
-        return routeTable.getMain( ) && !routeTable.getSubnets( ).isEmpty( );
-      }
-    },
-  }
-
   public enum FilterStringSetFunctions implements Function<RouteTable, Set<String>> {
     ASSOCIATION_ID {
       @Override
       public Set<String> apply( final RouteTable routeTable ) {
-        return subnetPropertySet( routeTable, Subnets.FilterStringFunctions.ROUTE_TABLE_ASSOCIATION_ID );
+        return associationPropertySet( routeTable, AssociationFilterStringFunctions.ASSOCIATION_ID );
+      }
+    },
+    ASSOCIATION_ROUTE_TABLE_ID {
+      @Override
+      public Set<String> apply( final RouteTable routeTable ) {
+        return associationPropertySet( routeTable, AssociationFilterStringFunctions.ROUTE_TABLE_ID );
       }
     },
     ASSOCIATION_SUBNET_ID {
       @Override
       public Set<String> apply( final RouteTable routeTable ) {
-        return subnetPropertySet( routeTable, CloudMetadatas.toDisplayName() );
+        return associationPropertySet( routeTable, AssociationFilterStringFunctions.SUBNET_ID );
       }
     },
     ROUTE_DESTINATION_CIDR {
@@ -253,9 +251,50 @@ public interface RouteTables extends Lister<RouteTable> {
       return Sets.newHashSet( Iterables.transform( routeTable.getRoutes( ), propertyGetter ) );
     }
 
-    private static Set<String> subnetPropertySet( final RouteTable routeTable,
-                                                  final Function<? super Subnet, String> propertyGetter ) {
-      return Sets.newHashSet( Iterables.transform( routeTable.getSubnets(), propertyGetter ) );
+    static <T> Set<T> associationPropertySet( final RouteTable routeTable,
+                                                      final Function<RouteTableAssociation, T> propertyGetter ) {
+      return Sets.newHashSet( Iterables.filter(
+          Iterables.transform( routeTable.getRouteTableAssociations( ), propertyGetter ),
+          Predicates.notNull( ) ) );
     }
+  }
+
+  public enum FilterBooleanSetFunctions implements Function<RouteTable, Set<Boolean>> {
+    ASSOCIATION_MAIN {
+      @Override
+      public Set<Boolean> apply( final RouteTable routeTable ) {
+        return FilterStringSetFunctions.associationPropertySet( routeTable, AssociationFilterBooleanFunctions.MAIN );
+      }
+    },
+  }
+
+  public enum AssociationFilterStringFunctions implements Function<RouteTableAssociation, String> {
+    ASSOCIATION_ID {
+      @Override
+      public String apply( final RouteTableAssociation association ) {
+        return association.getAssociationId( );
+      }
+    },
+    ROUTE_TABLE_ID {
+      @Override
+      public String apply( final RouteTableAssociation association ) {
+        return association.getRouteTableId();
+      }
+    },
+    SUBNET_ID {
+      @Override
+      public String apply( final RouteTableAssociation association ) {
+        return association.getSubnetId();
+      }
+    },
+  }
+
+  public enum AssociationFilterBooleanFunctions implements Function<RouteTableAssociation, Boolean> {
+    MAIN {
+      @Override
+      public Boolean apply( final RouteTableAssociation association ) {
+        return association.getMain();
+      }
+    },
   }
 }
