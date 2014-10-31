@@ -31,7 +31,7 @@ public class AWSCloudFormationWaitConditionCreatePromise {
     Step createStep = resourceAction.getCreateStep(stepIdLocal);
     Promise<String> timeoutPromise = promiseFor(activities.getAWSCloudFormationWaitConditionTimeout(resourceId, stackId, accountId, effectiveUserId));
     return waitFor(timeoutPromise) { String result ->
-      RetryPolicy retryPolicy = new StandardResourceRetryPolicy(Integer.valueOf(result));
+      RetryPolicy retryPolicy = new StandardResourceRetryPolicy(Integer.valueOf(result)).getPolicy();
       retry(retryPolicy) {
         promiseFor(activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId));
       }
