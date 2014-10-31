@@ -648,7 +648,6 @@
         </collection>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.RouteTableAssociationType" abstract="true">
-        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
         <value name="routeTableAssociationId" field="routeTableAssociationId" usage="required"/>
         <value name="routeTableId" field="routeTableId" usage="required"/>
         <value name="subnetId" field="subnetId" usage="optional"/>

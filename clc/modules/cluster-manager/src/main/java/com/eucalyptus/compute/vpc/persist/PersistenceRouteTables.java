@@ -28,10 +28,12 @@ import com.eucalyptus.compute.vpc.RouteTable;
 import com.eucalyptus.compute.vpc.RouteTables;
 import com.eucalyptus.compute.vpc.VpcMetadataException;
 import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 /**
  *
@@ -56,6 +58,19 @@ public class PersistenceRouteTables extends VpcPersistenceSupport<RouteTableMeta
     } catch ( NoSuchElementException e ) {
       throw new VpcMetadataNotFoundException( "Main route table not found for " + vpcId );
     }  }
+
+  @Override
+  public <T> T updateByAssociationId( final String associationId,
+                                           final OwnerFullName ownerFullName,
+                                           final Function<RouteTable,T> updateTransform ) throws VpcMetadataException {
+    return updateByExample(
+        RouteTable.exampleWithOwner( ownerFullName ),
+        Restrictions.eq( "routeTableAssociations.associationId", associationId ),
+        Collections.singletonMap( "routeTableAssociations", "routeTableAssociations" ),
+        ownerFullName,
+        associationId,
+        updateTransform );
+  }
 
   @Override
   protected RouteTable exampleWithOwner( final OwnerFullName ownerFullName ) {

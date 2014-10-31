@@ -1086,7 +1086,7 @@ class DhcpValueSetType extends EucalyptusData {
   @HttpParameterMapping( parameter = "Value" )
   ArrayList<DhcpValueType> item = new ArrayList<DhcpValueType>();
 }
-class RouteTableAssociationType extends VpcMessage {
+class RouteTableAssociationType extends EucalyptusData {
   String routeTableAssociationId;
   String routeTableId;
   String subnetId;

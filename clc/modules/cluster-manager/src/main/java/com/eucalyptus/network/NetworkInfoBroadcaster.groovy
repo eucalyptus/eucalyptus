@@ -57,6 +57,7 @@ import com.eucalyptus.compute.vpc.NetworkAcls
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.Route
 import com.eucalyptus.compute.vpc.RouteTable
+import com.eucalyptus.compute.vpc.RouteTableAssociation
 import com.eucalyptus.compute.vpc.Vpc
 import com.eucalyptus.compute.vpc.Subnet as VpcSubnet
 import com.eucalyptus.entities.EntityCache
@@ -333,7 +334,9 @@ class NetworkInfoBroadcaster {
               cidr: subnet.cidr,
               cluster: subnet.availabilityZone,
               networkAcl: subnet.networkAcl,
-              routeTable: subnet.routeTable
+              routeTable:
+                  Iterables.tryFind( routeTables, { RouteTableNetworkView routeTable -> routeTable.subnetIds.contains( subnet.subnetId ) } as Predicate<RouteTableNetworkView> ).or(
+                  Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.vpcId } as Predicate<RouteTableNetworkView> ) ).routeTableId
           )
         },
         networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.vpcId }.collect { NetworkAclNetworkView networkAcl ->
@@ -683,7 +686,6 @@ class NetworkInfoBroadcaster {
     String cidr
     String availabilityZone
     String networkAcl
-    String routeTable
   }
 
   @TypeMapper
@@ -698,8 +700,7 @@ class NetworkInfoBroadcaster {
           subnet.vpc.displayName,
           subnet.cidr,
           subnet.availabilityZone,
-          subnet.networkAcl.displayName,
-          subnet.routeTable.displayName
+          subnet.networkAcl.displayName
       )
     }
   }
@@ -815,6 +816,8 @@ class NetworkInfoBroadcaster {
     String routeTableId
     String ownerAccountNumber
     String vpcId
+    boolean main
+    List<String> subnetIds // associated subnets
     List<RouteNetworkView> routes
   }
 
@@ -834,6 +837,8 @@ class NetworkInfoBroadcaster {
           routeTable.displayName,
           routeTable.ownerAccountNumber,
           routeTable.vpc.displayName,
+          routeTable.main,
+          ImmutableList.copyOf( routeTable.routeTableAssociations.findResults{ RouteTableAssociation association -> association.subnetId } as Collection<String> ),
           ImmutableList.copyOf( routeTable.routes.collect{ Route route -> TypeMappers.transform( route, RouteNetworkView ) } ),
       )
     }

@@ -35,6 +35,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 
 /**
@@ -66,7 +67,9 @@ public class RouteTable extends AbstractOwnedPersistent implements RouteTableMet
     routeTable.setRoutes( Lists.newArrayList(
       Route.create( routeTable, destinationCidr )
     ) );
-    routeTable.subnets = Lists.newArrayList( );
+    routeTable.setRouteTableAssociations( Lists.newArrayList( Optional.fromNullable(
+      main ?  RouteTableAssociation.create( routeTable ) : null
+    ).asSet( ) ) );
     return routeTable;
   }
 
@@ -99,8 +102,8 @@ public class RouteTable extends AbstractOwnedPersistent implements RouteTableMet
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<Route> routes = Lists.newArrayList();
 
-  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REFRESH , orphanRemoval = true, mappedBy = "routeTable" )
-  private Collection<Subnet> subnets;
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL , orphanRemoval = true, mappedBy = "routeTable" )
+  private List<RouteTableAssociation> routeTableAssociations;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "routeTable" )
   private Collection<RouteTableTag> tags;
@@ -129,7 +132,39 @@ public class RouteTable extends AbstractOwnedPersistent implements RouteTableMet
     this.routes = routes;
   }
 
-  public Collection<Subnet> getSubnets() {
-    return subnets;
+  public List<RouteTableAssociation> getRouteTableAssociations( ) {
+    return routeTableAssociations;
+  }
+
+  public void setRouteTableAssociations( final List<RouteTableAssociation> routeTableAssociations ) {
+    this.routeTableAssociations = routeTableAssociations;
+  }
+
+  public RouteTableAssociation associateMain( ) {
+    final RouteTableAssociation association = RouteTableAssociation.create( this );
+    setMain( true );
+    getRouteTableAssociations( ).add( association );
+    return association;
+  }
+
+  public RouteTableAssociation associate( final Subnet subnet ) {
+    final RouteTableAssociation association = RouteTableAssociation.create( this, subnet );
+    getRouteTableAssociations( ).add( association );
+    updateTimeStamps( );
+    return association;
+  }
+
+  public RouteTableAssociation disassociate( final String associationId ) {
+    for ( final RouteTableAssociation association : getRouteTableAssociations( ) ) {
+      if ( associationId.equals( association.getAssociationId( ) ) ) {
+        if ( association.getMain( ) ) {
+          setMain( false );
+        }
+        getRouteTableAssociations( ).remove( association );
+        updateTimeStamps( );
+        return association;
+      }
+    }
+    return null;
   }
 }
