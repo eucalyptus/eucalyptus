@@ -1719,14 +1719,14 @@ void *startup_thread(void *arg)
                 if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
 
-                    // DAN TEMPORARY FOR VPC TESTING
-                    //                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
                     if (!strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
-                        char iface[16], cmd[EUCA_MAX_PATH];
+                        char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
-                        //    snprintf(nc_state.rootwrap_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
                         snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                        rc = system(cmd);
+                        rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                        if (rc) {
+                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                        }
                     }
 
                     exit(0);
