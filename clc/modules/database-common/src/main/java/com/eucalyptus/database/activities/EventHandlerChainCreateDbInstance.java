@@ -845,7 +845,7 @@ public class EventHandlerChainCreateDbInstance extends
     @Override
     public List<String> getResult() {
       final String userData = B64.standard.encString(String.format("%s\n%s\n%s\n%s",
-          DatabaseServerProperties.CREDENTIALS_STR,
+          DatabaseServerProperties.getCredentialsString(),
           this.serverCertArn,
           this.encryptedPassword,
           DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 

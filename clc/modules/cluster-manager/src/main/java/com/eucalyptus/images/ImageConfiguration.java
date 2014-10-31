@@ -90,6 +90,7 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Intervals;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 
 @Entity
@@ -101,7 +102,9 @@ public class ImageConfiguration extends AbstractPersistent {
   @Transient
   private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
   
-  private static final Integer DEFAULT_MAX_IMAGE_SIZE_GB = 30; 
+  private static final Integer DEFAULT_MAX_IMAGE_SIZE_GB = 30;
+
+  private static final Integer DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES = 1024 * 1024 * 5; // 5MiB
   
   @ConfigurableField( displayName = "default_visibility", description = "The default value used to determine whether or not images are marked 'public' when first registered." )
   @Column( name = "config_image_is_public", nullable = false, columnDefinition = "boolean default false" )
@@ -156,7 +159,7 @@ public class ImageConfiguration extends AbstractPersistent {
     }
 
     if ( this.maxManifestSizeBytes == null ) {
-      this.maxManifestSizeBytes = 1024 * 1024 * 5; // 5MiB
+      this.maxManifestSizeBytes = DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES;
     }
   }
   
@@ -169,7 +172,7 @@ public class ImageConfiguration extends AbstractPersistent {
   }
 
   public Integer getMaxManifestSizeBytes( ) {
-    return maxManifestSizeBytes;
+    return Objects.firstNonNull( maxManifestSizeBytes, DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES );
   }
 
   public void setMaxManifestSizeBytes( final Integer maxManifestSizeBytes ) {

@@ -88,6 +88,16 @@ public class LoadBalancers {
 		 }
 	}
 	
+	public static List<LoadBalancer> listLoadbalancers(final String accountNumber) {
+	  try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
+      return Entities.query(LoadBalancer.ownedByAccount(accountNumber));
+    }catch(final NoSuchElementException ex){
+      return Lists.newArrayList();
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
 	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
 	@Nonnull
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
@@ -137,6 +147,13 @@ public class LoadBalancers {
       final LoadBalancer.Scheme scheme,
       final Map<String,String> securityGroupIdsToNames,
       final Map<String,String> tags ) throws LoadBalancingException {
+    
+    final List<LoadBalancer> accountLbs = LoadBalancers.listLoadbalancers(user.getAccountNumber());
+    for(final LoadBalancer lb : accountLbs) {
+      if (lbName.toLowerCase().equals(lb.getDisplayName().toLowerCase()))
+        throw new DuplicateAccessPointName( );
+    }
+    
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
       try {
         if( Entities.uniqueResult( LoadBalancer.namedByAccountId( user.getAccountNumber(), lbName ) ) != null )

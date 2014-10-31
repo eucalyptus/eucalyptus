@@ -66,6 +66,8 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Date;
+
 import javax.security.auth.x500.X500Principal;
 
 /**
@@ -106,6 +108,12 @@ public class Certs {
    */
   public static X509Certificate generateCertificate( final KeyPair keys, final String userName ) {
     return Crypto.getCertificateProvider( ).generateCertificate( keys, userName );
+  }
+  
+  
+  public static X509Certificate generateCertificate( final KeyPair keys, final String userName, final Date notAfter) {
+    final X500Principal principal = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=User, C=US", userName ));
+    return Crypto.getCertificateProvider().generateCertificate( keys, principal, principal, null, notAfter );
   }
   
   /**

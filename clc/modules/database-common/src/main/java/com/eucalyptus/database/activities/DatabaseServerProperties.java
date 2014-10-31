@@ -141,7 +141,14 @@ import com.google.common.net.HostSpecifier;
        )
    public static String DB_SERVER_NTP_SERVER = null;
    
-   
+   @ConfigurableField( displayName = "db_server_vm_expiration_days", 
+       description = "days after which the VMs expire", 
+       readonly = false,
+       initial = "180",
+       type = ConfigurableFieldType.KEYVALUE,
+       changeListener = VMExpirationDaysChangeListener.class
+       )
+   public static String DB_SERVER_VM_EXPIRATION_DAYS = "180";
    
    @Provides(Reporting.class)
    @RunDuring(Bootstrap.Stage.Final)
@@ -214,12 +221,17 @@ import com.google.common.net.HostSpecifier;
      }
    }
    
-   
    public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-db-servers";
-   public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
    private static AtomicBoolean launchLock = new AtomicBoolean();
    private static final String DB_INSTANCE_IDENTIFIER = "postgresql";
    private static final int DB_PORT = 5432;
+   
+   public static String getCredentialsString() {
+     final String credStr = String.format("euca-%s:expiration_day=%s;",
+         B64.standard.encString("setup-credential"), DB_SERVER_VM_EXPIRATION_DAYS);
+     return credStr;
+   }
+   
    private static class NewDBRunner implements Callable<Boolean>{
     @Override
     public Boolean call() throws Exception {
@@ -471,6 +483,18 @@ import com.google.common.net.HostSpecifier;
          throw new ConfigurablePropertyException("Could not change ntp server address", e);
        }
      }
+   }
+   
+   public static class VMExpirationDaysChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final int newExp = Integer.parseInt(newValue);
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type");
+      }
+    }
    }
 
    private static void onPropertyChange(final String emi, final String volumeId, final String instanceType, 

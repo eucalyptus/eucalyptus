@@ -87,6 +87,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Maps;
 
@@ -191,7 +192,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
       if ( this.vmInst != null ) {
         try {
-          this.vmInst.release( );
+          VmInstances.terminated( this.vmInst );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
