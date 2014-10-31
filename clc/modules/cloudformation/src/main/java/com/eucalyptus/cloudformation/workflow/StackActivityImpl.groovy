@@ -42,6 +42,8 @@ import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
@@ -637,5 +639,25 @@ public class StackActivityImpl implements StackActivity {
     return "";
   }
 
-
+  @Override
+  public String getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId) {
+    try {
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+      StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+      ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      Integer timeout = ((AWSCloudFormationWaitConditionProperties) resourceAction.getResourceProperties()).getTimeout(); // not proud of this hard coding.
+      if (timeout == null) return null;
+      return String.valueOf(timeout);
+    } catch (Exception ex) {
+        Throwable rootCause = Throwables.getRootCause(ex);
+        LOG.debug("Error getting timeout for resource " + resourceId);
+        LOG.error(ex, ex);
+        throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
+    }
+  }
 }
