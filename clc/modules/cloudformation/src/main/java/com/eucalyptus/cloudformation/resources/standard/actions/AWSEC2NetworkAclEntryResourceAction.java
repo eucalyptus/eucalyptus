@@ -99,7 +99,9 @@ public class AWSEC2NetworkAclEntryResourceAction extends ResourceAction {
         }
         CreateNetworkAclEntryType createNetworkAclEntryType = MessageHelper.createMessage(CreateNetworkAclEntryType.class, action.info.getEffectiveUserId());
         createNetworkAclEntryType.setCidrBlock(action.properties.getCidrBlock());
-        createNetworkAclEntryType.setEgress(action.properties.getEgress());
+        if (action.properties.getEgress() != null){
+          createNetworkAclEntryType.setEgress(action.properties.getEgress());
+        }
         createNetworkAclEntryType.setIcmpTypeCode(action.convertIcmpTypeCode(action.properties.getIcmp()));
         createNetworkAclEntryType.setNetworkAclId(action.properties.getNetworkAclId());
         createNetworkAclEntryType.setPortRange(action.convertPortRange(action.properties.getPortRange()));
