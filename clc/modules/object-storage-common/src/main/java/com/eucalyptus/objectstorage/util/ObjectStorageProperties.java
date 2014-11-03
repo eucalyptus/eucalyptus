@@ -65,10 +65,12 @@ package com.eucalyptus.objectstorage.util;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import java.util.Map;
 import java.util.Set;
 
 public class ObjectStorageProperties {
@@ -292,6 +294,53 @@ public class ObjectStorageProperties {
         //Per the S3 Dev guide, these must be included in the canonicalized resource:
         acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
     }
+
+    public enum ResponseHeaderOverrides {
+        response_content_type        { public String toString() { return "response-content-type"; }},
+        response_content_language    { public String toString() { return "response-content-language"; }},
+        response_expires             { public String toString() { return "response-expires"; }},
+        response_cache_control       { public String toString() { return "response-cache-control"; }},
+        response_content_disposition { public String toString() { return "response-content-disposition"; }},
+        response_content_encoding    { public String toString() { return "response-content-encoding"; }};
+
+        public static ResponseHeaderOverrides fromString(String value) {
+            if (value != null && "response-content-type".equals(value)) {
+                return response_content_type;
+            }
+            if (value != null && "response-content-language".equals(value)) {
+                return response_content_language;
+            }
+            if (value != null && "response-expires".equals(value)) {
+                return response_expires;
+            }
+            if (value != null && "response-cache-control".equals(value)) {
+                return response_cache_control;
+            }
+            if (value != null && "response-content-disposition".equals(value)) {
+                return response_content_disposition;
+            }
+            if (value != null && "response-content-encoding".equals(value)) {
+                return response_content_encoding;
+            }
+
+            return null;
+        }
+    }
+
+    public static final Map<String,String> RESPONSE_OVERRIDE_HTTP_HEADER_MAP = ImmutableMap.<String,String> builder()
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_type.toString(),
+                    HttpHeaders.Names.CONTENT_TYPE)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_language.toString(),
+                    HttpHeaders.Names.CONTENT_LANGUAGE)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_expires.toString(),
+                    HttpHeaders.Names.EXPIRES)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_cache_control.toString(),
+                    HttpHeaders.Names.CACHE_CONTROL)
+            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_disposition.toString(),
+                    "Content-Disposition")
+            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_encoding.toString(),
+                    HttpHeaders.Names.CONTENT_ENCODING)
+            .build();
 
     public enum HTTPVerb {
         GET, PUT, DELETE, POST, HEAD, OPTIONS;

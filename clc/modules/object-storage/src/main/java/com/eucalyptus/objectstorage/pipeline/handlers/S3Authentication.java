@@ -415,6 +415,13 @@ public class S3Authentication {
                 } catch (IllegalArgumentException e) {
                     //Skip. Not in the set.
                 }
+                try {
+                    if (ObjectStorageProperties.ResponseHeaderOverrides.fromString(queryParam) != null) {
+                        canonicalSubresources.add(queryParam);
+                    }
+                } catch (IllegalArgumentException e) {
+                    //Skip. Not in the set.
+                }
             }
 
             if (canonicalSubresources.size() > 0) {

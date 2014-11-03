@@ -85,7 +85,6 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import com.eucalyptus.objectstorage.pipeline.handlers.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -116,6 +115,7 @@ import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -571,7 +571,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                         Boolean isCompressed = Boolean.parseBoolean(params.remove(ObjectStorageProperties.GetOptionalParameters.IsCompressed.toString()));
                         operationParams.put("IsCompressed", isCompressed);
                     }
-
+                    Map<String,String> responseHeaderOverrides = Maps.newHashMap();
+                    for (String paramName : params.keySet()) {
+                        if (paramName != null && !"".equals(paramName) && paramName.startsWith("response-") ) {
+                            String paramValue = params.get(paramName);
+                            if (paramValue != null && !"".equals(paramValue)) {
+                                responseHeaderOverrides.put(paramName, params.get(paramName));
+                            }
+                        }
+                    }
+                    if (responseHeaderOverrides.size() > 0) {
+                        operationParams.put("ResponseHeaderOverrides", responseHeaderOverrides);
+                    }
                 } else if(verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
                     if(params.containsKey("uploadId")) {
                         operationParams.put("Parts", getPartsList(httpRequest));
