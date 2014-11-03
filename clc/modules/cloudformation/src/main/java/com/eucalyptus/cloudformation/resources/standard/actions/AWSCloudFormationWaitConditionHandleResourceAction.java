@@ -119,8 +119,8 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
-          if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-          String bucketName = objectNode.get("bucket").textValue();
+          if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
+          String bucketName = objectNode.get("bucket").asText();
           s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration(BucketVersioningConfiguration.ENABLED)));
         }
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
@@ -143,9 +143,9 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
         if (action.info.getPhysicalResourceId() == null) return action;
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
-          if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-          String bucketName = objectNode.get("bucket").textValue();
-          String keyName = objectNode.get("key").textValue();
+          if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
+          String bucketName = objectNode.get("bucket").asText();
+          String keyName = objectNode.get("key").asText();
           if (!s3c.doesBucketExist(bucketName)) {
             return action;
           }

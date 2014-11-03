@@ -310,10 +310,10 @@ public class StackActivityImpl implements StackActivity {
         output.setReady(true);
         output.setReady(true);
         JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap);
-        if (outputValue == null || !outputValue.isTextual()) {
+        if (outputValue == null || !outputValue.isValueNode()) {
           throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
         }
-        output.setStringValue(outputValue.textValue());
+        output.setStringValue(outputValue.asText());
         output.setJsonValue(JsonHelper.getStringFromJsonNode(outputValue));
       }
       stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));

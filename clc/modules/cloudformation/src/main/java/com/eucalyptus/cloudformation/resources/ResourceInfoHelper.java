@@ -45,28 +45,28 @@ public class ResourceInfoHelper {
     JsonNode resourceNode = JsonHelper.getJsonNodeFromString(json);
     LOG.info("resourceNode="+resourceNode);
     LOG.info("resourceNode.get(\"type\")="+resourceNode.get("type"));
-    String type = resourceNode.get("type").textValue();
+    String type = resourceNode.get("type").asText();
     ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
-    resourceInfo.setAccountId(resourceNode.get("accountId").textValue());
+    resourceInfo.setAccountId(resourceNode.get("accountId").asText());
     resourceInfo.setAllowedByCondition(resourceNode.get("allowedByCondition").booleanValue());
-    resourceInfo.setDescription(resourceNode.get("description").textValue());
-    resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").textValue());
-    resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").textValue());
-    resourceInfo.setLogicalResourceId(resourceNode.get("logicalResourceId").textValue());
-    resourceInfo.setMetadataJson(resourceNode.get("metadataJson").textValue());
-    resourceInfo.setPhysicalResourceId(resourceNode.get("physicalResourceId").textValue());
-    resourceInfo.setPropertiesJson(resourceNode.get("propertiesJson").textValue());
+    resourceInfo.setDescription(resourceNode.get("description").asText());
+    resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").asText());
+    resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").asText());
+    resourceInfo.setLogicalResourceId(resourceNode.get("logicalResourceId").asText());
+    resourceInfo.setMetadataJson(resourceNode.get("metadataJson").asText());
+    resourceInfo.setPhysicalResourceId(resourceNode.get("physicalResourceId").asText());
+    resourceInfo.setPropertiesJson(resourceNode.get("propertiesJson").asText());
     resourceInfo.setReady(resourceNode.get("ready").booleanValue());
-    resourceInfo.setReferenceValueJson(resourceNode.get("referenceValueJson").textValue());
-    resourceInfo.setUpdatePolicyJson(resourceNode.get("updatePolicyJson").textValue());
-    setResourceAttributesJson(resourceInfo, resourceNode.get("attributes").textValue());
+    resourceInfo.setReferenceValueJson(resourceNode.get("referenceValueJson").asText());
+    resourceInfo.setUpdatePolicyJson(resourceNode.get("updatePolicyJson").asText());
+    setResourceAttributesJson(resourceInfo, resourceNode.get("attributes").asText());
     return resourceInfo;
   }
 
   public static void setResourceAttributesJson(ResourceInfo resourceInfo, String json) throws CloudFormationException {
     JsonNode attributeNode = JsonHelper.getJsonNodeFromString(json);
     for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
-      resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).textValue());
+      resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).asText());
     }
   }
 

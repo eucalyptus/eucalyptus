@@ -62,11 +62,11 @@ public class FunctionEvaluation {
   }
 
   public static boolean evaluateBoolean(JsonNode jsonNode) throws CloudFormationException {
-    if (jsonNode == null || !jsonNode.isTextual() ||
-      !("true".equalsIgnoreCase(jsonNode.textValue()) || "false".equalsIgnoreCase(jsonNode.textValue()))) {
+    if (jsonNode == null || !jsonNode.isValueNode() ||
+      !("true".equalsIgnoreCase(jsonNode.asText()) || "false".equalsIgnoreCase(jsonNode.asText()))) {
       throw new ValidationErrorException("Template error: Invalid boolean value " + jsonNode);
     }
-    return "true".equalsIgnoreCase(jsonNode.textValue());
+    return "true".equalsIgnoreCase(jsonNode.asText());
   }
   public static void validateConditionSectionArgTypesWherePossible(JsonNode jsonNode) throws CloudFormationException {
     validateArgTypesWherePossible(jsonNode, true);
