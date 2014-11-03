@@ -31,11 +31,12 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 
 /**
  *
  */
-public class EntityCache<E extends AbstractPersistent, TE> implements Supplier<Iterable<TE>> {
+public class EntityCache<E extends AbstractPersistent, TE extends Comparable<TE>> implements Supplier<Iterable<TE>> {
 
   private static final int batchSize = 500;
   private final E example;
@@ -92,7 +93,7 @@ public class EntityCache<E extends AbstractPersistent, TE> implements Supplier<I
   @Override
   public Iterable<TE> get( ) {
     refresh( );
-    return Lists.newArrayList( cache.values( ) );
+    return Ordering.natural( ).sortedCopy( cache.values( ) );
   }
 
   private String getId( final E entity ) {
