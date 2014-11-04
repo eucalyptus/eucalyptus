@@ -406,7 +406,6 @@ public class S3Authentication {
             }
 
             List<String> canonicalSubresources = new ArrayList<>();
-            String resource;
             for (String queryParam : httpRequest.getParameters().keySet()) {
                 try {
                     if (ObjectStorageProperties.SubResource.valueOf(queryParam) != null) {

@@ -106,7 +106,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( signatureCredential.getCredentialScope() ).append("\n");
     sb.append( digestUTF8( makeCanonicalRequest( credentials, authorizationParameters, skipPath ) ) );
     final String subject = sb.toString( );
-    LOG.trace( "VERSION4: " + subject );
+    signatureLogger.trace( "VERSION4: " + subject );
     return subject;
   }
 
@@ -149,7 +149,9 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( authorizationParameters.get("SignedHeaders") );
     sb.append( "\n" );
     sb.append( digestUTF8( credentials.getBody() ) );
-    return sb.toString();
+    final String request = sb.toString( );
+    signatureLogger.trace( "VERSION4: " + request );
+    return request;
   }
 
   private String digestUTF8( final String text ) {

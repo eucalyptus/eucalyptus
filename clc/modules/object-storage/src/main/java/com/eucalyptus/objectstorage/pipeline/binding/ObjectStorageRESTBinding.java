@@ -85,6 +85,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import com.eucalyptus.objectstorage.pipeline.handlers.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;

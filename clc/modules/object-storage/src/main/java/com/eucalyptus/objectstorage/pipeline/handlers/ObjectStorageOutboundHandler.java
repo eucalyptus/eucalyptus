@@ -175,17 +175,19 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 				if (msg instanceof PutObjectResponseType || msg instanceof UploadPartResponseType) {
 					removeResponseBody(msg, httpResponse);
 				}
-      } else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
+			} else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
 				// Remove the content in response for certain operations
 				if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
 						|| msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-						|| msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType ) {
+						|| msg instanceof SetObjectAccessControlPolicyResponseType) {
 					if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
 						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
 					}
-          if ( msg instanceof SetBucketTaggingResponseType ) {
-            httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
-          }
+					/* VK: TODO: is that needed? 
+					if ( msg instanceof SetBucketTaggingResponseType ) {
+			            httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
+			          }
+			        */
 					removeResponseBody(msg, httpResponse);
 				}
 			}

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.compute.policy;
 
+import org.apache.log4j.Logger;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;

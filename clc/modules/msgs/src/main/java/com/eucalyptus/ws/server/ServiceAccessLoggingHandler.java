@@ -64,6 +64,7 @@
 
 package com.eucalyptus.ws.server;
 
+import static com.google.common.base.Objects.firstNonNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -91,7 +92,9 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.protocol.OperationParameter;
+import com.eucalyptus.ws.protocol.RequestLoggingFilters;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -134,6 +137,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
   Function<MappingHttpRequest, //
   Collection<String>>      //
                             createParameters           = new Function<MappingHttpRequest, Collection<String>>( ) {
+                                                         @SuppressWarnings( "ConstantConditions" )
                                                          @Override
                                                          public Collection<String> apply( MappingHttpRequest input ) {
                                                            try {
@@ -145,10 +149,11 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
                                                                query = new String( buffer.array( ) );
                                                                buffer.resetReaderIndex( );
                                                              }
-                                                             return Collections2.filter( Arrays.asList( query.split( "&" ) ),
-                                                                                         ignoredParametersPredicate );
+                                                             return Collections2.filter(
+                                                                 RequestLoggingFilters.get( ).apply( Arrays.asList( query.split( "&" ) ) ),
+                                                                 ignoredParametersPredicate );
                                                            } catch ( Exception e ) {
-                                                             return Collections.EMPTY_LIST;
+                                                             return Collections.emptyList( );
                                                            }
                                                          }
                                                        };
@@ -186,7 +191,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
   
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    try {
+    if ( firstNonNull( StackConfiguration.LOG_REQUESTS, Boolean.TRUE ) ) try {
       if ( e instanceof MessageEvent ) {
         final MessageEvent msge = ( MessageEvent ) e;
         if ( msge.getMessage( ) instanceof MappingHttpRequest ) {// Handle single request-response MEP
@@ -204,7 +209,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
   
   @Override
   public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    try {
+    if ( firstNonNull( StackConfiguration.LOG_REQUESTS, Boolean.TRUE ) ) try {
       if ( e instanceof MessageEvent ) {
         final MessageEvent msge = ( MessageEvent ) e;
         if ( msge.getMessage( ) instanceof MappingHttpResponse ) {// Handle single request-response MEP

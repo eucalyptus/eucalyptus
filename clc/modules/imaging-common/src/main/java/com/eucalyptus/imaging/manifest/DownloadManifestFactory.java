@@ -80,8 +80,8 @@ public class DownloadManifestFactory {
 	private static int DEFAULT_EXPIRE_TIME_HR = 3;
 
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-      final String manifestName) throws DownloadManifestException {
-	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
+      final String manifestName, boolean urlForNc) throws DownloadManifestException {
+	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR, urlForNc);
 	}
 
 	/**
@@ -90,13 +90,16 @@ public class DownloadManifestFactory {
 	 * @param keyToUse public key that used for encryption
 	 * @param manifestName name for generated manifest file
 	 * @param expirationHours expiration policy in hours for pre-signed URLs
+	 * @param urlForNc indicates if urs are constructed for NC use
 	 * @return pre-signed URL that can be used to download generated manifest
 	 * @throws DownloadManifestException
 	 */
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-		final String manifestName, int expirationHours) throws DownloadManifestException {
+		final String manifestName, int expirationHours, boolean urlForNc) throws DownloadManifestException {
 		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true)) ) {
 			//prepare to do pre-signed urls
+            if (!urlForNc)
+                s3Client.refreshEndpoint(true);
 
 			Date expiration = new Date();
 			long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;

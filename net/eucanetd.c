@@ -1123,7 +1123,6 @@ int update_public_ips(void)
     }
 
     rc = ipt_handler_repopulate(config->ipt);
-    rc = se_init(&cmds, config->cmdprefix, 2, 1);
 
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
@@ -1162,11 +1161,23 @@ int update_public_ips(void)
         strptrb = hex2dot(instances[i].privateIp);
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
+
+            // run some commands
+            rc = se_init(&cmds, config->cmdprefix, 2, 1);
+
             snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-
+            
             snprintf(cmd, EUCA_MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
             rc = se_add(&cmds, cmd, NULL, ignore_exit);
+            
+            se_print(&cmds);
+            rc = se_execute(&cmds);
+            if (rc) {
+                LOGERROR("could not execute command sequence (check above log errors for details): adding ips, sending arpings\n");
+                ret = 1;
+            }
+            se_free(&cmds);
 
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
@@ -1190,7 +1201,6 @@ int update_public_ips(void)
         EUCA_FREE(strptra);
         EUCA_FREE(strptrb);
     }
-    EUCA_FREE(instances);
 
     // lastly, install metadata redirect rule
     if (config->metadata_ip) {
@@ -1202,14 +1212,6 @@ int update_public_ips(void)
     rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
     EUCA_FREE(strptra);
 
-    se_print(&cmds);
-    rc = se_execute(&cmds);
-    if (rc) {
-        LOGERROR("could not execute command sequence (check above log errors for details): adding ips, sending arpings\n");
-        ret = 1;
-    }
-    se_free(&cmds);
-
     //  rc = ipt_handler_print(config->ipt);
     rc = ipt_handler_deploy(config->ipt);
     if (rc) {
@@ -1218,34 +1220,41 @@ int update_public_ips(void)
     }
     // if all has gone well, now clear any public IPs that have not been mapped to private IPs
     if (!ret) {
-        se_init(&cmds, config->cmdprefix, 2, 1);
+        
         for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
             int found = 0;
-
-            foundidx = 0;
-            for (j = 0; j < globalnetworkinfo->max_instances && !found; j++) {
-                if (globalnetworkinfo->instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
-                    found = 1;
-                    foundidx = i;
+            
+            if (max_instances > 0) {
+                // only clear IPs that are not assigned to instances running on this node
+                for (j = 0; j < max_instances && !found; j++) {
+                    if (instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
+                        found = 1;
+                    }
                 }
             }
-
+            
             if (!found) {
+                se_init(&cmds, config->cmdprefix, 2, 1);
+                
                 strptra = hex2dot(globalnetworkinfo->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
-                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
                 EUCA_FREE(strptra);
-            }
+                
+                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+                se_print(&cmds);
+                rc = se_execute(&cmds);
+                if (rc) {
+                    LOGERROR("could not execute command sequence (check above log errors for details): revoking no longer in use ips\n");
+                    ret = 1;
+                }
+                se_free(&cmds);
+                
+                }
         }
-
-        se_print(&cmds);
-        rc = se_execute(&cmds);
-        if (rc) {
-            LOGERROR("could not execute command sequence (check above log errors for details): revoking no longer in use ips\n");
-            ret = 1;
-        }
-        se_free(&cmds);
     }
+
+    EUCA_FREE(instances);
+
     return (ret);
 }
 

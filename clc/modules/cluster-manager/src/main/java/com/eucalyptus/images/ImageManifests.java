@@ -70,6 +70,8 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -170,8 +172,8 @@ public class ImageManifests {
     private String                                 userId;
     private List<ManifestDeviceMapping>            deviceMappings = Lists.newArrayList( );
     
-    ImageManifest( String imageLocation ) throws EucalyptusCloudException {
-      Context ctx = Contexts.lookup( );
+    ImageManifest( @Nonnull  final String imageLocation,
+                   @Nullable final User user ) throws EucalyptusCloudException {
       String cleanLocation = imageLocation.replaceAll( "^/*", "" );
       this.imageLocation = cleanLocation;
       int index = cleanLocation.indexOf( '/' );
@@ -211,9 +213,9 @@ public class ImageManifests {
             }
           }
       };
-      if ( ( checkIdType.apply( ImageMetadata.Type.kernel )  ) && !ctx.hasAdministrativePrivileges( ) ) {
+      if ( checkIdType.apply( ImageMetadata.Type.kernel ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-      } else if  ( ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      } else if  ( checkIdType.apply( ImageMetadata.Type.ramdisk ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
       this.manifest = ImageManifests.requestManifestData( bucketName, manifestKey );
@@ -342,10 +344,18 @@ public class ImageManifests {
     }
     
     public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
-      String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
-      String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" )
-                                                 .replaceAll( "</machine_configuration>.*",
-                                                              "</machine_configuration>" );
+      int idxImgOpen = this.manifest.indexOf("<image>");
+      int idxImgClose = this.manifest.lastIndexOf("</image>");
+      if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String image = this.manifest.substring(idxImgOpen, idxImgClose+"</image>".length());
+     
+      int idxConfOpen = this.manifest.indexOf("<machine_configuration>");
+      int idxConfClose = this.manifest.lastIndexOf("</machine_configuration>");
+      if (idxConfOpen < 0 || idxConfClose < 0 || idxConfOpen > idxConfClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String machineConfiguration = this.manifest.substring(idxConfOpen, idxConfClose+"</machine_configuration>".length());
+      
       final String pad = ( machineConfiguration + image );
       Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
         
@@ -491,13 +501,19 @@ public class ImageManifests {
     }
     
   }
-  
+
+  /**
+   * Lookup an ImageManifest
+   */
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
-    return new ImageManifest( imageLocation );
+    return new ImageManifest( imageLocation, null );
   }
-  
-  public static ImageManifest lookup( String imageLocation , User owner) throws EucalyptusCloudException {
-    final ImageManifest manifest =  new ImageManifest( imageLocation );
+
+  /**
+   * Lookup an ImageManifest, verifying permissions for the given user
+   */
+  public static ImageManifest lookup( String imageLocation, User owner) throws EucalyptusCloudException {
+    final ImageManifest manifest = new ImageManifest( imageLocation, owner );
     try{
       final String ownerAcctId = owner.getAccountNumber();
       if(ownerAcctId.equals(manifest.getAccountId()))

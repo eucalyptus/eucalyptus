@@ -1451,6 +1451,8 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
                     (*outResources)[i] = copy_sensor_resource_from_adb(resource, env);
                 }
             }
+        } else {
+            *outResources = NULL; // when NC returned no results
         }
     }
 

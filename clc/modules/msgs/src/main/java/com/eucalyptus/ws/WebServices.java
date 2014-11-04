@@ -73,6 +73,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
@@ -110,6 +112,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.CharMatcher;
@@ -230,6 +233,7 @@ public class WebServices {
 
 
   private static Logger   LOG = Logger.getLogger( WebServices.class );
+  private static Lock clientResourceLock = new ReentrantLock( );
   private static Executor clientWorkerThreadPool;
   private static NioClientSocketChannelFactory nioClientSocketChannelFactory;
   private static Runnable serverShutdown;
@@ -254,7 +258,7 @@ public class WebServices {
   private static NioClientSocketChannelFactory clientChannelFactory( ) {
     if ( nioClientSocketChannelFactory != null ) {
       return nioClientSocketChannelFactory;
-    } else synchronized ( WebServices.class ) {
+    } else try ( final LockResource resourceLock = LockResource.lock( clientResourceLock ) ) {
       if ( nioClientSocketChannelFactory != null ) {
         return nioClientSocketChannelFactory;
       } else {
@@ -269,23 +273,21 @@ public class WebServices {
   public static Executor clientWorkerPool( ) {
     if ( clientWorkerThreadPool != null ) {
       return clientWorkerThreadPool;
-    } else {
-      synchronized ( WebServices.class ) {
-        if ( clientWorkerThreadPool != null ) {
-          return clientWorkerThreadPool;
-        } else {
-          LOG.trace( LogUtil.subheader( "Creating client worker thread pool." ) );
-          LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.CLIENT_POOL_MAX_THREADS ) );
-          LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS ) );
-          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-          
-          return clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS,
-                                                                                    StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
-                                                                                    StackConfiguration.CLIENT_POOL_TOTAL_MEM,
-                                                                                    StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS,
-                                                                                    TimeUnit.MILLISECONDS );
-        }
+    } else try ( final LockResource resourceLock = LockResource.lock( clientResourceLock ) ) {
+      if ( clientWorkerThreadPool != null ) {
+        return clientWorkerThreadPool;
+      } else {
+        LOG.trace( LogUtil.subheader( "Creating client worker thread pool." ) );
+        LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.CLIENT_POOL_MAX_THREADS ) );
+        LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+
+        return clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS,
+                                                                                  StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
+                                                                                  StackConfiguration.CLIENT_POOL_TOTAL_MEM,
+                                                                                  StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS,
+                                                                                  TimeUnit.MILLISECONDS );
       }
     }
   }
@@ -346,7 +348,7 @@ public class WebServices {
         @Override
         public void run( ) {
           if ( this.ranned.compareAndSet( false, true ) ) {
-            serverChannelGroup.close( ).awaitUninterruptibly( );
+            serverChannelGroup.close( ).awaitUninterruptibly();
             serverChannelFactory.releaseExternalResources( );
           }
         }

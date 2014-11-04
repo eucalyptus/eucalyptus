@@ -2244,6 +2244,10 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
+    } else if ( ctx.isAdministrator( ) ) {
+      if ( !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Access not authorized for " + requestAccount );
+      }
     }
     return requestAccount;
   }
