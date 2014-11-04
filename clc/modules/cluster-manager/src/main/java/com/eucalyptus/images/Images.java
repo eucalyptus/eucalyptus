@@ -93,7 +93,7 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
-import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -663,7 +663,7 @@ public class Images {
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
-      if ( img instanceof ImageMetadata.StaticDiskImage ) {
+      if ( img instanceof StaticDiskImage ) {
         StaticDiskImages.flush( (StaticDiskImage) img );
       }
     } catch ( ConstraintViolationException cve ) {
@@ -1106,6 +1106,7 @@ public class Images {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
     } else {
       ret.setSignature( manifest.getSignature( ) );
+      ret.setManifestHash( ImageManifests.calculateManifestHash( manifest.getManifest() ) );
       return ret;
     }
   }
@@ -1114,13 +1115,11 @@ public class Images {
     // check manifest's signature
     if ( !manifest.checkManifestSignature( Accounts.lookupUserById(creator.getUserId()) ) )
       throw new EucalyptusCloudException("Manifest has invalid signature");
-    EntityTransaction tx = Entities.get( PutGetImageInfo.class );
-    try {
+    try(TransactionResource tx = Entities.transactionFor( PutGetImageInfo.class  )) {
       ret = Entities.merge( ret );
       tx.commit( );
       LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
     } catch ( Exception e ) {
-      tx.rollback( );
       throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
     }
     // TODO:GRZE:RESTORE
@@ -1129,7 +1128,7 @@ public class Images {
 // }
 // imageInfo.grantPermission( ctx.getAccount( ) );
     LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-    if ( ret instanceof ImageMetadata.StaticDiskImage && ret.getRunManifestLocation()!=null) {
+    if ( ret instanceof StaticDiskImage && ret.getRunManifestLocation()!=null) {
       StaticDiskImages.prepare( ret.getRunManifestLocation( ) );
     }
     return ret;
