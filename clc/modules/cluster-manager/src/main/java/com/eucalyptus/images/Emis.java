@@ -315,7 +315,7 @@ public class Emis {
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
-            if ( !this.getKernel().getManifestHash().isEmpty()
+            if ( !isEmptyString( this.getKernel().getManifestHash() )
                  && !this.getKernel().getManifestHash().equals(
                ImageManifests.getManifestHash( this.getKernel( ).getManifestLocation( ) )) )
               throw new MetadataException("Kernel manifest was changed after registration");
@@ -330,7 +330,7 @@ public class Emis {
                                   this.getKernel( ).getImageSizeBytes() );
           }
           if ( this.hasRamdisk( ) ) {
-            if ( !this.getRamdisk().getManifestHash().isEmpty()
+            if ( !isEmptyString( this.getRamdisk().getManifestHash() )
                  && !this.getRamdisk().getManifestHash().equals(
                 ImageManifests.getManifestHash( this.getRamdisk().getManifestLocation( ) )) )
               throw new MetadataException("Ramdisk manifest was changed after registration");
@@ -358,8 +358,8 @@ public class Emis {
           }else{
             // paravirtualized images have RunManifest that is located in the system bucket
             // and is not accessible by users so there is nothing to check
-            if ( diskImage.getRunManifestLocation().equals( diskImage.getManifestLocation() )
-                && !diskImage.getManifestHash().isEmpty()
+            if ( diskImage.getManifestLocation().equals( diskImage.getRunManifestLocation() )
+                && !isEmptyString( diskImage.getManifestHash() )
                 && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
                                                         diskImage.getManifestLocation() )) )
               throw new MetadataException("Instance manifest was changed after registration");
@@ -383,6 +383,10 @@ public class Emis {
     }
   }
   
+  private static boolean isEmptyString(String string) {
+    return (string == null || "".equals(string));
+  }
+
   static class NoRamdiskBootableSet extends BootableSet {
     private final KernelImageInfo kernel;
     
