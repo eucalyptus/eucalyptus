@@ -253,6 +253,13 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances, boolean verbose){
+    if(instances.size() <=0)
+      return Lists.newArrayList();
+    final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances, verbose);
+    return resultOf( describeTask, new EucalyptusSystemActivity(), "failed to describe the instances" );
+  }
+	
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
@@ -1447,12 +1454,22 @@ public class EucalyptusActivityTasks {
 	}
 	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
+		private boolean verbose = false;
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId){
 			this.instanceIds = instanceId;
 		}
+		
+		private EucalyptusDescribeInstanceTask(final List<String> instanceId, final boolean verbose){
+      this.instanceIds = instanceId;
+      this.verbose = verbose;
+    }
+		
 		DescribeInstancesType getRequest(){
 			final DescribeInstancesType req = new DescribeInstancesType();
-			req.setInstancesSet(Lists.newArrayList(this.instanceIds));
+			final ArrayList<String> instances = Lists.newArrayList(this.instanceIds);
+			if(this.verbose)
+			  instances.add("verbose");
+			req.setInstancesSet(instances);
 			return req;
 		}
 		
