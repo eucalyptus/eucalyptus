@@ -143,4 +143,16 @@ public class AuthenticationProperties {
       }
     }
   }
+
+  public static class PropertiesAuthenticationLimitProvider implements AuthenticationLimitProvider {
+    @Override
+    public int getAccessKeyLimitSpi( ) {
+      return ACCESS_KEYS_LIMIT;
+    }
+
+    @Override
+    public int getSigningCertificateLimitSpi( ) {
+      return SIGNING_CERTIFICATES_LIMIT;
+    }
+  }
 }
