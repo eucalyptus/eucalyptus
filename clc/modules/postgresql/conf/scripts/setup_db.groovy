@@ -819,13 +819,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
     ])
     if ( value != 0 ) {
-<<<<<<< HEAD
-      LOG.error("Unable to stop the postgresql server (exitcode:${value})",)
-      false
-=======
       LOG.error("Unable to stop the postgresql server (code:${value})")
       return false
->>>>>>> maint/4.0/security
     } else {
       LOG.info("Postgresql shutdown succeeded.")
       true
@@ -876,13 +871,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-<<<<<<< HEAD
-  String getServicePath( String... pathParts ) {
-    pathParts != null && pathParts.length > 0 ? Joiner.on("/").join( Arrays.asList( pathParts ) ) : 'eucalyptus_shared'
-=======
   public String getServicePath( String... pathParts ) {
     return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(Arrays.asList(pathParts)) : "eucalyptus"
->>>>>>> maint/4.0/security
   }
   
   @Override

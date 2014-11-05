@@ -63,6 +63,8 @@
 package com.eucalyptus.images;
 
 import java.io.ByteArrayInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.Certificate;
@@ -82,6 +84,7 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -131,6 +134,7 @@ public class ImageManifests {
             ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
       }
     } catch ( Exception e ) {
+      LOG.error("Can't read manifest due to: " + e);
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
   }
@@ -174,14 +178,10 @@ public class ImageManifests {
     
     ImageManifest( @Nonnull  final String imageLocation,
                    @Nullable final User user ) throws EucalyptusCloudException {
-      String cleanLocation = imageLocation.replaceAll( "^/*", "" );
-      this.imageLocation = cleanLocation;
-      int index = cleanLocation.indexOf( '/' );
-      if ( index < 2 || index + 1 >= cleanLocation.length( ) ) {
-        throw new EucalyptusCloudException( "Image registration failed:  Invalid image location: " + imageLocation );
-      }
-      String bucketName = cleanLocation.substring( 0, index );
-      String manifestKey = cleanLocation.substring( index + 1 );
+      ManifestLocation mLoc = new ManifestLocation( imageLocation );
+      this.imageLocation = mLoc.cleanLocation;
+      String bucketName = mLoc.bucketName;
+      String manifestKey = mLoc.manifestKey;
       final String manifestName = manifestKey.replaceAll( ".*/", "" );
 //GRZE:TODO: restore this ACL check
 //      if ( !ImageManifests.verifyBucketAcl( bucketName ) ) {
@@ -500,11 +500,39 @@ public class ImageManifests {
       return this.virtualizationType;
     }
     
+    public static class ManifestLocation {
+      public final String bucketName;
+      public final String manifestKey;
+      public final String cleanLocation;
+
+      public ManifestLocation(String imageLocation) throws EucalyptusCloudException {
+        cleanLocation = imageLocation.replaceAll( "^/*", "" );
+        int index = cleanLocation.indexOf( '/' );
+        if ( index < 2 || index + 1 >= cleanLocation.length( ) ) {
+          throw new EucalyptusCloudException( "Invalid image location: " + imageLocation );
+        }
+        bucketName = cleanLocation.substring( 0, index );
+        manifestKey = cleanLocation.substring( index + 1 );
+      }
+    }
   }
 
-  /**
-   * Lookup an ImageManifest
-   */
+  public static String getManifestHash( String manifestLocation ) throws EucalyptusCloudException {
+    ImageManifest.ManifestLocation mLoc = new ImageManifest.ManifestLocation( manifestLocation );
+    String manifest = ImageManifests.requestManifestData( mLoc.bucketName, mLoc.manifestKey );
+    return calculateManifestHash( manifest );
+  }
+
+  public static String calculateManifestHash( String content )  throws EucalyptusCloudException {
+    try {
+      MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+      messageDigest.update(content.getBytes());
+      return Base64.toBase64String(messageDigest.digest());
+    } catch (NoSuchAlgorithmException e) {
+      throw new EucalyptusCloudException("Can't load SHA-256 algorithm", e);
+    }
+  }
+
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
     return new ImageManifest( imageLocation, null );
   }

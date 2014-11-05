@@ -183,11 +183,10 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 					if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
 						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
 					}
-					/* VK: TODO: is that needed? 
+					// AWS returns in a 204, rather than a 200 like other requests for SetBucketTaggingResponseType
 					if ( msg instanceof SetBucketTaggingResponseType ) {
-			            httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
-			          }
-			        */
+						httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
+					}
 					removeResponseBody(msg, httpResponse);
 				}
 			}

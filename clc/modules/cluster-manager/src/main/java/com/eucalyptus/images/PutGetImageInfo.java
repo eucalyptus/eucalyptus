@@ -71,9 +71,10 @@ import javax.persistence.MappedSuperclass;
 
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.StaticDiskImage;
 
 @MappedSuperclass
-public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {
+public class PutGetImageInfo extends ImageInfo implements StaticDiskImage {
   @Column( name = "metadata_image_manifest_path" )
   private String manifestLocation;
   
@@ -91,6 +92,9 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
   @Column( name = "metadata_image_bundle_size" )
   private Long   bundleSizeBytes;
   
+  @Column( name = "metadata_image_manifest_hash" )
+  private String   manifestHash;
+
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId,
                              final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
                              final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform,
@@ -154,8 +158,16 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
   }
 
   @Override
+  public String getManifestHash( ) {
+    return this.manifestHash;
+  }
+
+  public void setManifestHash( String manifestHash ) {
+    this.manifestHash = manifestHash;
+  }
+
+  @Override
   public String getRunManifestLocation() {
     return this.getManifestLocation();
   }
-  
 }

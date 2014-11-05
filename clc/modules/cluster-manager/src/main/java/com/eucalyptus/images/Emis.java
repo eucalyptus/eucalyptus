@@ -69,12 +69,13 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.cloud.util.NoSuchImageIdException;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -84,6 +85,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestException;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
@@ -313,6 +315,10 @@ public class Emis {
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
+            if ( !isEmptyString( this.getKernel().getManifestHash() )
+                 && !this.getKernel().getManifestHash().equals(
+               ImageManifests.getManifestHash( this.getKernel( ).getManifestLocation( ) )) )
+              throw new MetadataException("Kernel manifest was changed after registration");
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile(
                   this.getKernel( ).getManifestLocation( ),
@@ -320,9 +326,14 @@ public class Emis {
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
                 partition.getNodeCertificate().getPublicKey(),
                 this.getKernel( ).getDisplayName( ) + "-" + reservationId, true);
-            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation, this.getKernel( ).getImageSizeBytes() );
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation,
+                                  this.getKernel( ).getImageSizeBytes() );
           }
           if ( this.hasRamdisk( ) ) {
+            if ( !isEmptyString( this.getRamdisk().getManifestHash() )
+                 && !this.getRamdisk().getManifestHash().equals(
+                ImageManifests.getManifestHash( this.getRamdisk().getManifestLocation( ) )) )
+              throw new MetadataException("Ramdisk manifest was changed after registration");
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( 
                   this.getRamdisk( ).getManifestLocation( ),
@@ -330,11 +341,12 @@ public class Emis {
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( )),
                 partition.getNodeCertificate().getPublicKey(),
                 this.getRamdisk( ).getDisplayName( ) + "-" + reservationId, true);
-            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation, this.getRamdisk( ).getImageSizeBytes() );
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation,
+                                   this.getRamdisk( ).getImageSizeBytes() );
           }
         }
-      
         if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          StaticDiskImage diskImage = (StaticDiskImage) this.getMachine( );
           final MachineImageInfo emi = LookupMachine.INSTANCE.apply(this.getMachine().getDisplayName());
           String manifestLocation = null;
           // generate download manifest and replace machine URL
@@ -344,15 +356,23 @@ public class Emis {
           }else if(ImageMetadata.State.pending_conversion.equals(emi.getState())){
             manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
           }else{
+            // paravirtualized images have RunManifest that is located in the system bucket
+            // and is not accessible by users so there is nothing to check
+            if ( diskImage.getManifestLocation().equals( diskImage.getRunManifestLocation() )
+                && !isEmptyString( diskImage.getManifestHash() )
+                && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
+                                                        diskImage.getManifestLocation() )) )
+              throw new MetadataException("Instance manifest was changed after registration");
             manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile(
-                  ((StaticDiskImage) this.getMachine( )).getRunManifestLocation( ),
+                  diskImage.getRunManifestLocation( ),
                   BundleImageManifest.INSTANCE,
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
-                partition.getNodeCertificate( ).getPublicKey( ),
-                reservationId, true);
+                  partition.getNodeCertificate( ).getPublicKey( ),
+                  reservationId, true);
           }
-          vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
+          vmTypeInfo.setRoot( diskImage.getDisplayName( ), manifestLocation,
+                              this.getMachine( ).getImageSizeBytes() );
         }
       } catch (DownloadManifestException ex) {
         throw new MetadataException(ex);
@@ -363,6 +383,10 @@ public class Emis {
     }
   }
   
+  private static boolean isEmptyString(String string) {
+    return (string == null || "".equals(string));
+  }
+
   static class NoRamdiskBootableSet extends BootableSet {
     private final KernelImageInfo kernel;
     
