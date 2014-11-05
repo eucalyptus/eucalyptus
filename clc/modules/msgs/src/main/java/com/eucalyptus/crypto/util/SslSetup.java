@@ -90,6 +90,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
@@ -110,6 +111,7 @@ public class SslSetup {
                       changeListener = SslCertChangeListener.class )
   public static String        SERVER_ALIAS    = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "Password of the private key corresponding to the specified certificate for SSL for webservices.",
+                      type = ConfigurableFieldType.KEYVALUEHIDDEN,
                       changeListener = SslPasswordChangeListener.class )
   public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "SSL ciphers for webservices." )

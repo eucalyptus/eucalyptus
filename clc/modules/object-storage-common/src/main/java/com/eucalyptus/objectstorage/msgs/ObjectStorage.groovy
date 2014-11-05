@@ -145,10 +145,12 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
     String contentType;
     String contentDisposition;
     String versionId;
+    Map<String,String> responseHeaderOverrides;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
     protected Channel channel;
+    Map<String,String> responseHeaderOverrides;
 
     public Channel getChannel() {
         return channel;

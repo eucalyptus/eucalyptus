@@ -316,7 +316,7 @@ class ModifySubnetAttributeType extends VpcMessage {
   AttributeBooleanValueType mapPublicIpOnLaunch;
   ModifySubnetAttributeType() {  }
 }
-class NetworkAclAssociationType extends VpcMessage {
+class NetworkAclAssociationType extends EucalyptusData {
   String networkAclAssociationId;
   String networkAclId;
   String subnetId;
@@ -514,7 +514,7 @@ class CreateSubnetResponseType extends VpcMessage {
   SubnetType subnet;
   CreateSubnetResponseType() {  }
 }
-class VpnConnectionType extends VpcMessage {
+class VpnConnectionType extends EucalyptusData {
   String vpnConnectionId;
   String state;
   String customerGatewayConfiguration;
@@ -568,7 +568,7 @@ class InternetGatewayIdSetItemType extends EucalyptusData {
   String internetGatewayId;
   InternetGatewayIdSetItemType() {  }
 }
-class VpcPeeringConnectionType extends VpcMessage {
+class VpcPeeringConnectionType extends EucalyptusData {
   String vpcPeeringConnectionId;
   VpcPeeringConnectionVpcInfoType requesterVpcInfo;
   VpcPeeringConnectionVpcInfoType accepterVpcInfo;
@@ -778,7 +778,7 @@ class SubnetIdSetItemType extends EucalyptusData {
   String subnetId;
   SubnetIdSetItemType() {  }
 }
-class CustomerGatewayType extends VpcMessage {
+class CustomerGatewayType extends EucalyptusData {
   String customerGatewayId;
   String state;
   String type;
@@ -802,7 +802,7 @@ class VpcSetType extends EucalyptusData {
   VpcSetType() {  }
   ArrayList<VpcType> item = new ArrayList<VpcType>();
 }
-class VpnGatewayType extends VpcMessage {
+class VpnGatewayType extends EucalyptusData {
   String vpnGatewayId;
   String state;
   String type;
@@ -869,7 +869,7 @@ class RejectVpcPeeringConnectionResponseType extends VpcMessage {
 class CreateNetworkAclEntryResponseType extends VpcMessage {
   CreateNetworkAclEntryResponseType() {  }
 }
-class NetworkAclEntryType extends VpcMessage {
+class NetworkAclEntryType extends EucalyptusData {
   Integer ruleNumber;
   String protocol;
   String ruleAction;
@@ -1612,7 +1612,7 @@ class CreateCustomerGatewayResponseType extends VpcMessage {
   CustomerGatewayType customerGateway;
   CreateCustomerGatewayResponseType() {  }
 }
-class RouteType extends VpcMessage {
+class RouteType extends EucalyptusData {
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;

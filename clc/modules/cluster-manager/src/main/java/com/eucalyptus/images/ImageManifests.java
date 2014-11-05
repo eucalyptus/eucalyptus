@@ -63,6 +63,8 @@
 package com.eucalyptus.images;
 
 import java.io.ByteArrayInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.Certificate;
@@ -70,6 +72,8 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -80,6 +84,7 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -129,6 +134,7 @@ public class ImageManifests {
             ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
       }
     } catch ( Exception e ) {
+      LOG.error("Can't read manifest due to: " + e);
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
   }
@@ -170,16 +176,12 @@ public class ImageManifests {
     private String                                 userId;
     private List<ManifestDeviceMapping>            deviceMappings = Lists.newArrayList( );
     
-    ImageManifest( String imageLocation ) throws EucalyptusCloudException {
-      Context ctx = Contexts.lookup( );
-      String cleanLocation = imageLocation.replaceAll( "^/*", "" );
-      this.imageLocation = cleanLocation;
-      int index = cleanLocation.indexOf( '/' );
-      if ( index < 2 || index + 1 >= cleanLocation.length( ) ) {
-        throw new EucalyptusCloudException( "Image registration failed:  Invalid image location: " + imageLocation );
-      }
-      String bucketName = cleanLocation.substring( 0, index );
-      String manifestKey = cleanLocation.substring( index + 1 );
+    ImageManifest( @Nonnull  final String imageLocation,
+                   @Nullable final User user ) throws EucalyptusCloudException {
+      ManifestLocation mLoc = new ManifestLocation( imageLocation );
+      this.imageLocation = mLoc.cleanLocation;
+      String bucketName = mLoc.bucketName;
+      String manifestKey = mLoc.manifestKey;
       final String manifestName = manifestKey.replaceAll( ".*/", "" );
 //GRZE:TODO: restore this ACL check
 //      if ( !ImageManifests.verifyBucketAcl( bucketName ) ) {
@@ -211,9 +213,9 @@ public class ImageManifests {
             }
           }
       };
-      if ( ( checkIdType.apply( ImageMetadata.Type.kernel )  ) && !ctx.hasAdministrativePrivileges( ) ) {
+      if ( checkIdType.apply( ImageMetadata.Type.kernel ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-      } else if  ( ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      } else if  ( checkIdType.apply( ImageMetadata.Type.ramdisk ) && user != null && !user.isSystemAdmin( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
       this.manifest = ImageManifests.requestManifestData( bucketName, manifestKey );
@@ -342,10 +344,18 @@ public class ImageManifests {
     }
     
     public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
-      String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
-      String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" )
-                                                 .replaceAll( "</machine_configuration>.*",
-                                                              "</machine_configuration>" );
+      int idxImgOpen = this.manifest.indexOf("<image>");
+      int idxImgClose = this.manifest.lastIndexOf("</image>");
+      if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String image = this.manifest.substring(idxImgOpen, idxImgClose+"</image>".length());
+     
+      int idxConfOpen = this.manifest.indexOf("<machine_configuration>");
+      int idxConfClose = this.manifest.lastIndexOf("</machine_configuration>");
+      if (idxConfOpen < 0 || idxConfClose < 0 || idxConfOpen > idxConfClose)
+        throw new EucalyptusCloudException("Manifest in wrong format");
+      String machineConfiguration = this.manifest.substring(idxConfOpen, idxConfClose+"</machine_configuration>".length());
+      
       final String pad = ( machineConfiguration + image );
       Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
         
@@ -490,14 +500,48 @@ public class ImageManifests {
       return this.virtualizationType;
     }
     
+    public static class ManifestLocation {
+      public final String bucketName;
+      public final String manifestKey;
+      public final String cleanLocation;
+
+      public ManifestLocation(String imageLocation) throws EucalyptusCloudException {
+        cleanLocation = imageLocation.replaceAll( "^/*", "" );
+        int index = cleanLocation.indexOf( '/' );
+        if ( index < 2 || index + 1 >= cleanLocation.length( ) ) {
+          throw new EucalyptusCloudException( "Invalid image location: " + imageLocation );
+        }
+        bucketName = cleanLocation.substring( 0, index );
+        manifestKey = cleanLocation.substring( index + 1 );
+      }
+    }
   }
-  
+
+  public static String getManifestHash( String manifestLocation ) throws EucalyptusCloudException {
+    ImageManifest.ManifestLocation mLoc = new ImageManifest.ManifestLocation( manifestLocation );
+    String manifest = ImageManifests.requestManifestData( mLoc.bucketName, mLoc.manifestKey );
+    return calculateManifestHash( manifest );
+  }
+
+  public static String calculateManifestHash( String content )  throws EucalyptusCloudException {
+    try {
+      MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+      messageDigest.update(content.getBytes());
+      return Base64.toBase64String(messageDigest.digest());
+    } catch (NoSuchAlgorithmException e) {
+      throw new EucalyptusCloudException("Can't load SHA-256 algorithm", e);
+    }
+  }
+
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
-    return new ImageManifest( imageLocation );
+    return new ImageManifest( imageLocation, null );
   }
-  
-  public static ImageManifest lookup( String imageLocation , User owner) throws EucalyptusCloudException {
-    final ImageManifest manifest =  new ImageManifest( imageLocation );
+
+  /**
+   * Lookup an ImageManifest, verifying permissions for the given user
+   */
+  public static ImageManifest lookup( String imageLocation, User owner) throws EucalyptusCloudException {
+    final ImageManifest manifest = new ImageManifest( imageLocation, owner );
     try{
       final String ownerAcctId = owner.getAccountNumber();
       if(ownerAcctId.equals(manifest.getAccountId()))

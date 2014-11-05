@@ -253,8 +253,7 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	private void checkAndAddUser() {
-        TransactionResource outter = Entities.transactionFor(CHAPUserInfo.class);
-		try {
+		try (TransactionResource outter = Entities.transactionFor(CHAPUserInfo.class)) {
 			CHAPUserInfo userInfo = Entities.uniqueResult(new CHAPUserInfo("eucalyptus"));
             outter.commit();
 			//check if account actually exists, if not create it.
@@ -267,7 +266,6 @@ public class ISCSIManager implements StorageExportManager {
 				}
 			}
 		} catch(NoSuchElementException ex) {
-            outter.rollback();
 			boolean addUser = true;
 			String encryptedPassword = null; 
             try (TransactionResource inner = Entities.transactionFor(CHAPUserInfo.class)) {

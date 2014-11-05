@@ -531,5 +531,4 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
                                  @Nullable final String imageId ) {
     return new ImageInfo( input, imageId );
   }
-  
 }

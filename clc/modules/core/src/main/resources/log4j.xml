@@ -242,6 +242,10 @@
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="com.eucalyptus.auth.login.HMAC" additivity="false">
+    <priority value="OFF" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="com.eucalyptus.entities.EntityWrapper" additivity="false">
     <priority value="${euca.log.exhaustive.db}" />
     <appender-ref ref="cloud-exhaust" />
@@ -306,6 +310,18 @@
   -->
   <category name="org.mule" additivity="false">
     <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.mule.transformer.simple.ObjectToString">
+    <priority value="OFF" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.mule.transformer.TransformerTemplate">
+    <priority value="OFF" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.mule.module.client.MuleClient">
+    <priority value="OFF" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.jboss" additivity="false">

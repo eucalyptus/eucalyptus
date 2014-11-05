@@ -147,7 +147,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     }
     if (addedParam) sb.setLength( sb.length() - 1 );
     String subject = prefix + sb.toString( );
-    LOG.trace( "VERSION2: " + subject );
+    signatureLogger.trace( "VERSION2: " + subject );
     return subject;
   }
 

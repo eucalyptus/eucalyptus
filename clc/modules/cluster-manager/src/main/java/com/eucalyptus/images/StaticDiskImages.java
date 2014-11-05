@@ -66,8 +66,7 @@ package com.eucalyptus.images;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
@@ -108,7 +107,7 @@ public class StaticDiskImages {
         throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       }
       LOG.info( "Triggering caching: " + staticImage.getRunManifestLocation( ) );
-      if ( staticImage instanceof ImageMetadata.StaticDiskImage ) {
+      if ( staticImage instanceof StaticDiskImage ) {
         StaticDiskImages.prepare( staticImage.getRunManifestLocation( ) );
       }
     }

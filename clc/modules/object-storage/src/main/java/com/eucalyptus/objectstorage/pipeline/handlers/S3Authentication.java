@@ -406,10 +406,16 @@ public class S3Authentication {
             }
 
             List<String> canonicalSubresources = new ArrayList<>();
-            String resource;
             for (String queryParam : httpRequest.getParameters().keySet()) {
                 try {
                     if (ObjectStorageProperties.SubResource.valueOf(queryParam) != null) {
+                        canonicalSubresources.add(queryParam);
+                    }
+                } catch (IllegalArgumentException e) {
+                    //Skip. Not in the set.
+                }
+                try {
+                    if (ObjectStorageProperties.ResponseHeaderOverrides.fromString(queryParam) != null) {
                         canonicalSubresources.add(queryParam);
                     }
                 } catch (IllegalArgumentException e) {

@@ -71,6 +71,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
@@ -104,6 +106,8 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -117,6 +121,8 @@ import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
+
+  private static final Interner<AllocationScope> allocationInterner = Interners.newWeakInterner( );
   
   /**
    * Annotation for use on a Class implementing Function<String,T extends RestrictedType>,
@@ -250,7 +256,7 @@ public class RestrictedTypes {
   /**
    * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
    * the allocated resource cannot be parameterized in any way.
-   * 
+   *
    * @param <T> type to be allocated
    * @param rscType class for type to be allocated
    * @param quantity quantity to be allocated
@@ -258,7 +264,46 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources( Class<?> rscType, Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+          final Class<?> rscType,
+          final Integer quantity,
+          final Supplier<T> allocator
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+      return doAllocate( rscType, quantity, new Supplier<List<T>>() {
+          @Override
+          public List<T> get( ) {
+              return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
+          }
+      } );
+  }
+
+  /**
+   * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   *
+   * @param <T> type to be allocated
+   * @param rscType class for type to be allocated
+   * @param min minimum quantity to be allocated
+   * @param max maximum quantity to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+      final Class<?> rscType,
+      final int min,
+      final int max,
+      final BatchAllocator<T> allocator
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doAllocate( rscType, max, new Supplier<List<T>>( ){
+      @Override
+      public List<T> get() {
+        return allocator.allocate( min, max );
+      }
+    });
+  }
+
+  private static <A> A doAllocate( final Class<?> rscType, final Integer quantity, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -270,13 +315,21 @@ public class RestrictedTypes {
       AuthContextSupplier userContext = ctx.getAuthContext( );
       if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
         throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
-      } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       }
+      final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get().getAccountNumber() ) ).lock( );
+      lock.lock();
+      try {
+        if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
+        }
+        return allocator.get( );
+      } finally {
+        lock.unlock( );
+      }
+    } else {
+      return allocator.get( );
     }
-    return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
   }
-  
   /**
    * Allocate a resource and subsequently verify naming restrictions.
    * 
@@ -700,6 +753,10 @@ public class RestrictedTypes {
     }
   }
 
+  public interface BatchAllocator<T> {
+    List<T> allocate( int min, int max );
+  }
+
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
     public ResourceMetricFunctionDiscovery( ) {
@@ -862,5 +919,61 @@ public class RestrictedTypes {
       }
     }
     return policy;
+  }
+
+  private static final class AllocationScope {
+    private final String resourceVendor;
+    private final String resourceType;
+    private final String accountNumber;
+    private final Lock lock = new ReentrantLock( );
+
+    private AllocationScope( final String resourceVendor,
+                             final String resourceType,
+                             final String accountNumber ) {
+      Parameters.checkParam( "resourceVendor", resourceVendor, notNullValue( ) );
+      Parameters.checkParam( "resourceType", resourceType, notNullValue( ) );
+      Parameters.checkParam( "accountNumber", accountNumber, notNullValue( ) );
+      this.resourceVendor = resourceVendor;
+      this.resourceType = resourceType;
+      this.accountNumber = accountNumber;
+    }
+
+    public Lock lock( ) {
+      return lock;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final AllocationScope that = (AllocationScope) o;
+
+      if ( !accountNumber.equals( that.accountNumber ) ) return false;
+      if ( !resourceType.equals( that.resourceType ) ) return false;
+      if ( !resourceVendor.equals( that.resourceVendor ) ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = resourceVendor.hashCode();
+      result = 31 * result + resourceType.hashCode();
+      result = 31 * result + accountNumber.hashCode();
+      return result;
+    }
+
+    public String getResourceVendor( ) {
+      return resourceVendor;
+    }
+
+    public String getResourceType( ) {
+      return resourceType;
+    }
+
+    public String getAccountNumber( ) {
+      return accountNumber;
+    }
   }
 }

@@ -124,7 +124,6 @@ public class EuareReplyQueue {
 
   public void handle( ExceptionMessage exMsg ) {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
-    LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
       HttpResponseStatus status = HttpResponseStatus.INTERNAL_SERVER_ERROR;

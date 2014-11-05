@@ -1599,6 +1599,10 @@ public class VpcManager {
             public void fire( final Subnet subnet ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) try {
                 final NetworkAcl networkAcl = networkAcls.lookupByName( accountFullName, networkAclId, Functions.<NetworkAcl>identity( ) );
+                if ( !subnet.getVpc( ).getDisplayName( ).equals( networkAcl.getVpc( ).getDisplayName( ) ) ) {
+                  throw new ClientComputeException( "InvalidParameterValue",
+                      "Network ACL "+networkAclId+" and subnet "+subnet.getDisplayName( )+" belong to different networks" );
+                }
                 subnet.setNetworkAcl( networkAcl );
                 subnet.setNetworkAclAssociationId( Identifier.aclassoc.generate() );
               } catch ( VpcMetadataNotFoundException e ) {

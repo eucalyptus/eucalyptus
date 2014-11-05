@@ -606,6 +606,8 @@ class VmInstanceLifecycleHelpers {
 
   @SuppressWarnings("GroovyUnusedDeclaration")
   static final class SecurityGroupVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
+    private static final Logger logger = Logger.getLogger( SecurityGroupVmInstanceLifecycleHelper )
+
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( )
@@ -616,10 +618,15 @@ class VmInstanceLifecycleHelpers {
       final String vpcId = allocation?.subnet?.vpc?.displayName ?: defaultVpcId
       final boolean isVpc = vpcId != null
       if ( networkNames.isEmpty( ) && networkIds.isEmpty( ) ) {
-        if ( !isVpc ) Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
-          NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
-        }
         networkNames.add( NetworkGroups.defaultNetworkName( ) )
+      }
+      if ( !isVpc && networkNames.contains( NetworkGroups.defaultNetworkName( ) ) ) try {
+        // Use separate thread so group is committed immediately
+        Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
+          NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
+        }.get( )
+      } catch( final Exception e ) {
+        logger.trace( "Error looking up default network", e )
       }
 
       final List<NetworkGroup> groups = Lists.newArrayList( )
