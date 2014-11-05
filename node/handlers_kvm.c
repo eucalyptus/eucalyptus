@@ -128,6 +128,11 @@
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+typedef struct rebooting_thread_params_t {
+    ncInstance instance;
+    struct nc_state_t nc;
+} rebooting_thread_params;
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -332,20 +337,27 @@ static void *rebooting_thread(void *arg)
     char *xml = NULL;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
-    ncInstance *instance = ((ncInstance *) arg);
+    //    ncInstance *instance = ((ncInstance *) arg);
+    ncInstance *instance = NULL;
+    struct nc_state_t *nc = NULL;
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
+    rebooting_thread_params *params = ((rebooting_thread_params *) arg);
+    instance = &(params->instance);
+    nc = &(params->nc);
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
         LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
+        EUCA_FREE(params);
         return NULL;
     }
     // obtain the most up-to-date XML for domain from libvirt
@@ -354,6 +366,7 @@ static void *rebooting_thread(void *arg)
         LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
         virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
+        EUCA_FREE(params);
         return NULL;
     }
     virDomainFree(dom);                // release libvirt resource
@@ -362,6 +375,7 @@ static void *rebooting_thread(void *arg)
     // try shutdown first, then kill it if uncooperative
     if (shutdown_then_destroy_domain(instance->instanceId, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     // Add a shift to values of three of the metrics: ones that
@@ -374,10 +388,15 @@ static void *rebooting_thread(void *arg)
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
+    if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
+            // need to sleep to allow midolman to update the VM interface
+            sleep (10);
+    }
     dom = virDomainCreateLinux(conn, xml, 0);
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
@@ -386,13 +405,28 @@ static void *rebooting_thread(void *arg)
         euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
         sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
         virDomainFree(dom);
+
+
+        if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
+            char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
+            int rc;
+            snprintf(iface, 16, "vn_%s", instance->instanceId);
+            snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+            rc = timeshell(cmd, obuf, ebuf, 256, 10);
+            if (rc) {
+                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+            }
+        }
+
     }
     EUCA_FREE(xml);
 
     unlock_hypervisor_conn();
     unset_corrid(get_corrid());
+    EUCA_FREE(params);
     return NULL;
 }
+
 
 //!
 //! Handles the reboot request of an instance.
@@ -408,6 +442,8 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 {
     pthread_t tcb = { 0 };
     ncInstance *instance = NULL;
+    rebooting_thread_params *params = NULL;
+
 
     sem_p(inst_sem);
     {
@@ -419,8 +455,12 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] cannot find instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
+
+    params = EUCA_ZALLOC(1, sizeof(rebooting_thread_params));
+    memcpy(&(params->instance), instance, sizeof(ncInstance));
+    memcpy(&(params->nc), nc, sizeof(struct nc_state_t));
     // since shutdown/restart may take a while, we do them in a thread
-    if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
+    if (pthread_create(&tcb, NULL, rebooting_thread, params)) {
         LOGERROR("[%s] failed to spawn a reboot thread\n", instanceId);
         return (EUCA_FATAL_ERROR);
     }

@@ -186,19 +186,28 @@ public class VpcManager {
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId() );
     final String subnetId = Identifier.subnet.normalize( request.getSubnetId() );
     try {
-      final Subnet subnet = subnets.updateByExample(
-          Subnet.exampleWithName( accountFullName, subnetId ),
+      final RouteTable routeTable = routeTables.updateByExample(
+          RouteTable.exampleWithName( accountFullName, routeTableId ),
           accountFullName,
-          request.getSubnetId(),
-          new Callback<Subnet>() {
+          request.getRouteTableId(),
+          new Callback<RouteTable>() {
             @Override
-            public void fire( final Subnet subnet ) {
-              if ( RestrictedTypes.filterPrivileged().apply( subnet ) ) try {
-                final RouteTable routeTable = routeTables.lookupByName( accountFullName, routeTableId, Functions.<RouteTable>identity() );
-                subnet.setRouteTable( routeTable );
-                subnet.setRouteTableAssociationId( Identifier.rtbassoc.generate() );
+            public void fire( final RouteTable routeTable ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
+                final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity( ) );
+
+                if ( !subnet.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+                  throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue",
+                      "Route table "+routeTableId+" and subnet "+subnetId+" belong to different networks" ) );
+                }
+
+                if ( !Iterables.tryFind(
+                    routeTable.getRouteTableAssociations( ),
+                    CollectionUtils.propertyPredicate( subnetId, RouteTables.AssociationFilterStringFunctions.SUBNET_ID ) ).isPresent( ) ) {
+                  routeTable.associate( subnet );
+                }
               } catch ( VpcMetadataNotFoundException e ) {
-                throw Exceptions.toUndeclared( new ClientComputeException( "InvalidRouteTableID.NotFound", "Route table not found '" + request.getRouteTableId() + "'" ) );
+                throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet ("+request.getSubnetId()+") not found" ) );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
               } else {
@@ -206,11 +215,17 @@ public class VpcManager {
               }
             }
           } );
-      reply.setAssociationId( subnet.getRouteTableAssociationId( ) );
+      final RouteTableAssociation association = Iterables.find(
+          routeTable.getRouteTableAssociations( ),
+          CollectionUtils.propertyPredicate( subnetId, RouteTables.AssociationFilterStringFunctions.SUBNET_ID ) );
+      reply.setAssociationId( association.getAssociationId( ) );
       invalidate( subnetId );
     } catch ( VpcMetadataNotFoundException e ) {
-      throw new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet ("+request.getSubnetId()+") not found " );
+      throw new ClientComputeException( "InvalidRouteTableID.NotFound", "Route table not found '" + request.getRouteTableId() + "'" );
     } catch ( Exception e ) {
+      if ( Exceptions.isCausedBy( e, ConstraintViolationException.class ) ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Subnet "+subnetId+" already associated." );
+      }
       throw handleException( e );
     }
     return reply;
@@ -677,12 +692,10 @@ public class VpcManager {
             throw new ClientComputeException( "InvalidSubnet.Conflict", "Cidr conflict for " + request.getCidrBlock( ) );
           }
           final NetworkAcl networkAcl = networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() );
-          final RouteTable routeTable = routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() );
           return subnets.save( Subnet.create(
               ctx.getUserFullName( ),
               vpc,
               networkAcl,
-              routeTable,
               Identifier.subnet.generate( ),
               request.getCidrBlock( ),
               availabilityZone.get() ) );
@@ -809,7 +822,6 @@ public class VpcManager {
                   vpcOwnerFullName,
                   vpc,
                   networkAcl,
-                  routeTable,
                   Identifier.subnet.generate( ),
                   subnetCidrs.remove( 0 ),
                   zone ) );
@@ -1410,23 +1422,28 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     final String associationId = Identifier.rtbassoc.normalize( request.getAssociationId() );
     try {
-      final Subnet subnet = subnets.updateByExample(
-          Subnet.exampleWithRouteTableAssociation( accountFullName, associationId ),
+      final String subnetId = routeTables.updateByAssociationId(
+          associationId,
           accountFullName,
-          request.getAssociationId( ),
-          new Callback<Subnet>() {
+          new Function<RouteTable,String>() {
             @Override
-            public void fire( final Subnet subnet ) {
-              if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) try {
-                final RouteTable routeTable = routeTables.lookupMain( subnet.getVpc( ).getDisplayName( ), Functions.<RouteTable>identity( ) );
-                subnet.setRouteTable( routeTable );
-                subnet.setRouteTableAssociationId( Identifier.rtbassoc.generate( ) ); //TODO:STEVE: this is wrong, the default table should not be associated (also on subnet create)
+            public String apply( final RouteTable routeTable ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
+                final RouteTableAssociation association = Iterables.find(
+                    routeTable.getRouteTableAssociations( ),
+                    CollectionUtils.propertyPredicate( associationId, RouteTables.AssociationFilterStringFunctions.ASSOCIATION_ID ) );
+                if ( association.getMain( ) ) {
+                  throw new ClientComputeException( "InvalidParameterValue", "Cannot disassociate the main route table association "+request.getAssociationId( ) );
+                }
+                routeTable.disassociate( associationId );
+                return association.getSubnetId( );
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
               }
+              return null;
             }
           } );
-      invalidate( subnet.getDisplayName( ) );
+      if ( subnetId != null ) invalidate( subnetId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidAssociationID.NotFound", "Route table association ("+request.getAssociationId( )+") not found " );
     } catch ( Exception e ) {
@@ -1582,6 +1599,10 @@ public class VpcManager {
             public void fire( final Subnet subnet ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) try {
                 final NetworkAcl networkAcl = networkAcls.lookupByName( accountFullName, networkAclId, Functions.<NetworkAcl>identity( ) );
+                if ( !subnet.getVpc( ).getDisplayName( ).equals( networkAcl.getVpc( ).getDisplayName( ) ) ) {
+                  throw new ClientComputeException( "InvalidParameterValue",
+                      "Network ACL "+networkAclId+" and subnet "+subnet.getDisplayName( )+" belong to different networks" );
+                }
                 subnet.setNetworkAcl( networkAcl );
                 subnet.setNetworkAclAssociationId( Identifier.aclassoc.generate() );
               } catch ( VpcMetadataNotFoundException e ) {
@@ -1696,7 +1717,7 @@ public class VpcManager {
     final ReplaceRouteResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
-    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) ); //TODO:STEVE: should support eni also?
+    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     final String destinationCidr = request.getDestinationCidrBlock( );
     final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
@@ -1753,21 +1774,31 @@ public class VpcManager {
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     final String associationId = Identifier.rtbassoc.normalize( request.getAssociationId() );
     try {
-      final Subnet subnet = subnets.updateByExample(
-          Subnet.exampleWithRouteTableAssociation( accountFullName, associationId ),
+      final String newAssociationId = routeTables.updateByAssociationId(
+          associationId,
           accountFullName,
-          request.getAssociationId( ),
-          new Callback<Subnet>() {
+          new Function<RouteTable,String>() {
             @Override
-            public void fire( final Subnet subnet ) {
-              if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) try {
-                final RouteTable routeTable = routeTables.lookupByName( accountFullName, routeTableId, Functions.<RouteTable>identity( ) );
-                if ( subnet.getRouteTable( ).getMain( ) ) {
-                  subnet.getRouteTable( ).setMain( false );
-                  routeTable.setMain( true );
+            public String apply( final RouteTable routeTable ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
+                final RouteTable newRouteTable = routeTables.lookupByName( accountFullName, routeTableId, Functions.<RouteTable>identity( ) );
+                final RouteTableAssociation association = Iterables.find(
+                    routeTable.getRouteTableAssociations( ),
+                    CollectionUtils.propertyPredicate( associationId, RouteTables.AssociationFilterStringFunctions.ASSOCIATION_ID ) );
+                if ( !newRouteTable.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+                  throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue",
+                      "Route table "+routeTableId+" belongs to different network" ) );
                 }
-                subnet.setRouteTable( routeTable );
-                subnet.setRouteTableAssociationId( Identifier.rtbassoc.generate( ) );
+                final RouteTableAssociation oldAssociation = routeTable.disassociate( associationId );
+                Entities.delete( oldAssociation );
+                Entities.flush( oldAssociation );
+                final RouteTableAssociation newAssociation;
+                if ( association.getMain( ) ) { // replacing main route table for VPC
+                  newAssociation = newRouteTable.associateMain( );
+                } else {
+                  newAssociation = newRouteTable.associate( association.getSubnet( ) );
+                }
+                return newAssociation.getAssociationId( );
               } catch ( VpcMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidRouteTableID.NotFound", "Route table not found '" + request.getRouteTableId() + "'" ) );
               } catch ( Exception e ) {
@@ -1778,7 +1809,7 @@ public class VpcManager {
             }
           } );
       invalidate( routeTableId );
-      reply.setNewAssociationId( subnet.getRouteTableAssociationId( ) );
+      reply.setNewAssociationId( newAssociationId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException( "InvalidAssociationID.NotFound", "Route table association ("+request.getAssociationId( )+") not found " );
     } catch ( Exception e ) {

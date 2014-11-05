@@ -62,6 +62,11 @@
 
 package com.eucalyptus.blockstorage.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_1_0;
+import groovy.sql.Sql;
+
+import java.util.concurrent.Callable;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -70,12 +75,11 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -85,10 +89,9 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-
-import java.util.NoSuchElementException;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -103,7 +106,7 @@ public class StorageInfo extends AbstractPersistent {
 	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
 	private static final Integer DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT = 48;
 	private static final Integer DEFAULT_READ_BUFFER_SIZE_IN_MB = 1;
-	private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 10;
+	private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 100;
 
 	@Transient
 	private static Logger LOG = Logger.getLogger(StorageInfo.class);
@@ -148,11 +151,11 @@ public class StorageInfo extends AbstractPersistent {
 	@Column(name = "snapshot_transfer_timeout_hours")
 	private Integer snapshotTransferTimeoutInHours;
 
-	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
+	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot when uploading snapshot to objectstorage gateway", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
 	@Column(name = "read_buffer_size_mb")
 	private Integer readBuffferSizeInMB;
 
-	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot", displayName = "Write Buffer Size", initial = "10", changeListener = PositiveIntegerChangeListener.class)
+	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot when downloading snapshot from objectstorage gateway", displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
 	@Column(name = "write_buffer_size_mb")
 	private Integer writeBufferSizeInMB;
 
@@ -353,21 +356,27 @@ public class StorageInfo extends AbstractPersistent {
 	}
 
 	public static StorageInfo getStorageInfo() {
-		TransactionResource tran = Entities.transactionFor(StorageInfo.class);
 		StorageInfo conf = null;
+
 		try {
-			conf = Entities.uniqueResult(new StorageInfo(StorageProperties.NAME));
-			tran.commit();
-		} catch (NoSuchElementException e) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
-			conf = getDefaultInstance();
-			Entities.persist(conf);
-			tran.commit();
-		} catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			tran.rollback();
-			return getDefaultInstance();
+			conf = Transactions.find(new StorageInfo());
+		} catch (Exception e) {
+			LOG.warn("Storage controller properties for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(getDefaultInstance());
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new StorageInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve StorageInfo entity");
+				}
+			}
 		}
+
+		if (conf == null) {
+			conf = getDefaultInstance();
+		}
+
 		return conf;
 	}
 
@@ -400,6 +409,34 @@ public class StorageInfo extends AbstractPersistent {
 			} else if (newValue.intValue() <= 0) {
 				LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
 				throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
+			}
+		}
+	}
+
+	@PreUpgrade(since = v4_1_0, value = Storage.class)
+	public static class RenameColumns implements Callable<Boolean> {
+
+		private static final Logger LOG = Logger.getLogger(RenameColumns.class);
+
+		@Override
+		public Boolean call() throws Exception {
+
+			LOG.info("Renaming columns in table storage_info");
+			Sql sql = null;
+
+			try {
+				sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+				sql.execute("alter table storage_info rename column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
+				sql.execute("alter table storage_info rename column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
+
+				return Boolean.TRUE;
+			} catch (Exception e) {
+				LOG.warn("Failed to rename columns in table storage_info", e);
+				return Boolean.TRUE;
+			} finally {
+				if (sql != null) {
+					sql.close();
+				}
 			}
 		}
 	}

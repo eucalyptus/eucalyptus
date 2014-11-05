@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.activities;
 
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.ServiceConfigurations;
 
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
@@ -73,18 +73,16 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
-import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -139,6 +137,18 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 					throw new ConfigurablePropertyException("Could not change key name", e);
 			    }
 			}
+	}
+	
+	public static class ElbVmExpirationDaysChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final int newExp = Integer.parseInt(newValue);
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type");
+      }
+    }
 	}
 	
 	private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
@@ -334,6 +344,15 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	    changeListener = ElbAppCookieDurationChangeListener.class)
 	public static String LOADBALANCER_APP_COOKIE_DURATION = "24";
 	
+	@ConfigurableField( displayName = "loadbalancer_vm_expiration_days",
+      description = "the days after which the loadbalancer Vms expire",
+      initial = "365", // 1 year by default 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbVmExpirationDaysChangeListener.class)
+  public static String LOADBALANCER_VM_EXPIRATION_DAYS = "365";
+  
+	
 	@Provides(LoadBalancingBackend.class)
 	@RunDuring(Bootstrap.Stage.Final)
 	@DependsLocal(LoadBalancingBackend.class)
@@ -511,9 +530,13 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				}
 				final String keyName =
 						LOADBALANCER_VM_KEYNAME!=null && LOADBALANCER_VM_KEYNAME.length()>0 ? LOADBALANCER_VM_KEYNAME : null;
+					
+				final String credStr = String.format("euca-%s:expiration_day=%s;",
+				    B64.standard.encString("setup-credential"), LOADBALANCER_VM_EXPIRATION_DAYS);
+
 				final String userData = B64.standard.encString(String.format("%s\n%s",
-						"euca-"+B64.standard.encString("setup-credential"),
-						userDataBuilder.build()));
+				    credStr,
+				    userDataBuilder.build()));
 
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
 						launchConfigName, securityGroupNamesOrIds, keyName, userData, !zoneToSubnetIdMap.isEmpty( ) );
@@ -638,40 +661,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				this.add("eucalyptus_path", path);
 				this.add("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
 				this.add("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
-				
-				//final ServiceConfiguration dns = Topology.lookup(Dns.class);
-				final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
-				    new Function<ServiceConfiguration, String>() {
-              @Override
-              public String apply(ServiceConfiguration arg0) {
-                return arg0.getInetAddress().getHostAddress();
-              }
-				}));
-				final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
-				    new Function<ServiceConfiguration, String>(){
-              @Override
-              public String apply(ServiceConfiguration arg0) {
-                return arg0.getInetAddress().getHostAddress();
-              }
-				}));
-				
-				final StringBuilder sbDns= new StringBuilder();
-				for(final String address : enabledDns){
-				  if(sbDns.length()<=0)
-				    sbDns.append(address);
-				  else
-				    sbDns.append( "," ).append( address );
-				}
-				for(final String address : dnsHosts){
-				  if(! enabledDns.contains(address)){
-	          if(sbDns.length()<=0)
-	            sbDns.append(address);
-	          else
-	            sbDns.append( "," ).append( address );
-				  } 
-				}
-	      this.add("dns_server", sbDns.toString());
-	      if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
+				if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
 					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
 				}
 				if(LOADBALANCER_APP_COOKIE_DURATION != null){

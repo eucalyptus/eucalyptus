@@ -23,6 +23,8 @@ import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -110,7 +112,23 @@ public class EuareServerCertificateUtil {
         throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
+  public static boolean verifyCertificate(final String certPem) {
+    try{
+      final X509Certificate cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
+      final Date notBefore = cert.getNotBefore();
+      final Date notAfter = cert.getNotAfter();
+      final Date now = Calendar.getInstance().getTime();
+      if (now.before(notBefore))
+        throw new Exception("Current date is before the certificate's valid period");
+      else if (now.after(notAfter))
+        throw new Exception("Current date is after the certificate's valid period");
+      return true;
+    }catch(final Exception ex) {
+      return false;
+    }
+  }
+
   public static boolean verifySignature(final String certPem, final String msg, final String sigB64){
     try{
       final Signature sig = Signature.getInstance("SHA256withRSA");

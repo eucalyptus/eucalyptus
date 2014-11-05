@@ -296,6 +296,7 @@ class NetworkInfoBroadcasterTest {
     new NetworkInfoBroadcaster.VmInstanceNetworkView(
       id,
       VmState.RUNNING,
+      false,
       ownerAccountNumber,
       null,
       null,

@@ -1105,7 +1105,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
             //return reply;
         }
-
+        reply.setResponseHeaderOverrides( request.getResponseHeaderOverrides() );
         return reply;
 	}
 
@@ -1125,6 +1125,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             response.setVersionId(objectEntity.getVersionId());
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
+            response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
             return response;
         } catch(Exception e) {
         	// Wrap the error from back-end with a 500 error

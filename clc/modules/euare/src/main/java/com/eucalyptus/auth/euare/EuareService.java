@@ -2101,6 +2101,15 @@ public class EuareService {
     final String authSigB64 = request.getAuthSignature();
     final String certArn = request.getCertificateArn();
     
+    try{
+      if(!EuareServerCertificateUtil.verifyCertificate(certPem))
+        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+    }catch(final EuareException ex) {
+      throw ex;
+    }catch(final Exception ex) {
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+    }
+    
     if(sigB64 == null || ts == null)
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Signature and timestamp are required");
     
@@ -2234,6 +2243,10 @@ public class EuareService {
         }        
       } else {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
+      }
+    } else if ( ctx.isAdministrator( ) ) {
+      if ( !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Access not authorized for " + requestAccount );
       }
     }
     return requestAccount;

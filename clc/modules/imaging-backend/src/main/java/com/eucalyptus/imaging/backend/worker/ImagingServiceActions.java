@@ -513,14 +513,14 @@ public class ImagingServiceActions {
       @Override
       public String getResult() {
         final String userData = B64.standard.encString(String.format("%s\n%s",
-            ImagingServiceProperties.CREDENTIALS_STR,
+            ImagingServiceProperties.getCredentialsString(),
             ImagingServiceProperties.getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
         return userData;
       }
     }
-
+    
     public static class CreateLaunchConfiguration extends AbstractAction {
       private String emi = null;
       private String instanceType = null;

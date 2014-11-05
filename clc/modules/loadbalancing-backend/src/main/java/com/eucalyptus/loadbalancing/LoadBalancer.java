@@ -167,6 +167,12 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return instance;
 	}
 	
+	public static LoadBalancer ownedByAccount(final String accountNumber) {
+	  final LoadBalancer instance = new LoadBalancer();
+	  instance.setOwnerAccountNumber(accountNumber);
+	  return instance;
+	}
+	
 	public static LoadBalancer namedByAccountId(final String accountId, final String lbName){
 		final LoadBalancer instance = new LoadBalancer(null, lbName);
 		instance.setOwnerAccountNumber(accountId);

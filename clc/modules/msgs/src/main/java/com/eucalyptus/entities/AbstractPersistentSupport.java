@@ -174,6 +174,21 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
     }
   }
 
+  public <T> T updateByExample( final AP example,
+                                final Criterion criterion,
+                                final Map<String,String> aliases,
+                                final OwnerFullName ownerFullName,
+                                final String key,
+                                final Function<? super AP,T> updateTransform ) throws PE {
+    try {
+      return Transactions.one( example, criterion, aliases, Predicates.alwaysTrue( ), updateTransform );
+    } catch ( NoSuchElementException e ) {
+      throw notFoundException( qualifyOwner( "Unable to find "+typeDescription+" '"+key+"'", ownerFullName ), e );
+    } catch ( Exception e ) {
+      throw metadataException( qualifyOwner( "Error updating "+typeDescription+" '"+key+"'", ownerFullName ), e );
+    }
+  }
+
   public AP save( final AP metadata ) throws PE {
     try {
       return Transactions.saveDirect( metadata );

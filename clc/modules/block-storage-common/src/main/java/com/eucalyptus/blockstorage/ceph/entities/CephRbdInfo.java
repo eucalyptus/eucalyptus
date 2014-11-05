@@ -102,7 +102,7 @@ public class CephRbdInfo extends AbstractPersistent {
 	private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";
 	private static final String DEFAULT_CEPH_CONFIG_FILE = "/etc/ceph/ceph.conf";
 	private static final String DEFAULT_POOL = "rbd";
-	private static final String DELETED_IMAGE_COMMON_PREFIX = "edi-";
+	private static final String DELETED_IMAGE_COMMON_PREFIX = "del";
 
 	@ConfigurableIdentifier
 	@Column(name = "cluster_name", unique = true)
@@ -234,7 +234,7 @@ public class CephRbdInfo extends AbstractPersistent {
 			virshSecret = UUID.randomUUID().toString();
 		}
 		if (Strings.isNullOrEmpty(deletedImagePrefix)) {
-			deletedImagePrefix = Crypto.generateAlphanumericId(8, DELETED_IMAGE_COMMON_PREFIX) + '-';
+			deletedImagePrefix = DELETED_IMAGE_COMMON_PREFIX + Crypto.generateAlphanumericId(8, "") + '-';
 		}
 	}
 

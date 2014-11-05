@@ -67,6 +67,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -213,11 +214,38 @@ public class Transactions {
   public static <S, T> S one( final T search,
                               final Predicate<? super T> predicate,
                               final Function<? super T, S> f ) throws TransactionException {
-    checkParam( search, notNullValue() );
+    return one( search, new Callable<T>( ){
+      @Override
+      public T call( ) throws TransactionException {
+        return Entities.uniqueResult( search );
+      }
+    }, predicate, f );
+  }
+
+  public static <S, T> S one( final T search,
+                              final Criterion criterion,
+                              final Map<String,String> aliases,
+                              final Predicate<? super T> predicate,
+                              final Function<? super T, S> f ) throws TransactionException {
+    return one( search, new Callable<T>( ){
+      @Override
+      public T call( ) throws TransactionException {
+        final List<T> ts = Entities.query( search, false, criterion, aliases );
+        if ( ts.size( ) != 1 ) throw new NoSuchElementException( );
+        return ts.get( 0 );
+      }
+    }, predicate, f );
+  }
+
+  private static <S, T> S one( final T type,
+                               final Callable<T> lookup,
+                               final Predicate<? super T> predicate,
+                               final Function<? super T, S> f ) throws TransactionException {
+    checkParam( type, notNullValue() );
     checkParam( f, notNullValue() );
-    EntityTransaction db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( type );
     try {
-      T entity = Entities.uniqueResult( search );
+      T entity = lookup.call();
       if ( !predicate.apply( entity ) ) {
         throw new NoSuchElementException();
       }

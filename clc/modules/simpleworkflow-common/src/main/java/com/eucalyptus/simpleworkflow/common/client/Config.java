@@ -24,6 +24,7 @@ import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
+import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import com.amazonaws.ClientConfiguration;
@@ -84,7 +85,10 @@ public class Config {
     client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
     client.addRequestHandler( new RequestHandler2( ) {
       @Override
-      public void beforeRequest( final Request<?> request ) { }
+      public void beforeRequest( final Request<?> request ) {
+        // Add nonce to ensure unique request signature
+        request.addHeader( "Euca-Nonce", UUID.randomUUID( ).toString( ) );
+      }
 
       @Override
       public void afterResponse( final Request<?> request, final Response<?> response ) { }

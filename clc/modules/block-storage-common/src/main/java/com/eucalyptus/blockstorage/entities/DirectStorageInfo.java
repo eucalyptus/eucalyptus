@@ -63,14 +63,13 @@
 package com.eucalyptus.blockstorage.entities;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
-import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -83,47 +82,43 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
 @Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "direct_storage_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton=false, deferred = true)
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "direct_storage_info")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class DirectStorageInfo extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger( DirectStorageInfo.class );
+	private static Logger LOG = Logger.getLogger(DirectStorageInfo.class);
 
 	@ConfigurableIdentifier
-	@Column( name = "storage_name", unique=true)
+	@Column(name = "storage_name", unique = true)
 	private String name;
-	@ConfigurableField( description = "Storage volumes directory.", displayName = "Volumes path" )
-	@Column( name = "system_storage_volumes_dir" )
+	@ConfigurableField(description = "Storage volumes directory.", displayName = "Volumes path")
+	@Column(name = "system_storage_volumes_dir")
 	private String volumesDir;
-	@ConfigurableField( description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN )
+	@ConfigurableField(description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
 	@Column(name = "zero_fill_volumes")
 	private Boolean zeroFillVolumes;
-	@ConfigurableField( description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
+	@ConfigurableField(description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
 	@Column(name = "timeout_in_millis")
 	private Long timeoutInMillis;
 
-	public DirectStorageInfo(){
+	public DirectStorageInfo() {
 		this.name = StorageProperties.NAME;
 	}
 
-	public DirectStorageInfo( final String name )
-	{
+	public DirectStorageInfo(final String name) {
 		this.name = name;
 	}
 
-	public DirectStorageInfo(final String name, 
-			final String storageInterface, 
-			final String volumesDir,
-			final Boolean zeroFillVolumes,
+	public DirectStorageInfo(final String name, final String storageInterface, final String volumesDir, final Boolean zeroFillVolumes,
 			final Long timeoutInMillis) {
 		this.name = name;
 		this.volumesDir = volumesDir;
@@ -189,64 +184,63 @@ public class DirectStorageInfo extends AbstractPersistent {
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return this.name;
+	}
+
+	@PreUpdate
+	public void preUpdateChecks() {
+		// EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
+		if (null == this.getTimeoutInMillis()) {
+			this.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+		}
 	}
 
 	public static DirectStorageInfo getStorageInfo() {
 		DirectStorageInfo conf = null;
-        TransactionResource tran = Entities.transactionFor(DirectStorageInfo.class);
+
 		try {
-			conf = Entities.uniqueResult(new DirectStorageInfo(StorageProperties.NAME));
-			// EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
-			if (null == conf.getTimeoutInMillis()) {
-				conf.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-				Entities.merge(conf);
+			conf = Transactions.find(new DirectStorageInfo());
+		} catch (Exception e) {
+			LOG.warn("Direct storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
+						StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis));
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new DirectStorageInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve DirectStorageInfo entity");
+				}
 			}
-			tran.commit();
 		}
-		catch ( NoSuchElementException e ) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
-			conf =  new DirectStorageInfo(StorageProperties.NAME, 
-					StorageProperties.iface, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes, 
-					StorageProperties.timeoutInMillis);
-			Entities.persist(conf);
-			tran.commit();
+
+		if (conf == null) {
+			conf = new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
+					StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis);
 		}
-		catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			tran.rollback();
-			return new DirectStorageInfo(StorageProperties.NAME, 
-					StorageProperties.iface, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes, 
-					StorageProperties.timeoutInMillis);
-		}
+
 		return conf;
 	}
-	
-  @EntityUpgrade( entities = { DirectStorageInfo.class }, since = Version.v3_2_0, value = Storage.class )
-  public enum DirectStorageInfoUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( DirectStorageInfo.DirectStorageInfoUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( DirectStorageInfo.class );
-      try {
-        List<DirectStorageInfo> entities = Entities.query( new DirectStorageInfo( ) );
-        for ( DirectStorageInfo entry : entities ) {
-          LOG.debug( "Upgrading: " + entry );
-          entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
+
+	@EntityUpgrade(entities = { DirectStorageInfo.class }, since = Version.v3_2_0, value = Storage.class)
+	public enum DirectStorageInfoUpgrade implements Predicate<Class> {
+		INSTANCE;
+		private static Logger LOG = Logger.getLogger(DirectStorageInfo.DirectStorageInfoUpgrade.class);
+
+		@Override
+		public boolean apply(Class arg0) {
+			try (TransactionResource tr = Entities.transactionFor(DirectStorageInfo.class)){
+				List<DirectStorageInfo> entities = Entities.query(new DirectStorageInfo());
+				for (DirectStorageInfo entry : entities) {
+					LOG.debug("Upgrading: " + entry);
+					entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+				}
+				tr.commit();
+				return true;
+			} catch (Exception ex) {
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+	}
 }

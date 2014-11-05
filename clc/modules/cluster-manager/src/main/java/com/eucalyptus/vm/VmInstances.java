@@ -168,10 +168,12 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilderSpec;
@@ -280,17 +282,70 @@ public class VmInstances {
     
   }
   
-  public enum VmSpecialUserData {
-    EUCAKEY_CRED_SETUP("euca-"+B64.standard.encString("setup-credential"));
+  public static class VmSpecialUserData {
+    /*
+     * Format:
+     * "$KEY_NAME:ARG1=VAL1;ARG2=VAL2...
+     */
+    public static final String EUCAKEY_CRED_SETUP = "euca-"+B64.standard.encString("setup-credential");
     
     private String key = null;
-    private VmSpecialUserData(final String key){
-      this.key = key;
+    private String payload = null;
+    private String userData = null;
+    public VmSpecialUserData(final String userData) {
+      final String[] lines = userData.split("\n");
+      if(lines==null || lines.length <= 0)
+        return;
+      this.key = lines[0];
+      this.payload = userData.substring(this.key.length()).trim();
+      this.userData = userData;
     }
     
     @Override
-    public String toString(){
-      return this.key;
+    public String toString() {
+        return this.userData;
+    }
+    
+    public String getKey() { 
+        if(this.key.indexOf(":") >= 0)
+          return this.key.substring(0, this.key.indexOf(":"));
+        else
+          return this.key;
+    }
+    
+    public List<String> getArgs(){
+      if(this.key.indexOf(":") >= 0) {
+        final String argStr = this.key.substring(this.key.indexOf(":")+1);
+        List<String> args = Lists.newArrayList(Splitter.on(";").split(argStr));
+        return args;
+      }else
+        return Lists.newArrayList();
+    }
+    
+    public String getArgValue(final String keyName) {
+      final List<String> args = this.getArgs();
+      for (final String arg : args) {
+        final List<String> kv =Lists.newArrayList(Splitter.on("=").split(arg));
+        if(kv.size()!=2)
+          continue;
+        if(keyName.equals(kv.get(0)))
+          return kv.get(1);
+      }
+      return null;
+    }
+    
+    public String getPayload() {
+      return this.payload;
+    }
+    
+    public static boolean apply(final String userData) {
+      if(userData == null || 
+          userData.length()< EUCAKEY_CRED_SETUP.length())
+        return false;
+      if(!userData.startsWith(EUCAKEY_CRED_SETUP))
+        return false;
+      
+      return true;
     }
   }
   
@@ -472,18 +527,27 @@ public class VmInstances {
     INSTANCE;
     
     @Override
-    public Long apply( final OwnerFullName input ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      final long i;
-      try {
-        i = Entities.count(
-            VmInstance.named( input, null ),
+    public Long apply( final OwnerFullName ownerFullName ) {
+      return
+          countPersistentInstances( ownerFullName ) +
+          countPendingInstances( ownerFullName );
+    }
+
+    private long countPersistentInstances( final OwnerFullName ownerFullName ) {
+      try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
+        return Entities.count(
+            VmInstance.named( ownerFullName, null ),
             Restrictions.not( criterion( VmStateSet.DONE.array() ) ),
             Collections.<String,String>emptyMap( ) );
-      } finally {
-        db.rollback( );
       }
-      return i;
+    }
+
+    private long countPendingInstances( final OwnerFullName ownerFullName ) {
+      long pending = 0;
+      for ( final Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+        pending += cluster.getNodeState( ).countUncommittedPendingInstances( ownerFullName );
+      }
+      return pending;
     }
   }
   

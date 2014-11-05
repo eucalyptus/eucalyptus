@@ -74,13 +74,17 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
+import java.util.Date;
+
 import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
 import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
+
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -207,7 +211,14 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   }
   
   @Override
-  public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey ) {
+  public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey) {
+    Calendar cal = Calendar.getInstance( );
+    cal.add( Calendar.YEAR, 5 );
+    return generateCertificate(keys, subjectDn, signer, signingKey, cal.getTime() );
+  }
+  
+  @Override
+  public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
     EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
@@ -222,8 +233,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     }
     Calendar cal = Calendar.getInstance( );
     certGen.setNotBefore( cal.getTime( ) );
-    cal.add( Calendar.YEAR, 5 );
-    certGen.setNotAfter( cal.getTime( ) );
+    certGen.setNotAfter(notAfter);
     certGen.setSubjectDN( subjectDn );
     certGen.setPublicKey( keys.getPublic( ) );
     certGen.setSignatureAlgorithm( KEY_SIGNING_ALGORITHM );

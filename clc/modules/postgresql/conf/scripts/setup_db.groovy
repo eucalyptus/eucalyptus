@@ -96,7 +96,7 @@ import static java.util.regex.Pattern.quote
  * SUMMARY : The PostgresqlBootstrapper class attempts to control the postgres database.  The methods
  * that control the database are : init, start, stop, hup, load, isRunning and destroy.
  */
-@SuppressWarnings("UnnecessaryQualifiedReference")
+@SuppressWarnings(["GroovyUnusedDeclaration", "UnnecessaryQualifiedReference"])
 class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
   
   private static Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_db" )
@@ -819,8 +819,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
     ])
     if ( value != 0 ) {
-      LOG.error("Unable to stop the postgresql server (exitcode:${value})",)
-      false
+      LOG.error("Unable to stop the postgresql server (code:${value})")
+      return false
     } else {
       LOG.info("Postgresql shutdown succeeded.")
       true
@@ -871,8 +871,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-  String getServicePath( String... pathParts ) {
-    pathParts != null && pathParts.length > 0 ? Joiner.on("/").join( Arrays.asList( pathParts ) ) : 'eucalyptus_shared'
+  public String getServicePath( String... pathParts ) {
+    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(Arrays.asList(pathParts)) : "eucalyptus"
   }
   
   @Override

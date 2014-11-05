@@ -532,7 +532,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     RestoreFailed {
       @Override
       public boolean apply( final VmInfo input ) {
-        if ( Networking.getInstance( ).supports( NetworkingFeature.Consistent ) ) {
+        if ( !Networking.getInstance( ).supports( NetworkingFeature.Consistent ) ) {
           return false; // consistent back-end required for restore-failed
         }
         final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
@@ -594,7 +594,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       public boolean apply( final VmInfo input ) {
         try {
           final VmInstance instance = VmInstances.lookupAny( input.getInstanceId( ) );
-          if ( instance.getNaturalId( ).equals( input.getUuid( ) ) && VmStateSet.NOT_RUNNING.apply( instance ) ) {
+          final Reason reason = instance.getRuntimeState( ).reason( );
+          if ( instance.getNaturalId( ).equals( input.getUuid( ) ) &&
+              VmStateSet.NOT_RUNNING.apply( instance ) &&
+              reason != null && reason.user( ) ) {
             return Terminate.apply( input );
           }
         } catch ( final NoSuchElementException e ) {
@@ -688,12 +691,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
 
     private static byte[] restoreUserData( final VmInfo input ) {
-      byte[] userData;
-      try {
+      byte[] userData = new byte[0];
+      if ( Strings.emptyToNull( input.getUserData( ) ) != null ) try {
         userData = Base64.decode( input.getUserData( ) );
       } catch ( final Exception ex ) {
-        LOG.debug("Failed to restore user data for : " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
-        userData = new byte[0];
+        LOG.error("Failed to restore user data for : " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
       }
       return userData;
     }
@@ -1697,16 +1699,27 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     NORMAL( "" ),
     EXPIRED( "Instance expired after not being reported for %s mins.", VmInstances.Timeout.UNREPORTED.getMinutes( ) ),
     FAILED( "The instance failed to start on the NC." ),
-    USER_TERMINATED( "User terminated." ),
-    USER_STOPPED( "User stopped." ),
-    USER_STARTED( "User started." ),
+    USER_TERMINATED( true, "User terminated." ),
+    USER_STOPPED( true, "User stopped." ),
+    USER_STARTED( true, "User started." ),
     APPEND( "" );
-    private String   message;
-    private Object[] args;
+
+    private final boolean user;
+    private final String message;
+    private final Object[] args;
     
     Reason( final String message, final Object... args ) {
+      this( false, message, args );
+    }
+
+    Reason( final boolean user, final String message, final Object... args ) {
+      this.user = user;
       this.message = message;
       this.args = args;
+    }
+
+    public boolean user( ) {
+      return user;
     }
 
     @Override

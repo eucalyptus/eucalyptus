@@ -209,7 +209,7 @@ public class RecursiveDnsResolver implements DnsResolver {
         authority.add( nsRec );
       }
     }
-
+   
     DnsResponse response = DnsResponse.forName( query.getName( ) )
         .recursive( )
         .withAuthority( Lists.newArrayList( authority ) )
@@ -239,7 +239,7 @@ public class RecursiveDnsResolver implements DnsResolver {
     final InetAddress source = request.getRemoteAddress( );
     if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source )) {
       return false;
-    } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )
+    } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) || RequestType.MX.apply(query))
                 && query.getName( ).isAbsolute( )
                 && !DomainNames.isSystemSubdomain( query.getName( ) ) ) {
       return true;

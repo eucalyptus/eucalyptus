@@ -57,6 +57,7 @@ import com.eucalyptus.compute.vpc.NetworkAcls
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.Route
 import com.eucalyptus.compute.vpc.RouteTable
+import com.eucalyptus.compute.vpc.RouteTableAssociation
 import com.eucalyptus.compute.vpc.Vpc
 import com.eucalyptus.compute.vpc.Subnet as VpcSubnet
 import com.eucalyptus.entities.EntityCache
@@ -80,6 +81,7 @@ import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Charsets
 import com.google.common.base.Function
+import com.google.common.base.Objects as GObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -291,7 +293,7 @@ class NetworkInfoBroadcaster {
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(
         networkInfoSource.instances,
-        { VmInstanceNetworkView instance -> !TORNDOWN.contains(instance.state) } as Predicate<VmInstanceNetworkView> )
+        { VmInstanceNetworkView instance -> !TORNDOWN.contains(instance.state) && !instance.omit } as Predicate<VmInstanceNetworkView> )
 
     // populate nodes
     ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
@@ -333,7 +335,9 @@ class NetworkInfoBroadcaster {
               cidr: subnet.cidr,
               cluster: subnet.availabilityZone,
               networkAcl: subnet.networkAcl,
-              routeTable: subnet.routeTable
+              routeTable:
+                  Iterables.tryFind( routeTables, { RouteTableNetworkView routeTable -> routeTable.subnetIds.contains( subnet.subnetId ) } as Predicate<RouteTableNetworkView> ).or(
+                  Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.vpcId } as Predicate<RouteTableNetworkView> ) ).routeTableId
           )
         },
         networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.vpcId }.collect { NetworkAclNetworkView networkAcl ->
@@ -547,9 +551,10 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class VmInstanceNetworkView {
+  static class VmInstanceNetworkView implements Comparable<VmInstanceNetworkView> {
     String instanceId
     VmState state
+    Boolean omit
     String ownerAccountNumber
     String vpcId
     String subnetId
@@ -559,6 +564,10 @@ class NetworkInfoBroadcaster {
     String partition
     String node
     List<String> securityGroupIds
+
+    int compareTo( VmInstanceNetworkView o ) {
+      this.instanceId <=> o.instanceId
+    }
   }
 
   @TypeMapper
@@ -570,6 +579,7 @@ class NetworkInfoBroadcaster {
       new VmInstanceNetworkView(
           instance.instanceId,
           instance.state,
+          GObjects.firstNonNull( instance.runtimeState.zombie, false ),
           instance.ownerAccountNumber,
           instance.bootRecord.vpcId,
           instance.bootRecord.subnetId,
@@ -627,12 +637,16 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkGroupNetworkView {
+  static class NetworkGroupNetworkView implements Comparable<NetworkGroupNetworkView> {
     String groupId
     String ownerAccountNumber
     List<String> rules
     List<IPPermissionNetworkView> ingressPermissions
     List<IPPermissionNetworkView> egressPermissions
+
+    int compareTo( NetworkGroupNetworkView o ) {
+      this.groupId <=> o.groupId
+    }
   }
 
   @TypeMapper
@@ -653,11 +667,15 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class VpcNetworkView {
+  static class VpcNetworkView implements Comparable<VpcNetworkView> {
     String vpcId
     String ownerAccountNumber
     String cidr
     String dhcpOptionSetId
+
+    int compareTo( VpcNetworkView o ) {
+      this.vpcId <=> o.vpcId
+    }
   }
 
   @TypeMapper
@@ -676,14 +694,17 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class SubnetNetworkView {
+  static class SubnetNetworkView implements Comparable<SubnetNetworkView> {
     String subnetId
     String ownerAccountNumber
     String vpcId
     String cidr
     String availabilityZone
     String networkAcl
-    String routeTable
+
+    int compareTo( SubnetNetworkView o ) {
+      this.subnetId <=> o.subnetId
+    }
   }
 
   @TypeMapper
@@ -698,17 +719,20 @@ class NetworkInfoBroadcaster {
           subnet.vpc.displayName,
           subnet.cidr,
           subnet.availabilityZone,
-          subnet.networkAcl.displayName,
-          subnet.routeTable.displayName
+          subnet.networkAcl.displayName
       )
     }
   }
 
   @Immutable
-  static class DhcpOptionSetNetworkView {
+  static class DhcpOptionSetNetworkView implements Comparable<DhcpOptionSetNetworkView> {
     String dhcpOptionSetId
     String ownerAccountNumber
     List<DhcpOptionNetworkView> options
+
+    int compareTo( DhcpOptionSetNetworkView o ) {
+      this.dhcpOptionSetId <=> o.dhcpOptionSetId
+    }
   }
 
   @Immutable
@@ -735,12 +759,16 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkAclNetworkView {
+  static class NetworkAclNetworkView implements Comparable<NetworkAclNetworkView> {
     String networkAclId
     String ownerAccountNumber
     String vpcId
     List<NetworkAclEntryNetworkView> ingressRules
     List<NetworkAclEntryNetworkView> egressRules
+
+    int compareTo( NetworkAclNetworkView o ) {
+      this.networkAclId <=> o.networkAclId
+    }
   }
 
   @Immutable
@@ -811,11 +839,17 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class RouteTableNetworkView {
+  static class RouteTableNetworkView implements Comparable<RouteTableNetworkView> {
     String routeTableId
     String ownerAccountNumber
     String vpcId
+    boolean main
+    List<String> subnetIds // associated subnets
     List<RouteNetworkView> routes
+
+    int compareTo( RouteTableNetworkView o ) {
+      this.routeTableId <=> o.routeTableId
+    }
   }
 
   @Immutable
@@ -834,6 +868,8 @@ class NetworkInfoBroadcaster {
           routeTable.displayName,
           routeTable.ownerAccountNumber,
           routeTable.vpc.displayName,
+          routeTable.main,
+          ImmutableList.copyOf( routeTable.routeTableAssociations.findResults{ RouteTableAssociation association -> association.subnetId } as Collection<String> ),
           ImmutableList.copyOf( routeTable.routes.collect{ Route route -> TypeMappers.transform( route, RouteNetworkView ) } ),
       )
     }
@@ -866,10 +902,14 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class InternetGatewayNetworkView {
+  static class InternetGatewayNetworkView implements Comparable<InternetGatewayNetworkView> {
     String internetGatewayId
     String ownerAccountNumber
     String vpcId
+
+    int compareTo( InternetGatewayNetworkView o ) {
+      this.internetGatewayId <=> o.internetGatewayId
+    }
   }
 
   @TypeMapper
@@ -887,7 +927,7 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkInterfaceNetworkView {
+  static class NetworkInterfaceNetworkView implements Comparable<NetworkInterfaceNetworkView> {
     String networkInterfaceId
     String ownerAccountNumber
     String instanceId
@@ -897,6 +937,10 @@ class NetworkInfoBroadcaster {
     String publicIp
     Boolean sourceDestCheck
     List<String> securityGroupIds
+
+    int compareTo( NetworkInterfaceNetworkView o ) {
+      this.networkInterfaceId <=> o.networkInterfaceId
+    }
   }
 
   @TypeMapper
