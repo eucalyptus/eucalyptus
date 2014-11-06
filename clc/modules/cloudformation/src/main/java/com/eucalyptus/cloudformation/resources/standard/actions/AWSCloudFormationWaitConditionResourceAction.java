@@ -127,10 +127,10 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
         }
         AWSCloudFormationWaitConditionHandleResourceInfo handleResourceInfo = (AWSCloudFormationWaitConditionHandleResourceInfo) StackResourceEntityManager.getResourceInfo(handleEntity);
         ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(handleResourceInfo.getEucaParts());
-        if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-        String bucketName = objectNode.get("bucket").textValue();
+        if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
+        String bucketName = objectNode.get("bucket").asText();
         LOG.trace("bucketName=" + bucketName);
-        String keyName = objectNode.get("key").textValue();
+        String keyName = objectNode.get("key").asText();
         LOG.trace("keyName=" + bucketName);
         boolean foundFailure = false;
         final Map<String, String> dataMap = Maps.newHashMap();
@@ -156,17 +156,17 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
                 continue;
               }
               ObjectNode localObjectNode = (ObjectNode) jsonNode;
-              String status = localObjectNode.get("Status").textValue();
+              String status = localObjectNode.get("Status").asText();
               if (status == null) {
                 LOG.trace("Null status, skipping");
                 continue;
               }
-              String data = localObjectNode.get("Data").textValue();
+              String data = localObjectNode.get("Data").asText();
               if (data == null) {
                 LOG.trace("Null data, skipping");
                 continue;
               }
-              String uniqueId = localObjectNode.get("UniqueId").textValue();
+              String uniqueId = localObjectNode.get("UniqueId").asText();
               if (data == null) {
                 LOG.trace("Null uniqueId, skipping");
                 continue;

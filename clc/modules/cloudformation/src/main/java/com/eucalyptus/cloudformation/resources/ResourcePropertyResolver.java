@@ -154,37 +154,37 @@ public class ResourcePropertyResolver {
       JsonNode valueNode = jsonNode.get(name);
       LOG.debug("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
       if (field.getType().equals(String.class)) {
-        if (!valueNode.isTextual()) {
+        if (!valueNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type String");
         } else {
-          setField(propertyDescriptorMap, field, object, valueNode.textValue());
+          setField(propertyDescriptorMap, field, object, valueNode.asText());
         }
       } else if (field.getType().equals(Integer.class)) {
-        if (!valueNode.isTextual()) {
+        if (!valueNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type Number");
         } else {
           try {
-            setField(propertyDescriptorMap, field, object, Integer.valueOf(valueNode.textValue()));
+            setField(propertyDescriptorMap, field, object, Integer.valueOf(valueNode.asText()));
           } catch (NumberFormatException ex) {
-            throw new ValidationErrorException("Template error: " + name + " must be of type Integer (" + valueNode.textValue() + ")");
+            throw new ValidationErrorException("Template error: " + name + " must be of type Integer (" + valueNode.asText() + ")");
           }
         }
       } else if (field.getType().equals(Double.class)) {
-        if (!valueNode.isTextual()) {
+        if (!valueNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type Number");
         } else {
           try {
-            setField(propertyDescriptorMap, field, object, Double.valueOf(valueNode.textValue()));
+            setField(propertyDescriptorMap, field, object, Double.valueOf(valueNode.asText()));
           } catch (NumberFormatException ex) {
-            throw new ValidationErrorException("Template error: " + name + " must be of type Number (" + valueNode.textValue() + ")");
+            throw new ValidationErrorException("Template error: " + name + " must be of type Number (" + valueNode.asText() + ")");
 
           }
         }
       } else if (field.getType().equals(Boolean.class)) {
-        if (!valueNode.isTextual()) {
+        if (!valueNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type Boolean");
         } else {
-          setField(propertyDescriptorMap, field, object, Boolean.valueOf(valueNode.textValue()));
+          setField(propertyDescriptorMap, field, object, Boolean.valueOf(valueNode.asText()));
         }
       } else if (field.getType().equals(Object.class)) {
         setField(propertyDescriptorMap, field, object, new Object());
@@ -260,37 +260,37 @@ public class ResourcePropertyResolver {
       Class<?> collectionTypeClass = (Class) collectionType;
       JsonNode itemNode = valueNode.get(i);
       if (collectionTypeClass.equals(String.class)) {
-        if (!itemNode.isTextual()) {
+        if (!itemNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + fieldName + " must have members of type String");
         } else {
-          addToCollection(collection, collectionTypeClass, itemNode.textValue());
+          addToCollection(collection, collectionTypeClass, itemNode.asText());
         }
       } else if (collectionTypeClass.equals(Integer.class)) {
-        if (!itemNode.isTextual()) {
+        if (!itemNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Integer");
         } else {
           try {
-            addToCollection(collection, collectionTypeClass, Integer.valueOf(itemNode.textValue()));
+            addToCollection(collection, collectionTypeClass, Integer.valueOf(itemNode.asText()));
           } catch (NumberFormatException ex) {
-            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Integer (" + itemNode.textValue() + ")");
+            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Integer (" + itemNode.asText() + ")");
           }
         }
       } else if (collectionTypeClass.equals(Double.class)) {
-        if (!itemNode.isTextual()) {
+        if (!itemNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number");
         } else {
           try {
-            addToCollection(collection, collectionTypeClass, Double.valueOf(itemNode.textValue()));
+            addToCollection(collection, collectionTypeClass, Double.valueOf(itemNode.asText()));
           } catch (NumberFormatException ex) {
-            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number (" + itemNode.textValue() + ")");
+            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number (" + itemNode.asText() + ")");
 
           }
         }
       } else if (collectionTypeClass.equals(Boolean.class)) {
-        if (!itemNode.isTextual()) {
+        if (!itemNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Boolean");
         } else {
-          addToCollection(collection, collectionTypeClass, Boolean.valueOf(itemNode.textValue()));
+          addToCollection(collection, collectionTypeClass, Boolean.valueOf(itemNode.asText()));
         }
       } else if (Collection.class.isAssignableFrom(collectionTypeClass)) {
         if(collectionType instanceof ParameterizedType){

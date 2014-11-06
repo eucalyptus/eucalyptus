@@ -111,7 +111,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
           }
           AssociateAddressType associateAddressType = MessageHelper.createMessage(AssociateAddressType.class, action.info.getEffectiveUserId());
           if (action.properties.getDomain() != null) {
-            associateAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).textValue());
+            associateAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).asText());
           } else {
             associateAddressType.setPublicIp(action.info.getPhysicalResourceId());
           }
@@ -137,7 +137,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
         DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
         if (action.properties.getDomain() != null) {
-          describeAddressesType.setAllocationIds(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).textValue()));
+          describeAddressesType.setAllocationIds(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).asText()));
         } else {
           describeAddressesType.setPublicIpsSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
         }
@@ -145,7 +145,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
         if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
           ReleaseAddressType releaseAddressType = MessageHelper.createMessage(ReleaseAddressType.class, action.info.getEffectiveUserId());
           if (action.properties.getDomain() != null) {
-            releaseAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).textValue());
+            releaseAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).asText());
           } else {
             releaseAddressType.setPublicIp(action.info.getPhysicalResourceId());
           }
