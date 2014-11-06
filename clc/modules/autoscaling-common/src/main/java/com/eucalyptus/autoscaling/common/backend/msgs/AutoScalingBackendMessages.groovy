@@ -30,7 +30,6 @@ import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import java.lang.reflect.Field
 import javax.annotation.Nonnull
-import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
 import com.google.common.base.Function
 import com.eucalyptus.util.CollectionUtils
@@ -68,13 +67,20 @@ public class AutoScalingBackendMessage extends BaseMessage {
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {
     TYPE type = super.getReply()
-    try {
-      Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
-      responseMetadataField.setAccessible( true )
-      ((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
-    } catch ( Exception e ) {
+    getResponseMetadata( type )?.with{
+      requestId = getCorrelationId( )
     }
     return type
+  }
+
+  static ResponseMetadata getResponseMetadata( final BaseMessage message ) {
+    try {
+      Field responseMetadataField = message.class.getDeclaredField("responseMetadata")
+      responseMetadataField.setAccessible( true )
+      return ((ResponseMetadata) responseMetadataField.get( message ))
+    } catch ( Exception e ) {
+    }
+    null
   }
 
   Map<String,String> validate( ) {

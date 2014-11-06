@@ -30,6 +30,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
+import com.eucalyptus.autoscaling.common.msgs.ResponseMetadata;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
@@ -70,6 +71,10 @@ public class AutoScalingService {
       final AutoScalingBackendMessage backendRequest = (AutoScalingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final AutoScalingMessage response = (AutoScalingMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );
+      final ResponseMetadata metadata = AutoScalingMessage.getResponseMetadata( response );
+      if ( metadata != null ) {
+        metadata.setRequestId( request.getCorrelationId( ) );
+      }
       response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
