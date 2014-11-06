@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 
 /**
  * @see com.google.common.base.Optional Optional - for null support
@@ -169,6 +170,41 @@ public class Pair<L,R> {
       @Override
       public Pair<L,Optional<R>> apply( final T value ) {
         return Pair.pair( leftFunction.apply( value ), Optional.fromNullable( rightFunction.apply( value ) ) );
+      }
+    };
+  }
+
+  public static <L,R> NonNullFunction<R,Iterable<Pair<L,R>>> explodeLeft( final Iterable<L> leftValues ) {
+    return new NonNullFunction<R,Iterable<Pair<L,R>>>( ) {
+      @SuppressWarnings( "ConstantConditions" )
+      @Nonnull
+      @Override
+      public Iterable<Pair<L,R>> apply( final R rightValue ) {
+        return Iterables.transform( leftValues, CollectionUtils.flipCurried( Pair.<L,R>pair( ) ).apply( rightValue ) );
+      }
+    };
+  }
+
+  public static <L,R> NonNullFunction<L,Iterable<Pair<L,R>>> explodeRight( final Iterable<R> rightValues ) {
+    return new NonNullFunction<L,Iterable<Pair<L,R>>>( ) {
+      @SuppressWarnings( "ConstantConditions" )
+      @Nonnull
+      @Override
+      public Iterable<Pair<L,R>> apply( final L leftValue ) {
+        return Iterables.transform( rightValues, Pair.<L,R>pair().apply( leftValue ) );
+      }
+    };
+  }
+
+  public static <L,R,V> NonNullFunction<Pair<L,R>,V> transformer(
+      final Function<L,Function<R,V>> pairTransform
+  ) {
+    return new NonNullFunction<Pair<L, R>, V>( ) {
+      @SuppressWarnings( "ConstantConditions" )
+      @Nonnull
+      @Override
+      public V apply( final Pair<L, R> pair ) {
+        return pairTransform.apply( pair.getLeft( ) ).apply( pair.getRight( ) );
       }
     };
   }

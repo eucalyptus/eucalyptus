@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -36,9 +38,11 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
@@ -64,6 +68,8 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
@@ -365,8 +371,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			final Date current = new Date(System.currentTimeMillis());
 			// find the record eligible to check its status
 			for(final LoadBalancerBackendInstance be : allInstances){
-				if(STATE.Error.equals(be.getBackendState()))
-					continue;
 				final Date lastUpdate = be.getLastUpdateTimestamp();
 				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
 				if(elapsedSec > CHECK_EVERY_SECONDS){
@@ -396,7 +400,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			List<RunningInstancesItemType> result  = null;
 			try{
 				result =
-						EucalyptusActivityTasks.getInstance().describeSystemInstances(instancesToCheck);
+						EucalyptusActivityTasks.getInstance().describeSystemInstances(instancesToCheck, true);
 				if(result==null)
 					throw new Exception();
 			}catch(final Exception ex){
@@ -404,6 +408,9 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				return;
 			}
 			
+			//EUCA-9919: remove registered instances when terminated
+			final Set<String> instancesToDelete = 
+			    Sets.newHashSet();
 			final Map<String, STATE> stateMap = new HashMap<String, STATE>();
 			final Map<String, RunningInstancesItemType> instanceMap = new HashMap<String, RunningInstancesItemType>();
 			for(final RunningInstancesItemType instance : result){
@@ -414,17 +421,23 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 					instanceMap.put(instance.getInstanceId(), instance);
 				}else if("shutting-down".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.Error);
-				else if("terminated".equals(state))
+				else if("terminated".equals(state)) {
 					stateMap.put(instance.getInstanceId(), STATE.Error);
-				else if("stopping".equals(state))
+					instancesToDelete.add(instance.getInstanceId());
+				}else if("stopping".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.Error);
 				else if("stopped".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.Error);
 			}
 			
+			final List<LoadBalancerBackendInstance> beToDelete = Lists.newArrayList();
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				for(final LoadBalancerBackendInstance be : stateOutdated){
-					if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
+				  if(instancesToDelete.contains(be.getInstanceId())){
+				    beToDelete.add(be);
+				    continue;
+				  }
+				  if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
 						final STATE trueState = stateMap.get(be.getInstanceId());
 						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
 						update.setBackendState(trueState);
@@ -437,6 +450,17 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				}
 				db.commit();
 			}catch(final Exception ex){
+			}
+			
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+			  for(final LoadBalancerBackendInstance be : beToDelete) {
+			   final LoadBalancerBackendInstance entity = Entities.uniqueResult(be);
+			   Entities.delete(entity);
+			   LOG.info("Instance "+be.getInstanceId()+" is terminated and removed from ELB");
+			  }
+			  db.commit();
+			}catch(final Exception ex) {
+			  ;
 			}
 		}
 	}

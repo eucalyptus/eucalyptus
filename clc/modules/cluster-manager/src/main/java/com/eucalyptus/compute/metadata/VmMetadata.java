@@ -63,12 +63,16 @@
 package com.eucalyptus.compute.metadata;
 
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -83,6 +87,8 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.cache.CacheLoader;
@@ -177,6 +183,14 @@ public class VmMetadata {
                                                                                           }
                                                                                         };
 
+  private static final Supplier<Set<NetworkingFeature>> networkingFeatureSupplier =
+      Suppliers.memoizeWithExpiration( new Supplier<Set<NetworkingFeature>>( ) {
+        @Override
+        public Set<NetworkingFeature> get( ) {
+          return Networking.getInstance( ).describeFeatures( );
+        }
+      }, 30, TimeUnit.SECONDS );
+
   private static final LoadingCache<String, Optional<String>> ipToVmIdCache =
       cache( resolveVm(), VmInstances.VM_METADATA_REQUEST_CACHE );
 
@@ -213,7 +227,6 @@ public class VmMetadata {
   public byte[] handle( final String path ) {
     final String[] parts = path.split( ":" );
     try {
-      //TODO:STEVE: only allow localhost metadata access in VPC mode
       final String requestIpOrInstanceId = ResourceIdentifiers.tryNormalize( ).apply( parts[0] );
       final boolean isInstanceId = requestIpOrInstanceId.startsWith( "i-" );
       final MetadataRequest request = new MetadataRequest(
@@ -224,6 +237,10 @@ public class VmMetadata {
           isInstanceId ? Optional.of( requestIpOrInstanceId ) : ipToVmIdCache.get( requestIpOrInstanceId ) );
 
       if ( instanceMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isInstance( ) ) {
+        if ( ( isInstanceId && !networkingFeatureSupplier.get( ).contains( NetworkingFeature.Vpc ) ) ||
+            ( !isInstanceId && !networkingFeatureSupplier.get( ).contains( NetworkingFeature.Classic ) ) ) {
+          throw new NoSuchElementException( "Metadata request failed (invalid for platform): " + path );
+        }
         return instanceMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else if ( systemMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isSystem( ) ) {
         return systemMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );

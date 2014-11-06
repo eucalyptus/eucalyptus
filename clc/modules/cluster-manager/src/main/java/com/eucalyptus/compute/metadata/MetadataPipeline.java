@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,10 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.server;
+package com.eucalyptus.compute.metadata;
 
 import java.net.InetSocketAddress;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -87,7 +86,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
@@ -110,7 +109,10 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
    */
   private static final Set<String> VERSION = ImmutableSet.of( "1.0", "2007-01-19", "2007-03-01", "2007-08-29",
                                                "2007-10-10", "2007-12-15", "2008-02-01", "2008-09-01", "2009-04-04",
-                                               "2011-01-01", "2011-05-01", "2012-01-12", "latest" );
+                                               "2011-01-01", "2011-05-01", "2012-01-12", "2014-02-25", "latest" );
+
+  private static final String INSTANCE_ID_HEADER = "Euca-Instance-Id";
+
   private static Logger       LOG          = Logger.getLogger( MetadataPipeline.class );
   
   public MetadataPipeline( ) {
@@ -136,8 +138,10 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       final String uri = request.getUri( );
       final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
       String remoteHostOrInstanceId = remoteAddr.getAddress( ).getHostAddress( );
-      if ( "127.0.0.1".equals( remoteHostOrInstanceId ) && request.containsHeader( "Euca-Instance-Id" ) ) {
-        remoteHostOrInstanceId = request.getHeader( "Euca-Instance-Id"  );
+      if ( "127.0.0.1".equals( remoteHostOrInstanceId ) &&
+          request.containsHeader( INSTANCE_ID_HEADER ) &&
+          request.getHeader( INSTANCE_ID_HEADER ).matches( "i-[0-9a-fA-F]{8}" ) ) {
+        remoteHostOrInstanceId = request.getHeader( INSTANCE_ID_HEADER );
       }
       final String newUri;
       if ( uri.startsWith( "/latest/" ) ) {
