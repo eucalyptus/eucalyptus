@@ -61,6 +61,7 @@
  ************************************************************************/
 
 
+import com.eucalyptus.bootstrap.BootstrapArgs
 import com.google.common.base.Optional
 
 import java.sql.ResultSet
@@ -76,7 +77,6 @@ import com.eucalyptus.component.id.Database
 import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
-import com.eucalyptus.util.Internets
 import com.eucalyptus.util.Pair
 import com.google.common.base.Joiner
 import com.google.common.collect.Iterables
@@ -113,7 +113,9 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static String PG_STATUS = "status"
   private static String PG_MODE = "-mf"
   private static String PG_PORT = 8777
-  private static String PG_HOST = "0.0.0.0" // or "127.0.0.1,${Internets.localHostAddress( )}"
+  private static String PG_HOST = BootstrapArgs.isInitializeSystem() || BootstrapArgs.isUpgradeSystem() ?
+      '127.0.0.1' :
+      '0.0.0.0' // or "127.0.0.1,${Internets.localHostAddress( )}"
   private static String PG_PORT_OPTS2 = "-o -h${PG_HOST} -p${PG_PORT}"
   private static String PG_DB_OPT = "-D"
   private static String PG_INITDB = "/bin/initdb"
@@ -571,7 +573,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   Sql getConnection( String database, String schema ) throws Exception {
-    getConnectionInternal( Internets.localHostInetAddress( ), database, schema )
+    getConnectionInternal( InetAddress.getByName('127.0.0.1'), database, schema )
   }
 
   private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
@@ -605,7 +607,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   List<String> listDatabases( ) {
-    listDatabases( Internets.localHostInetAddress( ) )
+    listDatabases( InetAddress.getByName('127.0.0.1') )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
@@ -626,7 +628,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
   @Override
   List<String> listSchemas( String database ) {
-    listSchemas( Internets.localHostInetAddress( ), database )
+    listSchemas( InetAddress.getByName('127.0.0.1'), database )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")

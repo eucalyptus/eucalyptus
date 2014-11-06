@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -132,7 +132,7 @@ def setupDbPool = { String db_name ->
               database(id:host.getBindAddress().getHostAddress( ),
                   local:host.isLocalHost( ),
                   weight:(Hosts.isCoordinator(host)?100:1),
-                  location:("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), db_name ).toASCIIString( )}")
+                  location:("jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}")
                   ) {
                     user(db_user)
                     password(db_pass)
