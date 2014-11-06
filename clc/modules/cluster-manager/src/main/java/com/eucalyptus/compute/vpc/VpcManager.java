@@ -867,12 +867,14 @@ public class VpcManager {
 
   public DeleteDhcpOptionsResponseType deleteDhcpOptions( final DeleteDhcpOptionsType request ) throws EucalyptusCloudException {
     final DeleteDhcpOptionsResponseType reply = request.getReply( );
-    delete( Identifier.dopt, request.getDhcpOptionsId(), new Function<Pair<AccountFullName,String>,DhcpOptionSet>( ) {
+    delete( Identifier.dopt, request.getDhcpOptionsId(), new Function<Pair<Optional<AccountFullName>,String>,DhcpOptionSet>( ) {
       @Override
-      public DhcpOptionSet apply( final Pair<AccountFullName, String> accountAndId ) {
+      public DhcpOptionSet apply( final Pair<Optional<AccountFullName>,String> accountAndId ) {
         try {
-          final DhcpOptionSet dhcpOptionSet =
-              dhcpOptionSets.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<DhcpOptionSet>identity( ) );
+          final DhcpOptionSet dhcpOptionSet = dhcpOptionSets.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<DhcpOptionSet>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( dhcpOptionSet ) ) {
             dhcpOptionSets.delete( dhcpOptionSet );
           } else {
@@ -889,12 +891,14 @@ public class VpcManager {
 
   public DeleteInternetGatewayResponseType deleteInternetGateway( final DeleteInternetGatewayType request ) throws EucalyptusCloudException {
     final DeleteInternetGatewayResponseType reply = request.getReply( );
-    delete( Identifier.igw, request.getInternetGatewayId( ), new Function<Pair<AccountFullName,String>,InternetGateway>( ) {
+    delete( Identifier.igw, request.getInternetGatewayId( ), new Function<Pair<Optional<AccountFullName>,String>,InternetGateway>( ) {
       @Override
-      public InternetGateway apply( final Pair<AccountFullName, String> accountAndId ) {
+      public InternetGateway apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final InternetGateway internetGateway =
-              internetGateways.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<InternetGateway>identity( ) );
+          final InternetGateway internetGateway = internetGateways.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<InternetGateway>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( internetGateway ) ) {
             internetGateways.delete( internetGateway );
           } else {
@@ -913,12 +917,14 @@ public class VpcManager {
 
   public DeleteNetworkAclResponseType deleteNetworkAcl( final DeleteNetworkAclType request ) throws EucalyptusCloudException {
     final DeleteNetworkAclResponseType reply = request.getReply( );
-    delete( Identifier.acl, request.getNetworkAclId( ), new Function<Pair<AccountFullName,String>,NetworkAcl>( ) {
+    delete( Identifier.acl, request.getNetworkAclId( ), new Function<Pair<Optional<AccountFullName>,String>,NetworkAcl>( ) {
       @Override
-      public NetworkAcl apply( final Pair<AccountFullName, String> accountAndId ) {
+      public NetworkAcl apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final NetworkAcl networkAcl =
-              networkAcls.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<NetworkAcl>identity( ) );
+          final NetworkAcl networkAcl = networkAcls.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<NetworkAcl>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
             networkAcls.delete( networkAcl );
           } else {
@@ -936,7 +942,7 @@ public class VpcManager {
   public DeleteNetworkAclEntryResponseType deleteNetworkAclEntry(final DeleteNetworkAclEntryType request) throws EucalyptusCloudException {
     final DeleteNetworkAclEntryResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId() );
     try {
       networkAcls.updateByExample(
@@ -947,10 +953,10 @@ public class VpcManager {
             @Override
             public void fire( final NetworkAcl networkAcl ) {
               try {
-                final Optional<NetworkAclEntry> entry = Iterables.tryFind(
-                    networkAcl.getEntries( ),
-                    entryPredicate( request.getEgress( ), request.getRuleNumber( ) ) );
                 if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
+                  final Optional<NetworkAclEntry> entry = Iterables.tryFind(
+                      networkAcl.getEntries( ),
+                      entryPredicate( request.getEgress( ), request.getRuleNumber( ) ) );
                   if ( entry.isPresent( ) ) {
                     networkAcl.getEntries( ).remove( entry.get( ) );
                     networkAcl.updateTimeStamps( ); // ensure version of table increments also
@@ -976,12 +982,14 @@ public class VpcManager {
 
   public DeleteNetworkInterfaceResponseType deleteNetworkInterface( final DeleteNetworkInterfaceType request ) throws EucalyptusCloudException {
     final DeleteNetworkInterfaceResponseType reply = request.getReply( );
-    delete( Identifier.eni, request.getNetworkInterfaceId( ), new Function<Pair<AccountFullName,String>,NetworkInterface>( ) {
+    delete( Identifier.eni, request.getNetworkInterfaceId( ), new Function<Pair<Optional<AccountFullName>,String>,NetworkInterface>( ) {
       @Override
-      public NetworkInterface apply( final Pair<AccountFullName, String> accountAndId ) {
+      public NetworkInterface apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final NetworkInterface networkInterface =
-              networkInterfaces.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<NetworkInterface>identity( ) );
+          final NetworkInterface networkInterface = networkInterfaces.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<NetworkInterface>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
             if ( networkInterface.isAttached( ) ) {
               throw new ClientComputeException( "" +
@@ -1005,7 +1013,7 @@ public class VpcManager {
   public DeleteRouteResponseType deleteRoute( final DeleteRouteType request ) throws EucalyptusCloudException {
     final DeleteRouteResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     try {
       routeTables.updateByExample(
@@ -1016,12 +1024,12 @@ public class VpcManager {
             @Override
             public void fire( final RouteTable routeTable ) {
               try {
-                final Optional<Route> route = Iterables.tryFind(
-                    routeTable.getRoutes( ),
-                    CollectionUtils.propertyPredicate(
-                        request.getDestinationCidrBlock( ),
-                        RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
                 if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
+                  final Optional<Route> route = Iterables.tryFind(
+                      routeTable.getRoutes( ),
+                      CollectionUtils.propertyPredicate(
+                          request.getDestinationCidrBlock( ),
+                          RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
                   if ( route.isPresent( ) ) {
                     routeTable.getRoutes( ).remove( route.get( ) );
                     routeTable.updateTimeStamps( ); // ensure version of table increments also
@@ -1047,11 +1055,14 @@ public class VpcManager {
 
   public DeleteRouteTableResponseType deleteRouteTable( final DeleteRouteTableType request ) throws EucalyptusCloudException {
     final DeleteRouteTableResponseType reply = request.getReply( );
-    delete( Identifier.rtb, request.getRouteTableId( ), new Function<Pair<AccountFullName,String>,RouteTable>( ) {
+    delete( Identifier.rtb, request.getRouteTableId( ), new Function<Pair<Optional<AccountFullName>,String>,RouteTable>( ) {
       @Override
-      public RouteTable apply( final Pair<AccountFullName, String> accountAndId ) {
+      public RouteTable apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final RouteTable routeTable = routeTables.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<RouteTable>identity( ) );
+          final RouteTable routeTable = routeTables.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<RouteTable>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
             routeTables.delete( routeTable );
           } else {
@@ -1068,11 +1079,14 @@ public class VpcManager {
 
   public DeleteSubnetResponseType deleteSubnet( final DeleteSubnetType request ) throws EucalyptusCloudException {
     final DeleteSubnetResponseType reply = request.getReply( );
-    delete( Identifier.subnet, request.getSubnetId( ), new Function<Pair<AccountFullName,String>,Subnet>( ) {
+    delete( Identifier.subnet, request.getSubnetId( ), new Function<Pair<Optional<AccountFullName>,String>,Subnet>( ) {
       @Override
-      public Subnet apply( final Pair<AccountFullName, String> accountAndId ) {
+      public Subnet apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final Subnet subnet = subnets.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<Subnet>identity( ) );
+          final Subnet subnet = subnets.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<Subnet>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) {
             subnets.delete( subnet );
           } else {
@@ -1089,19 +1103,35 @@ public class VpcManager {
 
   public DeleteVpcResponseType deleteVpc( final DeleteVpcType request ) throws EucalyptusCloudException {
     final DeleteVpcResponseType reply = request.getReply( );
-    delete( Identifier.vpc, request.getVpcId( ), new Function<Pair<AccountFullName,String>,Vpc>( ) {
+    delete( Identifier.vpc, request.getVpcId( ), new Function<Pair<Optional<AccountFullName>,String>,Vpc>( ) {
       @Override
-      public Vpc apply( final Pair<AccountFullName, String> accountAndId ) {
+      public Vpc apply( final Pair<Optional<AccountFullName>, String> accountAndId ) {
         try {
-          final Vpc vpc = vpcs.lookupByName( accountAndId.getLeft( ), accountAndId.getRight( ), Functions.<Vpc>identity( ) );
+          final Vpc vpc = vpcs.lookupByName(
+              accountAndId.getLeft( ).orNull( ),
+              accountAndId.getRight( ),
+              Functions.<Vpc>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
-            if ( Boolean.TRUE.equals( vpc.getDefaultVpc( ) ) &&  Contexts.lookup( ).isAdministrator( ) ) try {
-              final InternetGateway internetGateway =
-                  internetGateways.lookupByVpc( null, vpc.getDisplayName( ), Functions.<InternetGateway>identity( ) );
-              internetGateways.delete( internetGateway );
+            if ( Boolean.TRUE.equals( vpc.getDefaultVpc( ) ) &&  Contexts.lookup( ).isAdministrator( ) ) {
+              final List<Subnet> defaultSubnets = subnets.listByExample(
+                  Subnet.exampleDefault( AccountFullName.getInstance( vpc.getOwnerAccountNumber( ) ), null ),
+                  Predicates.alwaysTrue( ),
+                  Functions.<Subnet>identity( ) );
+              for ( final Subnet subnet : defaultSubnets ) {
+                subnets.delete( subnet );
+              }
+              try {
+                final InternetGateway internetGateway =
+                    internetGateways.lookupByVpc( null, vpc.getDisplayName( ), Functions.<InternetGateway>identity( ) );
+                internetGateways.delete( internetGateway );
+              } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
+            }
+            try {
+              networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
-            networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() ) );
-            routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() ) );
+            try {
+              routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() ) );
+            } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             try {
               securityGroups.delete( securityGroups.lookupDefault( vpc.getDisplayName(), Functions.<NetworkGroup>identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
@@ -1928,13 +1958,13 @@ public class VpcManager {
   private <E extends AbstractPersistent> void delete(
       final Identifier identifier,
       final String idParam,
-      final Function<Pair<AccountFullName,String>,E> deleter
+      final Function<Pair<Optional<AccountFullName>,String>,E> deleter
   ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
-    final AccountFullName accountName = ctx.getUserFullName( ).asAccountFullName( );
+    final AccountFullName accountName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String id = identifier.normalize( idParam );
     try {
-      transactional( deleter ).apply( Pair.pair( accountName, id ) );
+      transactional( deleter ).apply( Pair.lopair( accountName, id ) );
     } catch ( Exception e ) {
       if ( Exceptions.isCausedBy( e, ConstraintViolationException.class ) ) {
         throw new ClientComputeException( "DependencyViolation", "Resource ("+idParam+") is in use" );
