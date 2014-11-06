@@ -306,7 +306,6 @@ public class ConnectionHandler extends Thread {
 		Zone zone = findBestZone(name);
 		if (zone != null) {
 			if (type == Type.AAAA) {
-				addSOA(response, zone);
 				response.getHeader().setFlag(Flags.AA);
 				return (Rcode.NOERROR);
 			}
@@ -323,7 +322,7 @@ public class ConnectionHandler extends Thread {
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
 			if (zone != null) {
-				addSOA(response, zone);
+//EUCA-9995				addSOA(response, zone);
 				if (iterations == 0)
 					response.getHeader().setFlag(Flags.AA);
 			}
@@ -331,7 +330,7 @@ public class ConnectionHandler extends Thread {
 		}
 		else if (sr.isNXRRSET()) {
 			if (zone != null) {
-				addSOA(response, zone);
+//				addSOA(response, zone);
 				if (iterations == 0)
 					response.getHeader().setFlag(Flags.AA);
 			}
@@ -376,7 +375,6 @@ public class ConnectionHandler extends Thread {
 					addRRset(name, response, rrsets[i], Section.ANSWER, flags);
 			}
 			if (zone != null) {
-				addNS(response, zone, flags);
 				if (iterations == 0)
 					response.getHeader().setFlag(Flags.AA);
 			}
