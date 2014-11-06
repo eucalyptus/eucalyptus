@@ -926,13 +926,18 @@ public class VpcManager {
               accountAndId.getRight( ),
               Functions.<NetworkAcl>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
+            if ( networkAcl.getDefaultForVpc( ) ) {
+              throw new ClientComputeException(
+                  "InvalidParameterValue",
+                  "Cannot delete default network ACL " + accountAndId.getRight( ) );
+            }
             networkAcls.delete( networkAcl );
           } else {
-            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete network ACL" ) );
+            throw new ClientUnauthorizedComputeException( "Not authorized to delete network ACL" );
           }
           return null;
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     } );
@@ -1064,13 +1069,18 @@ public class VpcManager {
               accountAndId.getRight( ),
               Functions.<RouteTable>identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
+            if ( routeTable.getMain( ) ) {
+              throw new ClientComputeException(
+                  "InvalidParameterValue",
+                  "Cannot delete main route table " + accountAndId.getRight( ) );
+            }
             routeTables.delete( routeTable );
           } else {
-            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete route table" ) );
+            throw new ClientUnauthorizedComputeException( "Not authorized to delete route table" );
           }
           return null;
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     } );
