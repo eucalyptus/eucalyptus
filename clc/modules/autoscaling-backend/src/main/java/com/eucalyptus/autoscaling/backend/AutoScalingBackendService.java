@@ -440,7 +440,7 @@ public class AutoScalingBackendService {
         }
       }
 
-      if ( request.getTags().getMember().size() >= MAX_TAGS_PER_RESOURCE ) {
+      if ( request.getTags().getMember().size() > MAX_TAGS_PER_RESOURCE ) {
         throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded") );
       }
     }
