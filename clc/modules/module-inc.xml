@@ -237,7 +237,7 @@
                 <property name="junit.halt" value="on"/>
                 <property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
                 <mkdir dir="${junit.reports.dir}"/>
-                <junit fork="yes" forkmode="once" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" failureproperty="junit.failure" includeantruntime="yes" showoutput="yes">
+                <junit fork="yes" forkmode="once" maxmemory="512m" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" failureproperty="junit.failure" includeantruntime="yes" showoutput="yes">
                         <jvmarg line="${euca.junit.jvmargs}" />
                         <formatter type="plain" usefile="false"/>
                         <formatter type="xml" />
