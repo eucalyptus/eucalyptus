@@ -1069,7 +1069,7 @@ int update_sec_groups(void)
 //!
 int update_public_ips(void)
 {
-    int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0, foundidx = 0;
+    int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0;
     char cmd[EUCA_MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
@@ -1891,7 +1891,7 @@ int read_latest_network(void)
     int brdev_len = 0, i = 0, found_ip = 0;
     char *strptra = NULL, *strptrb = NULL, *strptrc = NULL, *strptrd = NULL;
     gni_cluster *mycluster = NULL;
-
+    
     LOGDEBUG("reading latest network view into eucanetd\n");
 
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
@@ -1899,69 +1899,74 @@ int read_latest_network(void)
         LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
-        rc = gni_print(globalnetworkinfo);
+        gni_print(globalnetworkinfo);
 
-        rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-        if (rc) {
-            LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
-            ret = 1;
+        if (!strcmp(config->vnetMode, "VPCMIDO")) {
+            // skip for VPCMIDO
+            ret = 0;
         } else {
-            if (!config->nc_router) {
-                // user has not specified NC router, use the default cluster private subnet gateway
-                config->vmGatewayIP = mycluster->private_subnet.gateway;
-                strptra = hex2dot(config->vmGatewayIP);
-                LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
-                EUCA_FREE(strptra);
+            rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+            if (rc) {
+                LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
+                ret = 1;
             } else {
-                // user has specified use of NC as router
-                if (!config->nc_router_ip) {
-                    // user has not specified a router IP, use 'fake_router' mode
+                if (!config->nc_router) {
+                    // user has not specified NC router, use the default cluster private subnet gateway
                     config->vmGatewayIP = mycluster->private_subnet.gateway;
                     strptra = hex2dot(config->vmGatewayIP);
-                    LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                    LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
                     EUCA_FREE(strptra);
-                } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
-                    // user has specified an explicit IP to use as NC router IP
-                    config->vmGatewayIP = dot2hex(config->ncRouterIP);
-                    LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
-                } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
-                    // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
-                    rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
-                    if (rc) {
-                        LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
-                        ret = 1;
-                    } else {
-                        LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
-                        for (i = 0; i < brdev_len && !found_ip; i++) {
-                            strptra = hex2dot(brdev_ips[i]);
-                            strptrb = hex2dot(brdev_nms[i]);
-                            if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
-                                strptrc = hex2dot(mycluster->private_subnet.subnet);
-                                strptrd = hex2dot(mycluster->private_subnet.netmask);
-                                LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev,
-                                         strptrc, strptrd);
-                                config->vmGatewayIP = brdev_ips[i];
-                                LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
-                                found_ip = 1;
-                                EUCA_FREE(strptrc);
-                                EUCA_FREE(strptrd);
-                            }
-                            EUCA_FREE(strptra);
-                            EUCA_FREE(strptrb);
-                        }
-                        if (!found_ip) {
-                            strptra = hex2dot(mycluster->private_subnet.subnet);
-                            strptrb = hex2dot(mycluster->private_subnet.netmask);
-                            LOGERROR
-                                ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
-                                 config->bridgeDev, strptra, strptrb);
-                            EUCA_FREE(strptra);
-                            EUCA_FREE(strptrb);
+                } else {
+                    // user has specified use of NC as router
+                    if (!config->nc_router_ip) {
+                        // user has not specified a router IP, use 'fake_router' mode
+                        config->vmGatewayIP = mycluster->private_subnet.gateway;
+                        strptra = hex2dot(config->vmGatewayIP);
+                        LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                        EUCA_FREE(strptra);
+                    } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified an explicit IP to use as NC router IP
+                        config->vmGatewayIP = dot2hex(config->ncRouterIP);
+                        LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
+                    } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
+                        rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
+                        if (rc) {
+                            LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
                             ret = 1;
+                        } else {
+                            LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
+                            for (i = 0; i < brdev_len && !found_ip; i++) {
+                                strptra = hex2dot(brdev_ips[i]);
+                                strptrb = hex2dot(brdev_nms[i]);
+                                if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
+                                    strptrc = hex2dot(mycluster->private_subnet.subnet);
+                                    strptrd = hex2dot(mycluster->private_subnet.netmask);
+                                    LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev,
+                                             strptrc, strptrd);
+                                    config->vmGatewayIP = brdev_ips[i];
+                                    LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
+                                    found_ip = 1;
+                                    EUCA_FREE(strptrc);
+                                    EUCA_FREE(strptrd);
+                                }
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                            }
+                            if (!found_ip) {
+                                strptra = hex2dot(mycluster->private_subnet.subnet);
+                                strptrb = hex2dot(mycluster->private_subnet.netmask);
+                                LOGERROR
+                                    ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                     config->bridgeDev, strptra, strptrb);
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                                ret = 1;
+                            }
                         }
+                        EUCA_FREE(brdev_ips);
+                        EUCA_FREE(brdev_nms);
                     }
-                    EUCA_FREE(brdev_ips);
-                    EUCA_FREE(brdev_nms);
                 }
             }
         }

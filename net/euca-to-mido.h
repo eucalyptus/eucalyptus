@@ -83,7 +83,7 @@ int delete_mido_vpc(mido_config * mido, mido_vpc * vpc);
 int find_mido_vpc(mido_config * mido, char *vpcname, mido_vpc ** outvpc);
 
 int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet);
-int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw);
+int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw, char *instanceDNSDomain, u32 *instanceDNSServers, int max_instanceDNSServers);
 int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * subnet);
 int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
 
