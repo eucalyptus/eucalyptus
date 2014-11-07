@@ -32,7 +32,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
@@ -216,7 +215,7 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     public Boolean call( ) throws Exception {
       Sql sql = null;
       try {
-        sql = Databases.getBootstrapper().getConnection( "eucalyptus_cloud" );
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
         sql.execute( "alter table metadata_private_addresses drop column if exists metadata_address" );
         return true;
       } catch ( Exception ex ) {

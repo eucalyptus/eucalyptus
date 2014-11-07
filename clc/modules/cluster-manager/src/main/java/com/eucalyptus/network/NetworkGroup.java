@@ -94,7 +94,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -106,6 +105,7 @@ import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
@@ -496,13 +496,13 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
   }
   
-  @PreUpgrade( value = Eucalyptus.class, since = Version.v3_4_0 )
+  @PreUpgrade( value = Eucalyptus.class, since = Version.v4_1_0 ) // originally v3_4_0
   public static class NetworkGroupPreUpgrade34 implements Callable<Boolean> {
     @Override
     public Boolean call( ) throws Exception {
       Sql sql = null;
       try {
-        sql = Databases.getBootstrapper().getConnection( "eucalyptus_cloud" );
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
         sql.execute( "alter table metadata_network_group drop column if exists vm_network_index" );
         return true;
       } catch ( Exception ex ) {

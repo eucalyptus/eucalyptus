@@ -23,8 +23,6 @@ import groovy.sql.Sql;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.base.Joiner;
 
@@ -36,9 +34,7 @@ public class PersistenceContext410Upgrade implements Callable<Boolean>{
    LOG.debug("Deleting duplicate tables from eucalyptus_reporting");
    Sql sql = null;
    try {
-     final String context = "eucalyptus_reporting";
-     sql = Databases.getBootstrapper( ).getConnection(PersistenceContexts.toDatabaseName( ).apply( context ), 
-         PersistenceContexts.toSchemaName().apply(context));
+     sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_reporting" );
      final String[] backend_tables = {
          "reporting_elastic_ip_attach_events",
          "reporting_elastic_ip_create_events",
