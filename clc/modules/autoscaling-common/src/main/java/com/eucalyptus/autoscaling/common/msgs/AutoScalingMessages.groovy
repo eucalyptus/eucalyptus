@@ -50,7 +50,10 @@ public class Alarm extends EucalyptusData {
 }
 public class MetricGranularityTypes extends EucalyptusData {
   public MetricGranularityTypes() {  }
-  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ] as ArrayList<MetricGranularityType>
+  public MetricGranularityTypes( final Collection<MetricGranularityType> member ) {
+    this.member = Lists.newArrayList( member )
+  }
+  ArrayList<MetricGranularityType> member = Lists.newArrayList( )
 }
 public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
   public DescribeAutoScalingNotificationTypesResponseType() {  }
@@ -702,6 +705,9 @@ public class ActivityIds extends EucalyptusData {
 public class MetricGranularityType extends EucalyptusData {
   String granularity
   public MetricGranularityType() {  }
+  public MetricGranularityType(final String granularity) {
+    this.granularity = granularity
+  }
 }
 public class AdjustmentTypes extends EucalyptusData {
   public AdjustmentTypes() {  }
