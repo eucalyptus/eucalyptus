@@ -30,6 +30,8 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -55,10 +57,13 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -70,7 +75,12 @@ public class SecurityTokenManager {
 
   private static final Logger log = Logger.getLogger( SecurityTokenManager.class );
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
-  private static final SecurityTokenManager instance = new SecurityTokenManager();
+  private static final SecurityTokenManager instance = new SecurityTokenManager( );
+  private static final int tokenCacheSize = Objects.firstNonNull(
+      Ints.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.cache.maximumSize", "500" ) ),
+      500 );
+  private static final Cache<Pair<String,String>,EncryptedSecurityToken> tokenCache =
+      CacheBuilder.newBuilder( ).expireAfterAccess( 5, TimeUnit.MINUTES ).maximumSize( tokenCacheSize ).build( );
 
   /**
    * Issue a security token.
@@ -269,8 +279,14 @@ public class SecurityTokenManager {
 
     final EncryptedSecurityToken encryptedToken;
     try {
-      encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
-    } catch ( GeneralSecurityException e ) {
+      final Pair<String,String> tokenKey = Pair.pair( accessKeyId, token );
+      encryptedToken = tokenCache.get( tokenKey, new Callable<EncryptedSecurityToken>( ) {
+        @Override
+        public EncryptedSecurityToken call() throws Exception {
+          return EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+        }
+      } );
+    } catch ( ExecutionException e ) {
       log.debug( e, e );
       throw new InvalidAccessKeyAuthException("Invalid security token");
     }
@@ -398,14 +414,17 @@ public class SecurityTokenManager {
     return new SecretKeySpec( digest.digest(), "AES" );
   }
 
+  /**
+   * Immutable token representation
+   */
   private static final class EncryptedSecurityToken {
     private static final byte[] TOKEN_PREFIX = new byte[]{ 'e', 'u', 'c', 'a', 0, 1 };
 
-    private String accessKeyId;
-    private String originatingId;
-    private String nonce;
-    private long created;
-    private long expires;
+    private final String accessKeyId;
+    private final String originatingId;
+    private final String nonce;
+    private final long created;
+    private final long expires;
 
     /**
      * Generate a new token
