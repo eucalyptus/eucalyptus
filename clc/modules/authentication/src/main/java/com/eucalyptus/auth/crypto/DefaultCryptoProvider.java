@@ -70,6 +70,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -216,6 +217,52 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     cal.add( Calendar.YEAR, 5 );
     return generateCertificate(keys, subjectDn, signer, signingKey, cal.getTime() );
   }
+  
+  @Override
+  public  X509Certificate generateCertificate( PublicKey key, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
+    if (signingKey == null){
+      LOG.error("No signing key is provided");
+      return null;
+    }
+    if (signer == null) {
+      LOG.error("No signiner principal is specified");
+      return null;
+    }
+    if (subjectDn == null) {
+      LOG.error("No subject principal is specified");
+      return null;
+    }
+    if (key == null) {
+      LOG.error("No requesting key is specified");
+      return null;
+    }
+    
+    EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
+    X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
+    certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
+    certGen.setIssuerDN( signer );
+    certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints( true ) );
+    try {
+      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new SubjectKeyIdentifierStructure( key ) );
+    } catch ( InvalidKeyException e ) {
+      LOG.error( "Error adding subject key identifier extension.", e );
+    }
+    Calendar cal = Calendar.getInstance( );
+    certGen.setNotBefore( cal.getTime( ) );
+    certGen.setNotAfter(notAfter);
+    certGen.setSubjectDN( subjectDn );
+    certGen.setPublicKey( key );
+    certGen.setSignatureAlgorithm( KEY_SIGNING_ALGORITHM );
+    try {
+      X509Certificate cert = certGen.generate( signingKey, PROVIDER );
+      cert.checkValidity( );
+      return cert;
+    } catch ( Exception e ) {
+      LOG.fatal( e, e );
+      return null;
+    }
+  }
+
   
   @Override
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {

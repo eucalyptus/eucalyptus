@@ -1048,7 +1048,9 @@ public class GetLdapSyncStatusResultType extends EucalyptusData {
 }
 
 public class SignCertificateType extends EuareMessage {
-  String certificate;
+  String instance;
+  String key;
+  Integer expirationDays;
   public SignCertificateType(){ }
 }
 
@@ -1060,7 +1062,6 @@ public class SignCertificateResponseType extends EuareMessage {
 
 public class SignCertificateResultType extends EucalyptusData {
   String certificate;
-  String signature;
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DOWNLOADSERVERCERTIFICATE )

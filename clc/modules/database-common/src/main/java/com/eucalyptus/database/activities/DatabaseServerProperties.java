@@ -491,8 +491,10 @@ import com.google.common.net.HostSpecifier;
         throws ConfigurablePropertyException {
       try{
         final int newExp = Integer.parseInt(newValue);
+        if(newExp <= 0)
+          throw new Exception();
       }catch(final Exception ex) {
-        throw new ConfigurablePropertyException("The value must be number type");
+        throw new ConfigurablePropertyException("The value must be number type and bigger than 0");
       }
     }
    }

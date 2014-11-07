@@ -65,6 +65,7 @@ package com.eucalyptus.auth.euare;
 import com.eucalyptus.auth.AuthContext;
 
 import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -105,6 +106,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -2058,28 +2060,36 @@ public class EuareService {
   
   /* Euca-only API for ELB SSL termination */
   public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
-    SignCertificateResponseType reply = request.getReply();
+    final SignCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final String certPem = request.getCertificate();
-    if(certPem == null || certPem.length()<=0)
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No certificate to sign is provided");
+    final String pubkey = request.getKey();
+    final String instanceId = request.getInstance();
+    Integer expirationDays = request.getExpirationDays();
    
-    // currently, the only use-case is for ELB ssl termination
+    if(pubkey == null || pubkey.length()<=0)
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
+    if(instanceId == null || instanceId.length()<=0)
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No instance ID is provided");
+    if (expirationDays == null)
+      expirationDays = 180;
     if (! requestUser.isSystemAdmin()){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
     }
+   
+    X509Certificate vmCert = null;
     try{
-      final String cert = B64.standard.decString(certPem);
-      final String signature = EuareServerCertificateUtil.generateSignatureWithEuare(cert);
-      final SignCertificateResultType result = new SignCertificateResultType();
-      result.setCertificate(certPem);
-      result.setSignature(signature);
-      reply.setSignCertificateResult(result);
-    }catch(final Exception ex){
-      LOG.error("failed to sign certificate", ex);
+      vmCert = EuareServerCertificateUtil.generateVMCertificate(pubkey, instanceId, expirationDays);
+    }catch(final EuareException ex) {
+      throw ex;
+    }catch(final Exception ex) {
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
+    final String certPem = B64.standard.encString( PEMFiles.getBytes( vmCert ) );
+    final SignCertificateResultType result = new SignCertificateResultType();
+    result.setCertificate(certPem);
+    reply.setSignCertificateResult(result);
+    
     reply.set_return(true);
     return reply;
   }
@@ -2100,10 +2110,14 @@ public class EuareService {
     final String certPem = request.getDelegationCertificate();
     final String authSigB64 = request.getAuthSignature();
     final String certArn = request.getCertificateArn();
-    
+    boolean oldCertType = false;
     try{
-      if(!EuareServerCertificateUtil.verifyCertificate(certPem))
-        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+      if(!EuareServerCertificateUtil.verifyCertificate(certPem, true)) {       
+        // must be certificate type prior 4.1
+        oldCertType = true;
+        if( !EuareServerCertificateUtil.verifyCertificate(certPem, false))
+          throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+      }
     }catch(final EuareException ex) {
       throw ex;
     }catch(final Exception ex) {
@@ -2134,19 +2148,21 @@ public class EuareService {
       LOG.error("failed to verify signature", ex);
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-    
-    final String certStr = B64.standard.decString(certPem);
-    // verify signature issued by EUARE
-    try{
-      if(!EuareServerCertificateUtil.verifySignatureWithEuare(certStr, authSigB64))
-        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
-    }catch(final EuareException ex){
-      throw ex;
-    }catch(final Exception ex){
-      LOG.error("failed to verify auth signature", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+   
+    // No longer the case after EUCA-8651. verifyCertificate() will validate the cert. Left here for backward-compatibility
+    if (oldCertType) {
+      // verify signature issued by EUARE
+      try{
+        final String certStr = B64.standard.decString(certPem);
+        if(!EuareServerCertificateUtil.verifySignatureWithEuare(certStr, authSigB64))
+          throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
+      }catch(final EuareException ex){
+        throw ex;
+      }catch(final Exception ex){
+        LOG.error("failed to verify auth signature", ex);
+        throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+      }
     }
-    
     try{
       // access control based on iam policy
       final ServerCertificateEntity cert = RestrictedTypes.doPrivileged(certArn, ServerCertificates.Lookup.INSTANCE);
