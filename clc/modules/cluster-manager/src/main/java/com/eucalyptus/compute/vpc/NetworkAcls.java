@@ -38,6 +38,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.NetworkAclAssociationType;
 import edu.ucsb.eucalyptus.msgs.NetworkAclEntryType;
 import edu.ucsb.eucalyptus.msgs.NetworkAclType;
@@ -149,7 +150,7 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withIntegerSetProperty( "entry.icmp.type", FilterIntegerSetFunctions.ICMP_TYPE )
               .withIntegerSetProperty( "entry.port-range.from", FilterIntegerSetFunctions.PORT_FROM )
               .withIntegerSetProperty( "entry.port-range.to", FilterIntegerSetFunctions.PORT_TO )
-              .withIntegerSetProperty( "entry.protocol", FilterIntegerSetFunctions.PROTOCOL ) //TODO:STEVE: String tcp/udp/icmp translation required, need to be able to supply a custom value function? (or full type?)
+              .withIntegerSetProperty( "entry.protocol", FilterIntegerSetFunctions.PROTOCOL, ProtocolValueFunction.INSTANCE )
               .withStringSetProperty( "entry.rule-action", FilterStringSetFunctions.ENTRY_RULE_ACTION )
               .withIntegerSetProperty( "entry.rule-number", FilterIntegerSetFunctions.RULE_NUMBER )
               .withStringProperty( "network-acl-id", CloudMetadatas.toDisplayName() )
@@ -166,12 +167,31 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withPersistenceFilter( "entry.icmp.type", "entries.icmpType", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "entry.port-range.from", "entries.portRangeFrom", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "entry.port-range.to", "entries.portRangeTo", PersistenceFilter.Type.Integer )
-              .withPersistenceFilter( "entry.protocol", "entries.protocol", PersistenceFilter.Type.Integer )
+              .withPersistenceFilter( "entry.protocol", "entries.protocol", ProtocolValueFunction.INSTANCE )
               .withPersistenceFilter( "entry.rule-action", "entries.ruleAction", Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ) )
               .withPersistenceFilter( "entry.rule-number", "entries.ruleNumber", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "network-acl-id", "displayName" )
               .withPersistenceFilter( "vpc-id", "vpc.displayName" )
       );
+    }
+
+    private enum ProtocolValueFunction implements Function<String,Integer> {
+      INSTANCE {
+        @Nullable
+        @Override
+        public Integer apply( final String value ) {
+          switch ( value.toLowerCase( ) ) {
+            case "tcp":
+              return 6;
+            case "udp":
+              return 17;
+            case "icmp":
+              return 1;
+            default:
+              return Ints.tryParse( value );
+          }
+        }
+      }
     }
   }
 
