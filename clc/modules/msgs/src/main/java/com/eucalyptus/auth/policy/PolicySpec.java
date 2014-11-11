@@ -100,15 +100,16 @@ public class PolicySpec {
   }) );
   
   // Vendor (AWS products)
+	// Do not add vendors here (use modules)
   public static final String VENDOR_IAM = "iam";
   public static final String VENDOR_EC2 = "ec2";
   public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
-  public static final String VENDOR_CLOUDFORMATION = "cloudformation";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
-  
+	// Do not add vendors here (use modules)
+
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
@@ -458,23 +459,6 @@ public class PolicySpec {
   public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
   public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
   public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
-  
-  //Cloud Formation actions, based on API Reference (API Version 2010-05-15)
-  public static final String CLOUDFORMATION_CANCELUPDATESTACK = "cancelupdatestack";
-  public static final String CLOUDFORMATION_CREATESTACK = "createstack";
-  public static final String CLOUDFORMATION_DELETESTACK = "deletestack";
-  public static final String CLOUDFORMATION_DESCRIBESTACKEVENTS = "describestackevents";
-  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCE = "describestackresource";
-  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCES = "describestackresources";
-  public static final String CLOUDFORMATION_DESCRIBESTACKS = "describestacks";
-  public static final String CLOUDFORMATION_ESTIMATETEMPLATECOST = "estimatetemplatecost";
-  public static final String CLOUDFORMATION_GETSTACKPOLICY = "getstackpolicy";
-  public static final String CLOUDFORMATION_GETTEMPLATE = "gettemplate";
-  public static final String CLOUDFORMATION_LISTSTACKRESOURCES = "liststackresources";
-  public static final String CLOUDFORMATION_LISTSTACKS = "liststacks";
-  public static final String CLOUDFORMATION_SETSTACKPOLICY = "setstackpolicy";
-  public static final String CLOUDFORMATION_UPDATESTACK = "updatestack";
-  public static final String CLOUDFORMATION_VALIDATETEMPLATE = "validatetemplate";
 
   // Euca-specific Imaging Service operations
   public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";

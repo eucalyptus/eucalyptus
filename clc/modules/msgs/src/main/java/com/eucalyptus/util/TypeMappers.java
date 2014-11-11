@@ -105,7 +105,7 @@ public class TypeMappers {
   public static <A, B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
     for ( Class p : Classes.ancestors( from ) ) {
-      if ( knownMappers.containsKey( p ) && !knownMappers.get( p ).isEmpty( ) ) {
+      if ( knownMappers.containsKey( p ) && knownMappers.get( p ).contains( to ) ) {
         target = p;
         break;
       }
