@@ -613,6 +613,7 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
   Integer volumeSize = null;
+  Boolean encrypted
   Boolean deleteOnTermination = Boolean.TRUE;
   String volumeType = "standard"
   Integer iops
