@@ -87,6 +87,11 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( Class candidate ) throws Exception {
     String bc = candidate.getCanonicalName( );
+    if ( Modifier.isAbstract( candidate.getModifiers( ) ) ||
+        !Bootstrapper.class.isAssignableFrom( candidate ) ) {
+      return false;
+    }
+
     Class bootstrapper = this.getBootstrapper( candidate );
     if ( !Ats.from( candidate ).has( RunDuring.class ) ) {
       throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + bc );
@@ -124,13 +129,11 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
 
   @SuppressWarnings( "unchecked" )
   private Class getBootstrapper( Class candidate ) throws Exception {
-    if ( Modifier.isAbstract( candidate.getModifiers( ) ) ) throw new InstantiationException( candidate.getName( ) + " is abstract." );
-    if ( !Bootstrapper.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + Bootstrapper.class );
     LOG.trace( "Candidate bootstrapper: " + candidate.getName( ) );
     if ( !Modifier.isPublic( candidate.getDeclaredConstructor( new Class[] {} ).getModifiers( ) ) ) {
       Method factory = candidate.getDeclaredMethod( "getInstance", new Class[] {} );
       if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) {
-        throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" );
+        throw BootstrapException.throwFatal( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" );
       }
     }
     EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAPPER_ADDED, candidate.getName() ).info( );
