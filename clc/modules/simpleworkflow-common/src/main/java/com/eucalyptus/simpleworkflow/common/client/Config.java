@@ -19,14 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.common.client;
 
+import java.beans.Introspector;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.mule.api.MessagingException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
 import com.amazonaws.Response;
@@ -34,6 +40,7 @@ import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.ActivityWorker;
+import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.amazonaws.services.simpleworkflow.flow.WorkerBase;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowWorker;
 import com.amazonaws.util.json.JSONException;
@@ -50,6 +57,11 @@ import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
+import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.reflect.AbstractInvocationHandler;
@@ -60,6 +72,7 @@ import com.google.common.reflect.AbstractInvocationHandler;
 public class Config {
   private static final ObjectMapper mapper = new ObjectMapper( )
       .setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) );
+  private static final com.fasterxml.jackson.databind.ObjectMapper workerObjectMapper = buildWorkerObjectMapper();
 
   /**
    * Parse a JSON format string for AWS SDK for Java ClientConfiguration.
@@ -123,6 +136,7 @@ public class Config {
       final String text ) {
     final WorkflowWorker workflowWorker = new WorkflowWorker( client, domain, taskList);
     workflowWorker.setRegisterDomain( true );
+    workflowWorker.setDefaultConverter( new JsonDataConverter( workerObjectMapper ) );
     configure( workflowWorker, text );
 
     Package workerPackage = null;
@@ -149,6 +163,7 @@ public class Config {
       final String taskList,
       final String text ) {
     final ActivityWorker activityWorker = configure( new ActivityWorker( client, domain, taskList), text );
+    activityWorker.setDataConverter( new JsonDataConverter( workerObjectMapper ) );
 
     Package workerPackage = null;
     for ( final Class<?> activitiesImplementation : WorkflowRegistry.lookupActivities( componentIdClass ) ) {
@@ -244,9 +259,50 @@ public class Config {
   private static AmazonSimpleWorkflow client( ) {
     return (AmazonSimpleWorkflow) Proxy.newProxyInstance( AmazonSimpleWorkflow.class.getClassLoader(), new Class<?>[]{ AmazonSimpleWorkflow.class }, new AbstractInvocationHandler() {
       @Override
-      protected Object handleInvocation( final Object o, final Method method, final Object[] objects ) throws Throwable {
+      protected Object handleInvocation(
+          @Nonnull final Object o,
+          @Nonnull final Method method,
+          @Nonnull final Object[] objects
+      ) throws Throwable {
         throw new Exception( "dummy-client" );
       }
     } );
+  }
+
+  private static com.fasterxml.jackson.databind.ObjectMapper buildWorkerObjectMapper( ) {
+    final com.fasterxml.jackson.databind.ObjectMapper workerObjectMapper =
+        new com.fasterxml.jackson.databind.ObjectMapper(  );
+    workerObjectMapper.setAnnotationIntrospector(
+        new JacksonAnnotationIntrospector( ) {
+          private static final long serialVersionUID = 1L;
+          @Override
+          public boolean hasIgnoreMarker( final AnnotatedMember m ) {
+            return isMethodBackedByTransientField( m ) || super.hasIgnoreMarker( m );
+          }
+        }
+    );
+    workerObjectMapper.configure( DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false );
+    workerObjectMapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
+    workerObjectMapper.addMixInAnnotations( MessagingException.class, MuleMixin.class );
+    workerObjectMapper.enableDefaultTyping( com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.NON_FINAL );
+    return workerObjectMapper;
+  }
+
+  private static boolean isMethodBackedByTransientField( final AnnotatedMember m ) {
+    boolean isMethodBackedByTransientField = false;
+    if (m instanceof AnnotatedMethod ) {
+      final String fieldName = Introspector.decapitalize( com.eucalyptus.util.Strings.trimPrefix( "get", m.getName() ) );
+      for (final Field field : m.getMember().getDeclaringClass().getDeclaredFields()) {
+        if (fieldName.equals(field.getName())) {
+          isMethodBackedByTransientField = Modifier.isTransient(field.getModifiers());
+          break;
+        }
+      }
+    }
+    return isMethodBackedByTransientField;
+  }
+
+  @JsonIgnoreProperties( { "failingMessageProcessor" } )
+  private static final class MuleMixin {
   }
 }
