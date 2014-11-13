@@ -68,7 +68,6 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
@@ -78,14 +77,10 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +112,6 @@ import org.jibx.runtime.JiBXException;
 import org.jibx.util.ClasspathUrlExtender;
 import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.records.EventRecord;
@@ -126,13 +120,13 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
@@ -164,7 +158,6 @@ public class BindingCache {
     private static final String                 BINDING_CACHE_BINDING_PREFIX = "binding.";
     private static final String                 BINDING_CACHE_DIGEST_LIST    = "classcache.properties";
     private static final File                   CACHE_LIST                   = SubDirectory.CLASSCACHE.getChildFile( BINDING_CACHE_DIGEST_LIST );
-    private final ClassLoader                   CACHE_CLASS_LOADER;
     private final Class<?>                      MSG_BASE_CLASS;
     private final Class<?>                      MSG_DATA_CLASS;
     private static final String                 FILE_PATTERN                 = System.getProperty( "euca.binding.pattern", ".*\\-binding.xml" );
@@ -172,7 +165,6 @@ public class BindingCache {
     
     private BindingFileSearch( ) {
       try {
-        CACHE_CLASS_LOADER = new URLClassLoader( new URL[] { SubDirectory.CLASSCACHE.getFile( ).toURL( ) } );
         MSG_BASE_CLASS = Class.forName( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
         MSG_DATA_CLASS = Class.forName( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
       } catch ( Exception ex ) {
@@ -197,11 +189,10 @@ public class BindingCache {
         LOG.info( "Found up-to-date binding class cache: skipping message binding." );
         return true;
       } else {
-        MapDifference<String, String> diffBindings = Maps.difference( oldBindings, newBindings );
-        if ( !diffBindings.entriesDiffering( ).isEmpty( ) ) {
-          LOG.info( "Binding class cache expired (old,new): \n" + diffBindings.entriesDiffering( ) );
-          DeleteRecursively.PREDICATE.apply( SubDirectory.CLASSCACHE.getFile( ) );
-          SubDirectory.CLASSCACHE.getFile( ).mkdir( );
+        LOG.info( "Binding class cache expired, rebuilding." );
+        DeleteRecursively.PREDICATE.apply( SubDirectory.CLASSCACHE.getFile( ) );
+        if ( !SubDirectory.CLASSCACHE.getFile( ).mkdirs( ) && !SubDirectory.CLASSCACHE.getFile( ).exists( ) ) {
+          LOG.error( "Error creating class cache directory: " + SubDirectory.CLASSCACHE.getFile( ).getAbsolutePath( ) );
         }
         return false;
       }
@@ -212,13 +203,17 @@ public class BindingCache {
       
       @Override
       public boolean apply( @Nullable File input ) {
-        try {
+        if ( input != null ) try {
           if ( input.isDirectory( ) ) {
             LOG.info( "Cleaning up class cache: " + input.getCanonicalPath( ) );
             Iterables.all( Arrays.asList( input.listFiles( ) ), DeleteRecursively.PREDICATE );
-            input.delete( );
+            if ( !input.delete( ) ) {
+              LOG.error( "Unable to delete directory: " + input.getAbsolutePath( ) );
+            }
           } else {
-            input.delete( );
+            if ( !input.delete( ) ) {
+              LOG.error( "Unable to delete file: " + input.getAbsolutePath( ) );
+            }
           }
         } catch ( SecurityException ex ) {
           LOG.error( ex );
@@ -243,7 +238,9 @@ public class BindingCache {
         }
       } catch ( IOException ex ) {
         DeleteRecursively.PREDICATE.apply( SubDirectory.CLASSCACHE.getFile( ) );
-        SubDirectory.CLASSCACHE.getFile( ).mkdir( );
+        if ( !SubDirectory.CLASSCACHE.getFile( ).mkdirs( ) && !SubDirectory.CLASSCACHE.getFile( ).exists( ) ) {
+          LOG.error( "Error creating class cache directory: " + SubDirectory.CLASSCACHE.getFile( ).getAbsolutePath( ) );
+        }
         throw ex;
       }
     }
@@ -315,9 +312,6 @@ public class BindingCache {
     @Override
     public boolean apply( URI input ) {
       try {
-        String shortPath = input.toURL( ).getPath( ).replaceAll( ".*!/", "" );
-        String sname = Utility.bindingFromFileName( shortPath );
-//        BindingDefinition def = Utility.loadBinding( input.toASCIIString( ), sname, input.toURL( ).openStream( ), input.toURL( ), true );
         ValidationContext vctx = BindingElement.newValidationContext( );
         BindingElement root = BindingElement.validateBinding( input.toASCIIString( ), input.toURL( ), input.toURL( ).openStream( ), vctx );
         Predicate<BindingElement> writeFile = new Predicate<BindingElement>( ) {
@@ -337,7 +331,7 @@ public class BindingCache {
                     Files.createParentDirs( destClassFile );
                     Files.copy( classSupplier, destClassFile );
                   }
-                  ClassFile cf = ClassFile.getClassFile( classFile.getName( ) );
+                  ClassFile.getClassFile( classFile.getName( ) );
                   Logs.extreme( ).debug( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                 } else if ( child instanceof IncludeElement ) {
                   IncludeElement includeElement = ( IncludeElement ) child;
@@ -381,6 +375,9 @@ public class BindingCache {
           }
           gen.close( );
           BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
+          byte[] digestBytes = Files.hash( gen.getOutFile( ), Hashing.md5() ).asBytes( );
+          String digest = new BigInteger( digestBytes ).abs( ).toString( 16 );
+          CURRENT_PROPS.put( BINDING_CACHE_BINDING_PREFIX + gen.getOutFile( ).getName( ), digest );
           LOG.info( "Binding cache: populating cache from transitive closure of bindings." );
           // load *-binding.xml, populate cache w/ all referenced files
           BindingFileSearch.reset( Utility.getClassPaths( ) );
@@ -388,8 +385,7 @@ public class BindingCache {
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           LOG.info( "Binding cache: loading and validating bindings." );
           Map<URI, BindingDefinition> bindingDefs = Maps.newTreeMap( );
-          PrintStream oldOut = System.out, oldErr = System.err;
-          
+
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
             String sname = Utility.bindingFromFileName( shortPath );
@@ -437,19 +433,17 @@ public class BindingCache {
             BindingFileSearch.INSTANCE.process( f );
           } catch ( final Throwable e ) {
             LOG.error( e.getMessage( ) );
-            continue;
           }
         }
       }
-      for ( String pathName : ClassPath.SYSTEM_CLASS_PATH.getClassPath( ).split( File.pathSeparator ) ) {
+      for ( String pathName : ClassPath.getClassPath( ).split( File.pathSeparator ) ) {
         File pathFile = new File( pathName );
         if ( pathFile.isDirectory( ) ) {
           try {
             BindingFileSearch.INSTANCE.process( pathFile );
           } catch ( final Throwable e ) {
             LOG.error( e.getMessage( ) );
-            continue;
-          };
+          }
         }
       }
     }
@@ -474,54 +468,47 @@ public class BindingCache {
     private PrintWriter              out;
     private String                   bindingName;
     private int                      indent       = 0;
-    private Map<String, TypeBinding> typeBindings = new HashMap<String, TypeBinding>( ) {
-                                                    {
-                                                      put( Integer.class.getCanonicalName( ), new IntegerTypeBinding( ) );
-                                                      put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
-                                                      put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
-                                                      put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
-                                                      put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) );
-                                                      put( "boolean", new BooleanTypeBinding( ) );
-                                                      put( "int", new IntegerTypeBinding( ) );
-                                                      put( "long", new LongTypeBinding( ) );
-                                                      put( "double", new DoubleTypeBinding( ) );
-                                                      put( java.util.Date.class.getCanonicalName( ), new StringTypeBinding( ) );
-                                                    }
-                                                  };
-    
-    private static List<String>      badClasses   = new ArrayList<String>( ) {
-                                                    {
-                                                      add( ".*HttpResponseStatus" );
-                                                      add( ".*Closure" );
-                                                      add( ".*Channel" );
-                                                      add( ".*\\.JiBX_*" );
-                                                    }
-                                                  };
-    private static List<String>      badFields    = new ArrayList<String>( ) {
-                                                    {
-                                                      add( "__.*" );
-                                                      add( "\\w*\\$\\w*\\$*.*" );
-                                                      add( "class\\$.*" );
-                                                      add( "metaClass" );
-                                                      add( "JiBX_.*" );
-                                                      add( "serialVersionUID" );
-                                                    }
-                                                  };
+    private final Map<String, TypeBinding> typeBindings = ImmutableMap.<String, TypeBinding>builder( )
+                                                      .put( Integer.class.getCanonicalName( ), new IntegerTypeBinding( ) )
+                                                      .put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) )
+                                                      .put( String.class.getCanonicalName( ), new StringTypeBinding( ) )
+                                                      .put( Long.class.getCanonicalName( ), new LongTypeBinding( ) )
+                                                      .put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) )
+                                                      .put( "boolean", new BooleanTypeBinding( ) )
+                                                      .put( "int", new IntegerTypeBinding( ) )
+                                                      .put( "long", new LongTypeBinding( ) )
+                                                      .put( "double", new DoubleTypeBinding( ) )
+                                                      .put( java.util.Date.class.getCanonicalName( ), new StringTypeBinding( ) )
+                                                      .build( );
+
+    private static final List<String>      badClasses   = ImmutableList.of(
+                                                            ".*HttpResponseStatus",
+                                                            ".*Closure",
+                                                            ".*Channel",
+                                                            ".*\\.JiBX_*"
+                                                          );
+
+    private static final List<String>      badFields    = ImmutableList.of(
+                                                            "__.*",
+                                                            "\\w*\\$\\w*\\$*.*",
+                                                            "class\\$.*",
+                                                            "metaClass",
+                                                            "JiBX_.*",
+                                                            "serialVersionUID"
+                                                          );
     
     public InternalSoapBindingGenerator( ) {
       this.outFile = new File( SubDirectory.CLASSCACHE.getFile( ).getAbsolutePath( ) + "/msgs-binding.xml" );
     }
     
-    public ElemItem peek( ) {
-      return this.elemStack.peek( );
-    }
-    
-    private static Set<String> classNames = new TreeSet<String>( );
+    private static Set<String> classNames = new TreeSet<>( );
     
     public void processClass( Class klass ) {
       if ( this.out == null ) {
         if ( this.outFile.exists( ) ) {
-          this.outFile.delete( );
+          if ( !this.outFile.delete( ) ) {
+            LOG.error( "Error deleting binding file: " + this.outFile.getAbsolutePath( ) );
+          }
         }
         try {
           this.out = new PrintWriter( this.outFile );
@@ -544,23 +531,6 @@ public class BindingCache {
       }
     }
     
-    //TODO:GRZE: just use the suffix for the moment.
-    private String getNamespacePrefix( final Class klass ) {
-      return getNamespaceSuffix( klass );
-    }
-
-    private String getNamespaceSuffix( final Class klass ) {
-      String namespace = "";
-      final ComponentMessage componentMessage =
-        Ats.inClassHierarchy( klass ).get( ComponentMessage.class );
-      if ( componentMessage != null ) {
-        namespace += Classes.newInstance( componentMessage.value( ) ).name( );
-      } else {
-        namespace += "euca";//bad bad person, abondoning your message types.
-      }
-      return namespace;
-    }
-    
     public void close( ) {
       try {
         this.out.flush( );
@@ -580,8 +550,7 @@ public class BindingCache {
         Class listType = getTypeArgument( field );
         if ( listType == null ) {
           Logs.extreme( ).debug(
-            String.format( "IGNORE: %-70s [type=%s] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "." + field.getName( ),
-              listType ) );
+            String.format( "IGNORE: %-70s [type=null] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "." + field.getName( ) ) );
           return new NoopTypeBinding( field );
         } else if ( this.typeBindings.containsKey( listType.getCanonicalName( ) ) ) {
           return new CollectionTypeBinding( field.getName( ), this.typeBindings.get( listType.getCanonicalName( ) ) );
@@ -615,22 +584,14 @@ public class BindingCache {
     
     class RootObjectTypeBinding extends TypeBinding {
       private Class   type;
-      private String  namespace;
-      private String  nsPrefix;
       private boolean abs;
       
       public RootObjectTypeBinding( Class type ) {
         InternalSoapBindingGenerator.this.indent = 2;
         this.type = type;
-        this.namespace = ns + "/" + getNamespaceSuffix( type );
-        this.nsPrefix = getNamespacePrefix( type );
-        if ( Object.class.equals( type.getSuperclass( ) ) ) {
-          this.abs = true;
-        } else if ( type.getSuperclass( ).getSimpleName( ).equals( "EucalyptusData" ) ) {
-          this.abs = true;
-        } else {
-          this.abs = false;
-        }
+        this.abs =
+            Object.class.equals( type.getSuperclass() ) ||
+            type.getSuperclass().getSimpleName().equals( "EucalyptusData" );
       }
       
       @Override
@@ -639,9 +600,7 @@ public class BindingCache {
       }
       
       public String process( ) {
-        if ( this.type.getCanonicalName( ) == null ) {
-//          new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
-        } else {
+        if ( this.type.getCanonicalName( ) != null ) {
           this.elem( Elem.mapping );
           if ( this.abs ) {
             this.attr( "abstract", "true" );
@@ -866,12 +825,12 @@ public class BindingCache {
       
       @Override
       public String toString( ) {
-        return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indentCount, Boolean.valueOf( this.children ) );
+        return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indentCount, this.children );
       }
       
     }
     
-    private Deque<ElemItem> elemStack = new LinkedList<ElemItem>( );
+    private Deque<ElemItem> elemStack = new LinkedList<>( );
     
     enum Elem {
       structure,
@@ -882,20 +841,9 @@ public class BindingCache {
       namespace
     }
     
-    class IgnoredTypeBinding extends NoopTypeBinding {
-      
-      public IgnoredTypeBinding( Field field ) {
-        super( field );
-      }
-    }
-    
     class NoopTypeBinding extends TypeBinding {
-      private String name;
-      private Class  type;
-      
+
       public NoopTypeBinding( Field field ) {
-        this.name = field.getName( );
-        this.type = field.getType( );
       }
       
       @Override
