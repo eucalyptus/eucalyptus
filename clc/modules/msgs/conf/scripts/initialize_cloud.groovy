@@ -120,7 +120,7 @@ try {
       p.putAll( props );
       final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
       final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.localHostInetAddress( ), databaseName)}";
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
       p.setProperty( "hibernate.connection.url", ctxUrl );
       p.setProperty( 'hibernate.cache.region_prefix', ctx + '_cache' );
       if ( schemaName != null ) p.setProperty( 'hibernate.default_schema', schemaName )
