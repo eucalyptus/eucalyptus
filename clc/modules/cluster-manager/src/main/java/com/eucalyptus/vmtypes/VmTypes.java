@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 import javax.annotation.Nonnull;
@@ -95,6 +96,7 @@ import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -128,8 +130,13 @@ public class VmTypes {
     @Override
     public boolean apply( ServiceConfiguration input ) {
       try {
-        Cluster cluster = Clusters.lookup( input );
-        cluster.check( );
+        final Cluster cluster = Clusters.lookup( input );
+        try ( final LockResource lock =
+                  LockResource.tryLock( cluster.getGateLock( ).readLock( ), 20, TimeUnit.SECONDS ) ) {
+          if ( lock.isLocked( ) ) {
+            cluster.refreshResources( );
+          }
+        }
       } catch ( Exception ex ) {
         LOG.error( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ) );
         LOG.debug( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ), ex );
