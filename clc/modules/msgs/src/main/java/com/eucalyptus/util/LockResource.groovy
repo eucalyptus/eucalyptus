@@ -21,6 +21,7 @@ package com.eucalyptus.util
 
 import groovy.transform.CompileStatic
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Lock
 
 /**
@@ -30,16 +31,31 @@ import java.util.concurrent.locks.Lock
 class LockResource implements AutoCloseable {
 
   private final Lock lock
+  private final boolean locked
 
-  private LockResource( final Lock lock ) {
+  private LockResource( final Lock lock,
+                        final boolean locked ) {
     this.lock = lock
+    this.locked = locked
   }
 
   static LockResource lock( Lock lock ) {
     lock.lock()
-    new LockResource( lock );
+    new LockResource( lock, true );
   }
-  
+
+  /**
+   * Try to acquire lock for the given time.
+   *
+   * <p>WARNING: Caller must check if lock was acquired</p>
+   *
+   * @see #isLocked()
+   */
+  static LockResource tryLock( Lock lock, long time, TimeUnit unit ) {
+    boolean locked = lock.tryLock( time, unit )
+    new LockResource( lock, locked );
+  }
+
   static <V> V withLock( Lock lock, Closure<V> closure ) {
     lock.lock( )
     try {
@@ -48,9 +64,15 @@ class LockResource implements AutoCloseable {
       lock.unlock( )
     }
   }
+
+  boolean isLocked( ) {
+    return locked;
+  }
   
   @Override
   void close( ) {
-    lock.unlock( )
+    if ( isLocked( ) ) {
+      lock.unlock( )
+    }
   }
 }
