@@ -463,6 +463,7 @@ typedef struct ncResource_t {
     int numberOfCoresMax;              //!< Maximum number of core supported by this node controller
     int numberOfCoresAvailable;        //!< Currently available number of core on this node controller
     char publicSubnets[CHAR_BUFFER_SIZE];   //!< Public subnet configured on this node controller
+    char hypervisor[CHAR_BUFFER_SIZE];  //!< Node hypervisor                   
 } ncResource;
 
 //! Instance list node structure
@@ -537,7 +538,7 @@ int total_instances(bunchOfInstances ** ppHead);
 //! @{
 //! @name Resources APIs
 ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
-                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets, const char *sHypervisor) _attribute_wur_;
 void free_resource(ncResource ** ppresource);
 //! @}
 

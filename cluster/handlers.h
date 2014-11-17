@@ -290,6 +290,7 @@ typedef struct resource_t {
     char nodeMessage[1024];
     char nodeStatus[24];
     boolean migrationCapable;
+    char hypervisor[16];
 } ccResource;
 
 typedef struct ccResourceCache_t {

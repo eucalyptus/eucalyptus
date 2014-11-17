@@ -204,9 +204,8 @@ public class ClusterAllocator implements Runnable {
           @Override
           public Boolean call( ) {
             try {
-              new ClusterAllocator( allocInfo ).run( );
+              new ClusterAllocator( allocInfo, config ).run( );
             } catch ( final Exception ex ) {
-              LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
               LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
             return Boolean.TRUE;
@@ -234,11 +233,11 @@ public class ClusterAllocator implements Runnable {
     return SubmitAllocation.INSTANCE;
   }
   
-  private ClusterAllocator( final Allocation allocInfo ) {
+  private ClusterAllocator( final Allocation allocInfo, final ServiceConfiguration clusterConfig ) {
     this.allocInfo = allocInfo;
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+      this.cluster = Clusters.lookup( clusterConfig );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
       this.setupVolumeMessages( );

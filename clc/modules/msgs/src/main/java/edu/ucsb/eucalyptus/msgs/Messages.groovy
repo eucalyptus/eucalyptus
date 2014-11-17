@@ -335,8 +335,9 @@ public class DescribeResourcesType extends CloudClusterMessage {
 public class NodeType extends EucalyptusData {
   String serviceTag;
   String iqn;
+  String hypervisor;
   public String toString() {
-    return "NodeType ${URI.create(serviceTag).getHost()} ${iqn}";
+    return "NodeType ${URI.create(serviceTag).getHost()} ${iqn} ${hypervisor}";
   }
 }
 public class DescribeResourcesResponseType extends CloudClusterMessage {

@@ -204,6 +204,7 @@ public class NodeInfo implements Comparable {
   String serviceTag;
   String name;
   String partition;
+  Hypervisor hypervisor = Hypervisor.Unknown;
   Boolean hasClusterCert = false;
   Boolean hasNodeCert = false;
   Component.State lastState;
@@ -228,6 +229,7 @@ public class NodeInfo implements Comparable {
     this.partition = partition;
     this.serviceTag = nodeType.getServiceTag( );
     this.iqn = nodeType.getIqn( );
+	this.hypervisor = Hypervisor.fromString(nodeType.getHypervisor());
     this.name = (new URI(this.serviceTag)).getHost();
     this.lastSeen = new Date();
     this.certs.setServiceTag(this.serviceTag);
@@ -282,6 +284,28 @@ public class NodeInfo implements Comparable {
   
   @Override
   public String toString( ) {
-    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
+    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn} hypervisor=${hypervisor}";
+  }
+  
+  public enum Hypervisor {
+	KVM(true), ESXI(false), Unknown(false);
+
+	private final boolean supportsEkiEri;
+
+	public Hypervisor(boolean supportsEkiEri) {
+	  this.supportsEkiEri = supportsEkiEri;
+	}
+
+    public static Hypervisor fromString(String hypervisor) {
+	  try {
+	    return Hypervisor.valueOf(hypervisor);
+	  } catch (IllegalArgumentException ex) {
+	    return Unknown;
+	  }
+	}
+
+    public boolean supportEkiEri() {
+      return supportsEkiEri;
+    }
   }
 }

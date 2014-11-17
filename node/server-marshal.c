@@ -446,6 +446,7 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
             adb_ncDescribeResourceResponseType_set_numberOfCoresMax(output, env, outRes->numberOfCoresMax);
             adb_ncDescribeResourceResponseType_set_numberOfCoresAvailable(output, env, outRes->numberOfCoresAvailable);
             adb_ncDescribeResourceResponseType_set_publicSubnets(output, env, outRes->publicSubnets);
+            adb_ncDescribeResourceResponseType_set_hypervisor(output, env, outRes->hypervisor);
             free_resource(&outRes);
         }
         unset_corrid(corr_id);

@@ -799,6 +799,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! @param[in] numberOfCoresMax the maximum number of cores available on this node
 //! @param[in] numberOfCoresAvailable the current number of cores available on this node
 //! @param[in] sPublicSubnets the available public subnet for this node
+//! @param[in] sHypervisor node's hypervisor
 //!
 //! @return a pointer to the newly allocated resource structure or NULL if any error occured.
 //!
@@ -811,7 +812,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! @note Caller is responsible to free the allocated memory using the free_resource() function call.
 //!
 ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
-                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets)
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets, const char *sHypervisor)
 {
     ncResource *pResource = NULL;
 
@@ -830,10 +831,10 @@ ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable,
     if (sIQN)
         euca_strncpy(pResource->iqn, sIQN, CHAR_BUFFER_SIZE);
     pResource->migrationCapable = migrationCapable;
-
     if (sPublicSubnets)
         euca_strncpy(pResource->publicSubnets, sPublicSubnets, CHAR_BUFFER_SIZE);
-
+    if (sHypervisor)
+        euca_strncpy(pResource->hypervisor, sHypervisor, CHAR_BUFFER_SIZE);
     pResource->memorySizeMax = memorySizeMax;
     pResource->memorySizeAvailable = memorySizeAvailable;
     pResource->diskSizeMax = diskSizeMax;

@@ -123,10 +123,11 @@
       </xs:complexType>
 
       <xs:complexType name="ccNodeType">
-	<xs:sequence>
-      	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
-	  <xs:element minOccurs="0" name="iqn" type="xs:string"/>
-	</xs:sequence>
+	    <xs:sequence>
+          <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	      <xs:element minOccurs="0" name="iqn" type="xs:string"/>
+	      <xs:element minOccurs="0" name="hypervisor" type="xs:string"/>
+	    </xs:sequence>
       </xs:complexType>
 
       <xs:complexType name="volumeType">
