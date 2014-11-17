@@ -47,6 +47,7 @@ import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
+import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType
@@ -146,6 +147,9 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
     String contentDisposition;
     String versionId;
     Map<String,String> responseHeaderOverrides;
+    String cacheControl;
+    String contentEncoding;
+    String expires;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
@@ -368,6 +372,7 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 public class PutObjectType extends ObjectStorageDataRequestType {
     String contentLength;
     List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    Map<String,String> copiedHeaders = Maps.newHashMap();
     AccessControlList accessControlList = new AccessControlList();
     String storageClass;
     String contentType;

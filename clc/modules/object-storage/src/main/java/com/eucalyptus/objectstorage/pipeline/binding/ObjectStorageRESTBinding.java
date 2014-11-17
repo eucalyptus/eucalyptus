@@ -117,6 +117,7 @@ import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -141,6 +142,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -537,6 +539,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                             operationParams.put("ContentMD5", contentMD5);
                         if(contentLengthString != null)
                             operationParams.put("ContentLength", (new Long(contentLength).toString()));
+                        copyHeadersForStoring(operationParams, httpRequest);
                     }
                 } else if(verb.equals(ObjectStorageProperties.HTTPVerb.GET.toString())) {
                     if(!objectstorageInternalOperation) {
@@ -725,6 +728,35 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                 operationParams.put("LocationConstraint", locationConstraint);
         }
         return operationName;
+    }
+
+    private static final Ordering<String> STRING_COMPARATOR = Ordering.natural();
+
+    protected List<String> responseHeadersForStoring = Collections.unmodifiableList(
+            STRING_COMPARATOR.sortedCopy(
+                    Lists.newArrayList(
+                            // per REST API PUT Object docs as of 10/13/2014
+                            HttpHeaders.Names.CACHE_CONTROL,
+                            "Content-Disposition", // strangely not included
+                            HttpHeaders.Names.CONTENT_ENCODING,
+                            HttpHeaders.Names.CONTENT_LENGTH,
+                            //HttpHeaders.Names.CONTENT_MD5, // handled elsewhere
+                            HttpHeaders.Names.CONTENT_TYPE,
+                            //HttpHeaders.Names.EXPECT, // handled elsewhere
+                            HttpHeaders.Names.EXPIRES)));
+
+    protected void copyHeadersForStoring(Map operationParams, MappingHttpRequest httpRequest) {
+        Map<String,String> headersToStore = Maps.newHashMap();
+        List<Map.Entry<String,String>> headersInRequest = httpRequest.getHeaders();
+        for (Map.Entry<String,String> entry : headersInRequest) {
+            int foundIdx = Collections.binarySearch(responseHeadersForStoring, entry.getKey(), STRING_COMPARATOR);
+            if (foundIdx >= 0) {
+                headersToStore.put(entry.getKey(), entry.getValue());
+            }
+        }
+        if (headersToStore != null && headersToStore.size() > 0) {
+            operationParams.put("copiedHeaders", headersToStore);
+        }
     }
 
     protected void getTargetBucketParams(Map operationParams,

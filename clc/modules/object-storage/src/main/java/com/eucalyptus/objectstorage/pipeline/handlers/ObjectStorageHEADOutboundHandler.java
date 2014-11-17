@@ -120,10 +120,12 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
 				if (lastModified != null) {
 					httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
 				}
+
+                // add copied headers
+                OSGUtil.addCopiedHeadersToResponse(httpResponse, headResponse);
             }
             //Since a HEAD response, never include a body
             httpResponse.setMessage(null);
         }
     }
-
 }

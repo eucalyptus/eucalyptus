@@ -67,6 +67,8 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -78,6 +80,8 @@ import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.crypto.Cipher;
 import java.io.UnsupportedEncodingException;
@@ -207,4 +211,21 @@ public class OSGUtil {
             throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
         }
     }
+
+    public static void addCopiedHeadersToResponse(HttpResponse httpResponse, ObjectStorageDataResponseType osgResponse) {
+        /* seems like this one is handled elsewhere
+        if (osgResponse.getContentDisposition() != null && !"".equals( osgResponse.getContentDisposition() )) {
+            httpResponse.addHeader( "Content-Disposition", osgResponse.getContentDisposition() );
+        }*/
+        if (osgResponse.getContentEncoding() != null && !"".equals( osgResponse.getContentEncoding() )) {
+            httpResponse.addHeader( HttpHeaders.Names.CONTENT_ENCODING, osgResponse.getContentEncoding() );
+        }
+        if (osgResponse.getCacheControl() != null && !"".equals( osgResponse.getCacheControl() )) {
+            httpResponse.addHeader( HttpHeaders.Names.CACHE_CONTROL, osgResponse.getCacheControl() );
+        }
+        if (osgResponse.getExpires() != null && !"".equals( osgResponse.getExpires() )) {
+            httpResponse.addHeader( HttpHeaders.Names.EXPIRES, osgResponse.getExpires() );
+        }
+    }
+
 }

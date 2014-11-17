@@ -24,7 +24,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
-import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -32,6 +31,9 @@ import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.VersionEntry;
+import com.google.common.collect.Maps;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -41,20 +43,25 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
+import org.hibernate.annotations.Type;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -107,6 +114,11 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     @Column(name = "upload_id")
     private String uploadId;
+
+    @Column(name = "stored_headers")
+    @Lob
+    @Type(type="org.hibernate.type.StringClobType")
+    private String storedHeaders;
 
     public Long getCreationExpiration() {
         return creationExpiration;
@@ -205,7 +217,11 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
      * @param objectKey
      * @param usr
      */
-    public static ObjectEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, @Nonnull long contentLength, @Nonnull User usr) throws Exception {
+    public static ObjectEntity newInitializedForCreate(
+            @Nonnull Bucket bucket,
+            @Nonnull String objectKey,
+            @Nonnull long contentLength,
+            @Nonnull User usr) throws Exception {
         ObjectEntity entity = new ObjectEntity(bucket, objectKey, bucket.generateObjectVersionId());
         entity.setObjectUuid(generateInternalKey(objectKey));
 
@@ -224,6 +240,17 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
         entity.updateCreationExpiration();
         entity.setState(ObjectState.creating);
+        return entity;
+    }
+
+    public static ObjectEntity newInitializedForCreate(
+            @Nonnull Bucket bucket,
+            @Nonnull String objectKey,
+            @Nonnull long contentLength,
+            @Nonnull User usr,
+            @Nullable Map<String,String> headersToStore) throws Exception {
+        ObjectEntity entity = newInitializedForCreate(bucket, objectKey, contentLength, usr);
+        entity.setStoredHeaders(headersToStore);
         return entity;
     }
 
@@ -343,6 +370,28 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     public void setUploadId(String uploadId) {
         this.uploadId = uploadId;
+    }
+
+    public Map<String,String> getStoredHeaders() {
+        Map<String,String> headersMap = Maps.newHashMap();
+        if (storedHeaders == null || "".equals(storedHeaders) ) {
+            return headersMap;
+        }
+        JSONObject headersJson = (JSONObject) JSONSerializer.toJSON(this.storedHeaders);
+        String key = null;
+        Iterator keys = headersJson.keys();
+        while (keys.hasNext()) {
+            key = (String) keys.next();
+            Object value = headersJson.get(key);
+            if (value != null ) {
+                headersMap.put( key, value.toString() );
+            }
+        }
+        return headersMap;
+    }
+
+    public void setStoredHeaders(Map<String,String> storedHeadersMap) {
+        this.storedHeaders = JSONObject.fromObject(storedHeadersMap).toString();
     }
 
     @Override
