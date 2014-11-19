@@ -7,11 +7,11 @@
 #               [--with-axis2=<dir>]
 #               [--with-libvirt=<dir>]
 #               [--extra-version=<version>]
-#               [--with-interface-theme=<name>]
-#               [--enable-appliance-store]
 #               [--enable-debug]
-#				[--db-home=<dir>]
-#			    [--db-suffix=<version>]
+#               [--db-home=<dir>]
+#               [--db-suffix=<version>]
+#               [--db-old-home=<dir>]
+#               [--db-old-suffix=<version>]
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
@@ -89,8 +89,14 @@ AC_ARG_WITH(db-home,
         [  --with-db-home=<dir>                 where postgresql is installed],
         [EUCA_DB_HOME="${withval}"])
 AC_ARG_WITH(db-suffix,
-        [  --with-db-suffix=<dir>                 where postgresql is installed],
+        [  --with-db-suffix=<dir>               where postgresql is installed],
         [EUCA_DB_SUFFIX="${withval}"])
+AC_ARG_WITH(db-old-home,
+        [  --with-db-old-home=<dir>             where previous postgresql is installed],
+        [EUCA_DB_OLD_HOME="${withval}"])
+AC_ARG_WITH(db-old-suffix,
+        [  --with-db-old-suffix=<dir>           where previous postgresql is installed],
+        [EUCA_DB_OLD_SUFFIX="${withval}"])
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
         [if test "${enableval}" != "no"; then
@@ -305,6 +311,8 @@ AC_SUBST(AXIS2_HOME)
 AC_SUBST(CFLAGS)
 AC_SUBST(EUCA_DB_HOME)
 AC_SUBST(EUCA_DB_SUFFIX)
+AC_SUBST(EUCA_DB_OLD_HOME)
+AC_SUBST(EUCA_DB_OLD_SUFFIX)
 AC_SUBST(EUCA_VERSION)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(EXTRA_VERSION)
@@ -348,6 +356,8 @@ echo "    AXIS2C_SERVICES.....: ${AXIS2C_SERVICES:-Not Set}"
 echo "    AXIS2_HOME..........: ${AXIS2_HOME:-Not Set}"
 echo "    EUCA_DB_HOME........: ${EUCA_DB_HOME:-Not Set}"
 echo "    EUCA_DB_SUFFIX......: ${EUCA_DB_SUFFIX:-Not Set}"
+echo "    EUCA_DB_OLD_HOME....: ${EUCA_DB_OLD_HOME:-Not Set}"
+echo "    EUCA_DB_OLD_SUFFIX..: ${EUCA_DB_OLD_SUFFIX:-Not Set}"
 echo "    JAVA_HOME...........: ${JAVA_HOME:-Not Set}"
 echo "    LIBVIRT_HOME........: ${LIBVIRT_HOME:-Not Set}"
 echo "    VDDK_HOME...........: ${VDDK_HOME:-Not Set}"

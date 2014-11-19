@@ -213,7 +213,7 @@ do_upgrade() {
         # Remove old unpacked webapp area
         rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
 
-        # Java version check: older than 1.6.0_22 is bad
+        # Verify Java version
         check_java_version
 
         # Attempt db upgrade
