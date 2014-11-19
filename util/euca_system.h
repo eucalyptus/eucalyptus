@@ -113,7 +113,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean euca_is_process_running(pid_t pid, const char *psSearch);
+boolean euca_is_running(pid_t pid, const char *psSearch);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -126,8 +126,6 @@ boolean euca_is_process_running(pid_t pid, const char *psSearch);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#define IS_PROCESS_RUNNING(_pid, _search)           euca_is_process_running((_pid), (_search))
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -1305,7 +1305,7 @@ void *monitoring_thread(void *arg)
             snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
             if ((psPid = file2str(sPidFile)) != NULL) {
                 // Is the
-                if (IS_PROCESS_RUNNING(atoi(psPid), EUCANETD_SERVICE_NAME)) {
+                if (euca_is_running(atoi(psPid), EUCANETD_SERVICE_NAME)) {
                     if (nc_state.isEucanetdEnabled == FALSE)
                         LOGDEBUG("Service %s detected and running.\n", EUCANETD_SERVICE_NAME);
                     nc_state.isEucanetdEnabled = TRUE;

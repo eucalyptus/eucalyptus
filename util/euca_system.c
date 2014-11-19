@@ -188,7 +188,7 @@
 //!
 //! @note
 //!
-boolean euca_is_process_running(pid_t pid, const char *psSearch)
+boolean euca_is_running(pid_t pid, const char *psSearch)
 {
 #define BUFFER_LEN         1024
 
@@ -202,7 +202,9 @@ boolean euca_is_process_running(pid_t pid, const char *psSearch)
     snprintf(sFile, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
     if ((rc = check_file(sFile)) == 0) {
         if (psSearch) {
-            // check if cmdline contains 'psSearch'
+            // check if cmdline contains 'psSearch'. The cmdline proc file contains the list of
+            // arguments given on the command line. Each arguments are separated with a NULL '\0'
+            // character.
             if ((pFh = fopen(sFile, "r")) != NULL) {
                 sBuffer[0] = '\0';
                 while (fgets(sBuffer, BUFFER_LEN, pFh)) {
@@ -210,7 +212,7 @@ boolean euca_is_process_running(pid_t pid, const char *psSearch)
                         (*pChar) = 'X';
                     }
 
-                    // safety
+                    // safety to ensure strstr() does not go beyond the buffer's end
                     sBuffer[BUFFER_LEN - 1] = '\0';
                     if (strstr(sBuffer, psSearch)) {
                         return (TRUE);
