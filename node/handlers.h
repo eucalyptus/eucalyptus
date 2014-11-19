@@ -119,6 +119,7 @@
 //! NC State structure
 struct nc_state_t {
     boolean is_enabled;                //!< flag determining if the node controller is enabled
+    boolean isEucanetdEnabled;         //!< Flag indicating whether or not EUCANETD is running on this component
     char version[CHAR_BUFFER_SIZE];    //!< version of the node controller
 
     struct handlers *H;                //!< selected handler

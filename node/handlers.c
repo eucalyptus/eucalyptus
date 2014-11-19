@@ -116,6 +116,7 @@
 #include <fault.h>
 #include <log.h>
 #include <euca_string.h>
+#include <euca_system.h>
 
 #define HANDLERS_FANOUT
 #include "handlers.h"
@@ -1258,13 +1259,17 @@ static void update_ebs_params(void)
 //!
 void *monitoring_thread(void *arg)
 {
+#define EUCANETD_PID_FILE         "%s/var/run/eucalyptus/eucanetd.pid"
+#define EUCANETD_SERVICE_NAME     "eucanetd"
+
     int i = 0;
     int tmpint = 0;
     int left = 0;
     int cleaned_up = 0;
     int destroy_files = 0;
     u32 ipHex = 0;
-    FILE *FP = NULL;
+    char *psPid = NULL;
+    char sPidFile[EUCA_MAX_PATH] = "";
     char nfile[EUCA_MAX_PATH] = "";
     char nfilefinal[EUCA_MAX_PATH] = "";
     char URL[EUCA_MAX_PATH] = "";
@@ -1276,6 +1281,7 @@ void *monitoring_thread(void *arg)
     long long work_fs_avail_mb = 0;
     long long cache_fs_size_mb = 0;
     long long cache_fs_avail_mb = 0;
+    FILE *FP = NULL;
     time_t now = 0;
     struct nc_state_t *nc = NULL;
     bunchOfInstances *head = NULL;
@@ -1293,6 +1299,30 @@ void *monitoring_thread(void *arg)
 
     for (iteration = 0; TRUE; iteration++) {
         now = time(NULL);
+
+        // EUCA-10056 we need to check if EUCANETD is running when in EDGE of VPC mode
+        if (!strcmp(nc_state.vnetconfig->mode, NETMODE_EDGE) || !strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
+            snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
+            if ((psPid = file2str(sPidFile)) != NULL) {
+                // Is the
+                if (euca_is_running(atoi(psPid), EUCANETD_SERVICE_NAME)) {
+                    if (nc_state.isEucanetdEnabled == FALSE)
+                        LOGDEBUG("Service %s detected and running.\n", EUCANETD_SERVICE_NAME);
+                    nc_state.isEucanetdEnabled = TRUE;
+                } else if (nc_state.isEucanetdEnabled) {
+                    // EUCANETD isn't running... Throw a fault for the user to correct
+                    LOGERROR("Service %s not running (even if PID file is detected).\n", EUCANETD_SERVICE_NAME);
+                    nc_state.isEucanetdEnabled = FALSE;
+                    log_eucafault("1008", "daemon", EUCANETD_SERVICE_NAME, NULL);
+                }
+                EUCA_FREE(psPid);
+            } else if (nc_state.isEucanetdEnabled) {
+                // EUCANETD isn't running... Throw a fault for the user to correct
+                LOGERROR("Service %s not running.\n", EUCANETD_SERVICE_NAME);
+                nc_state.isEucanetdEnabled = FALSE;
+                log_eucafault("1008", "daemon", EUCANETD_SERVICE_NAME, NULL);
+            }
+        }
 
         sem_p(inst_sem);
 
@@ -1569,6 +1599,9 @@ void *monitoring_thread(void *arg)
     }
 
     return NULL;
+
+#undef EUCANETD_PID_FILE
+#undef EUCANETD_SERVICE_NAME
 }
 
 //!
