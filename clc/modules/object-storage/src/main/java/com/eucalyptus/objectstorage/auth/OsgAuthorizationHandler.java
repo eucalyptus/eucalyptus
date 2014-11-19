@@ -20,6 +20,7 @@
 
 package com.eucalyptus.objectstorage.auth;
 
+import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import com.eucalyptus.auth.AuthContextSupplier;
 import java.util.Collections;
 import javax.annotation.Nonnull;
@@ -30,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
@@ -163,28 +165,39 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			authContext = Permissions.createAuthContextSupplier( requestUser, Collections.<String,String>emptyMap( ) );
 		}
 
-		Account resourceOwnerAccount = null;
+		final Account resourceOwnerAccount;
+		final PolicyResourceInfo policyResourceInfo;
 		if(resourceType == null) {
 			LOG.error("No resource type found in request class annotations, cannot process.");
 			return false;
 		} else {
 			try {
 				//Ensure we have the proper resource entities present and get owner info						
-				if(PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType)) {
-					//Get the bucket owner.
-					if(bucketResourceEntity == null) {
-						LOG.error("Could not check access for operation due to no bucket resource entity found");
+				switch ( resourceType ) {
+					case PolicySpec.S3_RESOURCE_BUCKET:
+						//Get the bucket owner.
+						if ( bucketResourceEntity == null ) {
+							LOG.error( "Could not check access for operation due to no bucket resource entity found" );
+							return false;
+						} else {
+							resourceOwnerAccount = Accounts.lookupAccountByCanonicalId( bucketResourceEntity.getOwnerCanonicalId() );
+							policyResourceInfo =
+									PolicyResourceContext.resourceInfo( resourceOwnerAccount.getAccountNumber(), bucketResourceEntity );
+						}
+						break;
+					case PolicySpec.S3_RESOURCE_OBJECT:
+						if ( objectResourceEntity == null ) {
+							LOG.error( "Could not check access for operation due to no object resource entity found" );
+							return false;
+						} else {
+							resourceOwnerAccount = Accounts.lookupAccountByCanonicalId( objectResourceEntity.getOwnerCanonicalId() );
+							policyResourceInfo =
+									PolicyResourceContext.resourceInfo( resourceOwnerAccount.getAccountNumber(), objectResourceEntity );
+						}
+						break;
+					default:
+						LOG.error( "Unknown resource type looking up resource owner. Disallowing operation." );
 						return false;
-					} else {
-						resourceOwnerAccount = Accounts.lookupAccountByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
-					}
-				} else if(PolicySpec.S3_RESOURCE_OBJECT.equals(resourceType)) {
-					if(objectResourceEntity == null) {
-						LOG.error("Could not check access for operation due to no object resource entity found");
-						return false;
-					} else {
-						resourceOwnerAccount = Accounts.lookupAccountByCanonicalId(objectResourceEntity.getOwnerCanonicalId());
-					}
 				}
 			} catch(AuthException e) {
 				LOG.error("Exception caught looking up resource owner. Disallowing operation.",e);
@@ -204,7 +217,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 
 		if(allowAdmin &&
 				requestUser.isSystemUser( ) &&
-				iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize ) ) {
+				iamPermissionsAllow( authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize ) ) {
 			//Admin override
 			return true;
 		}
@@ -254,7 +267,8 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			//Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
 			return aclAllow;
 		} else {
-			Boolean iamAllow = iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize );
+			Boolean iamAllow =
+					iamPermissionsAllow( authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize );
 			//Must have both acl and iam allow (account & user)
 			return aclAllow && iamAllow;
 		}
@@ -263,6 +277,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 	private static Boolean iamPermissionsAllow(
 				final AuthContextSupplier authContext,
 				final String[] requiredActions,
+				final PolicyResourceInfo policyResourceInfo,
 				final String resourceType,
 				final String resourceId,
 				final long resourceAllocationSize
@@ -271,12 +286,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		// the Permissions.isAuthorized() handles the default deny for each action.
 		boolean iamAllow = true;  //Evaluate each iam action required, all must be allowed
 		for(String action : requiredActions ) {
-			//Any deny overrides an allow
-			//Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
-			// were valid, let ACLs handle cross-account access.
-			iamAllow &=
-					Permissions.isAuthorized( PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, authContext ) &&
-					Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, authContext, resourceAllocationSize);
+			try ( final PolicyResourceContext context = PolicyResourceContext.of( policyResourceInfo, action ) ) {
+				//Any deny overrides an allow
+				//Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
+				// were valid, let ACLs handle cross-account access.
+				iamAllow &=
+						Permissions.isAuthorized(PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, authContext) &&
+						Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, authContext, resourceAllocationSize);
+			}
 		}
 		return iamAllow;
 	}

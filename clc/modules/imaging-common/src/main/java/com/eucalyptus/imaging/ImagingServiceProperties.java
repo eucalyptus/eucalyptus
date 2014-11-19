@@ -55,7 +55,6 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -176,7 +175,7 @@ public class ImagingServiceProperties {
 
     private static ImagingBackendServicePropertyBootstrapper singleton;
     private static final Callable<String> imageNotConfiguredFaultRunnable =
-        Faults.forComponent( Imaging.class ).havingId( 1015 ).logOnFirstRun();
+        Faults.forComponent( ImagingBackend.class ).havingId( 1015 ).logOnFirstRun();
 
     public static Bootstrapper getInstance() {
       synchronized ( ImagingBackendServicePropertyBootstrapper.class ) {
@@ -213,7 +212,7 @@ public class ImagingServiceProperties {
       } else {
         try {
           //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
-          final ServiceConfiguration localService = Components.lookup( Imaging.class ).getLocalServiceConfiguration( );
+          final ServiceConfiguration localService = Components.lookup( ImagingBackend.class ).getLocalServiceConfiguration( );
           final CheckException ex = Faults.failure( localService, imageNotConfiguredFaultRunnable.call( ).split("\n")[1] );
           Faults.submit( localService, localService.lookupStateMachine().getTransitionRecord(), ex );
         } catch ( Exception e ) {

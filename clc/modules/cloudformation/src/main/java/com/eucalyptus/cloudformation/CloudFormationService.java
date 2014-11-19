@@ -25,9 +25,9 @@ import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequ
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
+import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
@@ -112,7 +112,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
     } catch (Exception ex) {
       LOG.error(ex, ex);
       handleException(ex);
@@ -126,7 +126,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_CREATESTACK, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_CREATESTACK, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
@@ -386,7 +386,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_DELETESTACK, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DELETESTACK, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -451,7 +451,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKEVENTS, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKEVENTS, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -476,7 +476,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCE, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCE, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -512,7 +512,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCES, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCES, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -560,7 +560,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKS, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKS, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -658,7 +658,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
     } catch (Exception ex) {
       LOG.error(ex, ex);
       handleException(ex);
@@ -672,7 +672,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_GETSTACKPOLICY, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETSTACKPOLICY, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -700,7 +700,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_GETTEMPLATE, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETTEMPLATE, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -728,7 +728,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_LISTSTACKRESOURCES, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_LISTSTACKRESOURCES, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -768,7 +768,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_LISTSTACKS, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_LISTSTACKS, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -816,7 +816,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_SETSTACKPOLICY, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_SETSTACKPOLICY, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -847,7 +847,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
     } catch (Exception ex) {
       LOG.error(ex, ex);
       handleException(ex);
@@ -861,7 +861,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
@@ -908,7 +908,7 @@ public class CloudFormationService {
   }
   private void checkActionPermission(final String actionType, final Context ctx)
     throws AccessDeniedException {
-    if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
+    if (!Permissions.isAuthorized(CloudFormationPolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
       throw new AccessDeniedException("User does not have permission");
     }
