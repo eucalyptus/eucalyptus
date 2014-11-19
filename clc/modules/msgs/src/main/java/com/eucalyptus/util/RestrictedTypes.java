@@ -66,7 +66,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +81,7 @@ import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -113,6 +113,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.auth.AuthContextSupplier;
+import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
@@ -148,9 +149,8 @@ public class RestrictedTypes {
     Class<?> value( );
   }
   
-  private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
-  private static final List<PolicyResourceInterceptor> resourceInterceptors = Lists.newCopyOnWriteArrayList( );
-  
+  private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap();
+
   public static <T extends RestrictedType> Function<String, T> resolver( Class<T> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
   }
@@ -511,27 +511,15 @@ public class RestrictedTypes {
       }
 
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
-      notifyResourceInterceptors( requestedObject, qualifiedAction );
-      try {
+      try ( final PolicyResourceContext policyResourceContext = PolicyResourceContext.of( requestedObject, qualifiedAction ) ) {
         if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
                                         PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
                                         qualifiedAction, requestUser, evaluatedKeys ) ) {
           throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                    + UserFullName.getInstance( requestUser ) );
         }
-      } finally {
-        notifyResourceInterceptors( null, null );
       }
       return requestedObject;
-    }
-  }
-
-  private static <T extends RestrictedType> void notifyResourceInterceptors(
-      final T requestedObject,
-      final String action
-  ) {
-    for ( final PolicyResourceInterceptor interceptor : resourceInterceptors ) {
-      interceptor.onResource( requestedObject, action );
     }
   }
 
@@ -612,12 +600,12 @@ public class RestrictedTypes {
                 : arg0.getOwner( ).getAccountNumber( );
             }
             final AuthEvaluationContext evaluationContext = contextFunction.apply( arg0.getClass( ) );
-            notifyResourceInterceptors( arg0, evaluationContext.getAction( ) );
-            return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName( ) );
+            try  ( final PolicyResourceContext policyResourceContext =
+                       PolicyResourceContext.of( arg0, evaluationContext.getAction( ) ) ) {
+              return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName() );
+            }
           } catch ( Exception ex ) {
             return false;
-          } finally {
-            notifyResourceInterceptors( null, null );
           }
         }
         return true;
@@ -696,8 +684,23 @@ public class RestrictedTypes {
     };
   }
 
-  public interface PolicyResourceInterceptor {
-    void onResource( RestrictedType resource, String action );
+  @TypeMapper
+  public enum RestrictedTypeToPolicyResourceInfo implements Function<RestrictedType,PolicyResourceInfo> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public PolicyResourceInfo apply( final RestrictedType restrictedType ) {
+      final String accountNumber;
+      if ( restrictedType instanceof UserRestrictedType ) {
+        accountNumber = ( (UserRestrictedType) restrictedType ).getOwnerAccountNumber( );
+      } else if ( restrictedType instanceof AccountRestrictedType ) {
+        accountNumber = ( (AccountRestrictedType) restrictedType ).getOwnerAccountNumber( );
+      } else {
+        accountNumber = null;
+      }
+      return PolicyResourceContext.resourceInfo( accountNumber, restrictedType );
+    }
   }
 
   public static class FilterBuilder<T extends RestrictedType> {
@@ -794,31 +797,6 @@ public class RestrictedTypes {
       return 0.3d;
     }
     
-  }
-
-  public static class PolicyResourceInterceptorDiscovery extends ServiceJarDiscovery {
-
-    public PolicyResourceInterceptorDiscovery( ) {
-      super( );
-    }
-
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public boolean processClass( final Class candidate ) throws Exception {
-      if ( PolicyResourceInterceptor.class.isAssignableFrom( candidate ) &&
-          !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
-        LOG.info( "Registered PolicyResourceInterceptor:    " + candidate );
-        RestrictedTypes.resourceInterceptors.add( (PolicyResourceInterceptor) Classes.newInstance( candidate ) );
-        return true;
-      }
-
-      return false;
-    }
-
-    @Override
-    public Double getPriority( ) {
-      return 0.3d;
-    }
   }
 
   public static String getIamActionByMessageType( ) {

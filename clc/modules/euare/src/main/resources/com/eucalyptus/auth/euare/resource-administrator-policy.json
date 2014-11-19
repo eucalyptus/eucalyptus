@@ -3,6 +3,7 @@
     "Effect": "Allow",
     "Action": [
       "autoscaling:*",
+      "cloudformation:*",
       "cloudwatch:*",
       "ec2:DescribeInstanceAttribute",
       "ec2:DescribeInstances",
@@ -51,9 +52,13 @@
       "ec2:*Vpn*",
       "ec2:*VpnGateway*",
       "elasticloadbalancing:*",
-      "s3:*"
+      "s3:*",
+      "swf:*"
     ],
-    "Resource": "*"
+    "Resource": "*",
+      "Condition": {
+          "Bool": { "aws:SystemResource": "false" }
+      }
   }, {
     "Effect": "Allow",
     "Action": [
