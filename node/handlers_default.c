@@ -885,7 +885,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     // EUCA-10056 if EUCANETD is not running, then we have no resources available for instances
     if (!strcmp(nc->vnetconfig->mode, NETMODE_EDGE) || !strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
         if (nc->isEucanetdEnabled == FALSE) {
-            if ((res = allocate_resource("disabled", nc->migration_capable, nc->iqn, nc->mem_max, 0, nc->disk_max, 0, nc->cores_max, 0, "none")) == NULL) {
+            if ((res = allocate_resource("disabled", nc->migration_capable, nc->iqn, nc->mem_max, 0, nc->disk_max, 0, nc->cores_max, 0, "none", "KVM")) == NULL) {
                 LOGERROR("out of memory\n");
                 return (EUCA_MEMORY_ERROR);
             }
