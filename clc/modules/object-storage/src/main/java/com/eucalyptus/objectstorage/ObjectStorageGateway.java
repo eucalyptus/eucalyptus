@@ -45,6 +45,7 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.records.Logs;
@@ -177,6 +178,7 @@ import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 
+import com.google.common.net.HttpHeaders;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -194,6 +196,7 @@ import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 
@@ -367,7 +370,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
             ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket,
                     request.getKey(),
                     objectSize,
-                    requestUser);
+                    requestUser,
+                    request.getCopiedHeaders());
 
             if(!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, objectSize)) {
                 throw new AccessDeniedException(request.getBucket());
@@ -384,7 +388,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
             final String fullObjectKey = objectEntity.getObjectUuid();
             request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
             try {
-            	objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
+            	objectEntity = OsgObjectFactory.getFactory().createObject(
+                        ospClient, objectEntity, request.getData(),
+                        request.getMetaData(), requestUser);
             } catch(Exception e) {
             	// Wrap the error from back-end with a 500 error
             	throw new InternalErrorException(request.getKey(), e);
@@ -396,6 +402,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
             response.setEtag(objectEntity.geteTag());
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
+            Map<String,String> storedHeaders = objectEntity.getStoredHeaders();
+            populateStoredHeaders(response, storedHeaders);
             try {
                 fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(),
                         objectEntity.getVersionId(),
@@ -1105,6 +1113,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
             //return reply;
         }
+        populateStoredHeaders(reply, objectEntity.getStoredHeaders());
         reply.setResponseHeaderOverrides( request.getResponseHeaderOverrides() );
         return reply;
 	}
@@ -1125,6 +1134,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             response.setVersionId(objectEntity.getVersionId());
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
+            populateStoredHeaders(response, objectEntity.getStoredHeaders());
             response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
             return response;
         } catch(Exception e) {
@@ -1133,6 +1143,27 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey(), e);
         }
 	}
+
+    private void populateStoredHeaders(ObjectStorageDataResponseType reply, Map<String, String> storedHeaders) {
+        if (storedHeaders == null || storedHeaders.size() == 0) {
+            return;
+        }
+        if (storedHeaders.containsKey(HttpHeaders.CONTENT_TYPE) ) {
+            reply.setContentType(storedHeaders.get(HttpHeaders.CONTENT_TYPE));
+        }
+        if (storedHeaders.containsKey(HttpHeaders.CONTENT_DISPOSITION) ) {
+            reply.setContentDisposition(storedHeaders.get(HttpHeaders.CONTENT_DISPOSITION));
+        }
+        if (storedHeaders.containsKey(HttpHeaders.CACHE_CONTROL) ) {
+            reply.setCacheControl(storedHeaders.get(HttpHeaders.CACHE_CONTROL));
+        }
+        if (storedHeaders.containsKey(HttpHeaders.CONTENT_ENCODING) ) {
+            reply.setContentEncoding(storedHeaders.get(HttpHeaders.CONTENT_ENCODING));
+        }
+        if (storedHeaders.containsKey(HttpHeaders.EXPIRES) ) {
+            reply.setExpires(storedHeaders.get(HttpHeaders.EXPIRES));
+        }
+    }
 
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObject(com.eucalyptus.objectstorage.msgs.GetObjectType)
@@ -1153,9 +1184,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //Unset the versionId because it isn't used on backend
             request.setVersionId(null);
             HeadObjectResponseType backendReply = ospClient.headObject(request);
-            reply.setMetaData(backendReply.getMetaData());
-            reply.setContentType(backendReply.getContentType());
-            reply.setContentDisposition(backendReply.getContentDisposition());
+            populateStoredHeaders(reply, objectEntity.getStoredHeaders());
         } catch(S3Exception e) {
         	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
             //We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.

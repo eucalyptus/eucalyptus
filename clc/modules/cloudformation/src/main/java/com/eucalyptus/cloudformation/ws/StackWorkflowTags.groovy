@@ -37,7 +37,7 @@ class StackWorkflowTags extends WorkflowTags {
     DataConverter dataConverter = new JsonDataConverter()
     String valueString = null
     try {
-      valueString = new ObjectMapper().readTree(json ?: '""').get(key).textValue();
+      valueString = new ObjectMapper().readTree(json ?: '""').get(key).asText();
     } catch (Exception ignore) {
       // This is not the property we are looking for, no reason to fail
     }

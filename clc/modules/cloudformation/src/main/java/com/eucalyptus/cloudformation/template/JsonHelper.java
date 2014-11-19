@@ -55,7 +55,7 @@ public class JsonHelper {
 
   public static JsonNode checkString(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
-    if (jsonNode != null && !jsonNode.isTextual()) {
+    if (jsonNode != null && !jsonNode.isValueNode()) {
       throw error(errorMsg);
     }
     return jsonNode;
@@ -63,7 +63,7 @@ public class JsonHelper {
 
   public static JsonNode checkString(JsonNode parent, int index, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(index);
-    if (jsonNode != null && !jsonNode.isTextual()) {
+    if (jsonNode != null && !jsonNode.isValueNode()) {
       throw error(errorMsg);
     }
     return jsonNode;
@@ -93,11 +93,11 @@ public class JsonHelper {
   }
 
   private static String getString(JsonNode node) {
-    return (node == null) ? null : node.textValue();
+    return (node == null) ? null : node.asText();
   }
 
   private static Double getDouble(JsonNode node) {
-    return (node == null) ? null : Double.parseDouble(node.textValue());
+    return (node == null) ? null : Double.parseDouble(node.asText());
   }
 
 
@@ -105,7 +105,7 @@ public class JsonHelper {
     JsonNode jsonNode = checkString(parent, key, errorMsg);
     try {
       if (jsonNode != null) {
-        Double.parseDouble(jsonNode.textValue());
+        Double.parseDouble(jsonNode.asText());
       }
     } catch (NullPointerException | NumberFormatException ex) {
       throw error(errorMsg);
@@ -114,22 +114,22 @@ public class JsonHelper {
   }
   public static JsonNode checkDouble(JsonNode parent, String key) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
-    if (jsonNode != null && !jsonNode.isTextual()) {
+    if (jsonNode != null && !jsonNode.isValueNode()) {
       throw error(errorMsg(key, "number"));
     }
     try {
       if (jsonNode != null) {
-        Double.parseDouble(jsonNode.textValue());
+        Double.parseDouble(jsonNode.asText());
       }
     } catch (NumberFormatException ex) {
-      throw error(errorMsg(key, "number (" + jsonNode.textValue() + ")"));
+      throw error(errorMsg(key, "number (" + jsonNode.asText() + ")"));
     }
     return jsonNode;
   }
 
   public static JsonNode checkStringOrArray(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
-    if (jsonNode != null && !jsonNode.isTextual() && !jsonNode.isArray()) {
+    if (jsonNode != null && !jsonNode.isValueNode() && !jsonNode.isArray()) {
       throw error(errorMsg);
     }
     return jsonNode;
@@ -157,7 +157,7 @@ public class JsonHelper {
   }
 
   public static String getStringFromJsonNode(JsonNode jsonNode) {
-    return (jsonNode == null || jsonNode.isTextual() && jsonNode.textValue() == null) ? null : jsonNode.toString();
+    return (jsonNode == null || jsonNode.isValueNode() && jsonNode.asText() == null) ? null : jsonNode.toString();
   }
 
 }

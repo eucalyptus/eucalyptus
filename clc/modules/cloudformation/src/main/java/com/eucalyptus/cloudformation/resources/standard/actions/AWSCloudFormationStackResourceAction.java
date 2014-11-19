@@ -113,12 +113,12 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
           }
           for (String paramName : Lists.newArrayList(action.properties.getParameters().fieldNames())) {
             JsonNode paramValue = action.properties.getParameters().get(paramName);
-            if (!paramValue.isTextual()) {
+            if (!paramValue.isValueNode()) {
               throw new ValidationErrorException("All Parameters must have String values for nested stacks");
             } else {
               Parameter parameter = new Parameter();
               parameter.setParameterKey(paramName);
-              parameter.setParameterValue(paramValue.textValue());
+              parameter.setParameterValue(paramValue.asText());
               parameters.getMember().add(parameter);
             }
           }

@@ -70,6 +70,7 @@
   <mapping class="edu.ucsb.eucalyptus.msgs.NodeType" abstract="true">
     <value name="serviceTag" field="serviceTag" usage="optional" />
     <value name="iqn" field="iqn" usage="optional" />
+    <value name="hypervisor" field="hypervisor" usage="optional" />
   </mapping>
   <mapping name="DescribeResources" class="edu.ucsb.eucalyptus.msgs.DescribeResourcesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

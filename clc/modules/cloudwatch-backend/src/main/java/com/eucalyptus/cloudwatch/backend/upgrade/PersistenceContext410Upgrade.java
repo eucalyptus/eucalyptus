@@ -25,9 +25,7 @@ import groovy.sql.Sql;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.base.Joiner;
 
@@ -39,9 +37,7 @@ public class PersistenceContext410Upgrade implements Callable<Boolean>{
    LOG.debug("Deleting duplicate tables from eucalyptus_cloudwatch");
    Sql sql = null;
    try {
-     final String context = "eucalyptus_cloudwatch";
-     sql = Databases.getBootstrapper( ).getConnection(PersistenceContexts.toDatabaseName( ).apply( context ), 
-         PersistenceContexts.toSchemaName().apply(context));
+     sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloudwatch" );
      final String[] backend_tables = {
          "alarm_history",
          "metric_data",

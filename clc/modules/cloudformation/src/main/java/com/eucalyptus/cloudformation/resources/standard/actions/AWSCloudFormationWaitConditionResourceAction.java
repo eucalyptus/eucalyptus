@@ -41,6 +41,7 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
+import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
 import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
@@ -69,8 +70,9 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
   private AWSCloudFormationWaitConditionResourceInfo info = new AWSCloudFormationWaitConditionResourceInfo();
 
   public AWSCloudFormationWaitConditionResourceAction() {
-    CreateStep createStep = new CreateStep();
-    createSteps.put(createStep.name(), createStep);
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
     for (DeleteSteps deleteStep: DeleteSteps.values()) {
       deleteSteps.put(deleteStep.name(), deleteStep);
     }
@@ -96,124 +98,119 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
     info = (AWSCloudFormationWaitConditionResourceInfo) resourceInfo;
   }
 
-  // Special case Create step, requires value from the properties in retry so can not be static
-  private class CreateStep implements Step {
-    @Override
-    public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-      LOG.trace("Creating wait condition");
-      AWSCloudFormationWaitConditionResourceAction action = (AWSCloudFormationWaitConditionResourceAction) resourceAction;
-      int numSignals = action.properties.getCount() != null && action.properties.getCount() > 0 ? action.properties.getCount() : 1;
-      LOG.trace("num signals = " + numSignals);
-      if (action.properties.getTimeout() > 43200) {
-        throw new ValidationErrorException("timeout can not be more than 43200");
-      }
-      LOG.trace("Timeout = " + action.properties.getTimeout());
-      LOG.trace("Looking for handle : " + action.properties.getHandle());
-      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId());
-      StackResourceEntity handleEntity = null;
-      for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
-        if (stackResourceEntity.getPhysicalResourceId() != null && stackResourceEntity.getPhysicalResourceId().equals(action.properties.getHandle())) {
-          LOG.trace("found something with the same physical id, type:" + stackResourceEntity.getResourceType());
-          if (stackResourceEntity.getResourceType().equals("AWS::CloudFormation::WaitConditionHandle")) {
-            handleEntity = stackResourceEntity;
-            break;
-          }
+  private enum CreateSteps implements Step {
+    CREATE_WAIT_CONDITION {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        LOG.trace("Creating wait condition");
+        AWSCloudFormationWaitConditionResourceAction action = (AWSCloudFormationWaitConditionResourceAction) resourceAction;
+        int numSignals = action.properties.getCount() != null && action.properties.getCount() > 0 ? action.properties.getCount() : 1;
+        LOG.trace("num signals = " + numSignals);
+        if (action.properties.getTimeout() > 43200) {
+          throw new ValidationErrorException("timeout can not be more than 43200");
         }
-      }
-      if (handleEntity == null) {
-        throw new Exception("Handle URL:" + action.properties.getHandle() + " does not match a WaitConditionHandle from this stack");
-      }
-      AWSCloudFormationWaitConditionHandleResourceInfo handleResourceInfo = (AWSCloudFormationWaitConditionHandleResourceInfo) StackResourceEntityManager.getResourceInfo(handleEntity);
-      ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(handleResourceInfo.getEucaParts());
-      if (!"1.0".equals(objectNode.get("version").textValue())) throw new Exception("Invalid version for eucaParts");
-      String bucketName = objectNode.get("bucket").textValue();
-      LOG.trace("bucketName=" + bucketName);
-      String keyName = objectNode.get("key").textValue();
-      LOG.trace("keyName=" + bucketName);
-      boolean foundFailure = false;
-      final Map<String, String> dataMap = Maps.newHashMap();
-      try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
-        LOG.trace( "Handle:" + action.properties.getHandle() );
-        VersionListing versionListing = s3c.listVersions( bucketName, "" );
-        LOG.trace( "Found " + versionListing.getVersionSummaries() + " versions to check" );
-        for ( S3VersionSummary versionSummary : versionListing.getVersionSummaries() ) {
-          LOG.trace( "Key:" + versionSummary.getKey() );
-          if ( !versionSummary.getKey().equals( keyName ) ) {
-            continue;
-          }
-          LOG.trace( "Getting version: " + versionSummary.getVersionId() );
-          try {
-            GetObjectRequest getObjectRequest = new GetObjectRequest( bucketName, keyName, versionSummary.getVersionId() );
-            S3Object s3Object = s3c.getObject( getObjectRequest );
-            JsonNode jsonNode = null;
-            try ( S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent() ) {
-              jsonNode = new ObjectMapper().readTree( s3ObjectInputStream );
-            }
-            if ( !jsonNode.isObject() ) {
-              LOG.trace( "Read object, json but not object..skipping file" );
-              continue;
-            }
-            ObjectNode localObjectNode = (ObjectNode) jsonNode;
-            String status = localObjectNode.get( "Status" ).textValue();
-            if ( status == null ) {
-              LOG.trace( "Null status, skipping" );
-              continue;
-            }
-            String data = localObjectNode.get( "Data" ).textValue();
-            if ( data == null ) {
-              LOG.trace( "Null data, skipping" );
-              continue;
-            }
-            String uniqueId = localObjectNode.get( "UniqueId" ).textValue();
-            if ( data == null ) {
-              LOG.trace( "Null uniqueId, skipping" );
-              continue;
-            }
-            if ( "FAILURE".equals( status ) ) {
-              foundFailure = true;
-              LOG.trace( "found failure, gonna die" );
+        LOG.trace("Timeout = " + action.properties.getTimeout());
+        LOG.trace("Looking for handle : " + action.properties.getHandle());
+        List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId());
+        StackResourceEntity handleEntity = null;
+        for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
+          if (stackResourceEntity.getPhysicalResourceId() != null && stackResourceEntity.getPhysicalResourceId().equals(action.properties.getHandle())) {
+            LOG.trace("found something with the same physical id, type:" + stackResourceEntity.getResourceType());
+            if (stackResourceEntity.getResourceType().equals("AWS::CloudFormation::WaitConditionHandle")) {
+              handleEntity = stackResourceEntity;
               break;
-            } else if ( !"SUCCESS".equals( status ) ) {
-              LOG.trace( "weird status...skipping" );
-              continue;
-            } else {
-              LOG.trace( "found success, uniqueId=" + uniqueId );
-              dataMap.put( uniqueId, data );
             }
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-            LOG.trace( "Exception while going through the objects, will skip this one." );
           }
         }
-      }
-      if (foundFailure) {
-        throw new ResourceFailureException("Found failure signal");
-      }
-      LOG.trace("Have " + dataMap.size() + " success signals, need " + numSignals);
-      if (dataMap.size() >= numSignals) {
-        LOG.trace("Success");
-        ObjectNode dataNode = new ObjectMapper().createObjectNode();
-        for (String uniqueId : dataMap.keySet()) {
-          dataNode.put(uniqueId, dataMap.get(uniqueId));
+        if (handleEntity == null) {
+          throw new Exception("Handle URL:" + action.properties.getHandle() + " does not match a WaitConditionHandle from this stack");
         }
-        action.info.setData(JsonHelper.getStringFromJsonNode(dataNode));
-        action.info.setPhysicalResourceId(keyName);
-        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
-        return action;
-      } else {
-        throw new ValidationFailedException("Not enough success signals yet");
+        AWSCloudFormationWaitConditionHandleResourceInfo handleResourceInfo = (AWSCloudFormationWaitConditionHandleResourceInfo) StackResourceEntityManager.getResourceInfo(handleEntity);
+        ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(handleResourceInfo.getEucaParts());
+        if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
+        String bucketName = objectNode.get("bucket").asText();
+        LOG.trace("bucketName=" + bucketName);
+        String keyName = objectNode.get("key").asText();
+        LOG.trace("keyName=" + bucketName);
+        boolean foundFailure = false;
+        final Map<String, String> dataMap = Maps.newHashMap();
+        try (final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials())) {
+          LOG.trace("Handle:" + action.properties.getHandle());
+          VersionListing versionListing = s3c.listVersions(bucketName, "");
+          LOG.trace("Found " + versionListing.getVersionSummaries() + " versions to check");
+          for (S3VersionSummary versionSummary : versionListing.getVersionSummaries()) {
+            LOG.trace("Key:" + versionSummary.getKey());
+            if (!versionSummary.getKey().equals(keyName)) {
+              continue;
+            }
+            LOG.trace("Getting version: " + versionSummary.getVersionId());
+            try {
+              GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, keyName, versionSummary.getVersionId());
+              S3Object s3Object = s3c.getObject(getObjectRequest);
+              JsonNode jsonNode = null;
+              try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
+                jsonNode = new ObjectMapper().readTree(s3ObjectInputStream);
+              }
+              if (!jsonNode.isObject()) {
+                LOG.trace("Read object, json but not object..skipping file");
+                continue;
+              }
+              ObjectNode localObjectNode = (ObjectNode) jsonNode;
+              String status = localObjectNode.get("Status").asText();
+              if (status == null) {
+                LOG.trace("Null status, skipping");
+                continue;
+              }
+              String data = localObjectNode.get("Data").asText();
+              if (data == null) {
+                LOG.trace("Null data, skipping");
+                continue;
+              }
+              String uniqueId = localObjectNode.get("UniqueId").asText();
+              if (data == null) {
+                LOG.trace("Null uniqueId, skipping");
+                continue;
+              }
+              if ("FAILURE".equals(status)) {
+                foundFailure = true;
+                LOG.trace("found failure, gonna die");
+                break;
+              } else if (!"SUCCESS".equals(status)) {
+                LOG.trace("weird status...skipping");
+                continue;
+              } else {
+                LOG.trace("found success, uniqueId=" + uniqueId);
+                dataMap.put(uniqueId, data);
+              }
+            } catch (Exception ex) {
+              LOG.error(ex, ex);
+              LOG.trace("Exception while going through the objects, will skip this one.");
+            }
+          }
+        }
+        if (foundFailure) {
+          throw new ResourceFailureException("Found failure signal");
+        }
+        LOG.trace("Have " + dataMap.size() + " success signals, need " + numSignals);
+        if (dataMap.size() >= numSignals) {
+          LOG.trace("Success");
+          ObjectNode dataNode = new ObjectMapper().createObjectNode();
+          for (String uniqueId : dataMap.keySet()) {
+            dataNode.put(uniqueId, dataMap.get(uniqueId));
+          }
+          action.info.setData(JsonHelper.getStringFromJsonNode(dataNode));
+          action.info.setPhysicalResourceId(keyName);
+          action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+          return action;
+        } else {
+          throw new ValidationFailedException("Not enough success signals yet");
+        }
       }
-    }
 
-    @Override
-    public RetryPolicy getRetryPolicy() {
-      // This depends on the timeout value of the particular action, this is why this class is not static
-      return new StandardResourceRetryPolicy(properties.getTimeout()).getPolicy();
-    }
-
-    @Override
-    public String name() {
-      return "CREATE_WAIT_CONDITION";
+      @Override
+      public RetryPolicy getRetryPolicy() {
+        return null;
+      } //dummy method
     }
   }
   private enum DeleteSteps implements Step {
@@ -231,8 +228,8 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
 
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.newArrayList(new CreateStep().name());
-    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name(), this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+
   }
 
   @Override

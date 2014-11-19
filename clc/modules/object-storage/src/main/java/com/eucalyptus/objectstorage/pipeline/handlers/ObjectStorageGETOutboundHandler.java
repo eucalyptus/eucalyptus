@@ -66,6 +66,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.ChunkedDataStream;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -73,7 +74,6 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -217,6 +217,9 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
         for (MetaDataEntry m : reply.getMetaData()) {
             httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
         }
+
+        // add copied headers
+        OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
 
         //write extra headers
         if (reply.getByteRangeEnd() != null) {

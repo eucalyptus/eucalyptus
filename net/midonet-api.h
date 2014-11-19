@@ -44,7 +44,7 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
 int mido_delete_route(midoname * name);
 int mido_get_routes(midoname * router, midoname ** outnames, int *outnames_max);
 
-int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, char *dns, midoname * outname);
+int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname * outname);
 int mido_read_dhcp(midoname * name);
 int mido_update_dhcp(midoname * name, ...);
 int mido_print_dhcp(midoname * name);

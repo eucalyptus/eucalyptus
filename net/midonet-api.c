@@ -369,19 +369,41 @@ int mido_get_ipaddrgroups(char *tenant, midoname ** outnames, int *outnames_max)
     return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups", outnames, outnames_max));
 }
 
-int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, char *dns, midoname * outname)
+int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname * outname)
 {
     int rc;
     midoname myname;
+    char *da=NULL, *db=NULL, *dc=NULL;
 
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(devname->tenant);
     myname.resource_type = strdup("dhcp");
     myname.content_type = strdup("DhcpSubnet");
 
-    rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:",
-                              dns, "dnsServerAddrs:END", "END", NULL);
-
+    // this is not so great - need to re-work the resource interface to allow for arbitrary sized arrays
+    switch (max_dnsServers) {
+    case 1:
+        da = hex2dot(dnsServers[0]);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
+        break;
+    case 2:
+        da = hex2dot(dnsServers[0]);
+        db = hex2dot(dnsServers[1]);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:END", "END", NULL);
+        break;
+    case 3:
+        da = hex2dot(dnsServers[0]);
+        db = hex2dot(dnsServers[1]);
+        dc = hex2dot(dnsServers[2]);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:", dc, "dnsServerAddrs:END", "END", NULL);
+        break;
+    default:
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", "8.8.8.8", "dnsServerAddrs:END", "END", NULL);
+        break;
+    }
+    EUCA_FREE(da);
+    EUCA_FREE(db);
+    EUCA_FREE(dc);
     mido_free_midoname(&myname);
     return (rc);
 }

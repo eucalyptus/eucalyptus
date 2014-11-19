@@ -360,7 +360,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	static class IAMPolicySetup extends AbstractEventHandler<NewLoadbalancerEvent> {
 		static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
 		private static final String SERVO_ROLE_POLICY_DOCUMENT=
-				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\", \"elasticloadbalancing:DescribeLoadBalancerAttributes\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
 				
 			protected IAMPolicySetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
 			super(chain);

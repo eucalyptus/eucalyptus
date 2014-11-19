@@ -65,6 +65,7 @@ package com.eucalyptus.crypto;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -89,6 +90,7 @@ public interface CertificateProvider extends BaseSecurityProvider {
    */
   public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey );
   public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter );
+  public abstract X509Certificate generateCertificate( PublicKey key, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter );
   public abstract X509Certificate generateCertificate( KeyPair keys, String userName );
   public abstract X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn );
 

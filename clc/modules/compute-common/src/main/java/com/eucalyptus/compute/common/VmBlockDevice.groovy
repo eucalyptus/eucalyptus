@@ -63,6 +63,7 @@ public class CreateVolumeType extends BlockVolumeMessage {
   String availabilityZone;
   String volumeType = "standard"
   Integer iops
+  Boolean encrypted
 }
 public class CreateVolumeResponseType extends BlockVolumeMessage {
   
@@ -163,6 +164,9 @@ public class Volume extends EucalyptusData {
   
   String volumeId;
   String size;
+  String volumeType = 'standard'
+  Integer iops
+  Boolean encrypted
   String snapshotId;
   String availabilityZone;
   String status;
@@ -230,7 +234,9 @@ public class Snapshot extends EucalyptusData {
   Date startTime = new Date();
   String progress;
   String ownerId;
+  String ownerAlias;
   String volumeSize = "n/a";
+  Boolean encrypted
   String description;
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 }

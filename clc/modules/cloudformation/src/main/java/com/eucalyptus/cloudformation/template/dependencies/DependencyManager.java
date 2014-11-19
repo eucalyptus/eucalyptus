@@ -121,8 +121,8 @@ public class DependencyManager {
     try {
       ObjectMapper mapper = new ObjectMapper();
       JsonNode jsonNode = mapper.readTree(json);
-      String nodeStr = jsonNode.get("nodes").textValue();
-      String dependenciesStr = jsonNode.get("dependencies").textValue();
+      String nodeStr = jsonNode.get("nodes").asText();
+      String dependenciesStr = jsonNode.get("dependencies").asText();
       ArrayList<String> nodes = mapper.readValue(nodeStr,
         new TypeReference<ArrayList<String>>(){});
       Map<String, List<String>> dependencies = mapper.readValue(dependenciesStr,

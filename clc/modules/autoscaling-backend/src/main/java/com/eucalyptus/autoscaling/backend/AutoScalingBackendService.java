@@ -111,6 +111,8 @@ import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyType;
 import com.eucalyptus.autoscaling.common.backend.msgs.Filter;
 import com.eucalyptus.autoscaling.common.backend.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.MetricCollectionTypes;
+import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityType;
+import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityTypes;
 import com.eucalyptus.autoscaling.common.backend.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationType;
@@ -440,7 +442,7 @@ public class AutoScalingBackendService {
         }
       }
 
-      if ( request.getTags().getMember().size() >= MAX_TAGS_PER_RESOURCE ) {
+      if ( request.getTags().getMember().size() > MAX_TAGS_PER_RESOURCE ) {
         throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded") );
       }
     }
@@ -1321,6 +1323,9 @@ public class AutoScalingBackendService {
         Collections2.transform(
             Collections2.filter( EnumSet.allOf( MetricCollectionType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
             Strings.toStringFunction() ) ) );
+    reply.getDescribeMetricCollectionTypesResult().setGranularities( new MetricGranularityTypes(
+        Collections.singletonList( new MetricGranularityType( "1Minute" ) )
+    ) );
 
     return reply;
   }

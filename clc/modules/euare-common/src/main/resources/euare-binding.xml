@@ -1166,7 +1166,9 @@
   </mapping>
   <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.SignCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <value name="Certificate" field="certificate" usage="required"/>
+    <value name="Instance" field="instance" usage="required"/>
+    <value name="Key" field="key" usage="required"/>
+    <value name="ExpirationDays" field="expirationDays" usage="optional"/>
   </mapping>
   <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.SignCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -1175,7 +1177,6 @@
   </mapping>
   <mapping name="SignCertificateResult" class="com.eucalyptus.auth.euare.SignCertificateResultType">
     <value name="Certificate" field="certificate" usage="required"/>
-    <value name="Signature" field="signature" usage="required"/>
   </mapping>
   <mapping name="DownloadServerCertificate" class="com.eucalyptus.auth.euare.DownloadServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>

@@ -657,7 +657,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
             cidr_split(gnivpcsubnet->cidr, subnet_buf, slashnet_buf, gw_buf, NULL);
 
-            rc = create_mido_vpc_subnet(mido, vpc, vpcsubnet, subnet_buf, slashnet_buf, gw_buf);
+            rc = create_mido_vpc_subnet(mido, vpc, vpcsubnet, subnet_buf, slashnet_buf, gw_buf, gni->instanceDNSDomain, gni->instanceDNSServers, gni->max_instanceDNSServers);
             if (rc) {
                 LOGERROR("failed to create VPC '%s' subnet '%s': check midonet health\n", gnivpc->name, gnivpc->subnets[j].name);
             }
@@ -2262,7 +2262,8 @@ int delete_mido_vpc(mido_config * mido, mido_vpc * vpc)
     return (ret);
 }
 
-int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw)
+  //int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw)
+int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw, char *instanceDNSDomain, u32 *instanceDNSServers, int max_instanceDNSServers)
 {
     int rc = 0, ret = 0, i = 0, found = 0;
     char name_buf[32], *tapiface = NULL;
@@ -2298,7 +2299,7 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
         return (1);
     }
     // setup DHCP on the bridge for this subnet
-    rc = mido_create_dhcp(&(vpcsubnet->midos[VPCBR]), subnet, slashnet, gw, "8.8.8.8", &(vpcsubnet->midos[VPCBR_DHCP]));
+    rc = mido_create_dhcp(&(vpcsubnet->midos[VPCBR]), subnet, slashnet, gw, instanceDNSServers, max_instanceDNSServers, &(vpcsubnet->midos[VPCBR_DHCP]));
     if (rc) {
         LOGERROR("cannot create midonet dhcp server: check midonet health\n");
         return (1);

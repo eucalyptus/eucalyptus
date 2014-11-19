@@ -68,7 +68,6 @@ import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -91,7 +90,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
@@ -206,9 +204,8 @@ public class ClusterAllocator implements Runnable {
           @Override
           public Boolean call( ) {
             try {
-              new ClusterAllocator( allocInfo ).run( );
+              new ClusterAllocator( allocInfo, config ).run( );
             } catch ( final Exception ex ) {
-              LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
               LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
             return Boolean.TRUE;
@@ -236,11 +233,11 @@ public class ClusterAllocator implements Runnable {
     return SubmitAllocation.INSTANCE;
   }
   
-  private ClusterAllocator( final Allocation allocInfo ) {
+  private ClusterAllocator( final Allocation allocInfo, final ServiceConfiguration clusterConfig ) {
     this.allocInfo = allocInfo;
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+      this.cluster = Clusters.lookup( clusterConfig );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
       this.setupVolumeMessages( );
@@ -339,19 +336,17 @@ public class ClusterAllocator implements Runnable {
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();
-      final X509Certificate kpCert = Certs.generateCertificate(kp, 
-          String.format("Certificate-for-%s/%s", this.allocInfo.getOwnerFullName().getAccountName(),  
-              this.allocInfo.getOwnerFullName().getUserName()), 
-              DateUtils.addDays(Calendar.getInstance().getTime(), expirationDays));
-      
-      // call iam:signCertificate with the pub key
-      final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
-      req.setCertificate(b64PubKey);
-           
+      final String pubkey =B64.standard.encString( kp.getPublic().getEncoded());
+      
+      req.setKey(pubkey);
+      req.setInstance(allocInfo.getInstanceId(0));
+      req.setExpirationDays(expirationDays);
       final SignCertificateResponseType resp= AsyncRequests.sendSync( euare, req );
-      final String token = resp.getSignCertificateResult().getSignature(); //in Base64
+      final X509Certificate kpCert = 
+          PEMFiles.getCert( B64.standard.dec( resp.getSignCertificateResult().getCertificate() ) );
+      final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       
       // use NODECERT to encrypt the pk
       // generate symmetric key
@@ -368,7 +363,9 @@ public class ClusterAllocator implements Runnable {
       cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(Base64.encode(PEMFiles.getBytes(kp.getPrivate())));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
-      
+            
+      // with EUCA-8651, no signature needs to be delivered; left here for backward compatibility
+      final String token = "NULL";
       // encrypt the token from EUARE
       cipher = Ciphers.AES_GCM.get();
       cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
@@ -394,7 +391,7 @@ public class ClusterAllocator implements Runnable {
       final String credential = String.format("%s\n%s\n%s\n%s\n%s\n%s",
           b64EuarePubkey,
           b64PubKey,
-          encToken, // iam token
+          encToken,
           encSymmKey, 
           encPrivKey,
           b64EucalyptusPubkey);

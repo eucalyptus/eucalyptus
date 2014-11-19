@@ -2479,7 +2479,9 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                     if (strlen(ncResDst->iqn)) {
                         snprintf(resourceCacheStage->resources[i].iqn, 128, "%s", ncResDst->iqn);
                     }
-
+                    if (strlen(ncResDst->hypervisor)) {
+                        euca_strncpy(resourceCacheStage->resources[i].hypervisor, ncResDst->hypervisor, 16);
+                    }
                     changeState(&(resourceCacheStage->resources[i]), RESUP);
                 }
                 if (errMsg != NULL) {

@@ -94,9 +94,12 @@ import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.VerificationException;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.DeviceMapping;
@@ -121,6 +124,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import net.sf.json.JSONException;
@@ -129,19 +133,24 @@ public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
   
-  public static Predicate<Allocation> get( ) {
+  public static Predicate<Allocation> getVerifiers( ) {
     return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
   }
 
+  public static Predicate<Allocation> getPostVerifiers( ) {
+	return Predicates.and( Lists.transform( postVerifiers, AsPredicate.INSTANCE ) );
+  }
 
   private interface MetadataVerifier {
-    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;
+    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException;
   }
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
                                                                                                 BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
+  
+  private static final ArrayList<? extends MetadataVerifier> postVerifiers = Lists.newArrayList( EkiEriSupportVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
@@ -158,6 +167,24 @@ public class VerifyMetadata {
           }
         }
       };
+    }
+  }
+  
+  enum EkiEriSupportVerifier implements MetadataVerifier {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Allocation allocInfo ) throws VerificationException {
+      if (allocInfo.getRunInstancesRequest().getKernelId() != null || allocInfo.getRunInstancesRequest().getRamdiskId() != null) {
+        Cluster c = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+        if (!c.getNodeHostMap().values().isEmpty()) {
+          NodeInfo.Hypervisor h = c.getNodeHostMap().values().iterator().next().getHypervisor();
+          LOG.warn("Hypervisor is" + h);
+          if ( !h.supportEkiEri() )
+            throw new VerificationException("EKI/ERI options are not supported by installation on " + h.name());
+        }
+      }
+      return true;
     }
   }
   

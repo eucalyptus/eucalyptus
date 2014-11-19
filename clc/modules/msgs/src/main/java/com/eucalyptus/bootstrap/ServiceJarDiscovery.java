@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,72 +63,35 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.io.Reader;
-import java.io.Writer;
-import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.persistence.PersistenceContext;
-import org.apache.bcel.util.ClassPath;
 import org.apache.log4j.Logger;
-import org.jibx.binding.Utility;
-import org.jibx.binding.classes.BoundClass;
-import org.jibx.binding.classes.BranchWrapper;
-import org.jibx.binding.classes.ClassCache;
-import org.jibx.binding.classes.ClassFile;
-import org.jibx.binding.classes.MungedClass;
-import org.jibx.binding.def.BindingDefinition;
-import org.jibx.binding.model.BindingElement;
-import org.jibx.binding.model.ElementBase;
-import org.jibx.binding.model.IncludeElement;
-import org.jibx.binding.model.MappingElement;
-import org.jibx.binding.model.MappingElementBase;
-import org.jibx.binding.model.ValidationContext;
-import org.jibx.runtime.JiBXException;
-import org.jibx.util.ClasspathUrlExtender;
-import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
-import com.google.common.io.Resources;
 
 /**
  * TODO: DOCUMENT

@@ -696,7 +696,8 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
                                 (int)adb_ncDescribeResourceResponseType_get_diskSizeAvailable(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_numberOfCoresMax(response, env),
                                 (int)adb_ncDescribeResourceResponseType_get_numberOfCoresAvailable(response, env),
-                                (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env));
+                                (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env),
+                                (char *)adb_ncDescribeResourceResponseType_get_hypervisor(response, env));
 
         if (!res) {
             LOGERROR("out of memory\n");

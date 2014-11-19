@@ -211,6 +211,16 @@ public class Strings {
     };
   }
 
+  public static Function<String,Function<String,String>> join( ) {
+    return new Function<String,Function<String,String>>( ) {
+      @Nullable
+      @Override
+      public Function<String,String> apply( @Nullable final String prefix ) {
+        return prepend( prefix );
+      }
+    };
+  }
+
   /**
    * Convert an object to a string.
    *

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -247,6 +247,21 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withIntegerSetProperty( final String filterName,
                                                final Function<? super RT,Set<Integer>> integerSetExtractor ) {
       predicateFunctions.put( filterName, FilterSupport.<RT>intSetFilter( integerSetExtractor ) );
+      return this;
+    }
+
+    /**
+     * Declare a filterable multi-valued integer property.
+     *
+     * @param filterName The name of the filter
+     * @param integerSetExtractor Function to extract the property values
+     * @param valueFunction Function to convert filter value
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withIntegerSetProperty( final String filterName,
+                                               final Function<? super RT,Set<Integer>> integerSetExtractor,
+                                               final Function<String,Integer> valueFunction ) {
+      predicateFunctions.put( filterName, FilterSupport.<RT>intSetFilter( integerSetExtractor, valueFunction ) );
       return this;
     }
 
@@ -720,6 +735,13 @@ public abstract class FilterSupport<RT> {
     return typedSetFilter( extractor, PersistenceFilter.Type.Integer );
   }
 
+  private static <T> Function<? super String, Predicate<? super T>> intSetFilter(
+      final Function<? super T, Set<Integer>> extractor,
+      final Function<String,Integer> valueFunction
+  ) {
+    return typedSetFilter( extractor, PersistenceFilter.Type.Integer, valueFunction );
+  }
+
   private static <T> Function<? super String, Predicate<? super T>> longFilter( final Function<? super T, Long> extractor ) {
     return longSetFilter( Functions.compose( FilterSupport.<Long>toSet(), extractor ) );
   }
@@ -728,11 +750,22 @@ public abstract class FilterSupport<RT> {
     return typedSetFilter( extractor, PersistenceFilter.Type.Integer );
   }
 
-  private static <T,VT> Function<? super String, Predicate<? super T>> typedSetFilter( final Function<? super T, Set<VT>> extractor, final PersistenceFilter.Type type ) {
+  private static <T,VT> Function<? super String, Predicate<? super T>> typedSetFilter(
+      final Function<? super T, Set<VT>> extractor,
+      final PersistenceFilter.Type type
+  ) {
+    return typedSetFilter( extractor, type, type.valueFunction( ) );
+  }
+
+  private static <T,VT> Function<? super String, Predicate<? super T>> typedSetFilter(
+      final Function<? super T, Set<VT>> extractor,
+      final PersistenceFilter.Type type,
+      final Function<String,?> valueFunction
+  ) {
     return new Function<String,Predicate<? super T>>() {
       @Override
       public Predicate<T> apply( final String filterValue ) {
-        final Predicate<Set<VT>> resourceValuePredicate = resourceValueMatcher( filterValue, type );
+        final Predicate<Set<VT>> resourceValuePredicate = resourceValueMatcher( filterValue, type, valueFunction );
         return new Predicate<T>() {
           @Override
           public boolean apply( final T resource ) {
@@ -819,10 +852,10 @@ public abstract class FilterSupport<RT> {
         };
   }
 
-
   private static <T> Predicate<Set<T>> resourceValueMatcher( final String filterPattern,
-                                                             final PersistenceFilter.Type type ) {
-    final Object value = type.valueFunction().apply( filterPattern );
+                                                             final PersistenceFilter.Type type,
+                                                             final Function<String,?> valueFunction ) {
+    final Object value = valueFunction.apply( filterPattern );
     return value == null ?
         Predicates.<Set<T>>alwaysFalse() :
         new Predicate<Set<T>>() {

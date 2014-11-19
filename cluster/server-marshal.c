@@ -1389,6 +1389,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             nt = adb_ccNodeType_create(env);
             adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
             adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
+            adb_ccNodeType_set_hypervisor(nt, env, outNodes[i].hypervisor);
             adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
 
         }

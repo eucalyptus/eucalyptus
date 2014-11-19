@@ -928,7 +928,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         return EUCA_OVERFLOW_ERROR;
     }
     res = allocate_resource(nc->is_enabled ? "enabled" : "disabled", nc->migration_capable, nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free,
-                            "none");
+                            "none", "KVM");
     if (res == NULL) {
         LOGERROR("out of memory\n");
         return (EUCA_MEMORY_ERROR);

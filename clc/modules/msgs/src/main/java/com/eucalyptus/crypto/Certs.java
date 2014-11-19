@@ -65,6 +65,7 @@ package com.eucalyptus.crypto;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -74,6 +75,10 @@ import javax.security.auth.x500.X500Principal;
  * Facade for generator methods providing asymmetric keys and certificates.
  */
 public class Certs {
+  
+  public static X509Certificate generateCertificate( PublicKey key, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
+    return Crypto.getCertificateProvider().generateCertificate(key, subjectDn, signer, signingKey, notAfter);
+  }
   
   /**
    * TODO: DOCUMENT Certs.java

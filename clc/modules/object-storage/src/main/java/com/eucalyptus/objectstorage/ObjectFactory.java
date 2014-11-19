@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;

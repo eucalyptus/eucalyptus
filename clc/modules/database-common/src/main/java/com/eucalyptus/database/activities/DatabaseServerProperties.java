@@ -161,20 +161,8 @@ import com.google.common.net.HostSpecifier;
    @DependsLocal(CloudWatchBackend.class)
    public static class CloudWatchPropertyBootstrapper extends DatabaseServerPropertyBootstrapper {
    }
-   
-   
-   public static class DatabaseServerPropertyBootstrapper extends Bootstrapper.Simple {
-     private static DatabaseServerPropertyBootstrapper singleton = null;
-     public static Bootstrapper getInstance( ) {
-       synchronized ( DatabaseServerPropertyBootstrapper.class ) {
-         if ( singleton == null ) {
-           singleton = new DatabaseServerPropertyBootstrapper( );
-         }
-       }
-       return singleton;
-     }
-     
-     
+
+   public abstract static class DatabaseServerPropertyBootstrapper extends Bootstrapper.Simple {
      @Override
      public boolean check( ) throws Exception {
        if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost()))
@@ -491,8 +479,10 @@ import com.google.common.net.HostSpecifier;
         throws ConfigurablePropertyException {
       try{
         final int newExp = Integer.parseInt(newValue);
+        if(newExp <= 0)
+          throw new Exception();
       }catch(final Exception ex) {
-        throw new ConfigurablePropertyException("The value must be number type");
+        throw new ConfigurablePropertyException("The value must be number type and bigger than 0");
       }
     }
    }

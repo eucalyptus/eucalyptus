@@ -706,7 +706,7 @@ public class TemplateParser {
     if (ifMatcher.isMatch()) {
       IntrinsicFunctions.IF.validateArgTypesWherePossible(ifMatcher);
       // we have a match against an "if"...
-      String conditionName = currentNode.get(FunctionEvaluation.FN_IF).get(0).textValue();
+      String conditionName = currentNode.get(FunctionEvaluation.FN_IF).get(0).asText();
       if (!conditionDependencyManager.containsNode(conditionName)) {
         unresolvedConditionDependencies.add(conditionName);
       } else {
@@ -719,7 +719,7 @@ public class TemplateParser {
     if (conditionMatcher.isMatch()) {
       IntrinsicFunctions.CONDITION.validateArgTypesWherePossible(conditionMatcher);
       // we have a match against an "condition"...
-      String conditionName = currentNode.get(FunctionEvaluation.CONDITION_STR).textValue();
+      String conditionName = currentNode.get(FunctionEvaluation.CONDITION_STR).asText();
       if (!conditionDependencyManager.containsNode(conditionName)) {
         unresolvedConditionDependencies.add(conditionName);
       } else {
@@ -732,7 +732,7 @@ public class TemplateParser {
     if (refMatcher.isMatch()) {
       IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
       // we have a match against a "ref"...
-      String refName = currentNode.get(FunctionEvaluation.REF_STR).textValue();
+      String refName = currentNode.get(FunctionEvaluation.REF_STR).asText();
       // it's ok if it's a psueodparameter or a parameter, but not a resource, or doesn't exist
       Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
       Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
@@ -747,8 +747,8 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
-      String attName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
+      String refName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
+      String attName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
@@ -777,7 +777,7 @@ public class TemplateParser {
     }
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
     Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
-    String accountId = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(AWS_ACCOUNT_ID)).textValue();
+    String accountId = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(AWS_ACCOUNT_ID)).asText();
     for (String resourceKey: resourceKeys) {
       JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);
       if (!(resourceJsonNode.isObject())) {
@@ -833,8 +833,8 @@ public class TemplateParser {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(dependsOnJsonNode);
         if (dependsOnJsonNode.isArray()) {
           for (int i = 0;i < dependsOnJsonNode.size(); i++) {
-            if (dependsOnJsonNode.get(i) != null && dependsOnJsonNode.get(i).isTextual()) {
-              String dependeningOnResourceName = dependsOnJsonNode.get(i).textValue();
+            if (dependsOnJsonNode.get(i) != null && dependsOnJsonNode.get(i).isValueNode()) {
+              String dependeningOnResourceName = dependsOnJsonNode.get(i).asText();
               if (!template.getResourceInfoMap().containsKey(dependeningOnResourceName)) {
                 unresolvedResourceDependencies.add(dependeningOnResourceName);
               } else {
@@ -844,8 +844,8 @@ public class TemplateParser {
               throw new ValidationErrorException("Template format error: Every DependsOn value must be a string.");
             }
           }
-        } else if (dependsOnJsonNode.isTextual()) {
-          String dependeningOnResourceName = dependsOnJsonNode.textValue();
+        } else if (dependsOnJsonNode.isValueNode()) {
+          String dependeningOnResourceName = dependsOnJsonNode.asText();
           if (!template.getResourceInfoMap().containsKey(dependeningOnResourceName)) {
             unresolvedResourceDependencies.add(dependeningOnResourceName);
           } else {
@@ -940,7 +940,7 @@ public class TemplateParser {
       // We know from validate this is an array of 3 elements
       JsonNode keyJsonNode = jsonNode.get(FunctionEvaluation.FN_IF);
 
-      String key = keyJsonNode.get(0).textValue();
+      String key = keyJsonNode.get(0).asText();
       Map<String, Boolean> conditionMap = template.getConditionMap();
 
       if (!conditionMap.containsKey(key)) {
@@ -959,7 +959,7 @@ public class TemplateParser {
     if (refMatcher.isMatch()) {
       IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.REF_STR).textValue();
+      String refName = jsonNode.get(FunctionEvaluation.REF_STR).asText();
       if (template.getResourceInfoMap().containsKey(refName)) {
         if (onLiveBranch) { // the onLiveBranch will add a dependency only if the condition is true
           resourceDependencies.addDependency(resourceKey, refName);
@@ -976,8 +976,8 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
-      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
+      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
+      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
@@ -1099,7 +1099,7 @@ public class TemplateParser {
     if (refMatcher.isMatch()) {
       IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.REF_STR).textValue();
+      String refName = jsonNode.get(FunctionEvaluation.REF_STR).asText();
       if (!parameterMap.containsKey(refName) &&
         !pseudoParameterMap.containsKey(refName) && !resourceInfoMap.containsKey(refName)) {
         unresolvedResourceDependencies.add(refName);
@@ -1112,8 +1112,8 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).textValue();
-      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
+      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
+      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
       // Not sure why, but AWS validates attribute types even in Conditions
       if (resourceInfoMap.containsKey(refName)) {
         ResourceInfo resourceInfo = resourceInfoMap.get(refName);

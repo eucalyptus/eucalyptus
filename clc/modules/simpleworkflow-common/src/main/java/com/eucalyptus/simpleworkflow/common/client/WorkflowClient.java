@@ -96,6 +96,7 @@ public class WorkflowClient {
           taskList,
           workflowWorkerConfig
       );
+      this.workflowWorker.setDisableServiceShutdownOnStop( !shutdownClient );
       this.activityWorker = Config.buildActivityWorker(
           componentIdClass,
           this.simpleWorkflow,
@@ -103,6 +104,7 @@ public class WorkflowClient {
           taskList,
           activityWorkerConfig
       );
+      this.activityWorker.setDisableServiceShutdownOnStop( !shutdownClient );
     } catch( Throwable e ) {
       try {
         stop( );

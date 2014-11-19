@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/imaging-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow/src/main/java"/>
+	<classpathentry kind="src" path="modules/imaging-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/imaging-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/euca-resources-support/src/main/java"/>
+	<classpathentry kind="src" path="modules/database-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow/src/test/java"/>
+	<classpathentry kind="src" path="modules/imaging-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/euca-resources-support/src/test/java"/>
+	<classpathentry kind="src" path="modules/database-common/src/test/java"/>
 	<classpathentry kind="src" path="modules/autoscaling-backend/src/main/java"/>
 	<classpathentry kind="src" path="modules/cloudwatch-backend/src/main/java"/>
 	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
