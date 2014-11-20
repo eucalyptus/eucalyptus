@@ -855,6 +855,26 @@ static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char *
 }
 
 //!
+//! Adds up NC disk usage for an instance
+//!
+static long long get_disk_use_gb(virtualMachine *vm)
+{
+    long long disk_use_bytes = 0L;
+
+    for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
+        virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
+        if (vbr->type != NC_RESOURCE_EBS && // EBS volumes do not count
+            vbr->type != NC_RESOURCE_KERNEL && // EKI doesn't count, though it maybe should
+            vbr->type != NC_RESOURCE_RAMDISK && // ERI doesn't count, though it maybe should
+            vbr->type != NC_RESOURCE_BOOT) { // boot sector is too small to be worth counting
+            disk_use_bytes += vbr->sizeBytes;
+        }
+    }
+
+    return disk_use_bytes/(1024*1024*1024);
+}
+
+//!
 //! Describe the resources status for this component
 //!
 //! @param[in]  nc a pointer to the NC state structure
@@ -901,7 +921,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
         if (inst->state == TEARDOWN)
             continue;                  // they don't take up resources
         sum_mem += inst->params.mem;
-        sum_disk += (inst->params.disk);
+        sum_disk += get_disk_use_gb(&(inst->params));
         sum_cores += inst->params.cores;
     }
     sem_v(inst_copy_sem);
