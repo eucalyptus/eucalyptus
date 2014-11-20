@@ -1768,6 +1768,10 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
     }
     sem_v(inst_sem);
 
+    char run_workflow_work_dir[EUCA_MAX_PATH];
+    snprintf(run_workflow_work_dir, sizeof(run_workflow_work_dir), "/tmp/bundle-%s", pInstance->instanceId);
+    euca_rmdir(run_workflow_work_dir, TRUE);
+
     if (pParams) {
         // Free our parameters allocated strings
         EUCA_FREE(pParams->workPath);
@@ -1845,6 +1849,16 @@ static void *bundling_thread(void *arg)
     snprintf(cloud_cert_path, sizeof(cloud_cert_path), EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
     char run_workflow_path[EUCA_MAX_PATH];
     snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", pParams->eucalyptusHomePath);
+    char run_workflow_pid_path[EUCA_MAX_PATH];
+    snprintf(run_workflow_pid_path, sizeof(run_workflow_pid_path), "/tmp/bundle-%s/process.pid", pInstance->instanceId);
+    char run_workflow_work_dir[EUCA_MAX_PATH];
+    snprintf(run_workflow_work_dir, sizeof(run_workflow_work_dir), "/tmp/bundle-%s", pInstance->instanceId);
+
+    if (check_directory(run_workflow_work_dir)) {
+        if (mkdir(run_workflow_work_dir, 0700)) {
+           LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", run_workflow_work_dir);
+        }
+    }
 
 #define _COMMON_BUNDLING_PARAMS \
                          euca_run_workflow_parser,\
@@ -1856,7 +1870,8 @@ static void *bundling_thread(void *arg)
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
-                         "--work-dir", "/tmp", /* @TODO: should not be needed any more*/ \
+                         "--work-dir", run_workflow_work_dir, \
+                         "--pid-path", run_workflow_pid_path, \
                          "--arch",  pParams->architecture, \
                          "--account", pParams->accountId, \
                          "--access-key", pParams->userPublicKey, /* @TODO: "PublicKey" is a misnomer*/ \
@@ -2048,7 +2063,6 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
         pInstance->stateCode = EXTANT;
         pInstance->retries = LIBVIRT_QUERY_RETRIES;
         pInstance->bundlingTime = 0;
-        pInstance->bundlePid = 0;
         pInstance->bundleCanceled = 0;
         pInstance->bundleBucketExists = 0;
         pInstance->bundleTaskState = NOT_BUNDLING;
@@ -2086,12 +2100,19 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *p
         LOGERROR("[%s] instance not found\n", psInstanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
-
+    // read pid
+    char run_workflow_pid_path[EUCA_MAX_PATH];
+    snprintf(run_workflow_pid_path, sizeof(run_workflow_pid_path), "/tmp/bundle-%s/process.pid", pInstance->instanceId);
+    char *pid_srt = file2strn(run_workflow_pid_path, 8);
+    if (strlen(pid_srt) == 0)
+        return EUCA_NOT_FOUND_ERROR;
+    int pid = atoi(pid_srt);
     pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
-    if ((pInstance->bundlePid > 0) && !check_process(pInstance->bundlePid, "euca-bundle-upload")) {
-        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pInstance->bundlePid);
-        kill(pInstance->bundlePid, 9);
-        pInstance->bundlePid = 0;
+    if (pid > 0 && !check_process(pid, "euca-run-workflow")) {
+        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pid);
+        if (kill((-1)*pid, 9) != EUCA_OK) { // kill process group
+            LOGERROR("[%s] can't kill process group with pid '%d'\n", psInstanceId, (-1)*pid);
+        }
     }
 
     return (EUCA_OK);

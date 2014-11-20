@@ -21,7 +21,6 @@
 # main
 import json
 import os
-from pprint import pprint
 import random
 import shutil
 import subprocess
@@ -64,6 +63,10 @@ class WF_base():
         self.check_deps(args)
         if len(self.problems) > 0:
             raise WF_InsufficientDependencies(self.problems)
+        if hasattr(args, 'pid_path') and args.pid_path is not None:
+            f = open(args.pid_path, 'w+')
+            f.write(str(os.getpid()))
+            f.close()
 
 # specific workflows, one per class
 
@@ -428,6 +431,7 @@ def _add_up_bundle_args(parser):
     parser.add_argument('--secret-key', required=False, metavar='NAME', help="The secret string for object store account (or --upload-policy)")
     parser.add_argument('--upload-policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
     parser.add_argument('--upload-policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
+    parser.add_argument('--pid-path', required=False, metavar='PATH', help='Path to process PID')
 
 def _add_vmdk_args(parser):
     parser.add_argument('--vsphere-url', required=True, metavar='URL', help="URL of the vSphere endpoint")
