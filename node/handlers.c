@@ -1301,7 +1301,7 @@ void *monitoring_thread(void *arg)
         now = time(NULL);
 
         // EUCA-10056 we need to check if EUCANETD is running when in EDGE of VPC mode
-        if (!strcmp(nc_state.vnetconfig->mode, NETMODE_EDGE) || !strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
+        if (!strcmp(nc_state.vnetconfig->mode, NETMODE_EDGE)) {
             snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
             if ((psPid = file2str(sPidFile)) != NULL) {
                 // Is the
