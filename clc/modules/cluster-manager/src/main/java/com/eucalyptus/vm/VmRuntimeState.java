@@ -839,8 +839,11 @@ public class VmRuntimeState {
         bundleRestartInstance( currentTask );
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
-          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
-                  currentTask.getBucket(), true);
+          Bundles.deleteBucketContent(
+              Accounts.lookupAccountById( this.getVmInstance( ).getOwnerAccountNumber( ) ).lookupAdmin( ),
+              currentTask.getBucket( ),
+              currentTask.getPrefix( ),
+              true );
         }catch(final Exception ex){
           LOG.error("After bundle failure, failed to delete the bucket", ex);
         }
@@ -848,8 +851,11 @@ public class VmRuntimeState {
         bundleRestartInstance( currentTask );
       } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
-          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
-              this.getBundleTask().getBucket(), true);
+          Bundles.deleteBucketContent(
+              Accounts.lookupAccountById( this.getVmInstance( ).getOwnerAccountNumber( ) ).lookupAdmin( ),
+              this.getBundleTask( ).getBucket( ),
+              this.getBundleTask( ).getPrefix( ),
+              true );
         }catch(final Exception ex){
           LOG.error("After bundle cancellation, failed to delete the bucket", ex);
         }

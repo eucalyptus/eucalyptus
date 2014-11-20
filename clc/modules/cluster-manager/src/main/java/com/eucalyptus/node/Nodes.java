@@ -346,10 +346,12 @@ public class Nodes {
 
   static <T extends BaseMessage> T send( ServiceTransitionType msg, ServiceConfiguration... configsArr ) throws RuntimeException {
     ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, configsArr[0].lookupPartition() );
-    if ( Component.State.ENABLED.apply( ccConfig ) && !ccConfig.lookupStateMachine( ).isBusy( ) ) {//GRZE: ensure not to trample the CC when it isn't ENABLED
+    if ( Component.State.ENABLED.apply( ccConfig ) ) { 
+      // EUCA-10136: the condition below causes race condition and effectively prevents sending the message
+      // && !ccConfig.lookupStateMachine( ).isBusy( ) ) {//GRZE: ensure not to trample the CC when it isn't ENABLED
       for ( ServiceId serviceId : Iterables.transform( Arrays.asList( configsArr ),
                                                        ServiceConfigurations.ServiceConfigurationToServiceId.INSTANCE ) ) {
-        msg.getServices( ).add( serviceId );
+        msg.getServices().add(serviceId);
       }
       try {
         return AsyncRequests.sendSync( ccConfig, msg );//GRZE: this call site is synchronous wrt other CC-bound requests.
