@@ -1146,7 +1146,8 @@ public class VmControl {
     }
     final String uploadPolicyJson = B64.standard.decString( request.getUploadPolicy( ) );
 
-    Bundles.checkAndCreateBucket(ctx.getUser(), request.getBucket());
+    Bundles.checkAndCreateBucket( ctx.getUser( ), request.getBucket( ), request.getPrefix( ) );
+
     final Function<String, VmInstance> bundleFunc = new Function<String,VmInstance>( ) {
       @Override
       public VmInstance apply( String input ) {

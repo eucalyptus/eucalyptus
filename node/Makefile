@@ -161,6 +161,9 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
+../util/euca_system.o: ../util/euca_system.c ../util/euca_system.h ../util/eucalyptus.h
+	make -C ../util
+
 ../util/sensor.o: ../util/sensor.c
 	make -C ../util
 
@@ -173,7 +176,7 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../storage/storage-controller.o: ../storage/storage-controller.c ../storage/sc-client-marshal-adb.o
 	make -C ../storage
 
-$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_file.o ../util/euca_file.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_system.o ../util/euca_file.o ../util/euca_file.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
 	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/vnetwork.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(EFENCE) -o $(SERVICE_SO)
 
 clientlib: generated/stubs ../util/data.o $(SCLIBS) client-marshal-adb.o
