@@ -346,7 +346,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	 * by which to include only the non-faulty instances in the list delivered to servo.
 	 */
 	public static class BackendInstanceChecker implements EventListener<ClockTick> {
-		private static final int CHECK_EVERY_SECONDS = 10;
+		private static final int CHECK_EVERY_SECONDS = 5;
 
 		public static void register(){
 			Listeners.register(ClockTick.class, new BackendInstanceChecker() );
