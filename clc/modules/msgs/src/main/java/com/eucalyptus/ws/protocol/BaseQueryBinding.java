@@ -310,6 +310,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       }
       
       if ( params.containsKey( e.getKey( ) )
+           && ( declaredType == null || !EucalyptusData.class.isAssignableFrom( declaredType ) )
            && !this.populateObjectField( obj, e, params ) ) {
         failedMappings.add( e.getKey( ) );
       } else if ( ( declaredType != null )
@@ -337,6 +338,8 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           }
           if ( !subParams.isEmpty( ) ) {
             this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
+            obj.setProperty( e.getValue(), newInstance );
+          } else if ( params.containsKey( e.getKey( ) ) ) {
             obj.setProperty( e.getValue(), newInstance );
           }
         } catch ( final Exception e1 ) {

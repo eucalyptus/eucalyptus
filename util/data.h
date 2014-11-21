@@ -370,7 +370,6 @@ typedef struct ncInstance_t {
     //! @name state as NC thinks of it
     instance_states state;             //!< Instance state
     bundling_progress bundleTaskState; //!< Bundling task progress state
-    int bundlePid;                     //!< Bundling task PID value
     int bundleBucketExists;            //!< Boolean indicating if the bundle's bucket already exists
     int bundleCanceled;                //!< Boolean indicating if the bundle has been cancelled
     //! @}

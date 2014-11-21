@@ -294,7 +294,8 @@ public class LoadBalancingBackendService {
             Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
               @Override
               public boolean apply( LoadBalancerBackendInstanceCoreView arg0 ) {
-                return !LoadBalancerBackendInstance.STATE.Error.equals( arg0.getBackendState( ) );
+                return !LoadBalancerBackendInstance.STATE.Error.equals( arg0.getBackendState( ) ) && 
+                    !(arg0.getIpAddress()==null || arg0.getIpAddress().length()<=0)  ;
               }
             });
 

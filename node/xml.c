@@ -728,8 +728,6 @@ int gen_instance_xml(const ncInstance * instance)
             _ELEMENT(states, "stateCode", str);
             _ELEMENT(states, "state", instance_state_names[instance->state]);
             _ELEMENT(states, "bundleTaskState", bundling_progress_names[instance->bundleTaskState]);
-            snprintf(str, sizeof(str), "%d", instance->bundlePid);
-            _ELEMENT(states, "bundlePid", str);
             _ELEMENT(states, "bundleBucketExists", (instance->bundleBucketExists) ? ("true") : ("false"));
             _ELEMENT(states, "bundleCanceled", (instance->bundleCanceled) ? ("true") : ("false"));
             _ELEMENT(states, "guestStateName", instance->guestStateName);
@@ -906,7 +904,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/states/stateCode", instance->stateCode);
     XGET_ENUM("/instance/states/state", instance->state, instance_state_from_string);
     XGET_ENUM("/instance/states/bundleTaskState", instance->bundleTaskState, bundling_progress_from_string);
-    XGET_INT("/instance/states/bundlePid", instance->bundlePid);
     XGET_BOOL("/instance/states/bundleBucketExists", instance->bundleBucketExists);
     XGET_BOOL("/instance/states/bundleCanceled", instance->bundleCanceled);
     XGET_STR("/instance/states/guestStateName", instance->guestStateName);
@@ -1654,7 +1651,6 @@ static void create_dummy_instance(const char *file)
     _ELEMENT(states, "stateCode", "4");
     _ELEMENT(states, "state", "Extant");
     _ELEMENT(states, "bundleTaskState", "none");
-    _ELEMENT(states, "bundlePid", "9876");
     _ELEMENT(states, "bundleBucketExists", "true");
     _ELEMENT(states, "bundleCanceled", "false");
     _ELEMENT(states, "guestStateName", "poweredOn");
