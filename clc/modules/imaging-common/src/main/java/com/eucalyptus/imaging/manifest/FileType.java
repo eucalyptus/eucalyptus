@@ -20,15 +20,15 @@
 package com.eucalyptus.imaging.manifest;
 
 public enum FileType {
-	RAW(false),
-	VHD(false),
-	VMDK(false),
-	BUNDLE(true);
-	
-	private final boolean requiresKey;
-	
-	private FileType(boolean requiresKey){
-		this.requiresKey = requiresKey;
-	}
-	public boolean requiresKey() { return requiresKey; }
+  RAW(false), VHD(false), VMDK(false), BUNDLE(true);
+
+  private final boolean requiresKey;
+
+  private FileType(boolean requiresKey) {
+    this.requiresKey = requiresKey;
+  }
+
+  public boolean requiresKey() {
+    return requiresKey;
+  }
 }

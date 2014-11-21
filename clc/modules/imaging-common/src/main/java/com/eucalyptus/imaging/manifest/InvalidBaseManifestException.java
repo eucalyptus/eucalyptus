@@ -21,20 +21,20 @@ package com.eucalyptus.imaging.manifest;
 
 public class InvalidBaseManifestException extends DownloadManifestException {
 
-	public InvalidBaseManifestException( ) {
-		super( );
-	}
+  public InvalidBaseManifestException() {
+    super();
+  }
 
-	public InvalidBaseManifestException( String message, Throwable cause ) {
-		super( message, cause );
-	}
+  public InvalidBaseManifestException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-	public InvalidBaseManifestException( String message ) {
-		super( message );
-	}
+  public InvalidBaseManifestException(String message) {
+    super(message);
+  }
 
-	public InvalidBaseManifestException( Throwable cause ) {
-		super( cause );
-	}
+  public InvalidBaseManifestException(Throwable cause) {
+    super(cause);
+  }
 
 }

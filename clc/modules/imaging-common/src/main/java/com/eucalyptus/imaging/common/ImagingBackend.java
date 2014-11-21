@@ -31,8 +31,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@Partition( Eucalyptus.class )
-@FaultLogPrefix( "cloud" )
+@Partition(Eucalyptus.class)
+@FaultLogPrefix("cloud")
 public class ImagingBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 
@@ -52,19 +52,19 @@ public class ImagingBackend extends ComponentId {
   }
 
   @Override
-  public boolean isImpersonationSupported( ) {
+  public boolean isImpersonationSupported() {
     return true;
   }
 
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
    */
-  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-  @Provides( ImagingBackend.class )
-  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
-    public ColocationBootstrapper( ) {
-      super( ImagingBackend.class );
+  @RunDuring(Bootstrap.Stage.RemoteServicesInit)
+  @Provides(ImagingBackend.class)
+  public static class ColocationBootstrapper extends
+      CloudControllerColocatingBootstrapper {
+    public ColocationBootstrapper() {
+      super(ImagingBackend.class);
     }
   }
 }
-

@@ -21,20 +21,20 @@ package com.eucalyptus.imaging.manifest;
 
 public class DownloadManifestException extends Exception {
 
-	public DownloadManifestException( ) {
-		super( );
-	}
+  public DownloadManifestException() {
+    super();
+  }
 
-	public DownloadManifestException( String message, Throwable cause ) {
-		super( message, cause );
-	}
+  public DownloadManifestException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-	public DownloadManifestException( String message ) {
-		super( message );
-	}
+  public DownloadManifestException(String message) {
+    super(message);
+  }
 
-	public DownloadManifestException( Throwable cause ) {
-		super( cause );
-	}
+  public DownloadManifestException(Throwable cause) {
+    super(cause);
+  }
 
 }
