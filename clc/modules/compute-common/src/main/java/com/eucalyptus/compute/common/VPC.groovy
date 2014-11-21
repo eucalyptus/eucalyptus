@@ -829,6 +829,7 @@ class NetworkInterfaceIdSetType extends EucalyptusData {
 class AccountAttributeNameSetType extends EucalyptusData {
   AccountAttributeNameSetType() {  }
   @HttpParameterMapping( parameter = "AttributeName" )
+  @HttpEmbedded(multiple=true)
   ArrayList<AccountAttributeNameSetItemType> item = new ArrayList<AccountAttributeNameSetItemType>();
 }
 class RejectVpcPeeringConnectionResponseType extends VpcMessage {
@@ -1294,6 +1295,7 @@ class RouteTableType extends EucalyptusData implements VpcTagged {
 
 }
 class AccountAttributeNameSetItemType extends EucalyptusData {
+  @HttpValue
   String attributeName;
   AccountAttributeNameSetItemType() {  }
 }
