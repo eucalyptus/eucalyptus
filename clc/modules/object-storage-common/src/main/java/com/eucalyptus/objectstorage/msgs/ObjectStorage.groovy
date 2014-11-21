@@ -127,7 +127,6 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
     ChannelBufferStreamingInputStream data;
     boolean isChunked;
     boolean expectHeader; //is 100-continue expected by the client
-    Map<String,String> copiedHeaders = Maps.newHashMap();
 
     def ObjectStorageDataRequestType() {
     }
@@ -378,6 +377,7 @@ public class PutObjectType extends ObjectStorageDataRequestType {
     String contentType;
     String contentDisposition;
     String contentMD5;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 
     def PutObjectType() {}
 }
@@ -477,6 +477,7 @@ public class CopyObjectType extends ObjectStorageRequestType {
     String copySourceIfNoneMatch;
     Date copySourceIfModifiedSince;
     Date copySourceIfUnmodifiedSince;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 /* HEAD /bucket/object */
@@ -851,6 +852,7 @@ public class UploadPartType extends ObjectStorageDataRequestType {
     String expect;
     String uploadId;
     String partNumber;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 public class UploadPartResponseType extends ObjectStorageDataResponseType {

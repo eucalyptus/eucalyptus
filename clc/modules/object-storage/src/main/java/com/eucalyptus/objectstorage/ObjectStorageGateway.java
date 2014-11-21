@@ -1282,7 +1282,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             ( destBucket.getVersioning() != null
                                     && destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) ) {
                         destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
-                            srcObject.getSize().longValue(), requestUser);
+                            srcObject.getSize().longValue(), requestUser, request.getCopiedHeaders());
                     }
                 } catch (Exception e) {
                     LOG.error("Error initializing entity for persisting object metadata for " + destBucket.getBucketName()
