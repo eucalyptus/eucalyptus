@@ -1436,6 +1436,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char bus[16];
     set_serial_and_bus(volumeId, canonicalDev, serial, sizeof(serial), bus, sizeof(bus));
     if (connect_ebs(canonicalDev, serial, bus, nc, instanceId, volumeId, attachmentToken, &libvirt_xml, &vol_data)) {
+        EUCA_FREE(vol_data);
         return EUCA_ERROR;
     }
     have_remote_device = TRUE;
@@ -2094,25 +2095,32 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
 //!
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId)
 {
+    int pid = 0;
+    char *pid_str = NULL;
+    char run_workflow_pid_path[EUCA_MAX_PATH] = "";
     ncInstance *pInstance = NULL;
 
     if ((pInstance = find_instance(&global_instances, psInstanceId)) == NULL) {
         LOGERROR("[%s] instance not found\n", psInstanceId);
-        return EUCA_NOT_FOUND_ERROR;
+        return (EUCA_NOT_FOUND_ERROR);
     }
     // read pid
-    char run_workflow_pid_path[EUCA_MAX_PATH];
     snprintf(run_workflow_pid_path, sizeof(run_workflow_pid_path), "/tmp/bundle-%s/process.pid", pInstance->instanceId);
-    char *pid_srt = file2strn(run_workflow_pid_path, 8);
-    if (strlen(pid_srt) == 0)
-        return EUCA_NOT_FOUND_ERROR;
-    int pid = atoi(pid_srt);
-    pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
-    if (pid > 0 && !check_process(pid, "euca-run-workflow")) {
-        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pid);
-        if (kill((-1)*pid, 9) != EUCA_OK) { // kill process group
-            LOGERROR("[%s] can't kill process group with pid '%d'\n", psInstanceId, (-1)*pid);
+    if ((pid_str = file2strn(run_workflow_pid_path, 8)) != NULL) {
+        if (strlen(pid_str) == 0) {
+            EUCA_FREE(pid_str);
+            return (EUCA_NOT_FOUND_ERROR);
         }
+
+        pid = atoi(pid_str);
+        pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
+        if ((pid > 0) && !check_process(pid, "euca-run-workflow")) {
+            LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pid);
+            if (kill((-1)*pid, 9) != EUCA_OK) { // kill process group
+                LOGERROR("[%s] can't kill process group with pid '%d'\n", psInstanceId, (-1)*pid);
+            }
+        }
+        EUCA_FREE(pid_str);
     }
 
     return (EUCA_OK);
