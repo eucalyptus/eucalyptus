@@ -22,12 +22,18 @@ package com.eucalyptus.ws.server;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Strings;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.WebServices;
+import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.ImmutableSet;
@@ -68,13 +74,6 @@ public abstract class SoapPipeline extends FilteredPipeline {
         namespacePattern );
   }
 
-  protected SoapPipeline( final String name,
-                          final String servicePath,
-                          final String defaultNamespace,
-                          final String namespacePattern ) {
-    this( name, null, ImmutableSet.of( servicePath ), defaultNamespace, namespacePattern );
-  }
-
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
     final boolean usesServicePath = Iterables.any( servicePaths, Strings.isSuffixOf( message.getUri( ) ) );
@@ -92,7 +91,15 @@ public abstract class SoapPipeline extends FilteredPipeline {
 
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    getAuthenticationStage( ).unrollStage( pipeline );
+    if ( !WebServices.isSoapEnabled( component ) ) {
+      pipeline.addLast( "disabled-soap-fault", new MessageStackHandler( ){
+        @Override
+        public void incomingMessage( final MessageEvent event ) throws Exception {
+          throw new WebServicesException( "Service not available" );
+        }
+      } );
+    }
+    getAuthenticationStage().unrollStage( pipeline );
     pipeline.addLast( "binding",
         new BindingHandler(
             BindingManager.getBinding( defaultNamespace, component ),
