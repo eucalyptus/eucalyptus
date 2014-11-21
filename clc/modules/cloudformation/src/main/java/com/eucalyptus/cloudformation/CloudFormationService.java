@@ -856,7 +856,7 @@ public class CloudFormationService {
   }
 
   public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
-      throws CloudFormationException {
+    throws CloudFormationException {
     ValidateTemplateResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -866,9 +866,18 @@ public class CloudFormationService {
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
       final String templateBody = request.getTemplateBody();
+      final String templateUrl = request.getTemplateURL();
       String stackName = "stackName"; // just some value to make the validate code work
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      if (templateBody == null) throw new ValidationErrorException("template body is null");
+      if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
+      if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
+
+      if (templateBody != null) {
+        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
+        }
+      }
+      String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
       final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
@@ -883,7 +892,7 @@ public class CloudFormationService {
       availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       pseudoParameterValues.setAvailabilityZones(availabilityZones);
       List<Parameter> parameters = Lists.newArrayList();
-      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateBody, parameters, pseudoParameterValues);
+      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues);
       reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
       LOG.error(ex, ex);
@@ -891,6 +900,7 @@ public class CloudFormationService {
     }
     return reply;
   }
+
   private static void handleException(final Exception e)
     throws CloudFormationException {
     final CloudFormationException cause = Exceptions.findCause(e,
