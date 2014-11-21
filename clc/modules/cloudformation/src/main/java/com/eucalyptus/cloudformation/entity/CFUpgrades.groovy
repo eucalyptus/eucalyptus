@@ -1,6 +1,6 @@
 package com.eucalyptus.cloudformation.entity
 
-import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.cloudformation.CloudFormation
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
@@ -13,7 +13,7 @@ import java.util.concurrent.Callable
  */
 public class CFUpgrades {
 
-  @com.eucalyptus.upgrade.Upgrades.PreUpgrade( value = Eucalyptus.class, since = com.eucalyptus.upgrade.Upgrades.Version.v4_1_0 )
+  @com.eucalyptus.upgrade.Upgrades.PreUpgrade( value = CloudFormation.class, since = com.eucalyptus.upgrade.Upgrades.Version.v4_1_0 )
   @CompileStatic( TypeCheckingMode.SKIP )
   public static class CloudFormation410PreUpgrade implements Callable<Boolean> {
     private static Logger LOG = Logger.getLogger( CloudFormation410PreUpgrade.class );
