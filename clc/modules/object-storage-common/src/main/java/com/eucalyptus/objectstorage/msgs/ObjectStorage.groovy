@@ -127,6 +127,7 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
     ChannelBufferStreamingInputStream data;
     boolean isChunked;
     boolean expectHeader; //is 100-continue expected by the client
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 
     def ObjectStorageDataRequestType() {
     }
@@ -372,7 +373,6 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 public class PutObjectType extends ObjectStorageDataRequestType {
     String contentLength;
     List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    Map<String,String> copiedHeaders = Maps.newHashMap();
     AccessControlList accessControlList = new AccessControlList();
     String storageClass;
     String contentType;
