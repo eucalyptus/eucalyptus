@@ -1281,8 +1281,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     if (destObject == null ||
                             ( destBucket.getVersioning() != null
                                     && destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) ) {
+                        // with S3, on a copy, the source's headers are carried over, but can be overridden
+                        Map<String,String> modded = srcObject.getStoredHeaders();
+                        Map<String,String> copiedHeaders = request.getCopiedHeaders();
+                        if (copiedHeaders != null && copiedHeaders.size() > 0) {
+                            for (Map.Entry<String,String> entry : copiedHeaders.entrySet()) {
+                                modded.put(entry.getKey(), entry.getValue());
+                            }
+                        }
                         destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
-                            srcObject.getSize().longValue(), requestUser);
+                                srcObject.getSize().longValue(), requestUser, modded);
                     }
                 } catch (Exception e) {
                     LOG.error("Error initializing entity for persisting object metadata for " + destBucket.getBucketName()
