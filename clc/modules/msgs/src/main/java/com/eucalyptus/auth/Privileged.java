@@ -82,8 +82,10 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -680,7 +682,7 @@ public class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) )  ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( user.getCertificates( ).size( ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
+    if ( countUnrevokedCertificates( user.getCertificates( ) ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName() );
@@ -697,7 +699,7 @@ public class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( user.getCertificates( ).size( ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
+    if ( countUnrevokedCertificates( user.getCertificates( ) ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     if ( Strings.isNullOrEmpty( certBody ) ) {
@@ -863,5 +865,13 @@ public class Privileged {
             throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.updateServerCeritificate(certName, newCertName, newPath);
+  }
+
+  private static int countUnrevokedCertificates( final List<Certificate> certificates )  {
+    return Iterables.size(
+        Iterables.filter(
+            certificates,
+            CollectionUtils.propertyPredicate( false, Certificate.Util.revoked( ) )
+        ) );
   }
 } 
