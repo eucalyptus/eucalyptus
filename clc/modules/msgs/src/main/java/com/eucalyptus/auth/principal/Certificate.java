@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,23 +65,43 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
+import com.google.common.base.Function;
 
-public interface  Certificate extends /*HasId,*/ Serializable {
-  public String getCertificateId( );
-  public Boolean isActive( );
-  public void setActive( Boolean active ) throws AuthException;
-  
-  public Boolean isRevoked( );
-  public void setRevoked( Boolean revoked ) throws AuthException;
-  
-  public String getPem( );
-  public X509Certificate getX509Certificate( );
-  public void setX509Certificate( X509Certificate x509 ) throws AuthException;
+public interface Certificate extends /*HasId,*/ Serializable {
 
-  public Date getCreateDate( );
-  public void setCreateDate( Date createDate ) throws AuthException;
+  String getCertificateId( );
+
+  Boolean isActive( );
+  void setActive( Boolean active ) throws AuthException;
   
-  public User getUser( ) throws AuthException;
+  Boolean isRevoked( );
+  void setRevoked( Boolean revoked ) throws AuthException;
   
+  String getPem( );
+
+  X509Certificate getX509Certificate( );
+  void setX509Certificate( X509Certificate x509 ) throws AuthException;
+
+  Date getCreateDate( );
+  void setCreateDate( Date createDate ) throws AuthException;
+  
+  User getUser( ) throws AuthException;
+  
+  static class Util {
+    public static Function<Certificate,Boolean> revoked( ) {
+      return CertificateToRevokedFlag.INSTANCE;
+    }
+
+    private enum CertificateToRevokedFlag implements Function<Certificate,Boolean> {
+      INSTANCE;
+
+      @Nullable
+      @Override
+      public Boolean apply( @Nullable final Certificate certificate ) {
+        return certificate == null ? null : certificate.isRevoked( );
+      }
+    }
+  }
 }
