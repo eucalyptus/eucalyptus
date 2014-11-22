@@ -473,6 +473,7 @@ static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr)
     _ELEMENT(node, "backingType", libvirtSourceTypeNames[vbr->backingType]);
     _ELEMENT(node, "backingPath", vbr->backingPath);
     _ELEMENT(node, "preparedResourceLocation", vbr->preparedResourceLocation);
+    _ELEMENT(node, "guestDeviceSerialId", vbr->guestDeviceSerialId);
 }
 
 //!
@@ -660,6 +661,7 @@ int gen_instance_xml(const ncInstance * instance)
                 }
                 _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
                 _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
+                _ATTRIBUTE(disk, "serial", vbr->guestDeviceSerialId);
 
                 if (j) {
                     rootNode = _ELEMENT(disks, "root", NULL);
@@ -795,6 +797,14 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             EUCA_FREE(res_array[z]);                                                 \
         EUCA_FREE(res_array);                                                        \
         return (EUCA_ERROR);                                                         \
+    }                                                                                \
+}
+
+#define XGET_STR_FREE_OPT(_XPATH, _dest)                                             \
+{                                                                                    \
+    LOGTRACE("reading up to %lu of " #_dest " from %s\n", sizeof(_dest), xml_path);  \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
+        LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                  \
     }                                                                                \
 }
 
@@ -964,6 +974,8 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             XGET_STR_FREE(vbrxpath, vbr->backingPath);
             MKVBRPATH("preparedResourceLocation");
             XGET_STR_FREE(vbrxpath, vbr->preparedResourceLocation);
+            MKVBRPATH("guestDeviceSerialId");
+            XGET_STR_FREE_OPT(vbrxpath, vbr->guestDeviceSerialId);
 
             // set pointers in the VBR
             if (strcmp(vbr->typeName, "machine") == 0 || (strcmp(vbr->typeName, "ebs") == 0 && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {

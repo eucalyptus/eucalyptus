@@ -242,6 +242,9 @@ that describes a Eucalyptus instance to be launched.
 			        </xsl:otherwise>
 	                    </xsl:choose>
                         </target>
+			<serial>
+			  <xsl:value-of select="@serial"/>
+			</serial>
                     </disk>
                 </xsl:for-each>
                 <xsl:if test="/instance/disks/floppyPath != ''">

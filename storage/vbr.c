@@ -725,6 +725,11 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
 {
     virtualBootRecord *partitions[BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];    // for validating partitions
     bzero(partitions, sizeof(partitions));  //! @fixme: chuck - this is not zeroing out the hole structure!!!
+
+    // ref: http://docs.amazonaws.cn/en_us/AWSEC2/latest/UserGuide/ec2-ug.pdf
+    int count_ebs = 1; // ebsN numbers in AWS metadata answers start at 1
+    int count_eph = 0; // ephemeralN numbers in AWS metadata answers and in block-device mappings start at 0
+
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
 
@@ -756,10 +761,12 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
                 vbr->guestDeviceName[0] = 'v';
             }
             
-            // compute serial ID
+            // compute serial ID for BDM disks (available at boot time)
             char disk_id[128];
             if (vbr->type == NC_RESOURCE_EBS) {
-                snprintf(disk_id, sizeof(disk_id), "%s", vbr->id);
+                snprintf(disk_id, sizeof(disk_id), "bdm-ebs%d", count_ebs++);
+            } else if (vbr->type == NC_RESOURCE_EPHEMERAL) {
+                snprintf(disk_id, sizeof(disk_id), "bdm-ephemeral%d", count_eph++);
             } else {
                 snprintf(disk_id, sizeof(disk_id), "bdm-%s", vbr->typeName);
             }
