@@ -44,6 +44,12 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.InternetGatewayType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -218,12 +224,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.InternetGatewayType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.SubnetType;
-import edu.ucsb.eucalyptus.msgs.VpcType;
 
 /**
  * @author Sang-Min Park
@@ -579,7 +579,7 @@ public class LoadBalancingBackendService {
             validZones,
             Iterables.transform(
                 EucalyptusActivityTasks.getInstance().describeAvailabilityZones( false ),
-                ClusterInfoType.zoneName( ) ) );
+                ClusterInfoType.zoneName() ) );
       } catch( Exception ex ){
         throw new InternalFailure400Exception("Unable to verify the requested zones");
       }

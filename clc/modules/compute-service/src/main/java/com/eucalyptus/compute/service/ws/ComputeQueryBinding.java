@@ -34,7 +34,7 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 public class ComputeQueryBinding extends BaseQueryBinding<OperationParameter> {
 
   static final String COMPUTE_NAMESPACE_PATTERN = "http://ec2.amazonaws.com/doc/%s/";
-  static final String COMPUTE_DEFAULT_VERSION = "2014-09-01";
+  static final String COMPUTE_DEFAULT_VERSION = "2014-10-01";
   static final String COMPUTE_DEFAULT_NAMESPACE = String.format( COMPUTE_NAMESPACE_PATTERN, COMPUTE_DEFAULT_VERSION );
 
   public ComputeQueryBinding( ) {

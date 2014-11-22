@@ -20,13 +20,13 @@
 package com.eucalyptus.autoscaling.activities;
 
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.util.DispatchingClient;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
- 
+
 /**
  * 
  */
-public class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+public class EucalyptusClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
 
   public EucalyptusClient( final String userId ) {
     super( userId, Eucalyptus.class );

@@ -70,6 +70,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
@@ -102,18 +103,17 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.msgs.AddressInfoType;
-import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
-import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
-import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
-import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
+import com.eucalyptus.compute.common.backend.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.backend.AllocateAddressType;
+import com.eucalyptus.compute.common.backend.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.backend.AssociateAddressType;
+import com.eucalyptus.compute.common.backend.DescribeAddressesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeAddressesType;
+import com.eucalyptus.compute.common.backend.DisassociateAddressResponseType;
+import com.eucalyptus.compute.common.backend.DisassociateAddressType;
+import com.eucalyptus.compute.common.backend.ReleaseAddressResponseType;
+import com.eucalyptus.compute.common.backend.ReleaseAddressType;
 
 @ComponentNamed
 public class AddressManager {

@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
-import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.InternetGatewayType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.tags.FilterSupport;
@@ -35,7 +35,6 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.msgs.InternetGatewayType;
 
 /**
  *

@@ -44,6 +44,11 @@ import org.w3c.dom.NodeList;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.ConversionTask;
+import com.eucalyptus.compute.common.ImportInstanceTaskDetails;
+import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
+import com.eucalyptus.compute.common.Snapshot;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -59,12 +64,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
-import edu.ucsb.eucalyptus.msgs.Snapshot;
-import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
  * @author Sang-Min Park
@@ -237,7 +236,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       if(snapshotIds!=null && snapshotIds.size()>0){
         try{
          // see if the snapshots are ready and register them as images
-          final List<Snapshot> snapshots = 
+          final List<Snapshot> snapshots =
               EucalyptusActivityTasks.getInstance().describeSnapshotsAsUser(instanceTask.getOwnerUserId(), snapshotIds);
           int numCompleted = 0;
           int numError = 0;
@@ -486,7 +485,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         }else{
           String volumeStatus= null;
           try{
-            final List<Volume> eucaVolumes = 
+            final List<Volume> eucaVolumes =
                 EucalyptusActivityTasks.getInstance().describeVolumesAsUser(instanceTask.getOwnerUserId(), Lists.newArrayList(volume.getVolume().getId()));
             final Volume eucaVolume = eucaVolumes.get(0);
             volumeStatus = eucaVolume.getStatus();

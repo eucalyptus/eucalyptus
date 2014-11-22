@@ -303,6 +303,25 @@
     <structure name="instanceStatus" field="instanceStatus" usage="required" type="com.eucalyptus.compute.common.InstanceStatusType"/>
   </mapping>
 
+  <mapping name="ReportInstanceStatus" class="com.eucalyptus.compute.common.ReportInstanceStatusType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection field="instanceId">
+      <value name="instanceId" type="java.lang.String"/>
+    </collection>
+    <value name="status" field="status" usage="required"/>
+    <value name="startTime" field="startTime" usage="required"/>
+    <value name="endTime" field="endTime" usage="required"/>
+    <collection field="reasonCode">
+      <value name="reasonCode" type="java.lang.String"/>
+    </collection>
+    <value name="description" field="description" usage="required"/>
+  </mapping>
+
+  <mapping name="ReportInstanceStatusResponse" class="com.eucalyptus.compute.common.ReportInstanceStatusResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
   <mapping name="TerminateInstancesResponse" class="com.eucalyptus.compute.common.TerminateInstancesResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />

@@ -24,8 +24,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 
 /**
  * @author Sang-Min Park

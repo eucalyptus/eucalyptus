@@ -65,25 +65,25 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType;
 
-public class RebootCallback extends MessageCallback<RebootInstancesType,RebootInstancesResponseType> {
+public class RebootCallback extends MessageCallback<ClusterRebootInstancesType,ClusterRebootInstancesResponseType> {
 
   private static Logger LOG = Logger.getLogger( RebootCallback.class );
 
   public RebootCallback( String instanceId ) {
-    super( new RebootInstancesType( instanceId ) );
+    super( new ClusterRebootInstancesType( instanceId ) );
   }
-  public RebootCallback( RebootInstancesType msg ) {
+  public RebootCallback( ClusterRebootInstancesType msg ) {
     super( msg );
   }
 
   @Override
-  public void initialize( RebootInstancesType msg )  {}
+  public void initialize( ClusterRebootInstancesType msg )  {}
 
   @Override
-  public void fire( RebootInstancesResponseType msg )  {}
+  public void fire( ClusterRebootInstancesResponseType msg )  {}
 
   @Override
   public void fireException( Throwable e ) {

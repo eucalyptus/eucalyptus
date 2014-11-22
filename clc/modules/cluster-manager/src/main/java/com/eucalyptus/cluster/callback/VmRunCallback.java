@@ -74,6 +74,7 @@ import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.EdgeNetworking;
@@ -171,7 +172,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         }
         final Address addr = getAddress( );
         if ( addr != null && !addr.isReallyAssigned( ) ) {
-            final BaseMessage runInstanceReq = MessageContexts.lookup(input.getInstanceId(), edu.ucsb.eucalyptus.msgs.RunInstancesType.class);
+            final BaseMessage runInstanceReq = MessageContexts.lookup(input.getInstanceId(), RunInstancesType.class);
             AddressingDispatcher.dispatch(
                 AsyncRequests.newRequest( addr.assign( vm ).getCallback(runInstanceReq) ).then(
                     new Callback.Success<BaseMessage>( ) {

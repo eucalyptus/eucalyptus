@@ -43,8 +43,25 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.AccountAttributeSetItemType;
+import com.eucalyptus.compute.common.AttributeBooleanValueType;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.DhcpConfigurationItemType;
+import com.eucalyptus.compute.common.DhcpOptionsType;
+import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.GroupSetType;
+import com.eucalyptus.compute.common.InternetGatewayType;
+import com.eucalyptus.compute.common.NetworkAclType;
+import com.eucalyptus.compute.common.NetworkInterfaceAttachmentType;
+import com.eucalyptus.compute.common.NetworkInterfaceType;
+import com.eucalyptus.compute.common.NullableAttributeValueType;
+import com.eucalyptus.compute.common.ResourceTagSetItemType;
+import com.eucalyptus.compute.common.ResourceTagSetType;
+import com.eucalyptus.compute.common.RouteTableType;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcTagged;
+import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
@@ -89,8 +106,8 @@ import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
 import com.google.common.net.InternetDomainName;
 import com.google.common.primitives.Ints;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.msgs.Filter;
+import com.eucalyptus.compute.common.backend.*;
+
 
 /**
  *
@@ -1451,11 +1468,6 @@ public class VpcManager {
     return reply;
   }
 
-  public DisassociateAddressResponseType disassociateAddress(DisassociateAddressType request) throws EucalyptusCloudException {
-    DisassociateAddressResponseType reply = request.getReply( );
-    return reply;
-  }
-
   public DisassociateRouteTableResponseType disassociateRouteTable(final DisassociateRouteTableType request) throws EucalyptusCloudException {
     final DisassociateRouteTableResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -1988,7 +2000,7 @@ public class VpcManager {
   private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
       final Identifier identifier,
       final Collection<String> ids,
-      final Collection<Filter> filters,
+      final Collection<com.eucalyptus.compute.common.Filter> filters,
       final Class<AP> persistent,
       final Class<AT> api,
       final List<AT> results,

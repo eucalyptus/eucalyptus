@@ -20,8 +20,8 @@
 package com.eucalyptus.cluster.callback;
 
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.StopInstanceResponseType;
-import com.eucalyptus.vm.StopInstanceType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceResponseType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceType;
 
 /**
  * @author Sang-Min Park

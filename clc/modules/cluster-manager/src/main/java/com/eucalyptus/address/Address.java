@@ -83,6 +83,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
@@ -109,7 +110,6 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @Entity

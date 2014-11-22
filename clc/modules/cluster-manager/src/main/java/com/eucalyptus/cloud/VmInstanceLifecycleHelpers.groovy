@@ -39,6 +39,10 @@ import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.compute.common.CloudMetadatas
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType
+import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType
+import com.eucalyptus.compute.common.backend.RunInstancesType
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.NetworkingFeature
@@ -102,10 +106,6 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
 import edu.ucsb.eucalyptus.cloud.VmInfo
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetRequestType
-import edu.ucsb.eucalyptus.msgs.PrivateIpAddressesSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 

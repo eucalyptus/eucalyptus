@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,24 +62,33 @@
 
 package com.eucalyptus.compute.conversion;
 
-import edu.ucsb.eucalyptus.msgs.CancelExportTaskResponseType;
-import edu.ucsb.eucalyptus.msgs.CancelExportTaskType;
-import edu.ucsb.eucalyptus.msgs.DescribeExportTasksResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeExportTasksType;
+
+import com.eucalyptus.compute.common.backend.CancelExportTaskResponseType;
+import com.eucalyptus.compute.common.backend.CancelExportTaskType;
+import com.eucalyptus.compute.common.backend.CreateInstanceExportTaskResponseType;
+import com.eucalyptus.compute.common.backend.CreateInstanceExportTaskType;
+import com.eucalyptus.compute.common.backend.DescribeExportTasksResponseType;
+import com.eucalyptus.compute.common.backend.DescribeExportTasksType;
 
 /**
  * @todo doc
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 public class ExportManager {
+
   public CancelExportTaskResponseType cancelExportTask( CancelExportTaskType request ) {
     CancelExportTaskResponseType reply = request.getReply( );
     return reply;
   }
-  
+
+  public CreateInstanceExportTaskResponseType createInstanceExportTask( CreateInstanceExportTaskType request ) {
+    CreateInstanceExportTaskResponseType reply = request.getReply( );
+    return reply;
+  }
+
   public DescribeExportTasksResponseType describeExportTasks( DescribeExportTasksType request ) {
     DescribeExportTasksResponseType reply = request.getReply( );
     return reply;
   }
-  
+
 }

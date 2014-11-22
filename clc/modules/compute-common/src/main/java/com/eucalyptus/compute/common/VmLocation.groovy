@@ -23,6 +23,7 @@ package com.eucalyptus.compute.common
 
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.google.common.base.Function
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
@@ -84,6 +85,10 @@ public class ClusterInfoType extends EucalyptusData {
   String zoneState;
   String regionName;
   ArrayList<String> messageSet = new ArrayList<String>();
+
+  static Function<ClusterInfoType,String> zoneName( ) {
+    return { ClusterInfoType clusterInfoType -> clusterInfoType.zoneName } as Function<ClusterInfoType,String>
+  }
 }
 public class RegionInfoType extends EucalyptusData {  //** added 2008-12-01  **/
   public RegionInfoType(){}

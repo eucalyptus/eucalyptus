@@ -24,7 +24,7 @@ import java.util.List;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;

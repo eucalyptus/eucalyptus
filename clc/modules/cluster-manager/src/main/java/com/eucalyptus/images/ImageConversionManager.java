@@ -43,7 +43,14 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
@@ -100,13 +107,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 /**
  * @author Sang-Min Park
@@ -1054,13 +1054,13 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
     
     @Override
-    void dispatchInternal(Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+    void dispatchInternal(Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
       client.dispatch(createTag(), callback);             
     }
 
     @Override
-    void dispatchSuccess(EucalyptusMessage response) {
+    void dispatchSuccess(ComputeMessage response) {
       final CreateTagsResponseType resp = (CreateTagsResponseType) response;
     }
   }
@@ -1087,13 +1087,13 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       return req;
     }
     @Override
-    void dispatchInternal(Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+    void dispatchInternal(Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
       client.dispatch(deleteTag(), callback);      
     }
 
     @Override
-    void dispatchSuccess(EucalyptusMessage response) {
+    void dispatchSuccess(ComputeMessage response) {
       final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
     }
   }
@@ -1126,15 +1126,15 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private static abstract class EucalyptusUserActivityTask extends ActivityTask<EucalyptusMessage, Eucalyptus> {
+  private static abstract class EucalyptusUserActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
     private String userId = null;
     private EucalyptusUserActivityTask(final String userId){
       this.userId = userId;
     }
     @Override
-    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       try{
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+        final DispatchingClient<ComputeMessage, Eucalyptus> client =
             new DispatchingClient<>( userId, Eucalyptus.class );
             client.init();
             return client;
@@ -1144,11 +1144,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private static abstract class EucalyptusActivityTask extends ActivityTask<EucalyptusMessage, Eucalyptus> {
+  private static abstract class EucalyptusActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
     @Override
-    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       try{
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+        final DispatchingClient<ComputeMessage, Eucalyptus> client =
             new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , Eucalyptus.class );
             client.init();
             return client;

@@ -28,6 +28,8 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -39,8 +41,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.TagInfo;
 
 /**
  * Utility functions for Tag

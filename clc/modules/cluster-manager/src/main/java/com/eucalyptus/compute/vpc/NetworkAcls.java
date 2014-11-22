@@ -27,6 +27,9 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.NetworkAclAssociationType;
+import com.eucalyptus.compute.common.NetworkAclEntryType;
+import com.eucalyptus.compute.common.NetworkAclType;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -39,9 +42,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import edu.ucsb.eucalyptus.msgs.NetworkAclAssociationType;
-import edu.ucsb.eucalyptus.msgs.NetworkAclEntryType;
-import edu.ucsb.eucalyptus.msgs.NetworkAclType;
 
 /**
  *

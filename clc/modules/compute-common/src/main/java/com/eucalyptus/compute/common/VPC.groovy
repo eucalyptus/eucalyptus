@@ -184,6 +184,8 @@ class AttachNetworkInterfaceResponseType extends VpcMessage {
 }
 class AssignPrivateIpAddressesSetRequestType extends EucalyptusData {
   AssignPrivateIpAddressesSetRequestType() {  }
+  @HttpParameterMapping( parameter = "PrivateIpAddress" )
+  @HttpEmbedded(multiple=true)
   ArrayList<AssignPrivateIpAddressesSetItemRequestType> item = new ArrayList<AssignPrivateIpAddressesSetItemRequestType>();
 }
 class DescribeAccountAttributesType extends VpcMessage {
@@ -369,6 +371,10 @@ class SubnetType extends EucalyptusData implements VpcTagged {
 
   static Function<SubnetType, String> id( ) {
     { SubnetType subnet -> subnet.subnetId } as Function<SubnetType, String>
+  }
+
+  static Function<SubnetType, String> zone( ) {
+    { SubnetType subnet -> subnet.availabilityZone } as Function<SubnetType, String>
   }
 }
 class DescribeRouteTablesResponseType extends VpcMessage {
@@ -1180,6 +1186,7 @@ class ReplaceNetworkAclAssociationResponseType extends VpcMessage {
   ReplaceNetworkAclAssociationResponseType() {  }
 }
 class AssignPrivateIpAddressesSetItemRequestType extends EucalyptusData {
+  @HttpValue
   String privateIpAddress;
   AssignPrivateIpAddressesSetItemRequestType() {  }
 }
@@ -1189,6 +1196,7 @@ class NullableAttributeBooleanValueType extends EucalyptusData {
 }
 class UnassignPrivateIpAddressesType extends VpcMessage {
   String networkInterfaceId;
+  @HttpEmbedded
   AssignPrivateIpAddressesSetRequestType privateIpAddressesSet;
   UnassignPrivateIpAddressesType() {  }
 }
@@ -1357,6 +1365,7 @@ class IpRangeItemType extends EucalyptusData {
 }
 class AssignPrivateIpAddressesType extends VpcMessage {
   String networkInterfaceId;
+  @HttpEmbedded
   AssignPrivateIpAddressesSetRequestType privateIpAddressesSet;
   Integer secondaryPrivateIpAddressCount;
   Boolean allowReassignment;

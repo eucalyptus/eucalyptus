@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
@@ -43,8 +44,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * @author Sang-Min Park

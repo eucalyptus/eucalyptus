@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,9 +66,6 @@ package edu.ucsb.eucalyptus.msgs;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
@@ -91,6 +88,7 @@ public class ComponentType extends EucalyptusData {
   public ComponentType( ) {
   }
 }
+
 public class ComponentProperty extends EucalyptusData {
   private String type;
   private String displayName;
@@ -130,6 +128,7 @@ public class ComponentProperty extends EucalyptusData {
     this.value = value;
   }
 }
+
 public class StorageStateType extends BaseMessage{
   private String name;
   def StorageStateType() {
@@ -257,116 +256,17 @@ public class EucalyptusData implements BaseData {
 }
 /** *******************************************************************************/
 
-public class DescribeSensorsType extends CloudClusterMessage {
-    Integer historySize;
-    Integer collectionIntervalTimeMs;
-    @HttpParameterMapping (parameter = "sensorId")
-    ArrayList<String> sensorIds = new ArrayList<String>();
-    @HttpParameterMapping (parameter = "instanceId")
-    ArrayList<String> instanceIds = new ArrayList<String>();
-
-    DescribeSensorsType(){}
-    
-    DescribeSensorsType (Integer historySize, Integer collectionIntervalTimeMs, ArrayList<String> instanceIds ) {
-      this.historySize = historySize;
-      this.collectionIntervalTimeMs = collectionIntervalTimeMs;
-      this.instanceIds = instanceIds;
-    }
-}
-
-public class ModifyNode extends CloudClusterMessage {
-    String stateName;
-    String nodeName;
-    ModifyNode(){}
-   
-    ModifyNode (String nodeName, String stateName ) {
-      this.nodeName = nodeName;
-      this.stateName = stateName;
-    }
-}
-
-public class ModifyNodeResponse extends CloudClusterMessage {
-    ModifyNodeResponse(){}
-      
-}
-
-public class DescribeSensorsResponse extends CloudClusterMessage {
-    
-    ArrayList<SensorsResourceType> sensorsResources = new ArrayList<SensorsResourceType>();
-    
-}
-
-public class SensorsResourceType extends EucalyptusData {
-    String resourceName;
-    String resourceType;
-    String resourceUuid;
-    
-    ArrayList<MetricsResourceType> metrics = new ArrayList<MetricsResourceType>();
-    
-}
-
-public class MetricsResourceType extends EucalyptusData {
-    String metricName;
-    ArrayList<MetricCounterType> counters = new ArrayList<MetricCounterType>();
-}
-
-public class MetricCounterType extends EucalyptusData {
-    String type;
-    Long collectionIntervalMs;
-    ArrayList<MetricDimensionsType> dimensions = new ArrayList<MetricDimensionsType>();
-}
-
-public class MetricDimensionsType extends EucalyptusData {
-    String dimensionName;
-    Long sequenceNum;
-    ArrayList<MetricDimensionsValuesType> values = new ArrayList<MetricDimensionsValuesType>();
-}
-
-public class MetricDimensionsValuesType extends EucalyptusData {
-    Date timestamp;
-    Double value;
-}
-
-
-public class DescribeResourcesType extends CloudClusterMessage {
-  
-  ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();
-}
-public class NodeType extends EucalyptusData {
-  String serviceTag;
-  String iqn;
-  String hypervisor;
-  public String toString() {
-    return "NodeType ${URI.create(serviceTag).getHost()} ${iqn} ${hypervisor}";
-  }
-}
-public class DescribeResourcesResponseType extends CloudClusterMessage {
-  ArrayList<ResourceType> resources = new ArrayList<ResourceType>();
-  ArrayList<NodeType> nodes = new ArrayList<NodeType>();
-  ArrayList<String> serviceTags = new ArrayList<String>();
-  
-  public String toString() {
-    String out = "";
-    resources.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
-    nodes.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
-    return out;
-  }
-}
-
 public class VmTypeInfo extends EucalyptusData implements Cloneable {
-  
   String name;
   Integer memory;
   Integer disk;
   Integer cores;
   String rootDeviceName;
   @HttpEmbedded(multiple=true)
-  ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
-  @HttpEmbedded(multiple=true)
   ArrayList<VirtualBootRecord> virtualBootRecord = new ArrayList<VirtualBootRecord>();
   def VmTypeInfo(){
   }
-  
+
   def VmTypeInfo(String name, Integer memory, Integer disk, Integer cores, String rootDevice ) {
     this.name = name;
     this.memory = memory;
@@ -374,54 +274,53 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.cores = cores;
     this.rootDeviceName = rootDevice;
   }
-  
+
   public VmTypeInfo child( ) {
     VmTypeInfo child = new VmTypeInfo( this.name, this.memory, this.disk, this.cores, this.rootDeviceName );
-    child.deviceMappings.addAll( this.deviceMappings );
     child.virtualBootRecord.addAll( this.virtualBootRecord.collect{ VirtualBootRecord it -> it.clone() } );
     return child;
   }
-  
+
   @Override
   public String toString() {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
-  
+
   public String dump() {
-   StringBuilder sb = new StringBuilder();
-   sb.append("VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores} rootDeviceName=${rootDeviceName} ");
-   for (VirtualBootRecord vbr : this.virtualBootRecord) {
-    sb.append("{VirtualBootRecord deviceName=").append(vbr.getGuestDeviceName())
-	  .append(" resourceLocation=").append(vbr.resourceLocation)
-	  .append(" size=").append(vbr.size).append("} ");
-	}
-	return sb.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append("VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores} rootDeviceName=${rootDeviceName} ");
+    for (VirtualBootRecord vbr : this.virtualBootRecord) {
+      sb.append("{VirtualBootRecord deviceName=").append(vbr.getGuestDeviceName())
+          .append(" resourceLocation=").append(vbr.resourceLocation)
+          .append(" size=").append(vbr.size).append("} ");
+    }
+    return sb.toString();
   }
-  
+
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn://
   }
-  
+
   public void setRoot( String imageId, String location, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
-  
+
   public void setKernel( String imageId, String location, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, type : "kernel" ) );
   }
-  
+
   public void setRamdisk( String imageId, String location, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, type : "ramdisk" ) );
   }
-  
+
   protected void setSwap( String deviceName, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "swap", format : "swap" ) );
   }
-  
+
   public void setEphemeral( Integer index, String deviceName, Long sizeBytes, String formatName ) {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "ephemeral", format : formatName ) );
   }
-  
+
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
@@ -450,142 +349,6 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     }
   }
 }
-public class ResourceType extends EucalyptusData {
-  
-  VmTypeInfo instanceType;
-  int maxInstances;
-  int availableInstances;
-  public String toString() {
-    return "ResourceType ${instanceType} ${availableInstances} / ${maxInstances}";
-  }
-}
-public class NetworkConfigType extends EucalyptusData {
-  String macAddress;
-  String ipAddress;
-  String ignoredPublicIp;
-  String privateDnsName;
-  String publicDnsName;
-  Integer vlan;
-  Long networkIndex;
-  
-  def NetworkConfigType() {
-  }
-  
-  public void updateDns( String domain ) {
-    this.ipAddress = ( this.ipAddress == null ? "0.0.0.0" : this.ipAddress )
-    this.ignoredPublicIp = ( this.ignoredPublicIp == null ? "0.0.0.0" : this.ignoredPublicIp )
-    this.publicDnsName = "euca-${this.ignoredPublicIp.replaceAll( '\\.', '-' )}.eucalyptus.${domain}";
-    this.privateDnsName = "euca-${this.ipAddress.replaceAll( '\\.', '-' )}.eucalyptus.internal";
-  }
-  
-  @Override
-  public String toString() {
-    return "NetworkConfig ${vlan} ${networkIndex} ${ipAddress} ${ignoredPublicIp} ${privateDnsName} ${publicDnsName}";
-  }
-}
-
-public class NetworkParameters extends EucalyptusData {
-  String privateMacAddress;
-  String publicMacAddress;
-  int macLimit;
-  int vlan;
-}
-
-public class PacketFilterRule extends EucalyptusData {
-  public static String ACCEPT = "firewall-open";
-  public static String DENY = "firewall-close";
-  
-  public static PacketFilterRule revoke( PacketFilterRule  existingRule ) {
-    PacketFilterRule pf = new PacketFilterRule();
-    pf.destUserName = existingRule.getDestUserName();
-    pf.destNetworkName = existingRule.getDestNetworkName();
-    pf.policy = DENY;
-    pf.portMin = existingRule.getPortMin();
-    pf.portMax = existingRule.getPortMax();
-    pf.protocol = existingRule.getProtocol();
-    pf.setPeers( existingRule.getPeers() );
-    pf.setSourceCidrs( existingRule.getSourceCidrs() );
-    pf.setSourceNetworkNames( existingRule.getSourceNetworkNames() );
-    pf.setSourceUserNames( existingRule.getSourceUserNames() );
-    return pf;
-  }
-  String destUserName;
-  String destNetworkName;
-  String policy = "firewall-open";
-  String protocol;
-  Integer portMin;
-  Integer portMax;
-  ArrayList<String> sourceCidrs = new ArrayList<String>();
-  ArrayList<VmNetworkPeer> peers = new ArrayList<VmNetworkPeer>();
-  ArrayList<String> sourceNetworkNames = new ArrayList<String>();
-  ArrayList<String> sourceUserNames = new ArrayList<String>();
-  
-  def PacketFilterRule(String destUserName, String destNetworkName, String protocol, Integer portMin, Integer portMax) {
-    this.destUserName = destUserName;
-    this.destNetworkName = destNetworkName;
-    this.protocol = protocol;
-    this.portMin = portMin;
-    this.portMax = portMax;
-  }
-  
-  def PacketFilterRule(){
-  }
-  
-  @Override
-  public String toString() {
-    return "PacketFilterRule ${destUserName} ${destNetworkName} ${policy} ${protocol} ${portMin}-${portMax} " +
-    ((!sourceCidrs.isEmpty())?"":" source ${sourceCidrs}") +
-    ((!peers.isEmpty())?"":" peers ${peers}") +
-    ((!sourceNetworkNames.isEmpty())?"":" sourceNetworks ${sourceNetworkNames}") +
-    ((!sourceUserNames.isEmpty())?"":" sourceUsers ${sourceUserNames}");
-  }
-  
-  
-  public void addPeer( String queryKey, String groupName ) {
-    VmNetworkPeer peer = new VmNetworkPeer( queryKey, groupName );
-    this.peers.add(peer);
-    this.sourceNetworkNames.add( peer.getSourceNetworkName() );
-    this.sourceUserNames.add(peer.userName);
-  }
-}
-
-public class VmNetworkPeer  extends EucalyptusData {
-  
-  String userName;
-  String sourceNetworkName;
-  
-  def VmNetworkPeer() {
-  }
-  
-  def VmNetworkPeer(final userName, final sourceNetworkName) {
-    this.userName = userName;
-    this.sourceNetworkName = sourceNetworkName;
-  }
-  
-  
-  
-  boolean equals(final Object o) {
-    if ( this.is(o) ) return true;
-    
-    if ( !o || getClass() != o.class ) return false;
-    
-    VmNetworkPeer that = (VmNetworkPeer) o;
-    
-    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != null ) return false;
-    if ( userName ? !userName.equals(that.userName) : that.userName != null ) return false;
-    
-    return true;
-  }
-  
-  int hashCode() {
-    int result;
-    
-    result = (userName ? userName.hashCode() : 0);
-    result = 31 * result + (sourceNetworkName ? sourceNetworkName.hashCode() : 0);
-    return result;
-  }
-}
-
 
 public class CloudGatherLogMessage extends EucalyptusMessage {
 
@@ -698,12 +461,6 @@ public class ComponentMessageType extends BaseMessage {
 public class ComponentMessageResponseType extends BaseMessage {
   def ComponentMessageResponseType() {
   }
-}
-
-public class Filter extends EucalyptusData {
-  String name;
-  @HttpParameterMapping (parameter = "Value")
-  ArrayList<String> valueSet = new ArrayList<String>( );
 }
 
 public class ErrorDetail extends EucalyptusData {

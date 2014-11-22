@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,15 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.ConversionTask;
+import com.eucalyptus.compute.common.backend.CancelConversionTaskResponseType;
+import com.eucalyptus.compute.common.backend.CancelConversionTaskType;
+import com.eucalyptus.compute.common.backend.DescribeConversionTasksResponseType;
+import com.eucalyptus.compute.common.backend.DescribeConversionTasksType;
+import com.eucalyptus.compute.common.backend.ImportInstanceResponseType;
+import com.eucalyptus.compute.common.backend.ImportInstanceType;
+import com.eucalyptus.compute.common.backend.ImportVolumeResponseType;
+import com.eucalyptus.compute.common.backend.ImportVolumeType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.backend.ImagingServiceException;
@@ -95,16 +104,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 import java.util.Collections;
-
-import edu.ucsb.eucalyptus.msgs.CancelConversionTaskResponseType;
-import edu.ucsb.eucalyptus.msgs.CancelConversionTaskType;
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
-import edu.ucsb.eucalyptus.msgs.ImportVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 
 public class ImportManager {
   private static Logger    LOG                           = Logger.getLogger( ImportManager.class );  

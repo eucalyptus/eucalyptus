@@ -79,6 +79,20 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.compute.common.CreateVolumePermissionItemType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotType;
+import com.eucalyptus.compute.common.backend.DeleteSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.DeleteSnapshotType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotAttributeResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotAttributeType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
+import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeType;
+import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeType;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -180,7 +194,7 @@ public class SnapshotManager {
     }
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
-    edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+    com.eucalyptus.compute.common.Snapshot snapMsg = snap.morph( new com.eucalyptus.compute.common.Snapshot( ) );
     snapMsg.setProgress( "0%" );
     snapMsg.setOwnerId( snap.getOwnerAccountNumber( ) );
     snapMsg.setVolumeSize( volReady.getSize( ).toString( ) );
@@ -295,7 +309,7 @@ public class SnapshotManager {
               Iterables.transform( snapshots, CloudMetadatas.toDisplayName() ) );
       for ( final Snapshot snap : snapshots ) {
         try {
-          final edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+          final com.eucalyptus.compute.common.Snapshot snapReply = snap.morph( new com.eucalyptus.compute.common.Snapshot( ) );
           Tags.addFromTags( snapReply.getTagSet(), ResourceTag.class, tagsMap.get( snapReply.getSnapshotId() ) );
           snapReply.setVolumeId( snap.getParentVolume( ) );
           snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );

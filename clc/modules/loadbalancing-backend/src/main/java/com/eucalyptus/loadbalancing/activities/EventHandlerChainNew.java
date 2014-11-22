@@ -45,6 +45,10 @@ import com.eucalyptus.autoscaling.common.msgs.Instances;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -76,10 +80,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
