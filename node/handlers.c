@@ -124,6 +124,10 @@
 #include "hooks.h"
 #include <ebs_utils.h>
 #include "objectstorage.h"
+#include "stats.h"
+#include "message_sensor.h"
+#include "message_stats.h"
+#include "service_sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -194,6 +198,7 @@ sem *addkey_sem = NULL;                //!< guarding access to global instance s
 sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
 sem *log_sem = NULL;                   //!< used by log.c
 sem *service_state_sem = NULL;         //!< Used to guard service state updates (i.e. topology updates)
+sem *stats_sem = NULL;                 //!< Used to guard the internal message stats data on updates
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list
@@ -224,6 +229,7 @@ configEntry configKeysNoRestartNC[] = {
     {CONFIG_NC_CEPH_USER, DEFAULT_CEPH_USER},
     {CONFIG_NC_CEPH_KEYS, DEFAULT_CEPH_KEYRING},
     {CONFIG_NC_CEPH_CONF, DEFAULT_CEPH_CONF},
+    {SENSOR_LIST_CONF_PARAM_NAME, SENSOR_LIST_CONF_PARAM_DEFAULT},
     {NULL, NULL},
 };
 
@@ -250,6 +256,9 @@ static struct handlers *available_handlers[] = {
     NULL,
 };
 
+static json_object *stats_json = NULL; //!< The json object that holds all of the internal message counters
+static int stats_sensor_interval_sec; //!< Keeps the current value for sensor interval. Set during init
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -265,6 +274,14 @@ static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative);
 static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
+
+//! Helpers for internal stats handling in the NC
+static json_object **message_stats_getter();
+static void message_stats_setter();
+static int initialize_stats_system(int interval_sec);
+static void *nc_run_stats(void *ignored_arg);
+
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -292,6 +309,128 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static void *nc_run_stats(void *ignored_arg)
+{
+    LOGDEBUG("Starting stats subsystem execution. Will not terminate until service halts\n");
+    if(run_stats(FALSE, stats_sensor_interval_sec, NULL) != EUCA_OK) {
+        LOGERROR("Stats run call returned with error. Unexepcted. Should not have returned\n");
+    }
+    return NULL;
+}
+
+//! Runs a check on service and returns result in string form
+//! for the stats sensor
+static char *stats_service_check_call() 
+{
+    LOGTRACE("Invoking NC check function for internal stats\n");
+    if(nc_state.is_enabled) {
+        return SERVICE_CHECK_OK_MSG;
+    }
+    return SERVICE_CHECK_FAILED_MSG;
+}
+
+//! Gets the CC state as a string for use by the stats system
+static char *stats_service_state_call()
+{
+    LOGTRACE("Getting NC service state for internal stats\n");    
+    if(nc_state.is_enabled) {
+        return "ENABLED";
+    } else {
+        return "DISABLED";
+    }
+}
+
+//! Gets the reference to the stats json object, basically a no-op for the NC
+static json_object **message_stats_getter()
+{
+    LOGTRACE("Fetching latest message stats from shared memory\n");
+    return &stats_json;
+}
+
+//! Updates the stats json data, literally a No-op for the NC (as opposed to the CC)
+static void message_stats_setter()
+{
+    LOGTRACE("Updating latest message stats from shared memory\n");
+    //No-op
+    return;
+}
+
+void nc_lock_stats()
+{
+    sem_p(stats_sem);
+}
+
+void nc_unlock_stats()
+{
+    sem_v(stats_sem);
+}
+
+
+//! Update the message stat structure
+//! Wraps the message stats update with the necessary caching copies and locking
+int nc_update_message_stats(const char *message_name, long call_time, int msg_failed)
+{
+    LOGTRACE("Updating message stats for message %s\n", message_name);
+
+    nc_lock_stats();    
+    json_object **stats_state = message_stats_getter();
+
+    //Update the counters
+    update_message_stats(*stats_state, message_name, call_time, msg_failed);
+    message_stats_setter();    
+
+    nc_unlock_stats();
+    LOGTRACE("Message stats update complete\n");
+    return EUCA_OK;
+}
+
+//! Provides NC-specific initializations for the stats system of
+//! internal service sensors (state sensors, message statistics, etc)
+//! @returns EUCA_OK on success, or error code on failure
+static int initialize_stats_system(int interval_sec) {
+    LOGDEBUG("Initializing stats subsystem for NC\n");
+    int ret = EUCA_OK;
+    int stats_ttl = interval_sec + 1;
+    stats_sensor_interval_sec = interval_sec;
+    nc_lock_stats();
+    {
+        //Init the message sensor with component-specific data
+        ret = initialize_message_sensor(euca_this_component_name, interval_sec, stats_ttl, message_stats_getter, message_stats_setter);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal message sensor: %d\n", ret);
+            goto cleanup;
+        } else {
+            json_object **tmp = message_stats_getter();
+            const char *tmp_out = json_object_to_json_string(*tmp);
+            LOGINFO("Initialized internal message stats: %s\n", tmp_out);
+            
+        }
+        
+        //Init the service state sensor with component-specific data
+        ret = initialize_service_state_sensor(euca_this_component_name, interval_sec, stats_ttl, stats_service_state_call, stats_service_check_call);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal service state sensor: %d\n", ret);
+            goto cleanup;
+        }
+        
+        ret = init_stats(nc_state.home, euca_this_component_name, nc_lock_stats, nc_unlock_stats);
+        if(ret != EUCA_OK) {
+            LOGERROR("Could not initialize CC stats system: %d\n", ret);
+            goto cleanup;
+        }
+    }
+
+    if(!ret) {
+        LOGINFO("Stats subsystem initialized\n");
+    } else {
+        LOGERROR("Stat subsystem init failed: %d\n", ret);
+    }
+ cleanup:
+    nc_unlock_stats();
+    return ret;
+}
+
 
 //!
 //! Authorize (or deauthorize) migration keys on destination host.
@@ -2289,6 +2428,7 @@ static int init(void)
     addkey_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     service_state_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    stats_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
 
     if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem || !service_state_sem) {
         LOGFATAL("failed to create and initialize semaphores\n");
@@ -2768,6 +2908,28 @@ static int init(void)
             LOGFATAL("failed to detach the monitoring thread\n");
             return (EUCA_FATAL_ERROR);
         }
+    }
+
+    {
+
+        if(initialize_stats_system(DEFAULT_SENSOR_INTERVAL_SEC) != EUCA_OK) {
+            //        if (init_stats(nc_state.home, euca_this_component_name, nc_stats_lock, nc_stats_unlock) != EUCA_OK) {
+            LOGERROR("Could not initialize NC stats system\n");
+            return EUCA_ERROR;
+        }
+        LOGDEBUG("Stats system initialized for NC\n");
+
+        //Stats thread. Independent of the monitoring thread because the monitoring thread fires irregularly
+        pthread_t stats_thread;
+        if (pthread_create(&stats_thread, NULL, nc_run_stats, &nc_state)) {
+            LOGFATAL("Failed to spawn the internal stats thread\n");
+            return (EUCA_FATAL_ERROR);
+        }
+        if(pthread_detach(stats_thread)) {
+            LOGFATAL("Failed to detach the internal stats thread\n");
+            return (EUCA_FATAL_ERROR);
+        }
+
     }
 
     // post-init hook

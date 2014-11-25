@@ -72,7 +72,7 @@ import com.eucalyptus.storage.common.ChunkedDataStream;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.server.Statistics;
+import com.eucalyptus.ws.server.MessageStatistics;
 import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -108,7 +108,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
             if (channelEvent instanceof MessageEvent) {
                 final MessageEvent msgEvent = (MessageEvent) channelEvent;
                 if (msgEvent.getMessage() != null) {
-                    Callable<Long> stat = Statistics.startDownstream(ctx.getChannel(), this);
+                    Callable<Long> stat = MessageStatistics.startDownstream(ctx.getChannel(), this);
                     boolean isDone = this.handleMessage(ctx, msgEvent);
                     stat.call();
 

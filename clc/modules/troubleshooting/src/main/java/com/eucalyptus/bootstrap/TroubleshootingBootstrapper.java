@@ -62,6 +62,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import com.eucalyptus.stats.StatsManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.Faults;
@@ -94,18 +95,29 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load() throws Exception {
-		return true;
+    LOG.info("Loading troubleshooting interface.");
+    return true;
 	}
 
 	@Override
 	public boolean start() throws Exception {
-		LOG.info("Starting troubleshooting interface.");
+    LOG.info("Starting troubleshooting interface.");
 		LogFileDiskCheckScheduler.resetLogFileDiskCheck();
 		DBCheckScheduler.resetDBCheck();
 		PermGenMemoryCheckScheduler.resetMXBeanMemoryCheck();
 		MemoryCheckScheduler.memoryCheck();
 		Faults.init();
-		return true;
+    LOG.info("Starting monitoring interface");
+
+    try {
+      StatsManager.init();
+      StatsManager.start();
+    } catch (Throwable f) {
+      LOG.fatal("Could not initialize and start the monitoring interface. Failing bootstrap", f);
+      throw f;
+    }
+
+    return true;
 	}
 
 	/**
@@ -113,7 +125,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean enable() throws Exception {
-		return true;
+    return true;
 	}
 
 	/**
@@ -121,7 +133,9 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop() throws Exception {
-		return true;
+        LOG.info("Stopping troubleshooting interface");
+        StatsManager.stop();
+        return true;
 	}
 
 	/**
@@ -144,7 +158,13 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check() throws Exception {
-		return true;
+        try {
+            StatsManager.check();
+        } catch(Exception e) {
+            LOG.error("Stat manager failed check. Failing Troubleshooting check call as well.",e);
+            return false;
+        }
+        return true;
 	}
 
 	@ConfigurableField(description = "Poll time (ms) for log file disk check", initial = "5000", changeListener = LogFileDiskCheckPollTimeListener.class, displayName = "log.file.disk.check.poll.time")

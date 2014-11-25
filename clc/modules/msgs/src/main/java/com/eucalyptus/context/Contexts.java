@@ -107,6 +107,14 @@ public class Contexts {
     }
     return ctx;
   }
+
+  public static long uuidContextCount() {
+    return uuidContexts.size();
+  }
+
+  public static long channelContextCount() {
+    return channelContexts.size();
+  }
   
   public static Context update ( Context ctx, final String correlationId) {
     final String oldId = ctx.getCorrelationId();

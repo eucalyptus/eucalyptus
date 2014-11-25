@@ -65,7 +65,7 @@ package com.eucalyptus.ws.server;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -78,8 +78,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Callables;
 
-public class Statistics {
-  private static Logger                            LOG               = Logger.getLogger( Statistics.class );
+public class MessageStatistics {
+  private static Logger                            LOG               = Logger.getLogger( MessageStatistics.class );
   private static final Map<Integer, RequestRecord> requestStatistics = Maps.newConcurrentMap( );
   
   private static class HandlerRecord implements Callable<Long> {

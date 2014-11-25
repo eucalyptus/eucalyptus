@@ -87,6 +87,8 @@
 #include "server-marshal.h"
 #include <adb-helpers.h>
 
+
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -187,6 +189,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     char statusMessage[256];
     char *volumeId = NULL, *instanceId = NULL, *attachmentToken = NULL, *localDev = NULL;
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     avt = adb_AttachVolume_get_AttachVolume(attachVolume, env);
 
@@ -221,6 +224,10 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     ret = adb_AttachVolumeResponse_create(env);
     adb_AttachVolumeResponse_set_AttachVolumeResponse(ret, env, avrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("AttachVolume", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -251,6 +258,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     char *localDev = NULL;
     int force = 0;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     dvt = adb_DetachVolume_get_DetachVolume(detachVolume, env);
 
@@ -291,6 +299,10 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     ret = adb_DetachVolumeResponse_create(env);
     adb_DetachVolumeResponse_set_DetachVolumeResponse(ret, env, dvrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DetachVolume", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -323,6 +335,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     char *S3PolicySig = NULL;
     char *architecture = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
 
@@ -361,6 +374,10 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     ret = adb_BundleInstanceResponse_create(env);
     adb_BundleInstanceResponse_set_BundleInstanceResponse(ret, env, birt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("BundleInstance" , (long)call_time, rc);
+
     return (ret);
 }
 
@@ -389,6 +406,7 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     adb_BundleRestartInstanceResponse_t *ret = NULL;
     adb_bundleRestartInstanceResponseType_t *birt = NULL;
     adb_bundleRestartInstanceType_t *bit = NULL;
+    long long call_time = time_ms();
 
     bit = adb_BundleRestartInstance_get_BundleRestartInstance(bundleInstance, env);
 
@@ -416,6 +434,11 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
 
     ret = adb_BundleRestartInstanceResponse_create(env);
     adb_BundleRestartInstanceResponse_set_BundleRestartInstanceResponse(ret, env, birt);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("BundleRestartInstance", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -441,6 +464,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     char statusMessage[256] = { 0 };
     char *instanceId = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
 
@@ -472,6 +496,10 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     ret = adb_CancelBundleTaskResponse_create(env);
     adb_CancelBundleTaskResponse_set_CancelBundleTaskResponse(ret, env, birt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("CancelBundleTask", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -490,7 +518,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env)
 {
     int result = EUCA_ERROR;
-
+    long long call_time = time_ms();
     adb_describeSensorsType_t *input = adb_DescribeSensors_get_DescribeSensors(describeSensors, env);
     adb_describeSensorsResponseType_t *output = adb_describeSensorsResponseType_create(env);
 
@@ -582,6 +610,11 @@ reply:
 
     LOGTRACE("done\n");
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DescribeSensors", (long)call_time, result);
+
+
     return response;
 }
 
@@ -609,6 +642,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
     char *netName = NULL;
     char *accountId = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     snt = adb_StopNetwork_get_StopNetwork(stopNetwork, env);
 
@@ -644,6 +678,11 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
 
     ret = adb_StopNetworkResponse_create(env);
     adb_StopNetworkResponse_set_StopNetworkResponse(ret, env, snrt);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StopNetwork", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -679,6 +718,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     int clusterControllersLen = 0;
     ncMetadata ccMeta = { 0 };
     vnetConfig *outvnetConfig = NULL;
+    long long call_time = time_ms();
 
     outvnetConfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
 
@@ -766,6 +806,11 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
 
     EUCA_FREE(outvnetConfig);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DescribeNetworks", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -794,6 +839,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     int i = 0;
     ncMetadata ccMeta = { 0 };
     publicip *outAddresses = NULL;
+    long long call_time = time_ms();
 
     dpa = adb_DescribePublicAddresses_get_DescribePublicAddresses(describePublicAddresses, env);
     EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
@@ -849,6 +895,11 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 
     ret = adb_DescribePublicAddressesResponse_create(env);
     adb_DescribePublicAddressesResponse_set_DescribePublicAddressesResponse(ret, env, dpart);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DescribePublicAddresses", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -874,6 +925,7 @@ adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNet
     char statusMessage[256] = { 0 };
     char *networkInfo = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     input = adb_BroadcastNetworkInfo_get_BroadcastNetworkInfo(broadcastNetworkInfo, env);
 
@@ -905,6 +957,10 @@ adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNet
     ret = adb_BroadcastNetworkInfoResponse_create(env);
     adb_BroadcastNetworkInfoResponse_set_BroadcastNetworkInfoResponse(ret, env, response);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("BroadcastNetworkInfo", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -932,6 +988,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
     char *dst = NULL;
     char *uuid = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     aat = adb_AssignAddress_get_AssignAddress(assignAddress, env);
 
@@ -965,6 +1022,10 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
     ret = adb_AssignAddressResponse_create(env);
     adb_AssignAddressResponse_set_AssignAddressResponse(ret, env, aart);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("AssignAddress", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -991,6 +1052,7 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
     char *src = NULL;
     char *dst = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     uat = adb_UnassignAddress_get_UnassignAddress(unassignAddress, env);
     EUCA_MESSAGE_UNMARSHAL(unassignAddressType, uat, (&ccMeta));
@@ -1021,6 +1083,10 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
 
     ret = adb_UnassignAddressResponse_create(env);
     adb_UnassignAddressResponse_set_UnassignAddressResponse(ret, env, uart);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("UnassignAddress", (long)call_time, rc);
 
     return (ret);
 }
@@ -1064,6 +1130,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     int namedLen = 0;
     int netLen = 0;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
     EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
@@ -1176,6 +1243,10 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     ret = adb_ConfigureNetworkResponse_create(env);
     adb_ConfigureNetworkResponse_set_ConfigureNetworkResponse(ret, env, cnrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("ConfigureNetwork", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1202,6 +1273,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     char *instId = NULL;
     char *output = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     gcot = adb_GetConsoleOutput_get_GetConsoleOutput(getConsoleOutput, env);
     EUCA_MESSAGE_UNMARSHAL(getConsoleOutputType, gcot, (&ccMeta));
@@ -1238,6 +1310,10 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     ret = adb_GetConsoleOutputResponse_create(env);
     adb_GetConsoleOutputResponse_set_GetConsoleOutputResponse(ret, env, gcort);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("GetConsoleOutput", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1271,6 +1347,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     int vlan = 0;
     int clusterControllersLen = 0;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     snt = adb_StartNetwork_get_StartNetwork(startNetwork, env);
     EUCA_MESSAGE_UNMARSHAL(startNetworkType, snt, (&ccMeta));
@@ -1320,6 +1397,10 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     ret = adb_StartNetworkResponse_create(env);
     adb_StartNetworkResponse_set_StartNetworkResponse(ret, env, snrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StartNetwork", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1353,6 +1434,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     virtualMachine *vms = NULL;
     adb_virtualMachineType_t *vm = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
 
@@ -1421,6 +1503,9 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     ret = adb_DescribeResourcesResponse_create(env);
     adb_DescribeResourcesResponse_set_DescribeResourcesResponse(ret, env, drrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DescribeResources", (long)call_time, rc);
     return (ret);
 }
 
@@ -1452,6 +1537,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
     ccInstance *outInsts = NULL;
     ccInstance *myInstance = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
     EUCA_MESSAGE_UNMARSHAL(describeInstancesType, dit, (&ccMeta));
@@ -1497,6 +1583,8 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
     ret = adb_DescribeInstancesResponse_create(env);
     adb_DescribeInstancesResponse_set_DescribeInstancesResponse(ret, env, dirt);
 
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DescribeInstances", (long)call_time, rc);
     return (ret);
 }
 
@@ -1664,6 +1752,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     ncMetadata ccMeta = { 0 };
     virtualMachine ccvm = { 0 };
     axutil_date_time_t *dt = NULL;
+    long long call_time = time_ms();
 
     rit = adb_RunInstances_get_RunInstances(runInstances, env);
     EUCA_MESSAGE_UNMARSHAL(runInstancesType, rit, (&ccMeta));
@@ -1814,6 +1903,11 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     EUCA_FREE(instIds);
     EUCA_FREE(userData);
     EUCA_FREE(uuids);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("RunInstances", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1841,6 +1935,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     rit = adb_RebootInstances_get_RebootInstances(rebootInstances, env);
     EUCA_MESSAGE_UNMARSHAL(rebootInstancesType, rit, (&ccMeta));
@@ -1880,6 +1975,10 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
     ret = adb_RebootInstancesResponse_create(env);
     adb_RebootInstancesResponse_set_RebootInstancesResponse(ret, env, rirt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("RebootInstances", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1910,6 +2009,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
     axis2_bool_t forceBool = AXIS2_FALSE;
     char statusMessage[256] = { 0 };
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     tit = adb_TerminateInstances_get_TerminateInstances(terminateInstances, env);
     EUCA_MESSAGE_UNMARSHAL(terminateInstancesType, tit, (&ccMeta));
@@ -1963,6 +2063,10 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
     ret = adb_TerminateInstancesResponse_create(env);
     adb_TerminateInstancesResponse_set_TerminateInstancesResponse(ret, env, tirt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("TerminateInstances", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -1990,6 +2094,7 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     cit = adb_CreateImage_get_CreateImage(createImage, env);
 
@@ -2024,6 +2129,10 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
 
     ret = adb_CreateImageResponse_create(env);
     adb_CreateImageResponse_set_CreateImageResponse(ret, env, cirt);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("CreateImage", (long)call_time, rc);
 
     return (ret);
 }
@@ -2067,6 +2176,7 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
     char *nodeName = NULL;
     char *stateName = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
 
     mnt = adb_ModifyNode_get_ModifyNode(modifyNode, env);
 
@@ -2099,6 +2209,10 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
     ret = adb_ModifyNodeResponse_create(env);
     adb_ModifyNodeResponse_set_ModifyNodeResponse(ret, env, mnrt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("ModifyNode", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -2128,6 +2242,8 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     int destinationNodeCount = 0;
     int allowHosts;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
+
     bzero(&ccMeta, sizeof(ncMetadata));
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
@@ -2173,6 +2289,11 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
     EUCA_FREE(destinationNodes);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("MigrateInstances", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -2198,6 +2319,8 @@ adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startIns
     char statusMessage[256] = { 0 };
     char *instanceId = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
+
     bzero(&ccMeta, sizeof(ncMetadata));
 
     mit = adb_StartInstance_get_StartInstance(startInstance, env);
@@ -2235,6 +2358,10 @@ adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startIns
     ret = adb_StartInstanceResponse_create(env);
     adb_StartInstanceResponse_set_StartInstanceResponse(ret, env, mirt);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StartInstance", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -2260,6 +2387,8 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
     char statusMessage[256] = { 0 };
     char *instanceId = NULL;
     ncMetadata ccMeta = { 0 };
+    long long call_time = time_ms();
+
     bzero(&ccMeta, sizeof(ncMetadata));
 
     mit = adb_StopInstance_get_StopInstance(stopInstance, env);
@@ -2295,6 +2424,10 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
 
     ret = adb_StopInstanceResponse_create(env);
     adb_StopInstanceResponse_set_StopInstanceResponse(ret, env, mirt);
+
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StopInstance", (long)call_time, rc);
 
     return (ret);
 }

@@ -88,6 +88,7 @@
 #include <signal.h>
 #include <math.h>
 #include <assert.h>
+#include <json/json.h>
 
 #include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
@@ -117,6 +118,11 @@
 
 #include <ebs_utils.h>
 
+#include <stats.h>
+#include <message_stats.h>
+#include <message_sensor.h>
+#include <service_sensor.h>
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -127,6 +133,7 @@
 #define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC
 #define POLL_INTERVAL_SAFETY_MARGIN_SEC          3
 #define POLL_INTERVAL_MINIMUM_SEC                6
+#define STATS_INTERVAL_SEC                       60
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -167,6 +174,7 @@ int local_init = 0;
 int thread_init = 0;
 int sensor_initd = 0;
 int init = 0;
+int stats_initd = 0;
 //! @}
 
 //! @{
@@ -178,6 +186,10 @@ globalNetworkInfo *globalnetworkinfo = NULL;
 ccResourceCache *resourceCache = NULL; // canonical source for latest information about resources
 ccResourceCache *resourceCacheStage = NULL; // clone of resourceCache used for aggregating replies from NCs (via child procs)
 sensorResourceCache *ccSensorResourceCache = NULL;  // canonical source for latest sensor data, both local and from NCs
+char *message_stats_shared_mem = NULL; //Reference to the shared memory region
+char message_stats_cache[MESSAGE_STATS_MEMORY_REGION_SIZE]; //The proc local holder for cached copies of message_stats_shared_mem to avoid realloc for each cache copy.
+json_object *stats_cache_json = NULL; //! Pointer to parsed stats from the cache
+
 //! @}
 
 //! @{
@@ -217,6 +229,13 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
                                        ccResourceCache * resourceCacheLocal, char **replyString);
 static int migration_handler(ccInstance * myInstance, char *host, char *src, char *dst, migration_states migration_state, char **node, char **instance, char **action);
 static int populateOutboundMeta(ncMetadata * pMeta);
+static int initialize_stats_system(int interval_sec);
+static json_object **message_stats_getter();
+static void message_stats_setter();
+static char *stats_service_check_call();
+static char *stats_service_state_call();
+static void lock_stats();
+static void unlock_stats();
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -240,7 +259,94 @@ void doInitCC(void)
     if (initialize(NULL, FALSE)) {
         LOGWARN("could not initialize\n");
     }
+
     LOGINFO("component started\n");
+}
+
+//! Runs a check on service and returns result in string form
+//! for the stats sensor
+static char *stats_service_check_call() {
+    LOGTRACE("Invoking CC check function for internal stats\n");
+    int clcTimer = FALSE;
+    if(ccCheckState(clcTimer) != EUCA_OK) {
+        return SERVICE_CHECK_FAILED_MSG;
+    } else {
+        return SERVICE_CHECK_OK_MSG;
+    }
+}
+
+//! Gets the CC state as a string for use by the stats system
+static char *stats_service_state_call() {
+    LOGTRACE("Getting CC service state for internal stats\n");
+    char state[32];
+    char *return_state;
+    if(ccGetStateString(state, 32) != EUCA_OK) {
+        return "UNKNOWN";
+    } else {
+        return_state = euca_strdup(state);
+        return return_state;
+    }
+}
+
+//! Simple wrapper used by stats system to abstract type of lock needed
+static void lock_stats() 
+{
+    sem_mywait(STATSCACHE);
+}
+
+//! Simple wrapper used by stats system to abstract type of lock needed
+static void unlock_stats()
+{
+    sem_mypost(STATSCACHE);
+}
+
+//! Provides CC-specific initializations for the stats system of
+//! internal service sensors (state sensors, message statistics, etc)
+//! @returns EUCA_OK on success, or error code on failure
+static int initialize_stats_system(int interval_sec) {
+    LOGDEBUG("Initializing stats subsystem for CC\n");    
+    int ret = EUCA_OK;
+    int stats_ttl = interval_sec + 1;
+
+    lock_stats();
+    {
+        //Zero the cache location
+        bzero(message_stats_cache, MESSAGE_STATS_MEMORY_REGION_SIZE);
+
+        //Init the message sensor with component-specific data
+        ret = initialize_message_sensor(euca_this_component_name, interval_sec, stats_ttl, message_stats_getter, message_stats_setter);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal message sensor: %d\n", ret);
+            goto cleanup;
+        } else {
+            json_object **tmp = message_stats_getter();
+            const char *tmp_out = json_object_to_json_string(*tmp);
+            LOGINFO("Initialized internal message stats: %s\n", tmp_out);
+            
+        }
+        
+        //Init the service state sensor with component-specific data
+        ret = initialize_service_state_sensor(euca_this_component_name, interval_sec, stats_ttl, stats_service_state_call, stats_service_check_call);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal service state sensor: %d\n", ret);
+            goto cleanup;
+        }
+        
+        ret = init_stats(config->eucahome, euca_this_component_name, lock_stats, unlock_stats);
+        if(ret != EUCA_OK) {
+            LOGERROR("Could not initialize CC stats system: %d\n", ret);
+            goto cleanup;
+        }
+    }
+
+    if(!ret) {
+        LOGINFO("Stats subsystem initialized\n");
+    } else {
+        LOGERROR("Stat subsystem init failed: %d\n", ret);
+    }
+ cleanup:
+    unlock_stats();
+    return ret;
 }
 
 //!
@@ -2164,7 +2270,6 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
     int j;
     ccResource *res;
     ccResourceCache resourceCacheLocal;
-
     LOGDEBUG("invoked: userId=%s, vmLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), vmLen);
 
     rc = initialize(pMeta, FALSE);
@@ -6063,9 +6168,41 @@ int init_pthreads(void)
             sensor_initd = 1;
         }
     }
+
+    //Init the stats process/thread
+    if (stats_initd == 0) {
+        if (config->threads[STATS] == 0 || check_process(config->threads[STATS], NULL)) {
+            //Stats system init here, done only once in init before any fork()
+            if(initialize_stats_system(STATS_INTERVAL_SEC) != EUCA_OK) {
+                LOGERROR("Error initializing stats system.\n");
+            }
+
+            int pid;
+            pid = fork();
+            if (!pid) {
+                // set up default signal handler for this child process (for SIGTERM)
+                struct sigaction newsigact = { {NULL} };
+                newsigact.sa_handler = SIG_DFL;
+                newsigact.sa_flags = 0;
+                sigemptyset(&newsigact.sa_mask);
+                sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+                sigaction(SIGTERM, &newsigact, NULL);
+                LOGDEBUG("stats polling process running\n");
+                LOGDEBUG("calling start_stats() to not return.\n");
+                if (run_stats(FALSE, STATS_INTERVAL_SEC, update_config) != EUCA_OK)    // this call will not return
+                    LOGERROR("failed to invoke the stats polling process\n");
+                exit(0);
+            } else {
+                config->threads[STATS] = pid;
+            }
+        }
+
+        sensor_initd = 1;
+    }
+    
+
     // sensor initialization should preceed monitor thread creation so
     // that monitor thread has its sensor subsystem initialized
-
     if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
         int pid;
         pid = fork();
@@ -6257,12 +6394,85 @@ int init_thread(void)
                 exit(1);
             }
         }
+       
+        //setup message stats shared buffer
+        if (message_stats_shared_mem == NULL) {
+            rc = setup_shared_buffer((void **)&message_stats_shared_mem, "/eucalyptusCCmessageStats", MESSAGE_STATS_MEMORY_REGION_SIZE, &(locks[STATSCACHE]),
+                                     "/eucalyptusCCmessageStatsLock", SHARED_FILE);
+            if(rc != 0) {
+                fprintf(stderr, "Cannot setup shared memory region for message statistics, exiting...\n");
+                sem_mypost(INIT);
+                exit(1);
+            }
+       }
 
         sem_mypost(INIT);
         thread_init = 1;
     }
     return (0);
 }
+
+
+//! Update the message stat structure
+//! Wraps the message stats update with the necessary caching copies.
+//! Caller must handle necessary locks
+static json_object **message_stats_getter()
+{
+    LOGTRACE("Fetching latest message stats from shared memory\n");
+    
+    //copy the memory region into the proc-local buffer from the shared-memory region
+    euca_strncpy(message_stats_cache, message_stats_shared_mem, MESSAGE_STATS_MEMORY_REGION_SIZE);
+
+    //A process-local json cache to avoid repeated parsing
+    stats_cache_json = json_tokener_parse(message_stats_cache);
+    
+    LOGTRACE("Message stats fetch complete\n");
+    return &stats_cache_json;
+}
+
+//! Write the cached value back to the shared memory region
+//! Must be called from within a lock for the memory region
+static void message_stats_setter()
+{
+    LOGTRACE("Updating latest message stats from shared memory\n");
+
+    if(stats_cache_json != NULL) {
+        //Write the memory back
+        const char *output = json_object_to_json_string(stats_cache_json);
+        LOGTRACE("Setting stats state to: %s\n", output);
+
+        if(strlen(output) + 1 > MESSAGE_STATS_MEMORY_REGION_SIZE) {
+            LOGERROR("Pre-allocated size for internal message stats exceeded. Stats updates will not be reflected.\n");
+        } else {
+            euca_strncpy(message_stats_shared_mem, output, strlen(output) + 1);
+        }
+        
+        json_object_put(stats_cache_json); //Free it
+    } 
+           
+    LOGTRACE("Message stats fetch complete\n");
+    return;
+}
+
+//! Update the message stat structure
+//! Wraps the message stats update with the necessary caching copies and locking
+int cached_message_stats_update(const char *message_name, long call_time, int msg_failed)
+{
+    LOGTRACE("Updating message stats for message %s\n", message_name);
+    lock_stats();
+    
+    json_object **stats_state = message_stats_getter();
+
+    //Update the counters
+    update_message_stats(*stats_state, message_name, call_time, msg_failed);
+
+    message_stats_setter();
+    
+    unlock_stats();
+    LOGTRACE("Message stats update complete\n");
+    return EUCA_OK;
+}
+
 
 //!
 //!
@@ -6362,6 +6572,8 @@ int update_config(void)
                 config->ncPollingFrequency = 6;
             }
 
+            // enabled sensors list -- removed since it is part of sensor cycle
+            //update_sensors_list();
         }
     }
 
@@ -6938,6 +7150,9 @@ int init_config(void)
     // update resourceCache
     reconfigure_resourceCache(res, numHosts);
     EUCA_FREE(res);
+
+    // enabled sensors list
+    //update_sensors_list();
 
     config_init = 1;
     LOGTRACE("done\n");

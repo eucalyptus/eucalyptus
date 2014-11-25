@@ -62,13 +62,12 @@
 
 package com.eucalyptus.walrus.pipeline;
 
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.server.Statistics;
+import com.eucalyptus.ws.server.MessageStatistics;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -118,7 +117,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
                         MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
                         BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
                         if (msg instanceof  WalrusDataGetResponseType) {
-                            Callable<Long> stat = Statistics.startDownstream(ctx.getChannel(), this);
+                            Callable<Long> stat = MessageStatistics.startDownstream(ctx.getChannel(), this);
                             boolean isDone = this.handleMessage(ctx, event);
                             stat.call();
 
@@ -129,7 +128,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
                         }
                     }
                     //handle other types
-                    Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ), this );
+                    Callable<Long> stat = MessageStatistics.startDownstream(ctx.getChannel(), this);
                     this.outgoingMessage(ctx, event);
                     stat.call();
                 }

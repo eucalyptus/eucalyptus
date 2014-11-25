@@ -63,6 +63,8 @@
 package com.eucalyptus.ws.handlers;
 
 import java.util.concurrent.Callable;
+
+import com.eucalyptus.ws.server.MessageStatistics;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -70,7 +72,6 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.server.Statistics;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
   
@@ -80,7 +81,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
         if ( msgEvent.getMessage( ) != null ) {
-          Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ), this );
+          Callable<Long> stat = MessageStatistics.startDownstream(ctx.getChannel(), this);
           this.outgoingMessage( ctx, msgEvent );
           stat.call( );
         }
@@ -110,7 +111,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ), this );
+      Callable<Long> stat = MessageStatistics.startUpstream(ctx.getChannel(), this);
       this.incomingMessage( ctx, msgEvent );
       stat.call( );
       ctx.sendUpstream( channelEvent );

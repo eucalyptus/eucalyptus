@@ -1,0 +1,47 @@
+#!/bin/bash
+# Runs check on a single java component by name e.g. storage, db, eucalyptus, etc.
+# Name of component should be component type as viewed from euca-describe-services output
+# This plugin only checks for health of the component on the local host. If no such component is found
+# the check will report 'DOWN'
+# Component types:
+# compute, eucalyptus, db, autoscaling, cloudwatch, loadbalancing, loadbalancingbackend, cloudwatchbackend, autoscalingbackend, ..., cc, nc
+
+help="check_component_health <component_type>"
+component_to_check=$1
+
+fail_proc_down() {
+	echo "$component_to_check - DOWN|Process Not Found"
+	exit 2
+}
+
+case $component_to_check in
+"cc")
+	! ./check_euca_proc "eucalyptus-cc" 1>&2 && fail_proc_down
+	;;
+"nc")
+	! ./check_euca_proc "eucalyptus-nc" 1>&2 && fail_proc_down
+	;;
+*)
+	! ./check_euca_proc "eucalyptus-cloud" 1>&2 && fail_proc_down
+	;;
+esac
+
+output=`/usr/bin/python ../sensor_utils.py --sensor_name euca.components.${component_to_check}.state --sensor_value Check --euca_home /opt/eucalyptus`
+result_code=$?
+result="$component_to_check -"
+case $output in
+"OK")
+	result="$result OK"
+	;;
+*)
+	result="$result DOWN"
+	;;
+esac
+echo "$result|health check returned $output"
+#echo "$component_to_check - $output"
+if (( $result_code!=0 ))
+then
+	exit 2
+else	
+	exit 0
+fi

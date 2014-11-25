@@ -66,6 +66,8 @@ import static java.util.Collections.unmodifiableMap;
 import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
+
+import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
@@ -95,7 +97,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseCallerContext;
@@ -140,7 +141,7 @@ public class Context {
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
-    Statistics.startRequest( channel );
+    MessageStatistics.startRequest(channel);
     this.correlationId = uuid.toString( );
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;

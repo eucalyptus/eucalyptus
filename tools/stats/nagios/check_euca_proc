@@ -1,0 +1,23 @@
+#!/bin/bash
+if [ -z $1 ]
+then
+	echo "Usage: check_euca_proc <eucalyptus-cloud|eucalyptus-cc|eucalyptus-nc|eucanetd>"
+	exit 2
+fi
+
+pidfile_to_check=$1
+EUCALYPTUS_HOME="/opt/eucalyptus"
+pid_file="$EUCALYPTUS_HOME/var/run/eucalyptus/${pidfile_to_check}.pid"
+if ! [ -f $pid_file ]
+then
+	#No pid file means it isn't running.
+	echo "$pidfile_to_check - DOWN|No pid file found"
+	exit 2
+else
+	#Is the process running?
+	pid=`cat $pid_file`
+	! [ -f /proc/$pid/status ] && echo "$pidfile_to_check - DOWN|No pid $pid found running" && exit 2
+	echo "$pidfile_to_check - UP|Process $pid running" && exit 0
+fi
+
+
