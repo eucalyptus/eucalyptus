@@ -81,6 +81,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
@@ -115,7 +116,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
 
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
+      final VmInstance vm = VmInstances.lookupAny( msg.getInstanceId( ) );
       msg.setUserId( vm.getOwnerUserId( ) );
       msg.setOwnerId( vm.getOwnerUserId( ) );
       msg.setAccountId( vm.getOwnerAccountNumber( ) );
@@ -124,7 +125,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
       db.rollback( );
     } catch ( final Exception e ) {
-      LOG.error( e );
+      if ( !Exceptions.isCausedBy( e, EucalyptusClusterException.class ) ) {
+        LOG.error( e );
+      }
       Logs.extreme( ).error( e, e );
       db.rollback( );
       try {

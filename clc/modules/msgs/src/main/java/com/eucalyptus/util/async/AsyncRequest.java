@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -233,7 +233,6 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           return execute.getResponse( );
         } catch ( Exception ex ) {
           AsyncRequest.this.result.setException( ex );
-          LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
           throw ex;
         }
