@@ -39,12 +39,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
 
 /**
  * Entity base-class for the persisted state associated with the progress in execution of an image

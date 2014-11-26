@@ -83,6 +83,48 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.GroupIdSetType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.InternetGatewayIdSetItemType;
+import com.eucalyptus.compute.common.InternetGatewayIdSetType;
+import com.eucalyptus.compute.common.InternetGatewayType;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.SubnetIdSetItemType;
+import com.eucalyptus.compute.common.SubnetIdSetType;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcType;
+import com.eucalyptus.compute.common.backend.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.backend.CreateSecurityGroupResponseType;
+import com.eucalyptus.compute.common.backend.CreateSecurityGroupType;
+import com.eucalyptus.compute.common.backend.DeleteSecurityGroupType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.backend.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeImagesType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesType;
+import com.eucalyptus.compute.common.backend.DescribeInternetGatewaysResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInternetGatewaysType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
+import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.backend.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSubnetsType;
+import com.eucalyptus.compute.common.backend.DescribeVpcsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeVpcsType;
+import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeType;
+import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressType;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -100,55 +142,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeInternetGatewaysResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInternetGatewaysType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
-import edu.ucsb.eucalyptus.msgs.DescribeVpcsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeVpcsType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.Filter;
-import edu.ucsb.eucalyptus.msgs.GroupIdSetType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.InternetGatewayIdSetItemType;
-import edu.ucsb.eucalyptus.msgs.InternetGatewayIdSetType;
-import edu.ucsb.eucalyptus.msgs.InternetGatewayType;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupIdSetItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.SubnetIdSetItemType;
-import edu.ucsb.eucalyptus.msgs.SubnetIdSetType;
-import edu.ucsb.eucalyptus.msgs.SubnetType;
-import edu.ucsb.eucalyptus.msgs.VpcType;
+
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -243,11 +244,11 @@ public class EucalyptusActivityTasks {
 		private EmpyreanSystemActivity() { super( Empyrean.class ); }
 	}
 	
-	private class EucalyptusSystemActivity extends SystemActivityContextSupport<EucalyptusMessage, Eucalyptus>{
+	private class EucalyptusSystemActivity extends SystemActivityContextSupport<ComputeMessage, Eucalyptus>{
 		private EucalyptusSystemActivity() { super( Eucalyptus.class ); }
 	}
 
-	private class EucalyptusUserActivity extends UserActivityContextSupport<EucalyptusMessage, Eucalyptus>{
+	private class EucalyptusUserActivity extends UserActivityContextSupport<ComputeMessage, Eucalyptus>{
 		private EucalyptusUserActivity(final String userId){
 			super( Eucalyptus.class, userId );
 		}
@@ -653,7 +654,7 @@ public class EucalyptusActivityTasks {
 		);
 	}
 	
-	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<ImageDetails>> {
+	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
 			this.imageIds = imageIds;
@@ -668,13 +669,13 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		List<ImageDetails> extractResult(EucalyptusMessage response) {
+		List<ImageDetails> extractResult(ComputeMessage response) {
 			final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
 			return resp.getImagesSet();
 		}
 	}
 	
-	private class EucaDeleteTagsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucaDeleteTagsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private List<String> resources = null;
@@ -696,7 +697,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucaCreateTagsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucaCreateTagsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private List<String> resources = null;
@@ -716,7 +717,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<DescribeKeyPairsResponseItemType>> {
+	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<DescribeKeyPairsResponseItemType>> {
 		private List<String> keyNames = null;
 		private EucaDescribeKeyPairsTask(final List<String> keyNames){
 			this.keyNames = keyNames;
@@ -731,14 +732,14 @@ public class EucalyptusActivityTasks {
 		}
 		
 		@Override
-		List<DescribeKeyPairsResponseItemType> extractResult(EucalyptusMessage response) {
+		List<DescribeKeyPairsResponseItemType> extractResult(ComputeMessage response) {
 			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
 			return resp.getKeySet();
 		}
 	}
 
 
-	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SecurityGroupItemType>> {
+	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SecurityGroupItemType>> {
 		private String vpcId = null;
 		private Collection<String> securityGroupIds = null;
 		private EucaDescribeSecurityGroupsTask( final String vpcId, final Collection<String> securityGroupIds){
@@ -756,13 +757,13 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		List<SecurityGroupItemType> extractResult( EucalyptusMessage response ) {
+		List<SecurityGroupItemType> extractResult( ComputeMessage response ) {
 			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
 			return resp.getSecurityGroupInfo( );
 		}
 	}
 
-	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<VpcType>> {
+	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<VpcType>> {
 		private Collection<String> vpcIds;
 		private final Boolean defaultVpc;
 		private EucaDescribeVpcsTask(final Boolean defaultVpc ) {
@@ -776,7 +777,7 @@ public class EucalyptusActivityTasks {
 			this.vpcIds = vpcIds;
 		}
 
-		EucalyptusMessage getRequest( ){
+		ComputeMessage getRequest( ){
 			final DescribeVpcsType req = new DescribeVpcsType();
 			if(this.defaultVpc!=null){
 				req.getFilterSet().add( filter( "isDefault", String.valueOf( defaultVpc ) ) );
@@ -788,13 +789,13 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		List<VpcType> extractResult( final EucalyptusMessage response ) {
+		List<VpcType> extractResult( final ComputeMessage response ) {
 			final DescribeVpcsResponseType resp = (DescribeVpcsResponseType) response;
 			return resp.getVpcSet( ).getItem();
 		}
 	}
 
-	private class EucaDescribeSubnetsTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SubnetType>> {
+	private class EucaDescribeSubnetsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SubnetType>> {
 		private String vpcId = null;
 		private Collection<String> subnetIds = null;
 		private Collection<String> zones = null;
@@ -808,7 +809,7 @@ public class EucalyptusActivityTasks {
 			this.zones = zones;
 		}
 
-		EucalyptusMessage getRequest( ){
+		ComputeMessage getRequest( ){
 			final DescribeSubnetsType req = new DescribeSubnetsType();
 			req.setSubnetSet( new SubnetIdSetType(  ) );
 			req.getSubnetSet( ).getItem( ).add( new SubnetIdSetItemType() );
@@ -829,19 +830,19 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		List<SubnetType> extractResult( final EucalyptusMessage response ) {
+		List<SubnetType> extractResult( final ComputeMessage response ) {
 			final DescribeSubnetsResponseType resp = (DescribeSubnetsResponseType) response;
 			return resp.getSubnetSet( ).getItem( );
 		}
 	}
 
-	private class EucaDescribeInternetGatewaysTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<InternetGatewayType>> {
+	private class EucaDescribeInternetGatewaysTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<InternetGatewayType>> {
 		private Collection<String> vpcIds = null;
 		private EucaDescribeInternetGatewaysTask(final Collection<String> vpcIds){
 			this.vpcIds = vpcIds;
 		}
 
-		EucalyptusMessage getRequest( ){
+		ComputeMessage getRequest( ){
 			final DescribeInternetGatewaysType req = new DescribeInternetGatewaysType();
 			req.setInternetGatewayIdSet( new InternetGatewayIdSetType() );
 			req.getInternetGatewayIdSet().getItem( ).add( new InternetGatewayIdSetItemType() );
@@ -853,7 +854,7 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		List<InternetGatewayType> extractResult( final EucalyptusMessage response ) {
+		List<InternetGatewayType> extractResult( final ComputeMessage response ) {
 			final DescribeInternetGatewaysResponseType resp = (DescribeInternetGatewaysResponseType) response;
 			return resp.getInternetGatewaySet( ).getItem( );
 		}
@@ -1340,7 +1341,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	
-	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<ClusterInfoType>> {
+	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<ClusterInfoType>> {
 		private boolean verbose = false;
 		private EucalyptusDescribeAvailabilityZonesTask(boolean verbose){
 			this.verbose = verbose;
@@ -1355,7 +1356,7 @@ public class EucalyptusActivityTasks {
 		}
 		
 		@Override
-		List<ClusterInfoType> extractResult(EucalyptusMessage response) {
+		List<ClusterInfoType> extractResult(ComputeMessage response) {
 			final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
 			return resp.getAvailabilityZoneInfo();
 		}
@@ -1452,7 +1453,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus,List<RunningInstancesItemType>> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
 		private boolean verbose = false;
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId){
@@ -1474,7 +1475,7 @@ public class EucalyptusActivityTasks {
 		}
 		
 		@Override
-		List<RunningInstancesItemType> extractResult( EucalyptusMessage response) {
+		List<RunningInstancesItemType> extractResult( ComputeMessage response) {
 			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
 			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
 			for(final ReservationInfoType res : resp.getReservationSet()){
@@ -1485,7 +1486,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	//SPARK: TODO: SYSTEM, STATIC MODE?
-	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, String> {
+	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, String> {
 		private String groupName = null;
 		private String groupDesc = null;
 		EucalyptusCreateGroupTask(String groupName, String groupDesc){
@@ -1500,13 +1501,13 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		String extractResult(EucalyptusMessage response) {
+		String extractResult(ComputeMessage response) {
 			final CreateSecurityGroupResponseType resp = (CreateSecurityGroupResponseType) response;
 			return resp.getGroupId();
 		}
 	}
 	
-	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		String groupNameOrId=null;
 		String protocol = null;
 		int portNum = 1;
@@ -1532,7 +1533,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		String groupName=null;
 		String protocol=null;
 		int portNum = 1;
@@ -1554,7 +1555,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
 		private String groupName = null;
 		EucalyptusDeleteGroupTask(String groupName){
 			this.groupName = groupName;
@@ -1566,7 +1567,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<EucalyptusMessage, Eucalyptus, List<SecurityGroupItemType>>{
+	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SecurityGroupItemType>>{
 		@Nullable private List<String> groupIds = null;
 		@Nullable private List<String> groupNames = null;
 		@Nullable private List<String> groupNameFilters = null;
@@ -1601,13 +1602,13 @@ public class EucalyptusActivityTasks {
 		}
 		
 		@Override
-		List<SecurityGroupItemType> extractResult(EucalyptusMessage response) {
+		List<SecurityGroupItemType> extractResult(ComputeMessage response) {
 			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
 			return resp.getSecurityGroupInfo();
 		}
 	}
 
-	private class EucalyptusModifySecurityGroupsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusModifySecurityGroupsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private final String instanceId;
 		private final Collection<String> securityGroupIds;
 
@@ -1620,7 +1621,7 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		EucalyptusMessage getRequest( ) {
+		ComputeMessage getRequest( ) {
 			final ModifyInstanceAttributeType modifyInstanceAttribute = new ModifyInstanceAttributeType( );
 			modifyInstanceAttribute.setInstanceId( instanceId );
 			modifyInstanceAttribute.setGroupIdSet( new GroupIdSetType( ) );

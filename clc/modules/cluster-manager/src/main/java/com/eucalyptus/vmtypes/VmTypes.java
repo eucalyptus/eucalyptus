@@ -86,7 +86,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;

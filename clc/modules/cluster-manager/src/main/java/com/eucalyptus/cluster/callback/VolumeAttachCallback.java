@@ -67,36 +67,29 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
 
-public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, AttachVolumeResponseType> {
+public class VolumeAttachCallback extends MessageCallback<ClusterAttachVolumeType, ClusterAttachVolumeResponseType> {
   private static Logger        LOG = Logger.getLogger( VolumeAttachCallback.class );
   
-  public VolumeAttachCallback( AttachVolumeType request ) {
+  public VolumeAttachCallback( ClusterAttachVolumeType request ) {
     super( request );
   }
   
   @Override
-  public void initialize( AttachVolumeType msg ) {
+  public void initialize( ClusterAttachVolumeType msg ) {
     final String instanceId = this.getRequest( ).getInstanceId( );
     final String volumeId = this.getRequest( ).getVolumeId( );
     final Function<String, VmInstance> funcName = new Function<String, VmInstance>( ) {
@@ -120,7 +113,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
   }
   
   @Override
-  public void fire( AttachVolumeResponseType reply ) {}
+  public void fire( ClusterAttachVolumeResponseType reply ) {}
   
   @Override
   public void fireException( Throwable e ) {

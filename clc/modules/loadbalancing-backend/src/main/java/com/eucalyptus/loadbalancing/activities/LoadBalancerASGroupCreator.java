@@ -51,6 +51,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -83,9 +85,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
-
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
  * @author Sang-Min Park
@@ -162,7 +161,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		// should validate the parameters
 		if(emi!=null){
 			try{
-				final List<ImageDetails> images = 
+				final List<ImageDetails> images =
 					EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
 				if(images == null || images.size()<=0)
 					throw new EucalyptusCloudException("No such EMI is found in the system");
@@ -177,7 +176,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		
 		if(keyname != null && ! keyname.equals("")){
 			try{
-				final List<DescribeKeyPairsResponseItemType> keypairs = 
+				final List<DescribeKeyPairsResponseItemType> keypairs =
 						EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
 				if(keypairs ==null || keypairs.size()<=0)
 					throw new EucalyptusCloudException("No such keypair is found in the system");

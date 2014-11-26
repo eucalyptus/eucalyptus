@@ -59,15 +59,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.TagInfo;
+import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
+import com.eucalyptus.compute.common.backend.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeTagsType;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.TagInfo;
 
 /**
  * Service implementation for Tag operations

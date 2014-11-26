@@ -83,7 +83,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -95,6 +94,9 @@ import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.UserIdGroupPairType;
 import com.eucalyptus.compute.common.network.NetworkReportType;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.Vpc;
@@ -131,9 +133,6 @@ import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
 @ConfigurableClass( root = "cloud.network",
                     description = "Default values used to bootstrap networking state discovery." )

@@ -106,6 +106,7 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
@@ -114,6 +115,10 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.InstanceStatusEventType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment;
@@ -183,9 +188,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusEventType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
@@ -680,7 +682,7 @@ public class VmInstances {
 	  }
   }
 
-  public static Function<VmEphemeralAttachment, BlockDeviceMappingItemType> EphemeralAttachmentToDevice = 
+  public static Function<VmEphemeralAttachment, BlockDeviceMappingItemType> EphemeralAttachmentToDevice =
 		  new Function<VmEphemeralAttachment, BlockDeviceMappingItemType>(){
 	  @Override
 	  @Nullable
@@ -758,8 +760,8 @@ public class VmInstances {
     BaseMessage originReq = null;
     try{
       originReq = MessageContexts.lookupLast(vm.getInstanceId(), Sets.<Class>newHashSet(
-          edu.ucsb.eucalyptus.msgs.TerminateInstancesType.class,
-          edu.ucsb.eucalyptus.msgs.StopInstancesType.class
+          TerminateInstancesType.class,
+          StopInstancesType.class
           ));
     }catch(final Exception ex){
       ;

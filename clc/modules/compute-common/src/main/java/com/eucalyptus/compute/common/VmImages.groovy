@@ -208,10 +208,24 @@ public class RegisterImageType extends VmImageMessage {
   String rootDeviceName;
   String virtualizationType;
   String platform;
+  String sriovNetSupport
   @HttpParameterMapping (parameter = "BlockDeviceMapping")
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
 }
+
+public class CopyImageType extends VmImageMessage {
+  String sourceRegion
+  String sourceImageId
+  String name
+  String description
+  String clientToken
+}
+
+public class CopyImageResponseType extends VmImageMessage {
+  String imageId
+}
+
 /** *******************************************************************************/
 public class ResetImageAttributeResponseType extends VmImageMessage {
 }

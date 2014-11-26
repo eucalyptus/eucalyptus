@@ -59,96 +59,24 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-/**
- * Messages for operations related to reading, updating, and interrogating vm type definitions.
- * @author chris grzegorczyk <grze@eucalyptus.com>
- */
 
-@GroovyAddClassUUID
-package com.eucalyptus.compute.common.backend
+package com.eucalyptus.compute;
 
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.util.MessageValidation
-import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.BaseMessage
-import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
-import com.google.common.collect.Lists
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.compute.common.UnimplementedMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-import javax.annotation.Nonnull
-
-import static com.eucalyptus.util.MessageValidation.validateRecursively
-
-import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
-
-@ComponentMessage(Eucalyptus.class)
-public class VmTypeMessage extends BaseMessage implements MessageValidation.ValidatableMessage {
-
-  Map<String,String> validate( ) {
-    validateRecursively(
-        Maps.<String,String>newTreeMap( ),
-        new ComputeMessageValidation.ComputeMessageValidationAssistant( ),
-        "",
-        this )
+public class ComputeDefaultHandler {
+  
+  private static Logger LOG = Logger.getLogger( ComputeDefaultHandler.class );
+  
+  public BaseMessage handle( BaseMessage msg ) {
+    if ( msg instanceof UnimplementedMessage ) {
+      return msg.getReply( );
+    }
+    return new ExceptionResponseType( msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ), HttpResponseStatus.NOT_FOUND, new IllegalAccessException( ) );
   }
-}
-public class VmTypeDetails extends EucalyptusData {
-  String name;
-  Integer cpu;
-  Integer disk;
-  Integer memory;
-  ArrayList<VmTypeZoneStatus> availability = new ArrayList<VmTypeZoneStatus>( );
-  ArrayList<VmTypeEphemeralDisk> ephemeralDisk = new ArrayList<VmTypeEphemeralDisk>( );
-}
-public class VmTypeZoneStatus extends EucalyptusData {
-  String name;
-  String zoneName;
-  Integer max;
-  Integer available;
-}
-public class VmTypeEphemeralDisk extends EucalyptusData {
-  String virtualDeviceName;
-  String deviceName;
-  Integer size;
-  String format;
-  VmTypeEphemeralDisk( ) { }
-  VmTypeEphemeralDisk( String virtualDeviceName, String deviceName, Integer size, String format ) {
-    super( );
-    this.virtualDeviceName = virtualDeviceName;
-    this.deviceName = deviceName;
-    this.size = size;
-    this.format = format;
-  }
-}
-public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
-  Boolean reset = false;
-  Boolean force = false;
-  @Nonnull
-  String name;
-  @FieldRange( min = 1l )
-  Integer cpu;
-  @FieldRange( min = 1l )
-  Integer disk;
-  @FieldRange( min = 1l )
-  Integer memory;
-}
-public class ModifyInstanceTypeAttributeResponseType extends VmTypeMessage {
-  VmTypeDetails instanceType;
-  VmTypeDetails previousInstanceType;
-}
-public class DescribeInstanceTypesType extends VmTypeMessage {
-  Boolean verbose = false;
-  Boolean availability = false;
-  @HttpParameterMapping(parameter="InstanceType")
-  ArrayList<String> instanceTypes = new ArrayList<String>();
-  DescribeInstanceTypesType () { }
-  DescribeInstanceTypesType ( Collection<String> instanceTypes ) {
-    this.instanceTypes.addAll( instanceTypes )
-  }
-}
-public class DescribeInstanceTypesResponseType extends VmTypeMessage  {
-  ArrayList<VmTypeDetails> instanceTypeDetails = Lists.newArrayList()
+  
 }

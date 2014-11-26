@@ -24,11 +24,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 /**
  * Reference to a VPC security group.

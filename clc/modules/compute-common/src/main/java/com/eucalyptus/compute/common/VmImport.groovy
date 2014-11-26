@@ -122,6 +122,7 @@ public class DiskImageVolume extends EucalyptusData {
 /*********************************************************************************/
 public class CancelConversionTaskType extends VmImportMessage {
   String conversionTaskId;
+  String reasonMessage
   public CancelConversionTask() {}
 }
 public class CancelConversionTaskResponseType extends VmImportResponseMessage {

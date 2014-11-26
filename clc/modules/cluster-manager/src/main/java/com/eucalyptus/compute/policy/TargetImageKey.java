@@ -26,13 +26,13 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ArnConditionOp;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
 import com.google.common.collect.ImmutableSet;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import net.sf.json.JSONException;
 
 /**

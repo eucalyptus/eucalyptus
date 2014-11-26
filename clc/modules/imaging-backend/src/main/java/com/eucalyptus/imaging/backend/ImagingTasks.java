@@ -26,6 +26,17 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.compute.common.ConversionTask;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.DiskImage;
+import com.eucalyptus.compute.common.DiskImageDetail;
+import com.eucalyptus.compute.common.DiskImageVolume;
+import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification;
+import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
+import com.eucalyptus.compute.common.InstancePlacement;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.backend.ImportInstanceType;
+import com.eucalyptus.compute.common.backend.ImportVolumeType;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -40,18 +51,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.DiskImage;
-import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
-import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
-import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
-import edu.ucsb.eucalyptus.msgs.InstancePlacement;
-import edu.ucsb.eucalyptus.msgs.SubnetType;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
@@ -123,7 +122,7 @@ public class ImagingTasks {
     return transform;
   }
   
-  public static ImportInstanceImagingTask createImportInstanceTask(final ImportInstanceType request) 
+  public static ImportInstanceImagingTask createImportInstanceTask(final ImportInstanceType request)
       throws ImagingServiceException {
     // verify the input
     final ImportInstanceLaunchSpecification launchSpec = request.getLaunchSpecification();

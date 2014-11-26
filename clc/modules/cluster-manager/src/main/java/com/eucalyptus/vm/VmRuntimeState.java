@@ -100,6 +100,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.ResourceTagMessage;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -123,13 +128,12 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
+import edu.ucsb.eucalyptus.msgs.StartInstanceType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
 
 @Embeddable
 public class VmRuntimeState {
@@ -410,7 +414,7 @@ public class VmRuntimeState {
                   GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
                   String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scReply.getToken(), volumeId);
                   LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, token));
+                  AsyncRequests.dispatch( ccConfig, new ClusterAttachVolumeType( volumeId, vmId, vmDevice, token));
 //                  final EntityTransaction db = Entities.get( VmInstance.class );
 //                  try {
 //                    final VmInstance entity = Entities.merge( vm );
@@ -487,8 +491,9 @@ public class VmRuntimeState {
       @Override
       public String getCorrelationId() {
         final BaseMessage req = MessageContexts.lookupLast(instanceId , 
-            Sets.<Class>newHashSet(edu.ucsb.eucalyptus.msgs.TerminateInstancesType.class,
-                edu.ucsb.eucalyptus.msgs.StopInstancesType.class
+            Sets.<Class>newHashSet(
+                TerminateInstancesType.class,
+                StopInstancesType.class
                 ));
         return req == null ? null : req.getCorrelationId();
       }

@@ -47,6 +47,9 @@ import com.eucalyptus.component.Faults;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -61,10 +64,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
  * @author Sang-Min Park

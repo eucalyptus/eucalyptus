@@ -60,20 +60,39 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
+<!--
+  The core binding is for bindings known at build time
+-->
+<binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
 
-<binding force-classes="true" add-constructors="true">
-  <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="sourceHost" field="sourceHost" usage="optional" />
-    <value name="instanceId" field="instanceId" usage="optional" />
-    <structure usage="optional">
-      <collection field="destinationHosts" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="destinationHost" type="java.lang.String" />
-      </collection>
-    </structure>
-    <value name="allowHosts" field="allowHosts" usage="optional" />
+  <include path="classpath:cc-network.xml" />
+  <include path="classpath:cc-volumes.xml" />
+  <include path="classpath:cc-resources.xml" />
+  <include path="classpath:cc-vms.xml" />
+  <include path="classpath:cc-getlogs.xml" />
+  <include path="classpath:cc-services.xml" />
+  <include path="classpath:cc-sensors.xml"/>
+  <include path="classpath:cc-evacuate.xml"/>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
   </mapping>
-  <mapping name="MigrateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
+    <value name="correlationId" field="correlationId" usage="optional" />
+    <value name="userId" field="userId" usage="optional" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+    <value name="return" field="_return" usage="optional" />
+    <value name="epoch" field="_epoch" usage="optional" />
+    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection field="_disabledServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection field="_notreadyServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
   </mapping>
+
 </binding>

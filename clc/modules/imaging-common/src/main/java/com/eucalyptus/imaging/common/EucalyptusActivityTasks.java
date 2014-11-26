@@ -89,12 +89,12 @@ import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -108,68 +108,65 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.backend.AuthorizeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.backend.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.DescribeSubnetsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSubnetsType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
-import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType;
-import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterImageType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
-import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.Filter;
-import edu.ucsb.eucalyptus.msgs.Snapshot;
-import edu.ucsb.eucalyptus.msgs.SubnetType;
-import edu.ucsb.eucalyptus.msgs.TagInfo;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
-import edu.ucsb.eucalyptus.msgs.Volume;
-import edu.ucsb.eucalyptus.msgs.VpcMessage;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
+import com.eucalyptus.compute.common.IpPermissionType;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.Snapshot;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.TagInfo;
+import com.eucalyptus.compute.common.Volume;
+import com.eucalyptus.compute.common.backend.CreateSecurityGroupResponseType;
+import com.eucalyptus.compute.common.backend.CreateSecurityGroupType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotType;
+import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
+import com.eucalyptus.compute.common.backend.CreateVolumeType;
+import com.eucalyptus.compute.common.backend.DeleteSecurityGroupResponseType;
+import com.eucalyptus.compute.common.backend.DeleteSecurityGroupType;
+import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
+import com.eucalyptus.compute.common.backend.DeleteVolumeResponseType;
+import com.eucalyptus.compute.common.backend.DeleteVolumeType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.backend.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeImagesType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
+import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
+import com.eucalyptus.compute.common.backend.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSubnetsType;
+import com.eucalyptus.compute.common.backend.DescribeTagsType;
+import com.eucalyptus.compute.common.backend.DescribeVolumesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeVolumesType;
+import com.eucalyptus.compute.common.backend.RegisterImageResponseType;
+import com.eucalyptus.compute.common.backend.RegisterImageType;
+import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressResponseType;
+import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.backend.RunInstancesResponseType;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -303,7 +300,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusSystemActivity implements
-      ActivityContext<EucalyptusMessage, Eucalyptus> {
+      ActivityContext<ComputeMessage, Eucalyptus> {
     @Override
     public String getUserId() {
       // TODO: SPARK: Impersonation?
@@ -316,9 +313,9 @@ public class EucalyptusActivityTasks {
     }
 
     @Override
-    public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    public DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       try {
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client = new DispatchingClient<>(
+        final DispatchingClient<ComputeMessage, Eucalyptus> client = new DispatchingClient<>(
             this.getUserId(), Eucalyptus.class);
         client.init();
         return client;
@@ -354,7 +351,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusUserActivity implements
-      ActivityContext<EucalyptusMessage, Eucalyptus> {
+      ActivityContext<ComputeMessage, Eucalyptus> {
     private String userId = null;
 
     private EucalyptusUserActivity(final String userId) {
@@ -368,10 +365,10 @@ public class EucalyptusActivityTasks {
     }
 
     @Override
-    public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    public DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       // TODO Auto-generated method stub
       try {
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client = new DispatchingClient<>(
+        final DispatchingClient<ComputeMessage, Eucalyptus> client = new DispatchingClient<>(
             this.getUserId(), Eucalyptus.class);
         client.init();
         return client;
@@ -1306,7 +1303,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusTerminateInstanceTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String instanceId = null;
 
     private EucalyptusTerminateInstanceTask(final String instanceId) {
@@ -1321,23 +1318,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(terminate(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final TerminateInstancesResponseType resp = (TerminateInstancesResponseType) response;
     }
   }
 
   private class EucalyptusCreateSnapshotTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String volumeId = null;
     private String snapshotId = null;
 
@@ -1353,17 +1350,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(createSnapshot(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
       try {
         this.snapshotId = resp.getSnapshot().getSnapshotId();
@@ -1378,7 +1375,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusRegisterEBSImageTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String snapshotId = null;
     private String description = null;
     private String name = null;
@@ -1428,17 +1425,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(register(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final RegisterImageResponseType resp = (RegisterImageResponseType) response;
       this.imageId = resp.getImageId();
     }
@@ -1449,7 +1446,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusDescribeSnapshotsTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> snapshots = null;
     private List<Snapshot> results = null;
 
@@ -1465,17 +1462,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeSnapshots(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
       this.results = resp.getSnapshotSet();
     }
@@ -1486,7 +1483,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusRunInstancesTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String imageId = null;
     private Set<String> groupNames = Collections.emptySet();
     private String userData = null;
@@ -1557,17 +1554,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(runInstances(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final RunInstancesResponseType resp = (RunInstancesResponseType) response;
       try {
         this.instanceId = resp.getRsvInfo().getInstancesSet().get(0)
@@ -1583,7 +1580,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusDescribeInstanceTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private final List<String> instanceIds;
     private final AtomicReference<List<RunningInstancesItemType>> result = new AtomicReference<List<RunningInstancesItemType>>();
 
@@ -1599,17 +1596,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeInstances(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
       final List<RunningInstancesItemType> resultInstances = Lists
           .newArrayList();
@@ -1625,7 +1622,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class DeleteVolumeTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String volumeId = null;
 
     private DeleteVolumeTask(final String volumeId) {
@@ -1640,23 +1637,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(deleteVolume(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DeleteVolumeResponseType resp = (DeleteVolumeResponseType) response;
     }
   }
 
   private class CreateVolumeTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String availabilityZone = null;
     private String snapshotId = null;
     private int size = -1;
@@ -1684,17 +1681,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(createVolume(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final CreateVolumeResponseType resp = (CreateVolumeResponseType) response;
       final Volume vol = resp.getVolume();
       if (vol != null && !"error".equals(vol.getStatus())) {
@@ -1708,7 +1705,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class DescribeVolumesTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> volumeIds = null;
     private List<Volume> result = null;
 
@@ -1730,17 +1727,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeVolumes(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeVolumesResponseType resp = (DescribeVolumesResponseType) response;
       this.result = resp.getVolumeSet();
     }
@@ -1751,7 +1748,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class DescribeTagsTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> names = null;
     private List<String> values = null;
     private List<TagInfo> tags = null;
@@ -1782,18 +1779,18 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeTags(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
-      final edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType resp = (edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType) response;
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
+      final com.eucalyptus.compute.common.backend.DescribeTagsResponseType resp = (com.eucalyptus.compute.common.backend.DescribeTagsResponseType) response;
 
       tags = resp.getTagSet();
     }
@@ -1876,7 +1873,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucaDescribeImagesTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> imageIds = null;
     private List<ImageDetails> result = null;
 
@@ -1894,17 +1891,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeImages(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
       result = resp.getImagesSet();
     }
@@ -2003,7 +2000,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucaDeleteTagsTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String tagKey = null;
     private String tagValue = null;
     private List<String> resources = null;
@@ -2027,24 +2024,24 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
 
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(deleteTags(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
     }
   }
 
   private class EucaCreateTagsTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String tagKey = null;
     private String tagValue = null;
     private List<String> resources = null;
@@ -2068,23 +2065,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(createTags(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final CreateTagsResponseType resp = (CreateTagsResponseType) response;
     }
   }
 
   private class EucaDescribeKeyPairsTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> keyNames = null;
     private List<DescribeKeyPairsResponseItemType> result = null;
 
@@ -2109,17 +2106,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeKeyPairs(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
       result = resp.getKeySet();
     }
@@ -2924,7 +2921,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusDescribeAvailabilityZonesTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<ClusterInfoType> zones = null;
     private boolean verbose = false;
 
@@ -2942,17 +2939,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeAvailabilityZones(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       // TODO Auto-generated method stub
       final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
       zones = resp.getAvailabilityZoneInfo();
@@ -3030,7 +3027,7 @@ public class EucalyptusActivityTasks {
 
   // SPARK: TODO: SYSTEM, STATIC MODE?
   private class EucalyptusCreateGroupTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String groupName = null;
     private String groupDesc = null;
     private String groupId = null;
@@ -3049,17 +3046,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(createSecurityGroup(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final CreateSecurityGroupResponseType resp = (CreateSecurityGroupResponseType) response;
       this.groupId = resp.getGroupId();
     }
@@ -3070,7 +3067,7 @@ public class EucalyptusActivityTasks {
   }
 
   private class EucalyptusAuthorizeIngressRuleTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     String groupName = null;
     String protocol = null;
     int portNum = 1;
@@ -3096,23 +3093,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(authorize(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final AuthorizeSecurityGroupIngressResponseType resp = (AuthorizeSecurityGroupIngressResponseType) response;
     }
   }
 
   private class EucalyptusRevokeIngressRuleTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     String groupName = null;
     String protocol = null;
     int portNum = 1;
@@ -3138,23 +3135,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(revoke(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final RevokeSecurityGroupIngressResponseType resp = (RevokeSecurityGroupIngressResponseType) response;
     }
   }
 
   private class EucalyptusDeleteGroupTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private String groupName = null;
 
     EucalyptusDeleteGroupTask(String groupName) {
@@ -3169,23 +3166,23 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(deleteSecurityGroup(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DeleteSecurityGroupResponseType resp = (DeleteSecurityGroupResponseType) response;
     }
   }
 
   private class EucalyptusDescribeSecurityGroupTask extends
-      EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+      EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
     private List<String> groups = null;
     private List<SecurityGroupItemType> result = null;
 
@@ -3201,17 +3198,17 @@ public class EucalyptusActivityTasks {
 
     @Override
     void dispatchInternal(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = context
           .getClient();
       client.dispatch(describeSecurityGroups(), callback);
     }
 
     @Override
     void dispatchSuccess(
-        ActivityContext<EucalyptusMessage, Eucalyptus> context,
-        EucalyptusMessage response) {
+        ActivityContext<ComputeMessage, Eucalyptus> context,
+        ComputeMessage response) {
       final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
       this.result = resp.getSecurityGroupInfo();
     }

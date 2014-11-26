@@ -27,6 +27,9 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.RouteTableAssociationType;
+import com.eucalyptus.compute.common.RouteTableType;
+import com.eucalyptus.compute.common.RouteType;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -39,9 +42,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.RouteTableAssociationType;
-import edu.ucsb.eucalyptus.msgs.RouteTableType;
-import edu.ucsb.eucalyptus.msgs.RouteType;
 
 /**
  *

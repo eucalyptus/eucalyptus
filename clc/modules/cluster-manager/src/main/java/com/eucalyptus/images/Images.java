@@ -89,7 +89,10 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
@@ -131,10 +134,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 public class Images {
   private static Logger LOG  = Logger.getLogger( Images.class );
@@ -376,7 +375,7 @@ public class Images {
   // Changing to method signature to accept a default size for generating ebs mappings. 
   // The default size will be used when both snapshot ID and volume size are missing. (AWS compliance)
   // The default size is usually size of the root device volume in case of boot from ebs images.
-  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent, 
+  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent,
                                                                                             final Integer rootVolSize ) {
     return deviceMappingGenerator( parent, rootVolSize, Collections.<String,String>emptyMap() );
   }

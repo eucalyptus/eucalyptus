@@ -166,13 +166,13 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     }
   }
   
-  public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
+  public com.eucalyptus.compute.common.Volume morph( final com.eucalyptus.compute.common.Volume vol ) {
     vol.setAvailabilityZone( this.getPartition( ) );
     vol.setCreateTime( this.getCreationTimestamp( ) );
     vol.setVolumeId( this.getDisplayName( ) );
     vol.setSnapshotId( this.getParentSnapshot( ) );
     vol.setStatus( this.mapState( ) );
-    vol.setSize( ( this.getSize( ) == -1 ) || ( this.getSize( ) == null )
+    vol.setSize( ( this.getSize( ) == null ) || ( this.getSize( ) == -1 )
       ? null
       : this.getSize( ).toString( ) );
     return vol;

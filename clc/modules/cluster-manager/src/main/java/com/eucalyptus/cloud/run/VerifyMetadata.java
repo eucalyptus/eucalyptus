@@ -85,9 +85,11 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
@@ -125,8 +127,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import net.sf.json.JSONException;
 
 public class VerifyMetadata {

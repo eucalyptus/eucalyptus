@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -37,8 +38,6 @@ import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import edu.ucsb.eucalyptus.msgs.TagInfo;
 
 /**
  * @author Sang-Min Park
@@ -100,7 +99,7 @@ public class ImagingServiceLaunchers {
     boolean tagFound = false;
     // lookup tags
     try{
-      final List<TagInfo> tags = EucalyptusActivityTasks.getInstance().describeTags(Lists.newArrayList("value"), 
+      final List<TagInfo> tags = EucalyptusActivityTasks.getInstance().describeTags(Lists.newArrayList("value"),
           Lists.newArrayList(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG));
       if(tags !=null){
         for(final TagInfo tag : tags){

@@ -47,6 +47,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
@@ -69,8 +70,6 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park

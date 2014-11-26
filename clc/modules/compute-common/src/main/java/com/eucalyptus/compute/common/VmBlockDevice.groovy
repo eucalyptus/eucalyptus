@@ -91,38 +91,33 @@ public class DescribeVolumesResponseType extends BlockVolumeMessage {
 }
 
 public class AttachVolumeType extends BlockVolumeMessage {
-  
+
   String volumeId;
   String instanceId;
   String device;
-  String remoteDevice;
   public AttachVolumeType( ) {
-    super( );
   }
-  public AttachVolumeType( String volumeId, String instanceId, String device, String remoteDevice ) {
-    super( );
+  public AttachVolumeType( String volumeId, String instanceId, String device ) {
     this.volumeId = volumeId;
     this.instanceId = instanceId;
     this.device = device;
-    this.remoteDevice = remoteDevice;
   }
-  
+
 }
 public class AttachVolumeResponseType extends BlockVolumeMessage {
-  
+
   AttachedVolume attachedVolume = new AttachedVolume();
 }
 
 public class DetachVolumeType extends BlockVolumeMessage {
-  
+
   String volumeId;
   String instanceId;
   String device;
-  String remoteDevice;
   Boolean force = false;
 }
 public class DetachVolumeResponseType extends BlockVolumeMessage {
-  
+
   AttachedVolume detachedVolume = new AttachedVolume();
 }
 
@@ -160,6 +155,48 @@ public class DescribeSnapshotsResponseType extends BlockSnapshotMessage {
   ArrayList<Snapshot> snapshotSet = new ArrayList<Snapshot>();
 }
 
+public class AttachedVolume extends EucalyptusData implements Comparable<AttachedVolume> {
+  String volumeId;
+  String instanceId;
+  String device;
+  String status;
+  Date attachTime = new Date();
+
+  def AttachedVolume(final String volumeId, final String instanceId, final String device) {
+    this.volumeId = volumeId;
+    this.instanceId = instanceId;
+    this.device = device;
+    this.status = "attaching";
+  }
+
+  public AttachedVolume( String volumeId ) {
+    this.volumeId = volumeId;
+  }
+
+  public AttachedVolume() {
+  }
+
+  public boolean equals(final Object o) {
+    if ( this.is(o) ) return true;
+    if ( o == null || !getClass().equals( o.class ) ) return false;
+    AttachedVolume that = (AttachedVolume) o;
+    if ( volumeId ? !volumeId.equals(that.volumeId) : that.volumeId != null ) return false;
+    return true;
+  }
+
+  public int hashCode() {
+    return (volumeId ? volumeId.hashCode() : 0);
+  }
+
+  public int compareTo( AttachedVolume that ) {
+    return this.volumeId.compareTo( that.volumeId );
+  }
+
+  public String toString() {
+    return "AttachedVolume ${volumeId} ${instanceId} ${status} ${device} ${attachTime}"
+  }
+}
+
 public class Volume extends EucalyptusData {
   
   String volumeId;
@@ -178,51 +215,6 @@ public class Volume extends EucalyptusData {
   }
   public Volume(String volumeId) {
     this.volumeId = volumeId;
-  }
-}
-
-public class AttachedVolume extends EucalyptusData implements Comparable<AttachedVolume> {
-  
-  String volumeId;
-  String instanceId;
-  String device;
-  String remoteDevice;
-  String status;
-  Date attachTime = new Date();
-  
-  def AttachedVolume(final String volumeId, final String instanceId, final String device, final String remoteDevice) {
-    this.volumeId = volumeId;
-    this.instanceId = instanceId;
-    this.device = device;
-    this.remoteDevice = remoteDevice;
-    this.status = "attaching";
-  }
-  
-  public AttachedVolume( String volumeId ) {
-    this.volumeId = volumeId;
-  }
-  
-  public AttachedVolume() {
-  }
-  
-  public boolean equals(final Object o) {
-    if ( this.is(o) ) return true;
-    if ( o == null || !getClass().equals( o.class ) ) return false;
-    AttachedVolume that = (AttachedVolume) o;
-    if ( volumeId ? !volumeId.equals(that.volumeId) : that.volumeId != null ) return false;
-    return true;
-  }
-  
-  public int hashCode() {
-    return (volumeId ? volumeId.hashCode() : 0);
-  }
-  
-  public int compareTo( AttachedVolume that ) {
-    return this.volumeId.compareTo( that.volumeId );
-  }
-  
-  public String toString() {
-    return "AttachedVolume ${volumeId} ${instanceId} ${status} ${device} ${remoteDevice} ${attachTime}"
   }
 }
 
@@ -420,3 +412,54 @@ public class ResetSnapshotAttributeType extends BlockSnapshotMessage {
     String createVolumePermission;
 }
 
+public class DescribeVolumeAttributeType extends BlockVolumeMessage {
+  String volumeId
+  String attribute
+}
+
+public class DescribeVolumeAttributeResponseType extends BlockVolumeMessage {
+  String volumeId
+  Boolean autoEnableIO
+  Boolean productCodes // not supported, would be a list of codes
+
+  boolean hasAutoEnableIO() {
+    this.autoEnableIO != null
+  }
+  boolean hasProductCodes() {
+    this.productCodes != null
+  }
+}
+
+public class DescribeVolumeStatusType extends BlockVolumeMessage {
+  ArrayList<String> volumeId
+  Integer maxResults
+  String nextToken
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+}
+
+public class VolumeStatusItemType extends EucalyptusData {
+  String volumeId
+  String availabilityZone
+  String status
+  String ioEnabledStatus
+}
+
+public class DescribeVolumeStatusResponseType extends BlockVolumeMessage {
+  ArrayList<VolumeStatusItemType> volumeStatusSet
+}
+
+public class EnableVolumeIOType extends BlockVolumeMessage {
+  String volumeId
+}
+
+public class EnableVolumeIOResponseType extends BlockVolumeMessage { }
+
+public class ModifyVolumeAttributeType extends BlockVolumeMessage {
+  String volumeId
+  @HttpParameterMapping (parameter = "AutoEnableIO.Value")
+  Boolean autoEnableIO
+}
+
+public class ModifyVolumeAttributeResponseType extends BlockVolumeMessage { }

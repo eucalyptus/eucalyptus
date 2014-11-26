@@ -53,7 +53,6 @@
     <value name="status" field="status" usage="required" />
     <value name="attachTime" field="attachTime" usage="required" />
   </mapping>
-
   <mapping name="CreateVolume" class="com.eucalyptus.compute.common.CreateVolumeType" ordered="false"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
@@ -130,4 +129,95 @@
       <structure name="item" map-as="com.eucalyptus.compute.common.Volume" />
     </collection>
   </mapping>
+
+  <mapping name="DescribeVolumeAttribute"
+           class="com.eucalyptus.compute.common.DescribeVolumeAttributeType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="attribute" field="attribute" usage="required" />
+  </mapping>
+
+  <mapping name="DescribeVolumeAttributeResponse"
+           class="com.eucalyptus.compute.common.DescribeVolumeAttributeResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="volumeId" field="volumeId" usage="required"/>
+    <structure name="autoEnableIO" usage="optional" test-method="hasAutoEnableIO">
+      <value name="value" field="autoEnableIO" usage="optional"/>
+    </structure>
+    <structure name="productCodes" usage="optional" test-method="hasProductCodes">
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeVolumeStatus"
+           class="com.eucalyptus.compute.common.DescribeVolumeStatusType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection field="volumeId" usage="optional">
+      <value name="volumeId" type="java.lang.String"/>
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional" />
+    <value name="nextToken" field="nextToken" usage="optional" />
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping abstract="true" class="com.eucalyptus.compute.common.VolumeStatusItemType">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <structure name="volumeStatus">
+      <value name="status" field="status" usage="required" />
+      <structure name="details">
+        <structure name="item">
+          <value name="name" constant="io-enabled"/>
+          <value name="status" field="ioEnabledStatus" usage="required" />
+        </structure>
+      </structure>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeVolumeStatusResponse"
+           class="com.eucalyptus.compute.common.DescribeVolumeStatusResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="volumeStatusSet" field="volumeStatusSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.VolumeStatusItemType" />
+    </collection>
+  </mapping>
+
+  <mapping name="EnableVolumeIO"
+           class="com.eucalyptus.compute.common.EnableVolumeIOType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="volumeId" field="volumeId" usage="required" />
+  </mapping>
+
+  <mapping name="EnableVolumeIOResponse"
+           class="com.eucalyptus.compute.common.EnableVolumeIOResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+
+  <mapping name="ModifyVolumeAttribute"
+           class="com.eucalyptus.compute.common.ModifyVolumeAttributeType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <structure name="autoEnableIO">
+      <value name="value" field="autoEnableIO" usage="required" />
+    </structure>
+  </mapping>
+
+  <mapping name="ModifyVolumeAttributeResponse"
+           class="com.eucalyptus.compute.common.ModifyVolumeAttributeResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+
 </binding>

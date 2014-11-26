@@ -55,6 +55,9 @@ import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClient
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -74,9 +77,6 @@ import com.google.common.collect.Maps;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
