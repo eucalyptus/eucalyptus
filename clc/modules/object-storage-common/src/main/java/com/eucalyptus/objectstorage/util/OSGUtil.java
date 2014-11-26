@@ -67,6 +67,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
@@ -213,10 +214,11 @@ public class OSGUtil {
     }
 
     public static void addCopiedHeadersToResponse(HttpResponse httpResponse, ObjectStorageDataResponseType osgResponse) {
-        /* seems like this one is handled elsewhere
-        if (osgResponse.getContentDisposition() != null && !"".equals( osgResponse.getContentDisposition() )) {
+        if (osgResponse instanceof HeadObjectResponseType
+                && osgResponse.getContentDisposition() != null
+                && !"".equals( osgResponse.getContentDisposition() )) {
             httpResponse.addHeader( "Content-Disposition", osgResponse.getContentDisposition() );
-        }*/
+        }
         if (osgResponse.getContentEncoding() != null && !"".equals( osgResponse.getContentEncoding() )) {
             httpResponse.addHeader( HttpHeaders.Names.CONTENT_ENCODING, osgResponse.getContentEncoding() );
         }
