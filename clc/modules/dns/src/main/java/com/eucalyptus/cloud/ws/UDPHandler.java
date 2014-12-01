@@ -110,7 +110,7 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.system.Threads;
 
 @ConfigurableClass( root = "dns.udp",
-		description = "Controls dns listeners." )
+		description = "Handles udp listeners." )
 
 public class UDPHandler extends Thread {
 	@ConfigurableField( description = "Parameter controlling the number of UDP worker threads." )
