@@ -311,7 +311,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = msg.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
+    boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create();
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
     final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
@@ -361,7 +361,7 @@ public class VmControl {
   public DescribeInstanceStatusResponseType describeInstanceStatus( final DescribeInstanceStatusType msg ) throws EucalyptusCloudException {
     final DescribeInstanceStatusResponseType reply = msg.getReply( );
     final Context ctx = Contexts.lookup();
-    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
+    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
     final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
     final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
@@ -589,6 +589,7 @@ public class VmControl {
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
     final DescribeBundleTasksResponseType reply = request.getReply( );
 
+    final boolean showAll = request.getBundleIds( ).remove( "verbose" ) || !request.getBundleIds( ).isEmpty( );
     final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       
@@ -606,7 +607,12 @@ public class VmControl {
       final Predicate<? super VmInstance> filteredInstances = 
           Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() );
       final Filter noFilters = Filters.generate( new ArrayList<com.eucalyptus.compute.common.Filter>(), VmBundleTask.class );
-      final Collection<VmInstance> dbBundles = VmInstances.list( null, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
+      final Context ctx = Contexts.lookup();
+      final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
+          ? null
+          : ctx.getUserFullName( ).asAccountFullName( );
+      final Collection<VmInstance> dbBundles =
+          VmInstances.list( ownerFullName, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
       for ( final VmInstance v : dbBundles) {
         
         if ( filteredInstances.apply(v) && VmInstance.Filters.BUNDLING.apply(v)) {
