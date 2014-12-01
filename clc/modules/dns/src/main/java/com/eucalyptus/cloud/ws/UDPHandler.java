@@ -109,7 +109,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.system.Threads;
 
-@ConfigurableClass( root = "dns",
+@ConfigurableClass( root = "dns.udp",
 		description = "Controls dns listeners." )
 
 public class UDPHandler extends Thread {
