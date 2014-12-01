@@ -838,7 +838,7 @@ int java_init(euca_opts * args, java_home_t * data)
                 GETARG(args, debug_port),
                 (args->debug_suspend_flag ? "y" : "n"));
     }
-    if (args->jmx_flag || args->debug_flag) {
+    if (args->jmx_flag) {
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");    //TODO:GRZE:wrapup jmx stuff here.
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false"); //TODO:GRZE:RELEASE FIXME to use ssl
