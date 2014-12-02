@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -37,6 +38,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+//Don't run automatically, only in manual junit runs from ide, etc.
+//Uses local file-system resources that may not be available in an automated CI system
+@Ignore
 public class HierarchicalFilesystemEventEmitterTest {
     private static String path = "unittesting" + UUID.randomUUID().toString();
 
@@ -62,7 +66,6 @@ public class HierarchicalFilesystemEventEmitterTest {
         }
         Files.delete(p);
     }
-
 
     @Test
     public void testSubmitEvent() throws Exception {

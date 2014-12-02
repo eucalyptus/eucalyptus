@@ -114,8 +114,13 @@ public class SystemMetric {
      * @param tags
      */
     public void setTags(List<String> tags) {
-        this.tags = Lists.newArrayList(tags);
-        Collections.sort(this.tags);
+        if(tags != null) {
+            this.tags = Lists.newArrayList(tags);
+            Collections.sort(this.tags);
+        } else {
+            this.tags = Lists.newArrayList();
+        }
+
     }
 
     public void setDescription(String description) {

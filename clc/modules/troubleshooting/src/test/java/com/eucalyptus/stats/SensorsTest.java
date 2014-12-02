@@ -26,6 +26,7 @@ import net.sf.hajdbc.util.SystemProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.management.MBeanAttributeInfo;
@@ -35,6 +36,10 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 
+
+//Don't run automatically, only in manual junit runs from ide, etc.
+//Uses local file-system resources that may not be available in an automated CI system
+@Ignore
 public class SensorsTest {
 
   @MXBean

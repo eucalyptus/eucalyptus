@@ -21,17 +21,21 @@
 package com.eucalyptus.stats;
 
 import com.google.common.collect.Maps;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
 
+//Don't run automatically, only in manual junit runs from ide, etc.
+//Uses local file-system resources that may not be available in an automated CI system
+@Ignore
 public class EventEmitterServiceTest {
 
   private SystemMetric eventGen(String name) {
     Map<String, Object> testResults = Maps.newHashMap();
     testResults.put("fakekeyString","fakeresult1");
-    testResults.put("fakekeyInteger", new Integer(100));
-    testResults.put("fakekeyDouble", new Double(150.50));
+    testResults.put("fakekeyInteger", 100);
+    testResults.put("fakekeyDouble", 150.50);
     return new SystemMetric(name,
         null,
         "description is here",
