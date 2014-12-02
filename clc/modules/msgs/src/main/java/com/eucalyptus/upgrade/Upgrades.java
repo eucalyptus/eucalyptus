@@ -521,30 +521,30 @@ public class Upgrades {
         return this.call( );
       }
     },
-//    CHECK_NAMING { //TODO:STEVE: enable or remove this
-//      @Override
-//      public boolean callAndLog() throws Exception {
-//        return this.call( );
-//      }
-//
-//      @Override
-//      public Boolean call( ) throws Exception {
-//        return BootstrapArgs.isCloudController( ) && !databaseNamingConflict( );
-//      }
-//
-//      private boolean databaseNamingConflict( ) {
-//        if ( BootstrapArgs.isUpgradeSystem( ) ) return false;
-//
-//        final Set<String> databaseNames = getDatabaseNames( );
-//        final Set<String> schemaNames = getSchemaNames( databaseNames );
-//        databaseNames.retainAll( schemaNames );
-//        if ( !databaseNames.isEmpty( ) ) {
-//          LOG.fatal( "Conflicting schema/database for contexts: " + databaseNames + ", resolve conflicts and restart." );
-//          System.exit( 1 );
-//        }
-//        return false;
-//      }
-//    },
+    CHECK_NAMING {
+      @Override
+      public boolean callAndLog() throws Exception {
+        return this.call( );
+      }
+
+      @Override
+      public Boolean call( ) throws Exception {
+        return BootstrapArgs.isCloudController( ) && !databaseNamingConflict( );
+      }
+
+      private boolean databaseNamingConflict( ) {
+        if ( BootstrapArgs.isUpgradeSystem( ) || isForceUpgrade( ) ) return false;
+
+        final Set<String> databaseNames = getDatabaseNames( );
+        final Set<String> schemaNames = getSchemaNames( databaseNames );
+        databaseNames.retainAll( schemaNames );
+        if ( !databaseNames.isEmpty( ) ) {
+          LOG.fatal( "Conflicting schema/database for contexts: " + databaseNames + ", resolve conflicts and restart." );
+          System.exit( 1 );
+        }
+        return false;
+      }
+    },
     PARSE_ARGS {
       
       @Override
@@ -563,8 +563,6 @@ public class Upgrades {
     },
     /**
      * Ensure each context is using the expected naming strategy.
-     *
-     * TODO:STEVE: Perform only when upgrading?
      */
     UPGRADE_NAMING {
       @Override
@@ -591,7 +589,11 @@ public class Upgrades {
             }
           } );
 
-          if ( presentStrategies.size( ) > 1 ) {
+          if ( !presentStrategies.isEmpty( ) && !(BootstrapArgs.isUpgradeSystem( ) || isForceUpgrade( )) ) {
+            LOG.fatal( "Database layout update required for '"+ctx+"', but upgrade not enabled (add '-Deuca.upgrade.force=true' in CLOUD_OPTS to force)" );
+            exitCode = 1;
+            break;
+          } else if ( presentStrategies.size( ) > 1 ) {
             LOG.fatal( "Error updating naming for context '"+ctx+"', multiple sources." );
             exitCode = 1;
             break;
@@ -786,9 +788,9 @@ public class Upgrades {
       @Override
       public Boolean call( ) throws Exception {
         if ( Version.getCurrentVersion( ).equals( UpgradeEventLog.getLastUpgradedVersion( ) ) ) {
-          return Boolean.TRUE.parseBoolean( System.getProperty( "euca.upgrade.force" ) );
+          return isForceUpgrade( );
         } else if ( Version.getCurrentVersion( ).equals( Version.getOldVersion( ) ) && !BootstrapArgs.isUpgradeSystem( ) ) {
-          return Boolean.TRUE.parseBoolean( System.getProperty( "euca.upgrade.force" ) );
+          return isForceUpgrade( );
         } else {
           return true;
         }
@@ -1101,6 +1103,10 @@ public class Upgrades {
       currentState = currentState.next( );
       return currentState;
     }
+  }
+
+  private static boolean isForceUpgrade( ) {
+    return Boolean.parseBoolean( System.getProperty( "euca.upgrade.force" ) );
   }
 
   private static void runSchemaUpdate( DatabaseFilters dbName ) throws RuntimeException {
