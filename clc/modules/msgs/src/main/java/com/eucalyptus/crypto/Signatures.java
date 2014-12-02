@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,45 +70,51 @@ import java.security.SignatureException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 
 public enum Signatures {
   SHA256withRSA,
   SHA1WithRSA;
   private static Logger LOG = Logger.getLogger( Signatures.class );
+  private static final String HEXES = "0123456789abcdef";
 
-  public String trySign( Class<? extends ComponentId> component, byte[] data ) {
-    PrivateKey pk = SystemCredentials.lookup( component ).getPrivateKey( );
-    return trySign( pk, data );
+  public String trySign( final Class<? extends ComponentId> component, final byte[] data ) {
+    return trySign( componentPk( component ), data );
   }
+
   /**
    * Identical to Signatures#sign() except in that it throws no checked exceptions and instead returns null in the case of a failure.
    */
-  public String trySign( PrivateKey pk, byte[] data ) {
+  public String trySign( final PrivateKey pk, final byte[] data ) {
     try {
       return this.sign( pk, data );
     } catch ( Exception e ) {
       return null;
     }
   }
-  static final String HEXES = "0123456789ABCDEF";
-  public String sign( PrivateKey pk, byte[] data ) throws InvalidKeyException, SignatureException {
-    Signature signer = this.getInstance( );
+
+  public String sign( final PrivateKey pk, final byte[] data ) throws InvalidKeyException, SignatureException {
+    return bytesToHex( signBinary( pk, data ) );
+  }
+
+  public byte[] signBinary(
+      final Class<? extends ComponentId> component,
+      final byte[] data
+  ) throws InvalidKeyException, SignatureException {
+    return signBinary( componentPk( component ), data );
+  }
+
+  public byte[] signBinary( final PrivateKey pk, final byte[] data ) throws InvalidKeyException, SignatureException {
+    final Signature signer = this.getInstance( );
     signer.initSign( pk );
     try {
       signer.update( data );
-      byte[] sig = signer.sign( );
-      final StringBuilder hex = new StringBuilder( 2 * sig.length );
-      for ( final byte b : sig ) {
-        hex.append(HEXES.charAt((b & 0xF0) >> 4))
-           .append(HEXES.charAt((b & 0x0F)));
-      }
-      return hex.toString().toLowerCase( );
+      return signer.sign( );
     } catch ( SignatureException e ) {
       LOG.debug( e, e );
       throw e;
     }
   }
+
   public Signature getInstance( ) {
     try {
       return Signature.getInstance( this.toString( ) );
@@ -117,5 +123,18 @@ public enum Signatures {
       throw new RuntimeException( e );
     }
   }
-  
+
+  static String bytesToHex( final byte[] bytes ) {
+    final char[] hex = new char[ bytes.length * 2 ];
+    for ( int i = 0; i < bytes.length; i++ ) {
+      int b = bytes[i] & 0xFF;
+      hex[ i * 2 ]     = HEXES.charAt( b >>> 4 );
+      hex[ i * 2 + 1 ] = HEXES.charAt( b & 0x0F );
+    }
+    return new String( hex );
+  }
+
+  private PrivateKey componentPk( final Class<? extends ComponentId> component ) {
+    return SystemCredentials.lookup( component ).getPrivateKey( );
+  }
 }

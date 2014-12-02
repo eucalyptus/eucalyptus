@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,13 +63,20 @@
 package com.eucalyptus.bootstrap;
 
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Digest;
+
 import com.eucalyptus.crypto.Signatures;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
 
 public class SystemIds {
-  
+
   public static String databasePassword( ) {
-    return Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) );
+    try {
+      return Digest.SHA256.digestHex( Signatures.SHA256withRSA.signBinary( Eucalyptus.class, "eucalyptus".getBytes() ) );
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( "Error getting database password", e );
+    }
   }
   
   public static String tunnelPassword( ) {

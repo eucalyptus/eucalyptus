@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,6 +80,14 @@ public enum Digest {
   SHA256("SHA-256"),
   SHA384("SHA-384"),
   SHA512("SHA-512");
+
+  public byte[] digestBinary( final byte[] data ) {
+    return get( ).digest( data );
+  }
+
+  public String digestHex( final byte[] data ) {
+    return Signatures.bytesToHex( digestBinary( data ) );
+  }
 
   public MessageDigest get( ) {
     try {

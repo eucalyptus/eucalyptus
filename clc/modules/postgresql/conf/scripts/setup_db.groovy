@@ -62,6 +62,8 @@
 
 
 import com.eucalyptus.bootstrap.BootstrapArgs
+import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.crypto.Signatures
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -140,6 +142,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_ENCODING = '--encoding=UTF8'
   private static final String PG_LOCALE = '--locale=C'
   private static final boolean PG_USE_SSL = Boolean.valueOf( System.getProperty('euca.db.ssl', 'true') )
+  private static final String PG_TEST_QUERY = 'SELECT 1'
   private static final String COMMAND_GET_CONF = 'getconf'
   private static final String GET_CONF_SYSTEM_PAGE_SIZE = 'PAGE_SIZE'
   private static final String PROC_SEM = '/proc/sys/kernel/sem'
@@ -181,14 +184,12 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private CommandResult runLibpqProcess( List<String> args ) {
     final File passFile = new File( PG_PASSFILE )
     try {
-      passFile.createNewFile( )
-      setOwnerReadWrite( passFile )
-      passFile.write( "*:*:*:*:${password}" )
+      createOwnerReadWrite( passFile ).write( "*:*:*:*:${password}" )
       return runProcess(args, [
           PGHOST: SubDirectory.DB.getChildPath( EUCA_DB_DIR ),
           PGPORT: PG_PORT as String,
           PGUSER: userName,
-          PGPASSWORD: password //TODO use "PGPASSFILE: PG_PASSFILE" rather than environment?
+          PGPASSFILE: PG_PASSFILE
       ])
     } finally {
       passFile.delete( )
@@ -339,9 +340,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private boolean initDatabase( ) throws Exception {
     final File passFile = new File( PG_PASSWORDFILE )
     try {
-      passFile.createNewFile( )
-      setOwnerReadWrite( passFile )
-      passFile.write( password )
+      createOwnerReadWrite( passFile ).write( password )
       CommandResult result = runProcess([
         newCommands.initdb,
         PG_ENCODING,
@@ -455,13 +454,11 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     final SystemCredentials.Credentials dbCredentials = SystemCredentials.lookup(Database.class)
     dbCredentials.with {
       if ( certificate != null && keyPair != null ) {
-        SubDirectory.DB.getChildFile( EUCA_DB_DIR, "server.crt").with {
+        createOwnerReadWrite( SubDirectory.DB.getChildFile( EUCA_DB_DIR, "server.crt") ).with {
           PEMFiles.write( getAbsolutePath(), certificate )
-          setOwnerReadonly getAbsoluteFile()
         }
-        SubDirectory.DB.getChildFile( EUCA_DB_DIR, "server.key").with {
+        createOwnerReadWrite( SubDirectory.DB.getChildFile( EUCA_DB_DIR, "server.key") ).with {
           PEMFiles.write( getAbsolutePath(), keyPair )
-          setOwnerReadonly getAbsoluteFile()
         }
       } else {
         LOG.warn("Credentials not found for database, not creating SSL certificate/key files")
@@ -470,13 +467,13 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
   }
   
-  private void setOwnerReadonly( final File file ) {
-    Files.setPosixFilePermissions( file.toPath( ), PosixFilePermissions.fromString( "r--------" ) );
+  private File createOwnerReadWrite( final File file ) {
+    Files.createFile(
+        file.toPath( ),
+        PosixFilePermissions.asFileAttribute( PosixFilePermissions.fromString( "rw-------" ) ) )
+    file
   }
 
-  private void setOwnerReadWrite( final File file ) {
-    Files.setPosixFilePermissions( file.toPath( ), PosixFilePermissions.fromString( "rw-------" ) );
-  }
   private Iterable<Pair<String,Optional<String>>> databases( ) {
     final List<String> contexts = PersistenceContexts.list();
     contexts.addAll(PersistenceContexts.listRemotable());
@@ -569,7 +566,10 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             result.processOut,
             result.processErr )
       }
+
       LOG.info("Postgresql startup succeeded.")
+
+      perhapsUpdateDbPassword( )
     } catch ( DatabaseProcessException ex ) {
       String postgresVersionError = 'database files are incompatible with server';
       if ( BootstrapArgs.isUpgradeSystem( ) && Iterables.tryFind(
@@ -588,6 +588,25 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     
     true
+  }
+
+  private void perhapsUpdateDbPassword( ) {
+    try {
+      dbExecute( 'postgres', PG_TEST_QUERY )
+    } catch ( Exception e ) {
+      if ( e.message?.contains('authentication') ) {
+        LOG.info( "Updating database password" )
+        String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
+        try {
+          withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
+            sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
+          }
+          dbExecute( 'postgres', PG_TEST_QUERY )
+        } catch ( Exception e2 ) {
+          LOG.warn( "Unable to update database password: ${e2.message}" )
+        }
+      }
+    }
   }
 
   private boolean startDatabaseWithUpgrade( ) throws Exception {
@@ -632,6 +651,9 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             result.processErr )
       }
     }
+
+    // update password if necessary
+    perhapsUpdateDbPassword( )
 
     // dump all databases
     LOG.info( 'Dumping databases' )
@@ -742,26 +764,33 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
+    getConnectionInternal( host, database, schema, userName, password )
+  }
+
+  private Sql getConnectionInternal( InetAddress host, String database, String schema, String connUserName, String connPassword ) throws Exception {
     String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
-    Sql sql = Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
+    Sql sql = Sql.newInstance( url, connUserName, connPassword, driverName )
     if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
   }
 
   private boolean dbExecute( String database, String statement ) throws Exception {
-    Sql sql = null
-    try {
-      sql = getConnection( database, null )
+    return withConnection( getConnection( database, null ) ) { Sql sql ->
       sql.execute( statement )
+    }
+  }
+
+  private boolean withConnection( Sql sql, Closure<Boolean> closure ) {
+    try {
+      closure.call( sql )
     } finally {
       sql?.close()
     }
   }
-  
+
   private void testContext( String databaseName ) throws Exception {
     try {
-      String pgPing = "SELECT USER"
-      if( !dbExecute( databaseName, pgPing ) ) {
+      if( !dbExecute( databaseName, PG_TEST_QUERY ) ) {
         LOG.error("Unable to ping the database : " + databaseName)
       }
     } catch (Exception exception) {
