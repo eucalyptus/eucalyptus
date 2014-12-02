@@ -63,39 +63,41 @@
 package com.eucalyptus.walrus.entities;
 
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "drbd_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Entity
+@PersistenceContext(name = "eucalyptus_walrus")
+@Table(name = "drbd_info")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
 public class DRBDInfo extends AbstractPersistent {
-	@Column(name = "walrus_name", unique=true)
+	private static Logger LOG = Logger.getLogger(DRBDInfo.class);
+
+	@Column(name = "walrus_name", unique = true)
 	private String name;
-	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
-	@Column( name = "block_device" )
+	@ConfigurableField(description = "DRBD block device", displayName = "Block Device")
+	@Column(name = "block_device")
 	private String blockDevice;
-	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
-	@Column( name = "resource_name" )
+	@ConfigurableField(description = "DRBD resource name", displayName = "DRBD Resource")
+	@Column(name = "resource_name")
 	private String resource;
 
-	public DRBDInfo() {}
+	public DRBDInfo() {
+	}
 
-	public DRBDInfo(final String name,
-			final String blockDevice) {
+	public DRBDInfo(final String name, final String blockDevice) {
 		this.name = name;
 		this.blockDevice = blockDevice;
 	}
@@ -125,17 +127,27 @@ public class DRBDInfo extends AbstractPersistent {
 	}
 
 	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
-		DRBDInfo drbdInfo;
+		DRBDInfo drbdInfo = null;
+
 		try {
-			drbdInfo = db.getUnique(new DRBDInfo());
-		} catch(EucalyptusCloudException ex) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
-					"/dev/unknown");
-			db.add(drbdInfo);     
-		} finally {
-			db.commit();
+			drbdInfo = Transactions.find(new DRBDInfo());
+		} catch (Exception e) {
+			LOG.warn("DRBD information not found. Loading defaults.");
+			try {
+				drbdInfo = Transactions.saveDirect(new DRBDInfo(WalrusProperties.NAME, "/dev/unknown"));
+			} catch (Exception e1) {
+				try {
+					drbdInfo = Transactions.find(new DRBDInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve DRBDInfo entity");
+				}
+			}
 		}
+
+		if (drbdInfo == null) {
+			drbdInfo = new DRBDInfo(WalrusProperties.NAME, "/dev/unknown");
+		}
+
 		return drbdInfo;
 	}
 }
