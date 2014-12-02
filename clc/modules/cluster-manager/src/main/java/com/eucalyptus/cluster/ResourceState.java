@@ -185,7 +185,18 @@ public class ResourceState {
 
   public synchronized void releaseToken( ResourceToken token ) {
     LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );
-    this.pendingTokens.remove( token );
+    if ( this.pendingTokens.remove( token ) ) {
+      // It is only safe to adjust availability for the vm type that was
+      // allocated. We do not know if larger types had any availability
+      // or what the availability was for smaller types.
+      //
+      // This is an optimization, other types availability will be updated
+      // on resource refresh.
+      final VmTypeAvailability vmAvailable = this.typeMap.get( token.getAllocationInfo( ).getVmType( ).getName( ) );
+      if ( vmAvailable != null ) {
+        vmAvailable.decrement( -1 );
+      }
+    }
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
