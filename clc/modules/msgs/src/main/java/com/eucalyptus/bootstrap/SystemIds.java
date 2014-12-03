@@ -88,11 +88,23 @@ public class SystemIds {
   }
 
   public static String createCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    return Joiner.on( "." ).join(
+        Eucalyptus.class.getSimpleName( ),
+        BillOfMaterials.getVersion( ),
+        subName,
+        Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
   public static String createShortCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    try {
+      return Joiner.on( "." ).join(
+          Eucalyptus.class.getSimpleName( ),
+          BillOfMaterials.getVersion( ),
+          subName,
+          Digest.SHA256.digestHex( Signatures.SHA256withRSA.signBinary( Eucalyptus.class, subName.getBytes( ) ) ) );
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( "Error getting short unique name for " + subName, e );
+    }
   }
   
   public static String cloudName( ) {
@@ -103,12 +115,8 @@ public class SystemIds {
     return createShortCloudUniqueName( "cache" );
   }
   
-  public static String jdbcGroupName( ) {
-    return createCloudUniqueName( "jdbc" );
-  }
-  
   public static String membershipGroupName( ) {
-    return createCloudUniqueName( "membership" );
+    return createShortCloudUniqueName( "membership" );
   }
   
   public static String membershipUdpMcastTransportName( ) {
