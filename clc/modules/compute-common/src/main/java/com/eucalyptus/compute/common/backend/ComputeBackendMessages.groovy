@@ -22,11 +22,12 @@ package com.eucalyptus.compute.common.backend
 
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.Eucalyptus
+import edu.ucsb.eucalyptus.msgs.BaseMessageMarker
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import groovy.transform.InheritConstructors
 
 @ComponentMessage( Eucalyptus.class )
-interface ComputeBackendMessage {
+interface ComputeBackendMessage extends BaseMessageMarker {
 }
 
 // Addresses

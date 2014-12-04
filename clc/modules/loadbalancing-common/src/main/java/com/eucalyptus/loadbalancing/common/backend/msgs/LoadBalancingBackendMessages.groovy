@@ -23,13 +23,12 @@ package com.eucalyptus.loadbalancing.common.backend.msgs
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend
 import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult
 import com.eucalyptus.loadbalancing.common.msgs.Instances
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage
 import com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult
 import com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata
 
 import com.eucalyptus.cloudwatch.common.msgs.MetricData
+import edu.ucsb.eucalyptus.msgs.BaseMessageMarker
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -75,7 +74,7 @@ class ErrorDetail extends EucalyptusData {
 }
 
 @ComponentMessage(LoadBalancingBackend.class)
-interface LoadBalancingBackendMessage {
+interface LoadBalancingBackendMessage extends BaseMessageMarker {
 }
 
 
