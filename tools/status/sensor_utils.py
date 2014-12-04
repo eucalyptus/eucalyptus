@@ -4,11 +4,11 @@ __author__ = 'zhill'
 import sys
 import json
 import time
-from argparse import ArgumentParserh
+from argparse import ArgumentParser
 
 
 default_euca_home=''
-default_monitoring_home='/var/run/eucalyptus/monitoring'
+default_monitoring_home='/var/run/eucalyptus/status'
 unknown_result = 'UNKNOWN'
 
 def parse_file(sensor_file=None):
@@ -31,6 +31,9 @@ def get_sensor_filename(sensor_name=None, monitoring_root=default_monitoring_hom
     return monitoring_root + '/' + sensor_name.replace('.', '/')
 
 def get_value(sensor_name=None, sensor_value=None, euca_home=default_euca_home):
+    if euca_home is None:
+        euca_home=default_euca_home
+  
     data_map = parse_file(get_sensor_filename(sensor_name, monitoring_root=euca_home + default_monitoring_home))
     result = unknown_result
     #Ensure there is a value and the data isn't expired based on the ttl

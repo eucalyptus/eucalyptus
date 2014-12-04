@@ -61,7 +61,7 @@
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
 include ../../Makedefs
-		
+STATS_DIR="status"
 build:
 
 deploy:
@@ -70,20 +70,20 @@ clean:
 	$(RM) -f *~ *.o *.pyc
 
 distclean:
-	@echo "removing stats scripts ..."
+	@echo "removing $(STATS_DIR) scripts ..."
 
 install-nagios: build
-	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios
-	@$(INSTALL) -m 754 nagios/check_component_health $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios/
-	@$(INSTALL) -m 754 nagios/check_euca_proc $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios/
+	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios
+	@$(INSTALL) -m 754 nagios/check_component_health $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios/
+	@$(INSTALL) -m 754 nagios/check_euca_proc $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios/
 
 install: build install-nagios
-	@$(INSTALL) -m 754 sensor_utils.py $(DESTDIR)$(datarootdir)/eucalyptus/stats/
+	@$(INSTALL) -m 754 sensor_utils.py $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/
 
 uninstall-nagios:
-	@echo "Removing nagios check scripts from $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios"
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios/check_component_health
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/stats/nagios/check_euca_proc
+	@echo "Removing nagios check scripts from $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios"
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios/check_component_health
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/nagios/check_euca_proc
 
 uninstall: uninstall-nagios
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/stats/sensor_utils.py
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/$(STATS_DIR)/sensor_utils.py
