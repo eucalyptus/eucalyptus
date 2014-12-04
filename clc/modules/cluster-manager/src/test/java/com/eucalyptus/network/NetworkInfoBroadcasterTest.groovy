@@ -25,6 +25,7 @@ import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
 import com.eucalyptus.cluster.NIInstance
+import com.eucalyptus.cluster.NIMidonet
 import com.eucalyptus.cluster.NINode
 import com.eucalyptus.cluster.NINodes
 import com.eucalyptus.cluster.NIProperty
@@ -32,6 +33,7 @@ import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.network.config.Cluster as ConfigCluster
+import com.eucalyptus.network.config.Midonet
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.Subnet
 import com.eucalyptus.util.TypeMappers
@@ -42,6 +44,7 @@ import com.google.common.base.Supplier
 import edu.ucsb.eucalyptus.cloud.NodeInfo
 import org.junit.BeforeClass
 import org.junit.Test
+
 import static org.junit.Assert.*
 
 /**
@@ -262,6 +265,113 @@ class NetworkInfoBroadcasterTest {
                         new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
                         new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
                         new NIProperty( name: 'privateIps', values: ['10.0.0.0-10.0.0.255'] ),
+                    ],
+                    nodes: new NINodes( name: 'nodes', nodes: [
+                        new NINode(
+                            name: 'node1',
+                            instanceIds: [ 'i-00000001' ]
+                        )
+                    ] )
+                )
+            ] ),
+        ),
+        instances: [
+            new NIInstance(
+                name: 'i-00000001',
+                ownerId: '000000000002',
+                macAddress: '00:00:00:00:00:00',
+                publicIp: '2.0.0.0',
+                privateIp: '10.0.0.0',
+                securityGroups: [],
+            )
+        ],
+        securityGroups: [ ]
+    ), info )
+  }
+
+  @Test
+  void testBroadcastVpcMido( ) {
+    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+        Optional.of( new NetworkConfiguration(
+            mode: 'VPCMIDO',
+            mido: new Midonet(
+                eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+                gatewayHost: 'a-35.qa1.eucalyptus-systems.com',
+                gatewayIP: '10.116.133.77',
+                gatewayInterface: 'em1.116',
+                publicNetworkCidr: '10.116.0.0/17',
+                publicGatewayIP: '10.116.133.67'
+            ),
+            publicIps: [ '2.0.0.0-2.0.0.255' ],
+        ) ),
+        new NetworkInfoBroadcaster.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+            [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            []
+          }
+        },
+        { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { '1.1.1.1' } as Supplier<String>,
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
+    )
+
+    assertEquals( 'broadcast vpc midonet', new NetworkInfo(
+        configuration: new NIConfiguration(
+            properties: [
+                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
+                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
+                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
+                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
+            ],
+            midonet: new NIMidonet(
+                name: 'mido',
+                properties: [
+                    new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+                    new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+                    new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
+                    new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
+                    new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
+                    new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
+                ]
+            ),
+            clusters: new NIClusters( name: 'clusters', clusters: [
+                new NICluster(
+                    name: 'cluster1',
+                    subnet: new NISubnet(
+                        name: '172.31.0.0',
+                        properties: [
+                            new NIProperty( name: 'subnet', values: ['172.31.0.0'] ),
+                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
+                            new NIProperty( name: 'gateway', values: ['172.31.0.1'] )
+                        ]
+                    ),
+                    properties: [
+                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
+                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
+                        new NIProperty( name: 'privateIps', values: ['172.31.0.5'] ),
                     ],
                     nodes: new NINodes( name: 'nodes', nodes: [
                         new NINode(

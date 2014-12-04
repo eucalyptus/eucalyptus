@@ -30,6 +30,7 @@ import com.eucalyptus.cluster.NIConfiguration
 import com.eucalyptus.cluster.NIDhcpOptionSet
 import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIInternetGateway
+import com.eucalyptus.cluster.NIMidonet
 import com.eucalyptus.cluster.NINetworkAcl
 import com.eucalyptus.cluster.NINetworkAclEntry
 import com.eucalyptus.cluster.NINetworkInterface
@@ -252,16 +253,24 @@ class NetworkInfoBroadcaster {
     NetworkInfo info = networkConfiguration
         .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
         .or( new NetworkInfo( ) )
+    boolean vpcmido = 'VPCMIDO' == networkConfiguration.orNull()?.mode
 
     // populate clusters
     info.configuration.clusters = new NIClusters(
         name: 'clusters',
         clusters: clusters.findResults{ Cluster cluster ->
           ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
-          configCluster && configCluster.subnet ?
+          configCluster && ( vpcmido || configCluster.subnet ) ?
             new NICluster(
                 name: configCluster.name,
-                subnet: new NISubnet(
+                subnet: vpcmido ? new NISubnet(
+                    name: '172.31.0.0',
+                    properties: [
+                        new NIProperty( name: 'subnet', values: [ '172.31.0.0' ]),
+                        new NIProperty( name: 'netmask', values: [ '255.255.0.0' ]),
+                        new NIProperty( name: 'gateway', values: [ '172.31.0.1' ])
+                    ]
+                ) : new NISubnet(
                     name: configCluster.subnet.subnet, // broadcast name is always the subnet value
                     properties: [
                         new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
@@ -269,11 +278,13 @@ class NetworkInfoBroadcaster {
                         new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
                     ]
                 ),
-                properties: [
+                properties: ( [
                     new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
                     new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix?:VmInstances.MAC_PREFIX ] ),
-                    new NIProperty( name: 'privateIps', values: configCluster.privateIps )
-                ],
+                ] + ( vpcmido ?
+                    [ new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) ] :
+                    [ new NIProperty( name: 'privateIps', values: configCluster.privateIps ) ]
+                ) ) as List<NIProperty>,
                 nodes: new NINodes(
                     name: 'nodes',
                     nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
@@ -529,9 +540,34 @@ class NetworkInfoBroadcaster {
     NetworkInfo apply( final NetworkConfiguration networkConfiguration ) {
       new NetworkInfo(
           configuration: new NIConfiguration(
-              properties: ( networkConfiguration.publicIps ? [
-                  new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps )
-              ] : [ ] ) as List<NIProperty>,
+              properties: [
+                  networkConfiguration.publicIps ?
+                      new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps ) :
+                      null
+              ].findAll( ) as List<NIProperty>,
+              midonet: networkConfiguration?.mido ? new NIMidonet(
+                  name: "mido",
+                  properties: [
+                      networkConfiguration?.mido?.eucanetdHost ?
+                          new NIProperty( name: 'eucanetdHost', values: [ networkConfiguration.mido.eucanetdHost ] ) :
+                          null,
+                      networkConfiguration?.mido?.gatewayHost ?
+                          new NIProperty( name: 'gatewayHost', values: [ networkConfiguration.mido.gatewayHost ] ) :
+                          null,
+                      networkConfiguration?.mido?.gatewayIP ?
+                          new NIProperty( name: 'gatewayIP', values: [ networkConfiguration.mido.gatewayIP ] ) :
+                          null,
+                      networkConfiguration?.mido?.gatewayInterface ?
+                          new NIProperty( name: 'gatewayInterface', values: [ networkConfiguration.mido.gatewayInterface ] ) :
+                          null,
+                      networkConfiguration?.mido?.publicNetworkCidr ?
+                          new NIProperty( name: 'publicNetworkCidr', values: [ networkConfiguration.mido.publicNetworkCidr ] ) :
+                          null,
+                      networkConfiguration?.mido?.publicGatewayIP ?
+                          new NIProperty( name: 'publicGatewayIP', values: [ networkConfiguration.mido.publicGatewayIP ] ) :
+                          null,
+                  ].findAll( ) as List<NIProperty>,
+              ) : null,
               subnets: networkConfiguration.subnets ? new NISubnets(
                   name: "subnets",
                   subnets: networkConfiguration.subnets.collect{ Subnet subnet ->
