@@ -444,7 +444,7 @@ public class EucalyptusActivityTasks {
 		updateAutoScalingGroup(groupName, zones, capacity, null);
 	}
 	
-	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity, final String launchConfigName){
+	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName){
 		checkResult(
 				new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName),
 				new AutoScalingSystemActivity( ),

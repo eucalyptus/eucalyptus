@@ -746,6 +746,8 @@ public class LoadBalancingBackendService {
       }
     }
 
+    Entities.evictCache( LoadBalancer.class );
+
     /// trigger new loadbalancer event 
     try{
       NewLoadbalancerEvent evt = new NewLoadbalancerEvent();

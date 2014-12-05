@@ -635,11 +635,11 @@ class VmInstanceLifecycleHelpers {
       for ( String groupName : networkNames ) {
         if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupName, RestrictedTypes.toDisplayName() ) ).isPresent() ) {
           if ( !isVpc ) {
-            groups.add(NetworkGroups.lookup(accountFullName, groupName))
+            groups.add( NetworkGroups.lookup( accountFullName, groupName ) )
           } else if ( defaultVpcId && defaultVpcId == vpcId ) {
-            groups.add( NetworkGroups.lookup( accountFullName, defaultVpcId, groupName ) )
+            groups.add( NetworkGroups.lookup( null, defaultVpcId, groupName ) )
           } else if ( groupName == NetworkGroups.defaultNetworkName( ) ) {
-            groups.add( NetworkGroups.lookupDefault( accountFullName, vpcId ) )
+            groups.add( NetworkGroups.lookupDefault( null, vpcId ) )
           }
         }
       }

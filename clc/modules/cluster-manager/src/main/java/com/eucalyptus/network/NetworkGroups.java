@@ -568,7 +568,10 @@ public class NetworkGroups {
                                      final String vpcId,
                                      final String name ) throws MetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      return Entities.uniqueResult( NetworkGroup.withUniqueName( ownerFullName, vpcId, name ) );
+      return Entities.uniqueResult( ownerFullName == null && vpcId != null ?
+              NetworkGroup.namedForVpc( vpcId, name ) :
+              NetworkGroup.withUniqueName( ownerFullName, vpcId, name )
+      );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchMetadataException( "Failed to find security group: " + name +", for vpc: " + vpcId + " for " + ownerFullName, ex );
