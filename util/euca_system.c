@@ -215,6 +215,7 @@ boolean euca_is_running(pid_t pid, const char *psSearch)
                     // safety to ensure strstr() does not go beyond the buffer's end
                     sBuffer[BUFFER_LEN - 1] = '\0';
                     if (strstr(sBuffer, psSearch)) {
+                        fclose(pFh);
                         return (TRUE);
                     }
                 }

@@ -51,6 +51,7 @@ class NetworkInfo {
 @XmlAccessorType( XmlAccessType.NONE )
 class NIConfiguration {
   @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
+  @XmlElement(name="property") NIMidonet midonet
   @XmlElement(name="property") NISubnets subnets
   @XmlElement(name="property") NIClusters clusters
 }
@@ -61,6 +62,14 @@ class NIConfiguration {
 class NIProperty {
   @XmlAttribute String name
   @XmlElement(name="value") List<String> values = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIMidonet {
+  @XmlAttribute String name
+  @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
 }
 
 @Canonical

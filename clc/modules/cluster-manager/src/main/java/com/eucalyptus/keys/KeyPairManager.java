@@ -77,6 +77,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.ImmutableList;
 import org.apache.log4j.Logger;
@@ -103,15 +104,14 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharStreams;
-import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
-import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteKeyPairType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
-import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
+import com.eucalyptus.compute.common.backend.CreateKeyPairResponseType;
+import com.eucalyptus.compute.common.backend.CreateKeyPairType;
+import com.eucalyptus.compute.common.backend.DeleteKeyPairResponseType;
+import com.eucalyptus.compute.common.backend.DeleteKeyPairType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
+import com.eucalyptus.compute.common.backend.ImportKeyPairResponseType;
+import com.eucalyptus.compute.common.backend.ImportKeyPairType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );

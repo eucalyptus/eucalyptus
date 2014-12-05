@@ -77,8 +77,6 @@ import org.hibernate.annotations.Type;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-
 @Embeddable
 public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   public enum AttachmentState {
@@ -211,35 +209,26 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	this.attachedAtStartup = attachedAtStartup;
   }
   
-  public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+  public static Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
+    return new Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment>( ) {
       @Override
-      public VmVolumeAttachment apply( AttachedVolume vol ) {
+      public VmVolumeAttachment apply( edu.ucsb.eucalyptus.msgs.AttachedVolume vol ) {
         return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
       }
     };
   }
   
-  public static Function<AttachedVolume, VmVolumeAttachment> fromTransientAttachedVolume( final VmInstance vm ) {
-    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+  public static Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume> asAttachedVolume( final VmInstance vm ) {
+    return new Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume>( ) {
       @Override
-      public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
-      }
-    };
-  }
-  
-  public static Function<VmVolumeAttachment, AttachedVolume> asAttachedVolume( final VmInstance vm ) {
-    return new Function<VmVolumeAttachment, AttachedVolume>( ) {
-      @Override
-      public AttachedVolume apply( VmVolumeAttachment vol ) {
-        AttachedVolume attachment = null;
+      public com.eucalyptus.compute.common.AttachedVolume apply( VmVolumeAttachment vol ) {
+        com.eucalyptus.compute.common.AttachedVolume attachment = null;
         if ( vm == null && vol.getVmInstance( ) == null ) {
           throw new NoSuchElementException( "Failed to transform volume attachment because it no longer exists: " + vol );
         } else if ( vm == null ) {
-          attachment = new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new com.eucalyptus.compute.common.AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ) );
         } else {
-          attachment = new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new com.eucalyptus.compute.common.AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ) );
         }
         attachment.setAttachTime( vol.getAttachTime( ) );
         attachment.setStatus( vol.getStatus( ) );

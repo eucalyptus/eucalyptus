@@ -26,6 +26,8 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.DhcpConfigurationItemType;
+import com.eucalyptus.compute.common.DhcpOptionsType;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -35,8 +37,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.DhcpConfigurationItemType;
-import edu.ucsb.eucalyptus.msgs.DhcpOptionsType;
 
 /**
  *

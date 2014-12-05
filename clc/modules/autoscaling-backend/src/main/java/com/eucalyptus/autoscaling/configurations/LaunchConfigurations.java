@@ -29,6 +29,10 @@ import com.eucalyptus.autoscaling.common.backend.msgs.BlockDeviceMappings;
 import com.eucalyptus.autoscaling.common.backend.msgs.InstanceMonitoring;
 import com.eucalyptus.autoscaling.common.backend.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SecurityGroups;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -38,10 +42,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
  *

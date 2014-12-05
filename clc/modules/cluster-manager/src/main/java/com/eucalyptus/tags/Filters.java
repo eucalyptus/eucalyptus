@@ -44,7 +44,7 @@ public class Filters {
    * @throws InvalidFilterException If a filter is invalid
    */
   @Nonnull
-  public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+  public static Filter generate( final Iterable<com.eucalyptus.compute.common.Filter> filters,
                                  final Class<?> resourceType ) throws InvalidFilterException {
     return generate( filters, resourceType, DEFAULT_FILTERS );
   }
@@ -59,7 +59,7 @@ public class Filters {
     * @throws InvalidFilterException If a filter is invalid
     */
   @Nonnull
-  public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+  public static Filter generate( final Iterable<com.eucalyptus.compute.common.Filter> filters,
                                  final Class<?> resourceType,
                                  final String qualifier ) throws InvalidFilterException {
     return generateFor( filters, resourceType, qualifier ).generate();
@@ -74,7 +74,7 @@ public class Filters {
    * @return The filter
    */
   @Nonnull
-  public static FiltersBuilder generateFor( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+  public static FiltersBuilder generateFor( final Iterable<com.eucalyptus.compute.common.Filter> filters,
                                             final Class<?> resourceType ) {
     return  generateFor( filters, resourceType, DEFAULT_FILTERS );
   }
@@ -88,19 +88,19 @@ public class Filters {
    * @return The filter
    */
   @Nonnull
-  public static FiltersBuilder generateFor( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+  public static FiltersBuilder generateFor( final Iterable<com.eucalyptus.compute.common.Filter> filters,
                                             final Class<?> resourceType,
                                             final String qualifier ) {
     return new FiltersBuilder( filters, resourceType, qualifier );
   }
 
   public static class FiltersBuilder {
-    private final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters;
+    private final Iterable<com.eucalyptus.compute.common.Filter> filters;
     private final Class<?> resourceType;
     private final String qualifier;
     private final Map<String,Set<String>> internalFilters = Maps.newHashMap();
 
-    public FiltersBuilder( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
+    public FiltersBuilder( final Iterable<com.eucalyptus.compute.common.Filter> filters,
                            final Class<?> resourceType,
                            final String qualifier ) {
       this.filters = filters;
@@ -142,10 +142,10 @@ public class Filters {
     }
   }
 
-  private static Map<String, Set<String>> toMap( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters ) {
+  private static Map<String, Set<String>> toMap( final Iterable<com.eucalyptus.compute.common.Filter> filters ) {
     final ImmutableMap.Builder<String,Set<String>> filterMapBuilder = ImmutableMap.builder();
 
-    for ( final edu.ucsb.eucalyptus.msgs.Filter filter : filters ) {
+    for ( final com.eucalyptus.compute.common.Filter filter : filters ) {
       final Set<String> values = ImmutableSet.copyOf(
           Iterables.transform( filter.getValueSet(), NullToEmptyString.INSTANCE ) );
       filterMapBuilder.put( filter.getName(), values );

@@ -78,6 +78,9 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
@@ -92,10 +95,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.StopInstancesType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class AlarmManager {
   private static final Logger LOG = Logger.getLogger(AlarmManager.class);
@@ -769,7 +768,7 @@ public class AlarmManager {
     }
   }
 
-  private static class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+  private static class EucalyptusClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
     public EucalyptusClient( final String userId ) {
       super( userId, Eucalyptus.class );
     }
@@ -857,9 +856,9 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       TerminateInstancesType terminateInstances = new TerminateInstancesType();
       terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
         @Override
-        public void fire(EucalyptusMessage input) {
+        public void fire(ComputeMessage input) {
           success(action, alarmEntity, now);
         }
 
@@ -902,9 +901,9 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       StopInstancesType stopInstances = new StopInstancesType();
       stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
         @Override
-        public void fire(EucalyptusMessage input) {
+        public void fire(ComputeMessage input) {
           success(action, alarmEntity, now);
         }
 

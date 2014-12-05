@@ -62,9 +62,13 @@
 
 include ../Makedefs
 
+SUBDIRS = stats
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
+
 all: euca_system.o euca_string.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o sequence_executor.o atomic_file.o euca_rootwrap euca_mountwrap euca-generate-fault 
+	@for subdir in $(SUBDIRS); do \
+        	(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
 build: all
 
@@ -89,8 +93,8 @@ test_fault: fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/disku
 euca-generate-fault: fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
-test_sensor: sensor.c sensor.h misc.o euca_string.o euca_file.o log.o ipc.o ../storage/diskutil.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
+test_sensor: sensor.c sensor.h misc.o euca_string.o euca_file.o log.o ipc.o ../storage/diskutil.o stats/stats.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c stats/stats.o misc.o euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
 
 ../storage/diskutil.o:
 	make -C ../storage
@@ -109,6 +113,8 @@ indent:
 
 clean:
 	rm -rf *~ *.o test test_fault euca-generate-fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor
+	@make -C stats clean
+
 
 distclean:
 	rm -rf eucalyptus-config.h

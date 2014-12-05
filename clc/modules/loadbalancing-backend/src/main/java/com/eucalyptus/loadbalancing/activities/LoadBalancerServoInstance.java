@@ -37,6 +37,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -58,7 +59,6 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -386,7 +386,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						String privateIpAddr = null;
 						if(instance.getAddress()==null){
 							try{
-								List<RunningInstancesItemType> result = 
+								List<RunningInstancesItemType> result =
 										EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
 								if(result!=null && result.size()>0){
 									ipAddr = result.get(0).getIpAddress();

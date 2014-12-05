@@ -171,7 +171,7 @@ import com.google.common.collect.ObjectArrays;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
+import edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 
@@ -1428,7 +1428,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.prepareInstanceEvacuations( sourceHost );
         //#5 Send the MigrateInstances operation.
         try {
-          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
               this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
               this.setSourceHost( sourceHost );
@@ -1464,7 +1464,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * <li> Update node and resource information; describe resources.
    * <li> Unmark this cluster as gated.
    * </ol>
-   * @param sourceHost
    * @param destHostsWhiteList -- the destination host list is a white list when true and a black list when false
    * @param destHosts -- list of hosts which are either a white list or black list based on {@code destHostsWhiteList}
    * @throws EucalyptusCloudException 
@@ -1486,7 +1485,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.prepareInstanceMigrations( instanceId );
         //#5 Send the MigrateInstances operation.
         try {
-          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
               this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
               this.setInstanceId( instanceId );

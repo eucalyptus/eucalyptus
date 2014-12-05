@@ -75,6 +75,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -106,7 +107,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {

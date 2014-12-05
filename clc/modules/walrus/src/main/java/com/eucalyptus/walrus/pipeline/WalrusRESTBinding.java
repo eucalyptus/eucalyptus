@@ -476,7 +476,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		if(target == null) {
 			//target = service
 			operationKey = SERVICE + verb;
-		} else if(target.length < 2) {
+		} else if(target.length == 1) {
 			//target = bucket
 			if(!target[0].equals("")) {
 				operationKey = BUCKET + verb;
@@ -539,12 +539,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		} else {
 			//target = object
 			operationKey = OBJECT + verb;
-			String objectKey="";
-			String splitOn = "";
-			for(int i = 1; i < target.length; ++i) {
-				objectKey += splitOn + target[i];
-				splitOn = "/";
-			}
+			String objectKey = target[1];;
 
 			try {
 				objectKey = WalrusUtil.URLdecode(objectKey);
@@ -574,10 +569,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						String sourceObjectKey = "";
 						String sourceSplitOn = "";
 						if(sourceTarget.length > 1) {
-							for(int i = 1; i < sourceTarget.length; ++i) {
-								sourceObjectKey += sourceSplitOn + sourceTarget[i];
-								sourceSplitOn = "/";
-							}
+							sourceObjectKey = sourceTarget[1];
 
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);

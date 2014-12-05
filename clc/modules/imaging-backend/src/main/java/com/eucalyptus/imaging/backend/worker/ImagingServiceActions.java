@@ -36,6 +36,12 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -44,13 +50,6 @@ import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
-import edu.ucsb.eucalyptus.msgs.TagInfo;
 
 /**
  * @author Sang-Min Park
@@ -130,7 +129,7 @@ public class ImagingServiceActions {
         final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
         if(keyName!=null && keyName.length()>0){
           try{
-            final List<DescribeKeyPairsResponseItemType> keypairs = 
+            final List<DescribeKeyPairsResponseItemType> keypairs =
                 EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyName));
             if(keypairs==null || keypairs.size()<=0 || !keypairs.get(0).getKeyName().equals(keyName))
               throw new Exception();
@@ -1096,7 +1095,7 @@ public class ImagingServiceActions {
         }
         
         try{
-          final List<TagInfo> tags = EucalyptusActivityTasks.getInstance().describeTags(Lists.newArrayList("value"), 
+          final List<TagInfo> tags = EucalyptusActivityTasks.getInstance().describeTags(Lists.newArrayList("value"),
             Lists.newArrayList(this.tagValue));
           if(tags !=null){
             for(final TagInfo tag : tags){

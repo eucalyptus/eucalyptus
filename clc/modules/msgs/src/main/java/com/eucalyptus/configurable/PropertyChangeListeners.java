@@ -111,6 +111,19 @@ public class PropertyChangeListeners {
     }
     
   }
+
+    public enum IsBoolean implements PropertyChangeListener {
+        INSTANCE;
+
+        @SuppressWarnings( "unchecked" )
+        @Override
+        public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+            String lowerValue = newValue.toString().toLowerCase();
+            if ( !"true".equals(lowerValue) && !"false".equals(lowerValue)) {
+                throw new ConfigurablePropertyException( "Value must be 'true' or 'false'" );
+            }
+        }
+    }
   
   public static PropertyChangeListener getListenerFromClass( Class<? extends PropertyChangeListener> changeListenerClass ) {
     PropertyChangeListener changeListener;

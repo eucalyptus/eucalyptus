@@ -83,6 +83,7 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
@@ -93,6 +94,13 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.RegionInfoType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.backend.DescribeRegionsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeRegionsType;
+import com.eucalyptus.compute.common.backend.MigrateInstancesResponseType;
+import com.eucalyptus.compute.common.backend.MigrateInstancesType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
@@ -120,18 +128,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
-import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
-import edu.ucsb.eucalyptus.msgs.MigrateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
+import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
-import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 
 public class ClusterEndpoint implements Startable {
   
@@ -252,8 +252,8 @@ public class ClusterEndpoint implements Startable {
   private void updatePasswordIfWindows(final VmInstance vm, final ServiceConfiguration ccConfig) throws Exception{
     if ( Platform.windows.name().equals(vm.getPlatform()) && (vm.getPasswordData( ) == null || vm.getPasswordData().length()<=0) ) {
       try {
-        final GetConsoleOutputResponseType consoleOutput =
-            AsyncRequests.sendSync( ccConfig, new GetConsoleOutputType( vm.getInstanceId() ) );
+        final ClusterGetConsoleOutputResponseType consoleOutput =
+            AsyncRequests.sendSync( ccConfig, new ClusterGetConsoleOutputType( vm.getInstanceId() ) );
         final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
         final String passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
         if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {

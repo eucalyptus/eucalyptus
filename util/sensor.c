@@ -91,6 +91,7 @@
 #include "sensor.h"
 #include "ipc.h"
 #include "euca_string.h"
+#include <stats.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -444,6 +445,7 @@ static void sensor_bottom_half(void)
 
     char resourceNames[MAX_SENSOR_RESOURCES][MAX_SENSOR_NAME_LEN];
     char resourceAliases[MAX_SENSOR_RESOURCES][MAX_SENSOR_NAME_LEN];
+
     for (int i = 0; i < MAX_SENSOR_RESOURCES; i++) {
         resourceNames[i][0] = '\0';
         resourceAliases[i][0] = '\0';
@@ -467,13 +469,26 @@ static void sensor_bottom_half(void)
         }
         sem_v(state_sem);
 
+        useconds_t start_usec = time_usec();
+
+        //Run internal stats sensor updates
+        /*
+          LOGTRACE("Executing internal stats sensor pass...not really\n");
+        //Don't return immediately on failure, run all internal sensors                
+        if(internal_sensor_pass(FALSE) != EUCA_OK) {
+            LOGERROR("Error encountered during internal stats sensor run.\n");
+        } else {
+            LOGTRACE("Internal stats sensor pass completed successfully\n");
+            }
+        */
+
         if (skip)
             continue;
 
         // obtain the list of current resources and their aliases from the cache
         // (they had to have been added explicitly with sensor_add_resource)
         // and only query the OS for those resources/instances
-        useconds_t start_usec = time_usec();
+
         sem_p(state_sem);
         for (int i = 0; i < sensor_state->max_resources && i < MAX_SENSOR_RESOURCES; i++) {
             euca_strncpy(resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);

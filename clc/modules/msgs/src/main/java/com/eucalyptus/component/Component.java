@@ -97,6 +97,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+
+import javax.annotation.Nullable;
+
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -536,6 +539,20 @@ public class Component implements HasName<Component> {
   public List<Bootstrapper> getBootstrappers( ) {
     return this.bootstrapper.getBootstrappers( );
   }
+
+  enum BootstrapChecks implements Predicate<Bootstrapper> {
+    CHECK_NO_TRANSITION {
+      @Override
+      public boolean apply(@Nullable Bootstrapper bootstrapper) {
+        try {
+          return bootstrapper.check();
+        } catch(Throwable f) {
+          LOG.debug("Bootstrap check failed", f);
+          return false;
+        }
+      }
+    }
+  }
   
   static class ComponentBootstrapper implements CanBootstrap {
     private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers;
@@ -748,7 +765,7 @@ public class Component implements HasName<Component> {
     public boolean check( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.CHECK );
     }
-    
+
     public List<Bootstrapper> getBootstrappers( ) {
       return Lists.newArrayList( this.bootstrappers.values( ) );
     }

@@ -30,6 +30,10 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.NetworkInterfaceAssociationType;
+import com.eucalyptus.compute.common.NetworkInterfaceAttachmentType;
+import com.eucalyptus.compute.common.NetworkInterfaceType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -48,10 +52,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.GroupItemType;
-import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAssociationType;
-import edu.ucsb.eucalyptus.msgs.NetworkInterfaceAttachmentType;
-import edu.ucsb.eucalyptus.msgs.NetworkInterfaceType;
 
 /**
  *

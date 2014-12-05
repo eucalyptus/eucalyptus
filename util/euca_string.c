@@ -417,8 +417,8 @@ char *euca_strdup(const char *s1)
 
     // Validate s1
     if (s1) {
-        // make sure we allocate at least 1 character for empty strings
-        len = (((len = strlen(s1)) > 0) ? len : 1);
+        // make sure we allocate at least 1 character for empty strings and pad for null term
+        len = strlen(s1) + 1;
 
         // Allocate the memory
         if ((sRet = EUCA_ALLOC(len, sizeof(char))) != NULL) {

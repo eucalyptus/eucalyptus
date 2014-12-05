@@ -27,6 +27,7 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -39,7 +40,6 @@ import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.msgs.SubnetType;
 
 /**
  *

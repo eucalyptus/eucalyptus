@@ -33,15 +33,18 @@ import org.xbill.DNS.Name;
 
 public class UrlValidator {
   private final List<URI> osgUrls = new ArrayList<URI>();
-  
+
   public UrlValidator() {
-    List<ServiceConfiguration> osgs = ServiceConfigurations.list(ObjectStorage.class);
-    for(ServiceConfiguration conf:osgs) {
-      osgUrls.add( conf.getUri() );
+    List<ServiceConfiguration> osgs = ServiceConfigurations
+        .list(ObjectStorage.class);
+    for (ServiceConfiguration conf : osgs) {
+      osgUrls.add(conf.getUri());
     }
   }
+
   /**
    * Checks if URL is pointing to a Eucalyptus
+   * 
    * @param url
    * @return
    */
@@ -55,11 +58,12 @@ public class UrlValidator {
     } catch (URISyntaxException e) {
       return false;
     }
-    
-    if ( DomainNames.isSystemSubdomain( Name.fromConstantString(in.getHost()+".") ) )
+
+    if (DomainNames.isSystemSubdomain(Name.fromConstantString(in.getHost()
+        + ".")))
       return true;
-    
-    for(URI u:osgUrls){
+
+    for (URI u : osgUrls) {
       if (u.getHost().equalsIgnoreCase(in.getHost()))
         return true;
     }

@@ -25,50 +25,53 @@ import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public enum BundleImageManifest implements ImageManifest {
-	INSTANCE;
-	
-	@Override
-	public FileType getFileType() {
-		return FileType.BUNDLE;
-	}
+  INSTANCE;
 
-	@Override
-	public String getPartsPath() {
-		return "/manifest/image/parts/part";
-	}
+  @Override
+  public FileType getFileType() {
+    return FileType.BUNDLE;
+  }
 
-	@Override
-	public String getPartUrlElement() {
-		return "filename";
-	}
+  @Override
+  public String getPartsPath() {
+    return "/manifest/image/parts/part";
+  }
 
-	@Override
-	public boolean signPartUrl() {
-		return true;
-	}
+  @Override
+  public String getPartUrlElement() {
+    return "filename";
+  }
 
-	@Override
-	public String getSizePath() {
-		return "/manifest/image/bundled_size";
-	}
+  @Override
+  public boolean signPartUrl() {
+    return true;
+  }
 
-	@Override
-	public String getManifest(String location, int maximumSize ) throws EucalyptusCloudException {
-		String cleanLocation = location.replaceAll( "^/*", "" );
-		int index = cleanLocation.indexOf( '/' );
-		String bucketName = cleanLocation.substring( 0, index );
-		String manifestKey = cleanLocation.substring( index + 1 );
-		try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client( Accounts.lookupSystemAdmin( ) ) ) {
-				return s3Client.getObjectContent(bucketName, manifestKey, maximumSize);
-		} catch (Exception e) {
-			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
-		}
-	}
+  @Override
+  public String getSizePath() {
+    return "/manifest/image/bundled_size";
+  }
 
-	@Override
-	public String getBaseBucket(String location) {
-		String cleanLocation = location.replaceAll( "^/*", "" );
-		int index = cleanLocation.indexOf( '/' );
-		return cleanLocation.substring( 0, index );
-	}
+  @Override
+  public String getManifest(String location, int maximumSize)
+      throws EucalyptusCloudException {
+    String cleanLocation = location.replaceAll("^/*", "");
+    int index = cleanLocation.indexOf('/');
+    String bucketName = cleanLocation.substring(0, index);
+    String manifestKey = cleanLocation.substring(index + 1);
+    try (final EucaS3Client s3Client = EucaS3ClientFactory
+        .getEucaS3Client(Accounts.lookupSystemAdmin())) {
+      return s3Client.getObjectContent(bucketName, manifestKey, maximumSize);
+    } catch (Exception e) {
+      throw new EucalyptusCloudException("Failed to read manifest file: "
+          + bucketName + "/" + manifestKey, e);
+    }
+  }
+
+  @Override
+  public String getBaseBucket(String location) {
+    String cleanLocation = location.replaceAll("^/*", "");
+    int index = cleanLocation.indexOf('/');
+    return cleanLocation.substring(0, index);
+  }
 }

@@ -86,6 +86,8 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.backend.ReportInstanceStatusResponseType;
+import com.eucalyptus.compute.common.backend.ReportInstanceStatusType;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -171,51 +173,54 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
-
-import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
-import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
-import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
-import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
-import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
-import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
-import edu.ucsb.eucalyptus.msgs.MonitorInstanceState;
-import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
-import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.GroupItemType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.SecurityGroupIdSetItemType;
-import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.StartInstancesType;
-import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.StopInstancesType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
-import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
-import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
+import com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.InstanceStatusItemType;
+import com.eucalyptus.compute.common.MonitorInstanceState;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
+import com.eucalyptus.compute.common.TerminateInstancesItemType;
+import com.eucalyptus.compute.common.InstanceBlockDeviceMapping;
+import com.eucalyptus.compute.common.backend.CreatePlacementGroupResponseType;
+import com.eucalyptus.compute.common.backend.CreatePlacementGroupType;
+import com.eucalyptus.compute.common.backend.DeletePlacementGroupResponseType;
+import com.eucalyptus.compute.common.backend.DeletePlacementGroupType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceAttributeResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceAttributeType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceStatusResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceStatusType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesType;
+import com.eucalyptus.compute.common.backend.DescribePlacementGroupsResponseType;
+import com.eucalyptus.compute.common.backend.DescribePlacementGroupsType;
+import com.eucalyptus.compute.common.backend.GetConsoleOutputResponseType;
+import com.eucalyptus.compute.common.backend.GetConsoleOutputType;
+import com.eucalyptus.compute.common.backend.GetPasswordDataResponseType;
+import com.eucalyptus.compute.common.backend.GetPasswordDataType;
+import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeType;
+import com.eucalyptus.compute.common.backend.MonitorInstancesResponseType;
+import com.eucalyptus.compute.common.backend.MonitorInstancesType;
+import com.eucalyptus.compute.common.backend.RebootInstancesResponseType;
+import com.eucalyptus.compute.common.backend.RebootInstancesType;
+import com.eucalyptus.compute.common.backend.ResetInstanceAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ResetInstanceAttributeType;
+import com.eucalyptus.compute.common.backend.RunInstancesResponseType;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.backend.StartInstancesResponseType;
+import com.eucalyptus.compute.common.backend.StartInstancesType;
+import com.eucalyptus.compute.common.backend.StopInstancesResponseType;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
+import com.eucalyptus.compute.common.backend.UnmonitorInstancesResponseType;
+import com.eucalyptus.compute.common.backend.UnmonitorInstancesType;
+import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -306,7 +311,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = msg.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
+    boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create();
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
     final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
@@ -356,7 +361,7 @@ public class VmControl {
   public DescribeInstanceStatusResponseType describeInstanceStatus( final DescribeInstanceStatusType msg ) throws EucalyptusCloudException {
     final DescribeInstanceStatusResponseType reply = msg.getReply( );
     final Context ctx = Contexts.lookup();
-    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
+    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
     final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
     final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
@@ -386,6 +391,10 @@ public class VmControl {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
     return reply;
+  }
+
+  public ReportInstanceStatusResponseType reportInstanceStatus( final ReportInstanceStatusType request ) {
+    return request.getReply( );
   }
 
   public TerminateInstancesResponseType terminateInstances( final TerminateInstancesType request ) throws EucalyptusCloudException {
@@ -523,7 +532,8 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
-              final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
+              final Request<ClusterRebootInstancesType, ClusterRebootInstancesResponseType> req =
+                  AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
               req.dispatch( ccConfig );
               return true;
@@ -562,8 +572,8 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + instanceId );
       }
       try {
-        final GetConsoleOutputResponseType response =
-            AsyncRequests.sendSync( cluster.getConfiguration( ), new GetConsoleOutputType( instanceId ) );
+        final ClusterGetConsoleOutputResponseType response =
+            AsyncRequests.sendSync( cluster.getConfiguration( ), new ClusterGetConsoleOutputType( instanceId ) );
         GetConsoleOutputResponseType reply = request.getReply();
         reply.setInstanceId( instanceId );
         reply.setTimestamp( response.getTimestamp() );
@@ -579,6 +589,7 @@ public class VmControl {
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
     final DescribeBundleTasksResponseType reply = request.getReply( );
 
+    final boolean showAll = request.getBundleIds( ).remove( "verbose" ) || !request.getBundleIds( ).isEmpty( );
     final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       
@@ -595,8 +606,13 @@ public class VmControl {
       
       final Predicate<? super VmInstance> filteredInstances = 
           Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() );
-      final Filter noFilters = Filters.generate( new ArrayList<edu.ucsb.eucalyptus.msgs.Filter>(), VmBundleTask.class );
-      final Collection<VmInstance> dbBundles = VmInstances.list( null, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
+      final Filter noFilters = Filters.generate( new ArrayList<com.eucalyptus.compute.common.Filter>(), VmBundleTask.class );
+      final Context ctx = Contexts.lookup();
+      final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
+          ? null
+          : ctx.getUserFullName( ).asAccountFullName( );
+      final Collection<VmInstance> dbBundles =
+          VmInstances.list( ownerFullName, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
       for ( final VmInstance v : dbBundles) {
         
         if ( filteredInstances.apply(v) && VmInstance.Filters.BUNDLING.apply(v)) {

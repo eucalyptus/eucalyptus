@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ import com.eucalyptus.cloudformation.DeleteStackResponseType;
 import com.eucalyptus.cloudformation.DeleteStackType;
 import com.eucalyptus.cloudformation.DescribeStacksResponseType;
 import com.eucalyptus.cloudformation.DescribeStacksType;
-import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.Output;
 import com.eucalyptus.cloudformation.Outputs;
 import com.eucalyptus.cloudformation.Parameter;
@@ -54,19 +53,13 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import org.apache.log4j.Logger;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**

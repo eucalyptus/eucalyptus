@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.images.ImageConfiguration;
@@ -48,8 +49,6 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 
 /**
  * @author Sang-Min Park

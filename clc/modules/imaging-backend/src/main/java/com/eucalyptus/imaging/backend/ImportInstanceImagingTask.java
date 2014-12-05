@@ -40,6 +40,15 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.compute.common.ConversionTask;
+import com.eucalyptus.compute.common.DiskImage;
+import com.eucalyptus.compute.common.DiskImageDescription;
+import com.eucalyptus.compute.common.DiskImageVolumeDescription;
+import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification;
+import com.eucalyptus.compute.common.ImportInstanceTaskDetails;
+import com.eucalyptus.compute.common.ImportInstanceType;
+import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
@@ -52,16 +61,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.DiskImage;
-import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
-import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
-import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
  * @author Sang-Min Park
@@ -249,7 +248,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
-          final List<Volume> eucaVolumes = 
+          final List<Volume> eucaVolumes =
             EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
           if (eucaVolumes.size() != 0) {
             EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());

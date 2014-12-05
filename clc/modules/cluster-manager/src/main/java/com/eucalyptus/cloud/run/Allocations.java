@@ -88,6 +88,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -117,7 +118,6 @@ import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {

@@ -140,7 +140,10 @@ public class Components {
   public static List<Component> list( ) {//TODO:GRZE: review all usage of this and replace with Components.whichAre...
     return ImmutableList.copyOf( components.values( ) );
   }
-  
+
+  public static List<Component> listLocal() {
+    return Lists.newArrayList(Iterables.filter(Components.list(), Predicates.ARE_LOCAL));
+  }
   /**
    * GRZE:NOTE: this should only ever be applied to user input and /never/ called with a hardcoded
    * string.
@@ -336,7 +339,13 @@ public class Components {
           ? false
           : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
-    }, 
+    },
+    ARE_LOCAL {
+      @Override
+      public boolean apply( final Component c ) {
+        return c.hasLocalService();
+      }
+    },
     ARE_MANY_TO_ONE_AND_ENABLED {
     	@Override
     	public boolean apply( final Component c) {

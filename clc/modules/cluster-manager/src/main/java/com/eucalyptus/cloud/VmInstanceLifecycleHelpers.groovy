@@ -39,6 +39,10 @@ import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.compute.common.CloudMetadatas
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType
+import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType
+import com.eucalyptus.compute.common.backend.RunInstancesType
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.NetworkingFeature
@@ -55,6 +59,7 @@ import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
 import com.eucalyptus.compute.vpc.NetworkInterfaces
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException
 import com.eucalyptus.compute.vpc.Subnet
 import com.eucalyptus.compute.vpc.Subnets
 import com.eucalyptus.compute.vpc.VpcConfiguration
@@ -102,10 +107,6 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
 import edu.ucsb.eucalyptus.cloud.VmInfo
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.InstanceNetworkInterfaceSetRequestType
-import edu.ucsb.eucalyptus.msgs.PrivateIpAddressesSetItemRequestType
-import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
@@ -779,9 +780,14 @@ class VmInstanceLifecycleHelpers {
           }
 
           Entities.transaction( VpcNetworkInterface ){
-            final VpcNetworkInterface networkInterface =
-                lookup( "network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface ) as
-                    VpcNetworkInterface
+            final VpcNetworkInterface networkInterface
+            try {
+              networkInterface =
+                  lookup("network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface) as
+                      VpcNetworkInterface
+            } catch ( Exception e ) {
+              throw new InvalidMetadataException( "Network interface (${instanceNetworkInterface.networkInterfaceId}) not found", e )
+            }
             networkInterfaceSubnetId = networkInterface.subnet.displayName
             networkInterfaceAvailabilityZone = networkInterface.availabilityZone
           }
@@ -790,7 +796,12 @@ class VmInstanceLifecycleHelpers {
         final String resolveSubnetId = subnetId?:networkInterfaceSubnetId
         if ( !resolveSubnetId ) throw new InvalidMetadataException( "SubnetId required" )
 
-        final Subnet subnet = lookup( "subnet", resolveSubnetId, Subnet ) as Subnet;
+        final Subnet subnet
+        try {
+          subnet = lookup( "subnet", resolveSubnetId, Subnet ) as Subnet
+        } catch ( NoSuchElementException e ) {
+          throw new NoSuchSubnetMetadataException( "Subnet (${resolveSubnetId}) not found", e )
+        }
         if ( privateIp && !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
           throw new InvalidMetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
         }
@@ -801,8 +812,10 @@ class VmInstanceLifecycleHelpers {
 
         final Set<NetworkGroup> groups = Sets.newHashSet( )
         for ( String groupId : networkIds ) {
-          if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
+          if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) try {
             groups.add( lookup( "security group", groupId, NetworkGroup  ) as NetworkGroup )
+          } catch ( Exception e ) {
+            throw new InvalidMetadataException( "Security group (${groupId}) not found", e )
           }
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {

@@ -90,12 +90,16 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.backend.CopyImageResponseType;
+import com.eucalyptus.compute.common.backend.CopyImageType;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
@@ -127,33 +131,35 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
-import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateImageType;
-import edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
-import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeImagesType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
-import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterImageType;
-import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import com.eucalyptus.compute.common.backend.ConfirmProductInstanceResponseType;
+import com.eucalyptus.compute.common.backend.ConfirmProductInstanceType;
+import com.eucalyptus.compute.common.backend.CreateImageResponseType;
+import com.eucalyptus.compute.common.backend.CreateImageType;
+import com.eucalyptus.compute.common.backend.DeregisterImageResponseType;
+import com.eucalyptus.compute.common.backend.DeregisterImageType;
+import com.eucalyptus.compute.common.backend.DescribeImageAttributeResponseType;
+import com.eucalyptus.compute.common.backend.DescribeImageAttributeType;
+import com.eucalyptus.compute.common.backend.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeImagesType;
+import com.eucalyptus.compute.common.backend.ModifyImageAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ModifyImageAttributeType;
+import com.eucalyptus.compute.common.backend.RegisterImageResponseType;
+import com.eucalyptus.compute.common.backend.RegisterImageType;
+import com.eucalyptus.compute.common.backend.ResetImageAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ResetImageAttributeType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.LaunchPermissionItemType;
+import com.eucalyptus.compute.common.ResourceTag;
 
 public class ImageManager {
   
   public static Logger        LOG = Logger.getLogger( ImageManager.class );
   private static final long GB = 1024*1024*1024; //bytes-per-gb
-  
+
+  public CopyImageResponseType copyImage( final CopyImageType request ) {
+    return request.getReply( );
+  }
+
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();

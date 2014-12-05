@@ -208,7 +208,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) this.setState( State.FAIL );
   }
   
-  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
+  public com.eucalyptus.compute.common.Snapshot morph( final com.eucalyptus.compute.common.Snapshot snap ) {
     snap.setSnapshotId( this.getDisplayName( ) );
     snap.setDescription( this.getDescription() );
     snap.setStatus( this.mapState( ) );

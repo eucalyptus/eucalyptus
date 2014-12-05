@@ -372,12 +372,12 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 public class PutObjectType extends ObjectStorageDataRequestType {
     String contentLength;
     List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    Map<String,String> copiedHeaders = Maps.newHashMap();
     AccessControlList accessControlList = new AccessControlList();
     String storageClass;
     String contentType;
     String contentDisposition;
     String contentMD5;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 
     def PutObjectType() {}
 }
@@ -477,6 +477,7 @@ public class CopyObjectType extends ObjectStorageRequestType {
     String copySourceIfNoneMatch;
     Date copySourceIfModifiedSince;
     Date copySourceIfUnmodifiedSince;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 /* HEAD /bucket/object */
@@ -851,6 +852,7 @@ public class UploadPartType extends ObjectStorageDataRequestType {
     String expect;
     String uploadId;
     String partNumber;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 public class UploadPartResponseType extends ObjectStorageDataResponseType {

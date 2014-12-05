@@ -128,6 +128,20 @@ public enum SubDirectory {
   },
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
   MANAGEMENT( BaseDirectory.CONF, "jmx" ),
+  STATUS( BaseDirectory.RUN, "status") {
+    @Override
+    protected void assertPermissions () {
+      super.assertPermissions();
+      try {
+        Groovyness.exec( "chmod -R 760 " + this.toString( ) );
+        //Same as loaded in com.eucalyptus.monitoring.MonitoringConfiguration
+        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.status_group" ) + " " + this.toString( ) );
+        Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+  },
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),

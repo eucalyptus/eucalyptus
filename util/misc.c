@@ -2062,6 +2062,7 @@ int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
     }
     // child?
     if (*ppid == 0) {
+        setpgid(0,0);
         // arrange the file descriptors
         if (stdin_fd) {
             close(stdin_p[1]);

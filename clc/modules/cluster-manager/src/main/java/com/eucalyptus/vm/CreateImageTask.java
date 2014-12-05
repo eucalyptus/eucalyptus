@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
@@ -40,7 +39,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -49,6 +50,15 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.Snapshot;
+import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -74,18 +84,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.Snapshot;
+import edu.ucsb.eucalyptus.msgs.StartInstanceResponseType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceResponseType;
 
 /**
  * @author Sang-Min Park
@@ -748,7 +748,7 @@ public class CreateImageTask {
 		}
 	}
 		
-	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private List<Snapshot> snapshots = null;
 		private List<String> snapshotIds = null;
 		private EucalyptusDescribeSnapshotTask(final List<String> snapshotIds){
@@ -762,15 +762,13 @@ public class CreateImageTask {
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(describeSnapshots(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
 			this.snapshots = resp.getSnapshotSet();
 		}
@@ -780,7 +778,7 @@ public class CreateImageTask {
 		}
 	}
 
-	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private String volumeId = null;
 		private String snapshotId = null;
 		private String description = null;
@@ -796,15 +794,13 @@ public class CreateImageTask {
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(createSnapshot(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
 			this.snapshotId = resp.getSnapshot().getSnapshotId();
 		}
@@ -814,7 +810,7 @@ public class CreateImageTask {
 		}
 	}
 	
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private RunningInstancesItemType result = null;
 		private EucalyptusDescribeInstanceTask(){}
 		private DescribeInstancesType describeInstances(){
@@ -824,15 +820,13 @@ public class CreateImageTask {
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(describeInstances(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
 			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
 			for(final ReservationInfoType res : resp.getReservationSet()){
@@ -890,9 +884,9 @@ public class CreateImageTask {
 	
 	    abstract void dispatchSuccess(TM response );
 	    
-	    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+	    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
 			try{
-				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+				final DispatchingClient<ComputeMessage, Eucalyptus> client =
 					new DispatchingClient<>(CreateImageTask.this.accountAdminId , Eucalyptus.class );
 				client.init();
 				return client;

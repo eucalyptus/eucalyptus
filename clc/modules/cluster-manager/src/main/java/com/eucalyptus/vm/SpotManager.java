@@ -62,16 +62,46 @@
 
 package com.eucalyptus.vm;
 
-import edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsType;
 
+import com.eucalyptus.compute.common.backend.CancelSpotInstanceRequestsResponseType;
+import com.eucalyptus.compute.common.backend.CancelSpotInstanceRequestsType;
+import com.eucalyptus.compute.common.backend.CreateSpotDatafeedSubscriptionResponseType;
+import com.eucalyptus.compute.common.backend.CreateSpotDatafeedSubscriptionType;
+import com.eucalyptus.compute.common.backend.DeleteSpotDatafeedSubscriptionResponseType;
+import com.eucalyptus.compute.common.backend.DeleteSpotDatafeedSubscriptionType;
+import com.eucalyptus.compute.common.backend.DescribeSpotDatafeedSubscriptionResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSpotDatafeedSubscriptionType;
+import com.eucalyptus.compute.common.backend.DescribeSpotInstanceRequestsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSpotInstanceRequestsType;
+import com.eucalyptus.compute.common.backend.RequestSpotInstancesResponseType;
+import com.eucalyptus.compute.common.backend.RequestSpotInstancesType;
 
 /**
  * @todo doc
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 public class SpotManager {
+  public CancelSpotInstanceRequestsResponseType CancelSpotInstanceRequests( CancelSpotInstanceRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public CreateSpotDatafeedSubscriptionResponseType CreateSpotDatafeedSubscription( CreateSpotDatafeedSubscriptionType request ) {
+    return request.getReply( );
+  }
+
+  public DeleteSpotDatafeedSubscriptionResponseType DeleteSpotDatafeedSubscription( DeleteSpotDatafeedSubscriptionType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotDatafeedSubscriptionResponseType DescribeSpotDatafeedSubscription( DescribeSpotDatafeedSubscriptionType request ) {
+    return request.getReply( );
+  }
+
   public DescribeSpotInstanceRequestsResponseType DescribeSpotInstances( DescribeSpotInstanceRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public RequestSpotInstancesResponseType RequestSpotInstances( RequestSpotInstancesType request ) {
     return request.getReply( );
   }
 }

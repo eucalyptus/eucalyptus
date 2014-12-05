@@ -66,6 +66,8 @@
 #ifndef INCLUDE_CONFIG_CC_H
 #define INCLUDE_CONFIG_CC_H
 
+#include "stats.h"
+
 configEntry configKeysRestartCC[] = {
     {"DISABLE_TUNNELING", "N"}
     ,
@@ -149,6 +151,8 @@ configEntry configKeysNoRestartCC[] = {
     {"LOGPREFIX", ""}
     ,
     {"LOGFACILITY", ""}
+    ,
+    {SENSOR_LIST_CONF_PARAM_NAME, SENSOR_LIST_CONF_PARAM_DEFAULT}
     ,
     {NULL, NULL}
     ,

@@ -1,4 +1,4 @@
- /*************************************************************************
+/*************************************************************************
  * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,17 +21,20 @@
 package com.eucalyptus.imaging.common;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
- *
+ * 
  */
 public class EucalyptusActivityException extends EucalyptusCloudException {
-	
-	private static final long serialVersionUID = 1L;
-	public EucalyptusActivityException(String message){
-		super(message);
-	}
-	public EucalyptusActivityException(String message, Throwable cause){
-		super(message, cause);
-	}
+
+  private static final long serialVersionUID = 1L;
+
+  public EucalyptusActivityException(String message) {
+    super(message);
+  }
+
+  public EucalyptusActivityException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

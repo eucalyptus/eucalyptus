@@ -253,8 +253,11 @@ class NetworkConfigurations {
         macPrefix = configuration.macPrefix
       }
 
-      if ( ( subnet == null || subnet && subnet.name && !subnet.subnet ) && name ) {
-        subnet = NetworkConfigurations.getSubnetForCluster( configuration, name )
+      // EDGE mode configuration
+      if ( configuration.mode == null || 'EDGE' == configuration.mode ) {
+        if ( ( subnet == null || subnet && subnet.name && !subnet.subnet ) && name ) {
+          subnet = NetworkConfigurations.getSubnetForCluster( configuration, name )
+        }
       }
 
       // Groovy gets confused here so we use the "cluster." prefix for the privateIps property
@@ -288,7 +291,7 @@ class NetworkConfigurations {
    * properties, if this is desired the configuration should first be
    * exploded.</p>
    *
-   * <p>This method currently validates that:</p>
+   * <p>This method currently validates for EDGE mode:</p>
    *
    * <ul>
    *   <li>Exactly one subnet (with valid IPs) is configured if there are no clusters specified</li>
@@ -302,19 +305,40 @@ class NetworkConfigurations {
    */
   static void validate( final NetworkConfiguration configuration ) throws NetworkConfigurationException {
     configuration?.with{
-      if ( configuration.clusters ) {
-        configuration.clusters.each{ Cluster cluster ->
-          if ( cluster.subnet && cluster.privateIps ) {
-            validateIPsForSubnet( cluster.subnet, cluster.privateIps, " for cluster ${cluster.name}" )
+      if ( configuration.mode == null || 'EDGE' == configuration.mode ) {
+        if ( configuration.clusters ) {
+          configuration.clusters.each{ Cluster cluster ->
+            if ( cluster.subnet && cluster.privateIps ) {
+              validateIPsForSubnet( cluster.subnet, cluster.privateIps, " for cluster ${cluster.name}" )
+            }
+            void
           }
-          void
+        } else {
+          if ( !configuration.subnets || configuration.subnets.size( ) != 1 ) {
+            throw new NetworkConfigurationException('A single subnet must be configured when clusters are not specified.' )
+          }
+          validateIPsForSubnet( configuration.subnets[0], configuration.privateIps )
         }
-      } else {
-        if ( !configuration.subnets || configuration.subnets.size( ) != 1 ) {
-          throw new NetworkConfigurationException('A single subnet must be configured when clusters are not specified.' )
+      } else if ( 'VPCMIDO' == configuration.mode ) {
+        if ( configuration.clusters ) {
+          configuration.clusters.each { Cluster cluster ->
+            if ( cluster.privateIps ) {
+              throw new NetworkConfigurationException('Private IP configuration not permitted for VPCMIDO.' )
+            }
+            if ( cluster.subnet ) {
+              throw new NetworkConfigurationException('Subnet configuration not permitted for VPCMIDO.' )
+            }
+            void
+          }
         }
-        validateIPsForSubnet( configuration.subnets[0], configuration.privateIps )
+        if ( configuration.privateIps ) {
+          throw new NetworkConfigurationException('Private IP configuration not permitted for VPCMIDO.' )
+        }
+        if ( configuration.subnets ) {
+          throw new NetworkConfigurationException('Subnet configuration not permitted for VPCMIDO.' )
+        }
       }
+      void
     }
   }
 

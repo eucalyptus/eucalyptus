@@ -62,22 +62,30 @@
 
 package com.eucalyptus.vm;
 
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType;
+import com.eucalyptus.compute.common.backend.CancelReservedInstancesListingResponseType;
+import com.eucalyptus.compute.common.backend.CancelReservedInstancesListingType;
+import com.eucalyptus.compute.common.backend.CreateReservedInstancesListingResponseType;
+import com.eucalyptus.compute.common.backend.CreateReservedInstancesListingType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesListingsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesListingsType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesModificationsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesModificationsType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesOfferingsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesOfferingsType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeReservedInstancesType;
+import com.eucalyptus.compute.common.backend.ModifyReservedInstancesResponseType;
+import com.eucalyptus.compute.common.backend.ModifyReservedInstancesType;
+import com.eucalyptus.compute.common.backend.PurchaseReservedInstancesOfferingResponseType;
+import com.eucalyptus.compute.common.backend.PurchaseReservedInstancesOfferingType;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 public class ReservedManager {
 
-  public DescribeReservedInstancesResponseType DescribeReservedInstances( 
-      final DescribeReservedInstancesType request 
+  public DescribeReservedInstancesResponseType DescribeReservedInstances(
+      final DescribeReservedInstancesType request
   ) {
     return request.getReply( );
   }
@@ -89,13 +97,37 @@ public class ReservedManager {
   }
   
   public DescribeReservedInstancesModificationsResponseType DescribeReservedInstancesModifications(
-      final DescribeReservedInstancesModificationsType request 
+      final DescribeReservedInstancesModificationsType request
   ) {
     return request.getReply( );
   }
 
   public DescribeReservedInstancesOfferingsResponseType DescribeReservedInstancesListings(
-      final DescribeReservedInstancesOfferingsType request 
+      final DescribeReservedInstancesOfferingsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateReservedInstancesListingResponseType CreateReservedInstancesListing(
+      final CreateReservedInstancesListingType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CancelReservedInstancesListingResponseType CancelReservedInstancesListing(
+      final CancelReservedInstancesListingType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyReservedInstancesResponseType ModifyReservedInstances(
+      final ModifyReservedInstancesType request
+  ) {
+    return request.getReply( );
+  }
+
+  public PurchaseReservedInstancesOfferingResponseType PurchaseReservedInstancesOffering(
+      final PurchaseReservedInstancesOfferingType request
   ) {
     return request.getReply( );
   }

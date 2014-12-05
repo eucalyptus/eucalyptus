@@ -1505,7 +1505,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
     char *output = NULL;
 
     LOGDEBUG("ch(own|mod) '%s' %s.%s %o\n", SP(path), ((user != NULL) ? user : "*"), ((group != NULL) ? group : "*"), perms);
-
+    
     if (path) {
         if (user) {
             output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path, NULL);

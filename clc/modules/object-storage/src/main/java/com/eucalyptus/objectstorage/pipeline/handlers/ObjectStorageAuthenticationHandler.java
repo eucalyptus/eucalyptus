@@ -70,8 +70,9 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingSecurityHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.server.Statistics;
+import com.eucalyptus.ws.server.MessageStatistics;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -175,7 +176,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		if (channelEvent instanceof MessageEvent) {
 			try {
 				final MessageEvent msgEvent = (MessageEvent) channelEvent;
-				Callable<Long> stat = Statistics.startUpstream(ctx.getChannel(), this);
+				Callable<Long> stat = MessageStatistics.startUpstream(ctx.getChannel(), this);
 				this.incomingMessage(ctx, msgEvent);
 				stat.call();
 				ctx.sendUpstream(channelEvent);

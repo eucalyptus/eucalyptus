@@ -539,8 +539,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                             operationParams.put("ContentMD5", contentMD5);
                         if(contentLengthString != null)
                             operationParams.put("ContentLength", (new Long(contentLength).toString()));
-                        copyHeadersForStoring(operationParams, httpRequest);
                     }
+                    copyHeadersForStoring(operationParams, httpRequest);
                 } else if(verb.equals(ObjectStorageProperties.HTTPVerb.GET.toString())) {
                     if(!objectstorageInternalOperation) {
 

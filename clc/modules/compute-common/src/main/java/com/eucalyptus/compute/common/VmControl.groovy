@@ -28,6 +28,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import groovy.transform.TupleConstructor
 
 import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
 import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
@@ -82,6 +83,8 @@ public class DescribeInstancesType extends VmControlMessage {
   
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
+  Integer maxResults
+  String nextToken
   @HttpParameterMapping (parameter = "Filter")
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
@@ -156,6 +159,17 @@ public class DescribeInstanceStatusResponseType extends VmControlMessage {
   String nextToken;
   public DescribeInstanceStatusResponseType() {  }
 }
+
+public class ReportInstanceStatusType extends VmControlMessage {
+  ArrayList<String> instanceId
+  String status
+  Date startTime
+  Date endTime
+  ArrayList<String> reasonCode
+  String description
+}
+
+public class ReportInstanceStatusResponseType extends VmControlMessage { }
 
 /** *******************************************************************************/
 
@@ -297,6 +311,13 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = ["InstanceId", "InstanceId.1"])
   String instanceId;
+
+  GetConsoleOutputType( ) {
+  }
+
+  GetConsoleOutputType( final String instanceId ) {
+    this.instanceId = instanceId
+  }
 }
 
 public class GetPasswordDataType extends VmControlMessage {
@@ -315,18 +336,18 @@ public class ReservationInfoType extends EucalyptusData {
   ArrayList<GroupItemType> groupSet = Lists.newArrayList()
   ArrayList<RunningInstancesItemType> instancesSet = Lists.newArrayList()
 
-  def ReservationInfoType( String reservationId, String ownerId, Map<String,String> groupIdsToNames ) {
-      this.reservationId = reservationId;
+  def ReservationInfoType( String reservationId, String ownerId, Collection<GroupItemType> groupIdsToNames ) {
+      this.reservationId = reservationId
       this.ownerId = ownerId
-      this.groupSet.addAll( groupIdsToNames.entrySet().collect{
-        Map.Entry<String,String> entry -> new GroupItemType( entry.key, entry.value ) } );
+      this.groupSet.addAll( groupIdsToNames )
+      Collections.sort( this.groupSet )
   }
   
   def ReservationInfoType() {
   }
 }
 
-public class GroupItemType extends EucalyptusData {
+public class GroupItemType extends EucalyptusData implements Comparable<GroupItemType> {
   String groupId;
   String groupName;
 
@@ -335,6 +356,11 @@ public class GroupItemType extends EucalyptusData {
   def GroupItemType( String groupId, String groupName ) {
     this.groupId = groupId;
     this.groupName = groupName;
+  }
+
+  @Override
+  int compareTo(final GroupItemType o) {
+    return (groupId?:'').compareTo( o.groupId?:'' )
   }
 }
 class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
@@ -736,6 +762,7 @@ public class StartInstancesResponseType extends VmControlMessage{
 public class StartInstancesType extends VmControlMessage{
   @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
+  String additionalInfo
   public StartInstancesType() {  }
 }
 

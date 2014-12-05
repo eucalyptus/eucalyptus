@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 
+import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.crypto.Crypto;
 import com.google.common.collect.Collections2;
 import org.apache.log4j.Logger;
@@ -113,7 +114,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @SuppressWarnings( "serial" )

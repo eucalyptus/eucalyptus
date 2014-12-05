@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,9 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -189,7 +191,11 @@ public class StatefulMessageSet<E extends Enum<E>> {
           currentState.name( ),
           this.cluster.getName( ),
           t.getClass( ).getSimpleName( ) ).info( );
-        LOG.error( t, t );
+        if ( Throwables.getRootCause( t ) instanceof EucalyptusClusterException ) {
+          LOG.warn( t );
+        } else {
+          LOG.error( t, t );
+        }
         nextState = this.rollback( );
         break;
       }

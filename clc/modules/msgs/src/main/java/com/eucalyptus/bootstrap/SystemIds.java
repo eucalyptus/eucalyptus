@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,13 +63,20 @@
 package com.eucalyptus.bootstrap;
 
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Digest;
+
 import com.eucalyptus.crypto.Signatures;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
 
 public class SystemIds {
-  
+
   public static String databasePassword( ) {
-    return Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) );
+    try {
+      return Digest.SHA256.digestHex( Signatures.SHA256withRSA.signBinary( Eucalyptus.class, "eucalyptus".getBytes() ) );
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( "Error getting database password", e );
+    }
   }
   
   public static String tunnelPassword( ) {
@@ -81,11 +88,23 @@ public class SystemIds {
   }
 
   public static String createCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    return Joiner.on( "." ).join(
+        Eucalyptus.class.getSimpleName( ),
+        BillOfMaterials.getVersion( ),
+        subName,
+        Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
   public static String createShortCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    try {
+      return Joiner.on( "." ).join(
+          Eucalyptus.class.getSimpleName( ),
+          BillOfMaterials.getVersion( ),
+          subName,
+          Digest.SHA256.digestHex( Signatures.SHA256withRSA.signBinary( Eucalyptus.class, subName.getBytes( ) ) ) );
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( "Error getting short unique name for " + subName, e );
+    }
   }
   
   public static String cloudName( ) {
@@ -96,12 +115,8 @@ public class SystemIds {
     return createShortCloudUniqueName( "cache" );
   }
   
-  public static String jdbcGroupName( ) {
-    return createCloudUniqueName( "jdbc" );
-  }
-  
   public static String membershipGroupName( ) {
-    return createCloudUniqueName( "membership" );
+    return createShortCloudUniqueName( "membership" );
   }
   
   public static String membershipUdpMcastTransportName( ) {

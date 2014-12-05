@@ -96,6 +96,13 @@
 #define OP_TIMEOUT_MIN                            5
 #define LOG_INTERVAL_SUMMARY_SEC                 60
 #define SCHED_TIMEOUT_SEC                         8 //! timeout for user scheduler
+#define MESSAGE_STATS_MEMORY_REGION_SIZE         10485760 //! 10 MB
+
+/*
+{
+"DoRunInstance-100.100.100.100":{"min":100000,"max":100000,"mean":100000,"failed_count":100000,"count":100000,"success_count":100000},
+}
+*/
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -124,6 +131,7 @@ enum {
     REFRESHLOCK,
     BUNDLECACHE,
     SENSORCACHE,
+    STATSCACHE,
     GLOBALNETWORKINFO,
     NCCALL0,
     NCCALL1,
@@ -193,6 +201,7 @@ enum {
 enum {
     MONITOR = 0,
     SENSOR,
+    STATS,
     NUM_THREADS,
 };
 
@@ -476,6 +485,9 @@ int writePubPrivIPMap(ccInstance * inst, void *in);
 
 //! For filtering service infos in the meta passed to the NC
 void filter_services(ncMetadata * meta, char *filter_partition);
+
+//Update message stats counters
+int cached_message_stats_update(const char *message_name, long call_time, int msg_failed);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

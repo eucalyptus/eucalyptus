@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.TerminateInstancesResponseType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -80,7 +81,6 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.glisten.WorkflowOperations;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 
 import java.util.ArrayList;
 import java.util.List;

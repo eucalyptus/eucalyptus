@@ -1184,6 +1184,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //Unset the versionId because it isn't used on backend
             request.setVersionId(null);
             HeadObjectResponseType backendReply = ospClient.headObject(request);
+			reply.setMetaData( backendReply.getMetaData() );
             populateStoredHeaders(reply, objectEntity.getStoredHeaders());
         } catch(S3Exception e) {
         	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
@@ -1278,12 +1279,38 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
                 try {
                     // we need to create a new instance of the object entity if versioning is enabled on the bucket
+					Map<String,String> modded = srcObject.getStoredHeaders();
                     if (destObject == null ||
                             ( destBucket.getVersioning() != null
                                     && destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) ) {
+                        if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+							// on copy, the incoming headers are ignored and prior headers are retained
+							// on replace, all metadata and headers are dumped and ones coming in on requests are stored
+							modded.clear();
+							Map<String,String> copiedHeaders = request.getCopiedHeaders();
+							if (copiedHeaders != null && copiedHeaders.size() > 0) {
+								for (Map.Entry<String,String> entry : copiedHeaders.entrySet()) {
+									modded.put(entry.getKey(), entry.getValue());
+								}
+							}
+						}
+
                         destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
-                            srcObject.getSize().longValue(), requestUser);
+                                srcObject.getSize().longValue(), requestUser, modded);
                     }
+					else if (destObject != null) {
+						// if the object already existed and we are this far, we need to consider the metadata and headers
+						if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+							modded.clear();
+							Map<String,String> copiedHeaders = request.getCopiedHeaders();
+							if (copiedHeaders != null && copiedHeaders.size() > 0) {
+								for (Map.Entry<String,String> entry : copiedHeaders.entrySet()) {
+									modded.put(entry.getKey(), entry.getValue());
+								}
+							}
+						}
+						destObject.setStoredHeaders(modded);
+					}
                 } catch (Exception e) {
                     LOG.error("Error initializing entity for persisting object metadata for " + destBucket.getBucketName()
                             + "/" + request.getDestinationObject());

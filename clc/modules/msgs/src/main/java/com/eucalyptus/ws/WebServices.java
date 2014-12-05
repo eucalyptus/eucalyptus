@@ -67,6 +67,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -76,6 +77,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.Nullable;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
@@ -115,17 +120,17 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Pair;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.net.InetAddresses;
 
 public class WebServices {
   
@@ -231,6 +236,27 @@ public class WebServices {
     }
   }
 
+  public static class ComponentListPropertyChangeListener implements PropertyChangeListener {
+    private static final Predicate<String> validComponentName = new Predicate<String>( ){
+      @Override
+      public boolean apply( @Nullable final String value ) {
+        try {
+          ComponentIds.lookup( value );
+          return true;
+        } catch ( NoSuchElementException e ) {
+          return false;
+        }
+      }
+    };
+
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      if ( !"*".equals( String.valueOf( newValue ) ) &&
+          !Iterables.all( iterableFromList( String.valueOf( newValue ) ), validComponentName  ) ) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+    }
+  }
 
   private static Logger   LOG = Logger.getLogger( WebServices.class );
   private static Lock clientResourceLock = new ReentrantLock( );
@@ -562,4 +588,15 @@ public class WebServices {
     return workerPool;
   }
 
+  private static Iterable<String> iterableFromList( final String list ) {
+    return Splitter.on( CharMatcher.anyOf( " ,\t\n\r" ) ).omitEmptyStrings().trimResults( ).split( list );
+  }
+
+  public static boolean isSoapEnabled( final Class<? extends ComponentId> component ) {
+    return
+        !StackConfiguration.DISABLED_SOAP_API_COMPONENTS.equals( "*" ) &&
+        !Iterables.contains(
+            Iterables.transform( iterableFromList( StackConfiguration.DISABLED_SOAP_API_COMPONENTS ), Strings.lower( ) ),
+            Components.lookup( component ).getName( ) );
+  }
 }

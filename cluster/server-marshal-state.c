@@ -177,6 +177,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     int serviceIdsLen = 0;
     serviceStatusType *outStatuses = NULL;
     int outStatusesLen = 0;
+    long long call_time = time_ms();
 
     adbinput = adb_DescribeServices_get_DescribeServices(describeServices, env);
     adbresp = adb_describeServicesResponseType_create(env);
@@ -227,6 +228,13 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     ret = adb_DescribeServicesResponse_create(env);
     adb_DescribeServicesResponse_set_DescribeServicesResponse(ret, env, adbresp);
 
+    call_time = time_ms() - call_time;
+    int stats_ret = 0;
+    stats_ret = cached_message_stats_update("DescribeServices", (long)call_time, rc);
+    if(stats_ret != EUCA_OK) {
+        LOGERROR("Error updating message stats: %d\n", stats_ret); 
+    }
+
     return (ret);
 }
 
@@ -252,6 +260,7 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startServic
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     adbinput = adb_StartService_get_StartService(startService, env);
     adbresp = adb_startServiceResponseType_create(env);
@@ -290,6 +299,10 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startServic
     ret = adb_StartServiceResponse_create(env);
     adb_StartServiceResponse_set_StartServiceResponse(ret, env, adbresp);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StartService", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -315,6 +328,7 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, c
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     adbinput = adb_StopService_get_StopService(stopService, env);
     adbresp = adb_stopServiceResponseType_create(env);
@@ -353,6 +367,10 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, c
     ret = adb_StopServiceResponse_create(env);
     adb_StopServiceResponse_set_StopServiceResponse(ret, env, adbresp);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("StopService", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -378,6 +396,7 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableSe
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     adbinput = adb_EnableService_get_EnableService(enableService, env);
     adbresp = adb_enableServiceResponseType_create(env);
@@ -416,6 +435,10 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableSe
     ret = adb_EnableServiceResponse_create(env);
     adb_EnableServiceResponse_set_EnableServiceResponse(ret, env, adbresp);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("EnableService", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -441,6 +464,7 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disab
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     adbinput = adb_DisableService_get_DisableService(disableService, env);
     adbresp = adb_disableServiceResponseType_create(env);
@@ -479,6 +503,10 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disab
     ret = adb_DisableServiceResponse_create(env);
     adb_DisableServiceResponse_set_DisableServiceResponse(ret, env, adbresp);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("DisableService", (long)call_time, rc);
+
     return (ret);
 }
 
@@ -504,6 +532,7 @@ adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * sh
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
     ncMetadata ccMeta;
+    long long call_time = time_ms();
 
     adbinput = adb_ShutdownService_get_ShutdownService(shutdownService, env);
     adbresp = adb_shutdownServiceResponseType_create(env);
@@ -534,5 +563,8 @@ adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * sh
     ret = adb_ShutdownServiceResponse_create(env);
     adb_ShutdownServiceResponse_set_ShutdownServiceResponse(ret, env, adbresp);
 
+    //update stats and return
+    call_time = time_ms() - call_time;
+    cached_message_stats_update("ShutdownService", (long)call_time, rc);
     return (ret);
 }

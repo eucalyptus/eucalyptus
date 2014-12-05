@@ -31,6 +31,7 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -52,8 +53,6 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBal
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -464,7 +463,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			  param.add(instanceId);
 			  String instanceState;
 			  try{
-			    final List<RunningInstancesItemType> result = 
+			    final List<RunningInstancesItemType> result =
 			        EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
 			    if (result.isEmpty())
 			      instanceState= "terminated";

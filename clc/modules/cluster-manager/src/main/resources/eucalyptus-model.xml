@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -91,27 +91,31 @@
         <outbound>
             <filtering-router>
                 <outbound-endpoint ref="ImageImportWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImportMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmImportMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ImageExportWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmExportMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmExportMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="VpcWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VpcMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VpcMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="SpotWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.SpotInstanceMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ReservedWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.ReservedInstanceMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="VmControlWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmControlMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="VmControlWS" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmPlacementMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="VmControlWS" /><!-- GRZE: should be different dest service -->
@@ -119,7 +123,7 @@
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="VmTypesWS" />
-                <payload-type-filter expectedType="com.eucalyptus.compute.common.backend.VmTypeMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmTypeMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ClusterEndpointWS" />
@@ -127,39 +131,39 @@
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ClusterEndpointWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.CloudTopologyMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="KeyPairWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmKeyPairMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ImageWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmImageMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="VolumeWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.BlockVolumeMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="SnapshotWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.BlockSnapshotMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="AddressWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmAddressMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="GroupsWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.VmSecurityMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="TagsWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ResourceTagMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.ResourceTagMessage" />
             </filtering-router>
             <filtering-router>
                 <outbound-endpoint ref="ShortBusWS" />
-                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.ComputeMessage" />
             </filtering-router>
         </outbound>
     </service>
@@ -184,14 +188,14 @@
       <inbound>
         <inbound-endpoint ref="ShortBusWS" />
       </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+      <component class="com.eucalyptus.compute.ComputeDefaultHandler" />
     </service>
 
     <service name="Eucalyptus">
       <inbound>
         <inbound-endpoint ref="EucalyptusWS" />
       </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+      <component class="com.eucalyptus.compute.ComputeDefaultHandler" />
     </service>
 
   </model>

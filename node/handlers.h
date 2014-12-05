@@ -86,6 +86,8 @@
 #include "config.h"
 #include "sensor.h"
 #include "ebs_utils.h"
+#include "stats.h"
+#include "message_stats.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -297,6 +299,12 @@ extern configEntry configKeysNoRestartNC[];
 #ifdef HANDLERS_FANOUT
 // only declare for the fanout code, not the actual handlers
 void doInitNC(void);
+
+//Functions for internal stats tracking
+void nc_lock_stats();
+void nc_unlock_stats();
+int nc_update_message_stats(const char* message_name, long call_time, int msg_failed);
+
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
 int doPowerDown(ncMetadata * pMeta);

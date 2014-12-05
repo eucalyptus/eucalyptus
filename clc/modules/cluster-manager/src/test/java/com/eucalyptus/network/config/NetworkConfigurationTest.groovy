@@ -31,6 +31,7 @@ class NetworkConfigurationTest {
   void testFullParse() {
     String config = """
     {
+        "Mode": "EDGE",
         "InstanceDnsDomain": "eucalyptus.internal",
         "InstanceDnsServers": [
            "1.2.3.4"
@@ -73,6 +74,7 @@ class NetworkConfigurationTest {
     println result
 
     NetworkConfiguration expected = new NetworkConfiguration(
+        mode: 'EDGE',
         instanceDnsDomain: 'eucalyptus.internal',
         instanceDnsServers: [ '1.2.3.4' ],
         macPrefix: 'd0:0d',
@@ -438,4 +440,63 @@ class NetworkConfigurationTest {
     NetworkConfigurations.parse( config )
   }
 
+  @Test
+  void testVpcMidoParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
+          "GatewayHost": "b",
+          "GatewayIP": "10.0.0.1",
+          "GatewayInterface": "foo",
+          "PublicNetworkCidr": "0.0.0.0/0",
+          "PublicGatewayIP": "10.0.0.1"
+        }
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        mode: 'VPCMIDO',
+        macPrefix: 'd0:0d',
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        mido: new Midonet(
+                eucanetdHost: 'a',
+                gatewayHost: 'b',
+                gatewayIP: '10.0.0.1',
+                gatewayInterface: 'foo',
+                publicNetworkCidr: '0.0.0.0/0',
+                publicGatewayIP: '10.0.0.1'
+        )
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testVpcMidoInvalidParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ]
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to missing Mido property" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error', 'Missing required property "Mido"', nce.message )
+    }
+  }
 }

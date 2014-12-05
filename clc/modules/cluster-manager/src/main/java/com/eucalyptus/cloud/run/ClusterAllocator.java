@@ -84,6 +84,9 @@ import javax.persistence.EntityTransaction;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.backend.StartInstancesType;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -162,7 +165,6 @@ import java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
@@ -214,8 +216,8 @@ public class ClusterAllocator implements Runnable {
         BaseMessage baseReq = null; 
         for(final String instId : allocInfo.getInstanceIds()){
           baseReq = MessageContexts.lookupLast(instId, Sets.<Class>newHashSet(
-              edu.ucsb.eucalyptus.msgs.RunInstancesType.class,
-              edu.ucsb.eucalyptus.msgs.StartInstancesType.class
+              RunInstancesType.class,
+              StartInstancesType.class
               ));
           if(baseReq!=null)
             break;

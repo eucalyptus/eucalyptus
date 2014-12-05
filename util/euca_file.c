@@ -1014,6 +1014,41 @@ long long file_size(const char *file_path)
     return ((long long)mystat.st_size);
 }
 
+
+//! Removes duplicate '/' in paths in-place.
+//!
+//! @param[in] path to modify in-place
+//!
+void dedup_path(char *path) {
+    int i = 0;
+    int j = 0;
+    int src_len;
+    int duplicate_detected = 0;
+
+    if(path == NULL) {
+        return;
+    }
+
+    src_len = strlen(path);
+    if(src_len <= 1) { 
+      return;
+    }
+    
+    //Include copying the null terminator
+    for(i = 1, j = 0 ; i < src_len + 1; i++) {
+        if(duplicate_detected && path[i] != '/') {
+            duplicate_detected = 0;
+        } else if(path[j] == '/' && path[i] == '/') {
+            duplicate_detected = 1;
+        }
+        
+        if(!duplicate_detected) {
+            path[++j] = path[i];
+        }
+    }   
+    return;
+}
+
 //!
 //! given path=A/B/C and only A existing, create A/B and, unless
 //! is_file_path==1, also create A/B/C directory

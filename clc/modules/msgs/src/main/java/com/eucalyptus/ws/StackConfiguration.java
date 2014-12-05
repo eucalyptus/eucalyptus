@@ -238,7 +238,7 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
-  public static String        DEFAULT_EUSTORE_URL          = "http://emis.eucalyptus.com/";                                      //GRZE: there references to specific services are not in the right scope here.
+  public static String        DEFAULT_EUSTORE_URL               = "http://emis.eucalyptus.com/";               //GRZE: there references to specific services are not in the right scope here.
 
   @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error)." )
   public static String        UNKNOWN_PARAMETER_HANDLING        = "default";
@@ -246,6 +246,10 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Enable request logging.", initial = "true",
       changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
   public static volatile Boolean LOG_REQUESTS                   = true;
+
+  @ConfigurableField( description = "List of services with disabled SOAP APIs.", initial = "",
+      changeListener = WebServices.ComponentListPropertyChangeListener.class )
+  public static volatile String DISABLED_SOAP_API_COMPONENTS    = "";
 
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   

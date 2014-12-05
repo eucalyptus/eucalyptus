@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -106,7 +106,10 @@ class GetCredentials(AWSQueryRequest):
         d = hashlib.sha256()
         d.update("eucalyptus")
         pk = RSA.load_key(self.cloudpk_file,passphrase_callback)
-        self.db_pass = binascii.hexlify(pk.sign(d.digest(),algo="sha256"))
+        bs = pk.sign(d.digest(),algo="sha256")
+        h = hashlib.sha256()
+        h.update(bs)
+        self.db_pass = binascii.hexlify(h.digest())
 
     def cli_formatter(self, data):
         pass

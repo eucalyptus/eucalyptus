@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,10 +66,6 @@ package edu.ucsb.eucalyptus.cloud
 import com.eucalyptus.component.Component
 import com.eucalyptus.component.Faults
 
-import java.util.ArrayList
-import java.util.List
-import com.eucalyptus.records.*
-import com.google.common.collect.*
 import edu.ucsb.eucalyptus.msgs.*
 import com.google.common.base.Joiner
 
@@ -147,7 +143,6 @@ public class VmInfo extends EucalyptusData {
     return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
   }
 }
-
 
 public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String id = "none";
