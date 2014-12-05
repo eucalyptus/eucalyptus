@@ -1561,8 +1561,25 @@ int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *e
 {
     int ret = 0;
 
-    if (!mido || !ext_rthostname || !ext_rtaddr || !ext_rtiface || !int_rtnetwork || !int_rtslashnet || !strlen(ext_rthostname) || !strlen(ext_rtaddr) || !strlen(ext_rtiface))
-        return (1);
+    if (!mido ||
+	!eucahome ||
+	!ext_eucanetdhostname || 
+	!ext_rthostname || 
+	!ext_rtaddr || 
+	!ext_rtiface || 
+	!ext_pubnw || 
+	!ext_pubgwip || 
+	!int_rtnetwork || 
+	!int_rtslashnet || 
+	!strlen(ext_eucanetdhostname) || 
+	!strlen(ext_rthostname) || 
+	!strlen(ext_rtaddr) || 
+	!strlen(ext_rtiface) || 
+	!strlen(ext_pubnw) || 
+	!strlen(ext_pubgwip) || 
+	!strlen(int_rtnetwork) || 
+	!strlen(int_rtslashnet) )
+	return (1);
 
     bzero(mido, sizeof(mido_config));
 
@@ -1583,7 +1600,7 @@ int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *e
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
     mido->midocore = calloc(1, sizeof(mido_core));
-    LOGDEBUG("mido initialized: ext_rthostname=%s ext_rtaddr=%s\n", SP(mido->ext_rthostname), SP(mido->ext_rtaddr));
+    LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s ext_rthostname=%s ext_rtaddr=%s  mido->ext_rtiface=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n", SP(mido->ext_eucanetdhostname), SP(mido->ext_rthostname), SP(mido->ext_rtaddr), SP(mido->ext_rtiface), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork), SP(int_rtslashnet));
 
     return (ret);
 }

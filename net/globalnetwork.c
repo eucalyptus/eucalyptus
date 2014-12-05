@@ -1085,6 +1085,60 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     }
     EUCA_FREE(results);
 
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='EucanetdHost']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->EucanetdHost, HOSTNAME_SIZE, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='GatewayHost']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->GatewayHost, HOSTNAME_SIZE, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='GatewayIP']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->GatewayIP, HOSTNAME_SIZE, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='GatewayInterface']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->GatewayInterface, 32, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='PublicNetworkCidr']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->PublicNetworkCidr, HOSTNAME_SIZE, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='PublicGatewayIP']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->PublicGatewayIP, HOSTNAME_SIZE, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
     snprintf(expression, 2048, "/network-data/configuration/property[@name='instanceDNSServers']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     gni->instanceDNSServers = EUCA_ZALLOC(max_results, sizeof(u32));

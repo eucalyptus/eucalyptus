@@ -367,9 +367,6 @@ int main(int argc, char **argv)
     // got all config, enter main loop
     //    while(counter<3) {
     while (1) {
-        // temporary
-        //        system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
-
         update_globalnet = 0;
 
         counter++;
@@ -1565,33 +1562,6 @@ int read_config(void)
 
     snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
 
-    // setup and read local NC eucalyptus.conf file
-    snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-    configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
-    readConfigFile(config->configFiles, 1);
-
-    cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
-    cvals[EUCANETD_CVAL_PRIVINTERFACE] = configFileValue("VNET_PRIVINTERFACE");
-    cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
-    cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
-    cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
-    cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
-    cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
-    cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
-    cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
-    cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
-    cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
-    cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
-    cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
-    cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOSETUPCORE] = configFileValue("MIDOSETUPCORE");
-    cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
-    cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
-    cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
-    cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
-    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
-    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-
     // search for the global state file from eucalyptue
     snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
     if (check_file(sourceuri)) {
@@ -1631,6 +1601,59 @@ int read_config(void)
         return (1);
     }
     rc = gni_print(globalnetworkinfo);
+
+    // setup and read local NC eucalyptus.conf file
+    snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
+    readConfigFile(config->configFiles, 1);
+
+    cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
+    cvals[EUCANETD_CVAL_PRIVINTERFACE] = configFileValue("VNET_PRIVINTERFACE");
+    cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
+    cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
+    cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
+    cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
+    cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
+    cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
+    cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
+    cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
+    cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
+    cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
+    cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
+    cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
+    cvals[EUCANETD_CVAL_MIDOSETUPCORE] = configFileValue("MIDOSETUPCORE");
+
+    cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
+    if (!cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]) {
+        cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(globalnetworkinfo->EucanetdHost);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
+    if (!cvals[EUCANETD_CVAL_MIDOGWHOST]) {
+        cvals[EUCANETD_CVAL_MIDOGWHOST] = strdup(globalnetworkinfo->GatewayHost);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
+    if (!cvals[EUCANETD_CVAL_MIDOGWIP]) {
+        cvals[EUCANETD_CVAL_MIDOGWIP] = strdup(globalnetworkinfo->GatewayIP);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
+    if (!cvals[EUCANETD_CVAL_MIDOGWIFACE]) {
+        cvals[EUCANETD_CVAL_MIDOGWIFACE] = strdup(globalnetworkinfo->GatewayInterface);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
+    if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
+        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(globalnetworkinfo->PublicNetworkCidr);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
+    if (!cvals[EUCANETD_CVAL_MIDOPUBGWIP]) {
+        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(globalnetworkinfo->PublicGatewayIP);
+    }
+
+    // now, set up the config datastructure from read in config values (file and global network view)
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
@@ -1695,6 +1718,9 @@ int read_config(void)
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
     snprintf(config->vnetMode, sizeof(config->vnetMode), "%s", cvals[EUCANETD_CVAL_MODE]);
+
+    // mido config opts
+    
     if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
         snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
@@ -1765,7 +1791,7 @@ int read_config(void)
         // VPCMIDO mode init
         rc = initialize_mido(mido, config->eucahome, config->midosetupcore, config->midoeucanetdhost, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
         if (rc) {
-            LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
+            LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf or the global cloud network configuration JSON\n");
             ret = 1;
         }
     }

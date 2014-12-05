@@ -137,6 +137,12 @@ typedef struct globalNetworkInfo_t {
     int init;
     char networkInfo[MAX_NETWORK_INFO];
     u32 enabledCLCIp;
+    char EucanetdHost[HOSTNAME_SIZE];
+    char GatewayHost[HOSTNAME_SIZE];
+    char GatewayIP[HOSTNAME_SIZE];
+    char GatewayInterface[32];
+    char PublicNetworkCidr[HOSTNAME_SIZE];
+    char PublicGatewayIP[HOSTNAME_SIZE];
     char instanceDNSDomain[HOSTNAME_SIZE];
     u32 *instanceDNSServers;
     int max_instanceDNSServers;
