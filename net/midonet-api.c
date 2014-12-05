@@ -921,6 +921,7 @@ int mido_update_resource(char *resource_type, char *content_type, midoname * nam
             val = va_arg(*al, char *);
         while (key && val) {
             el = json_object_object_get(jobj, key);
+            //            json_object_object_get_ex(jobj, key, &el);
             if (el) {
                 json_object_object_add(jobj, key, json_object_new_string(val));
                 //                json_object_put(el);
@@ -1261,6 +1262,7 @@ int mido_update_midoname(midoname * name)
         ret = 1;
     } else {
         el = json_object_object_get(jobj, "id");
+        //        json_object_object_get_ex(jobj, "id", &el);
         if (el) {
             EUCA_FREE(name->uuid);
             name->uuid = strdup(json_object_get_string(el));
@@ -1268,6 +1270,7 @@ int mido_update_midoname(midoname * name)
         }
 
         el = json_object_object_get(jobj, "tenantId");
+        //        json_object_object_get_ex(jobj, "tenantId", &el);
         if (el) {
             EUCA_FREE(name->tenant);
             name->tenant = strdup(json_object_get_string(el));
@@ -1275,6 +1278,7 @@ int mido_update_midoname(midoname * name)
         }
 
         el = json_object_object_get(jobj, "name");
+        //        json_object_object_get_ex(jobj, "name", &el);
         if (el) {
             EUCA_FREE(name->name);
             name->name = strdup(json_object_get_string(el));
@@ -1287,11 +1291,13 @@ int mido_update_midoname(midoname * name)
             EUCA_FREE(name->name);
 
             el = json_object_object_get(jobj, "subnetPrefix");
+            //json_object_object_get_ex(jobj, "subnetPrefix", &el);
             if (el) {
                 subnet = strdup(json_object_get_string(el));
             }
 
             el = json_object_object_get(jobj, "subnetLength");
+            //            json_object_object_get_ex(jobj, "subnetLength", &el);
             if (el) {
                 slashnet = strdup(json_object_get_string(el));
             }
@@ -1308,6 +1314,7 @@ int mido_update_midoname(midoname * name)
             EUCA_FREE(name->uuid);
             EUCA_FREE(name->name);
             el = json_object_object_get(jobj, "addr");
+            //json_object_object_get_ex(jobj, "addr", &el);
             if (el) {
                 ip = strdup(json_object_get_string(el));
             }
@@ -1320,6 +1327,7 @@ int mido_update_midoname(midoname * name)
         } else {
             if (!name->uuid || !strlen(name->uuid)) {
                 el = json_object_object_get(jobj, "uri");
+                //                json_object_object_get_ex(jobj, "uri", &el);
                 if (el) {
                     EUCA_FREE(name->uuid);
                     name->uuid = strdup(json_object_get_string(el));
@@ -1352,6 +1360,7 @@ int mido_delete_resource(midoname * parentname, midoname * name)
     jobj = json_tokener_parse(name->jsonbuf);
     if (jobj) {
         el = json_object_object_get(jobj, "uri");
+        //        json_object_object_get_ex(jobj, "uri", &el);
         if (el) {
             snprintf(url, EUCA_MAX_PATH, "%s", json_object_get_string(el));
         }
@@ -1698,6 +1707,7 @@ int json_object_cmp(json_object * one, json_object * two)
             LOGTRACE("evaling key %s\n", onekey);
             onesubtype = json_object_get_type(oneval);
             twoval = json_object_object_get(two, onekey);
+            //            json_object_object_get_ex(two, onekey, &twoval);
             twosubtype = json_object_get_type(twoval);
             if (onesubtype == json_type_object) {
                 // recurse
@@ -1948,6 +1958,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
                          */
 
                         el = json_object_object_get(host, "alive");
+                        //                        json_object_object_get_ex(host, "alive", &el);
                         if (el) {
                             if (!strcmp(json_object_get_string(el), "false")) {
                                 // host is down, skip
@@ -1962,12 +1973,14 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
                             names[names_max].jsonbuf = strdup(json_object_to_json_string(host));
 
                             el = json_object_object_get(host, "id");
+                            //                            json_object_object_get_ex(host, "id", &el);
                             if (el) {
                                 names[names_max].uuid = strdup(json_object_get_string(el));
                                 //                                json_object_put(el);
                             }
 
                             el = json_object_object_get(host, "name");
+                            //                            json_object_object_get_ex(host, "name", &el);
                             if (el) {
                                 names[names_max].name = strdup(json_object_get_string(el));
                                 //                                json_object_put(el);
