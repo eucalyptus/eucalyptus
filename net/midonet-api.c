@@ -219,10 +219,12 @@ int mido_create_router(char *tenant, char *name, midoname * outname)
     return (rc);
 }
 
+/*
 int mido_read_router(midoname * name)
 {
-    return (mido_read_resource("routers", name));
+    return (mido_read_resource("routers", name, NULL));
 }
+*/
 
 int mido_update_router(midoname * name, ...)
 {
@@ -272,10 +274,12 @@ int mido_create_bridge(char *tenant, char *name, midoname * outname)
     return (rc);
 }
 
+/*
 int mido_read_bridge(midoname * name)
 {
-    return (mido_read_resource("bridges", name));
+    return (mido_read_resource("bridges", name, NULL));
 }
+*/
 
 int mido_update_bridge(midoname * name, ...)
 {
@@ -309,7 +313,7 @@ int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
     myname.content_type = strdup("IpAddrGroup");
 
     // only create if it doesn't already exist
-    rc = mido_get_resources(NULL, 0, myname.tenant, "ip_addr_groups", &iags, &max_iags);
+    rc = mido_get_resources(NULL, 0, myname.tenant, "ip_addr_groups", "application/vnd.org.midonet.collection.IpAddrGroup-v1+json", &iags, &max_iags);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_iags && !found; i++) {
@@ -337,10 +341,12 @@ int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
     return (rc);
 }
 
+/*
 int mido_read_ipaddrgroup(midoname * name)
 {
-    return (mido_read_resource("ip_addr_groups", name));
+    return (mido_read_resource("ip_addr_groups", name, NULL));
 }
+*/
 
 int mido_update_ipaddrgroup(midoname * name, ...)
 {
@@ -366,7 +372,7 @@ int mido_print_ipaddrgroup(midoname * name)
 
 int mido_get_ipaddrgroups(char *tenant, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups", "application/vnd.org.midonet.collection.IpAddrGroup-v1+json", outnames, outnames_max));
 }
 
 int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname * outname)
@@ -408,10 +414,12 @@ int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw,
     return (rc);
 }
 
+/*
 int mido_read_dhcp(midoname * name)
 {
-    return (mido_read_resource("dhcp", name));
+    return (mido_read_resource("dhcp", name, NULL));
 }
+*/
 
 int mido_update_dhcp(midoname * name, ...)
 {
@@ -436,7 +444,7 @@ int mido_delete_dhcp(midoname * devname, midoname * name)
 
 int mido_get_dhcps(midoname * devname, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(devname, 1, devname->tenant, "dhcp", outnames, outnames_max));
+    return (mido_get_resources(devname, 1, devname->tenant, "dhcp", "application/vnd.org.midonet.collection.DhcpSubnet-v2+json", outnames, outnames_max));
 }
 
 int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames, int *outnames_max)
@@ -447,7 +455,7 @@ int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames
 
     mido_copy_midoname(&(parents[0]), devname);
     mido_copy_midoname(&(parents[1]), dhcp);
-    rc = mido_get_resources(parents, 2, devname->tenant, "hosts", outnames, outnames_max);
+    rc = mido_get_resources(parents, 2, devname->tenant, "hosts", "application/vnd.org.midonet.collection.DhcpHost-v1+json", outnames, outnames_max);
     mido_free_midoname_list(parents, 2);
     EUCA_FREE(parents);
 
@@ -472,7 +480,7 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
     mido_copy_midoname(&(parents[1]), dhcp);
 
     // check if host already has a rule in place
-    rc = mido_get_resources(parents, 2, myname.tenant, "hosts", &dhcphosts, &max_dhcphosts);
+    rc = mido_get_resources(parents, 2, myname.tenant, "hosts", "application/vnd.org.midonet.collection.DhcpHost-v1+json", &dhcphosts, &max_dhcphosts);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_dhcphosts && !found; i++) {
@@ -520,7 +528,7 @@ int mido_create_chain(char *tenant, char *name, midoname * outname)
     myname.content_type = strdup("Chain");
 
     // check if host already has a rule in place
-    rc = mido_get_resources(NULL, 0, myname.tenant, "chains", &chains, &max_chains);
+    rc = mido_get_resources(NULL, 0, myname.tenant, "chains", "application/vnd.org.midonet.collection.Chain-v1+json", &chains, &max_chains);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_chains && !found; i++) {
@@ -546,10 +554,12 @@ int mido_create_chain(char *tenant, char *name, midoname * outname)
     return (rc);
 }
 
+/* 
 int mido_read_chain(midoname * name)
 {
-    return (mido_read_resource("chains", name));
+    return (mido_read_resource("chains", name, NULL));
 }
+*/
 
 int mido_update_chain(midoname * name, ...)
 {
@@ -584,7 +594,7 @@ int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outn
     myname.content_type = strdup("IpAddrGroupAddr");
 
     // check if host already has a rule in place
-    rc = mido_get_resources(ipaddrgroup, 1, myname.tenant, "ip_addrs", &ips, &max_ips);
+    rc = mido_get_resources(ipaddrgroup, 1, myname.tenant, "ip_addrs", "application/vnd.org.midonet.collection.IpAddrGroupAddr-v1+json", &ips, &max_ips);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_ips && !found; i++) {
@@ -620,7 +630,7 @@ int mido_delete_ipaddrgroup_ip(midoname * ipaddrgroup, midoname * name)
 
 int mido_get_ipaddrgroup_ips(midoname * ipaddrgroup, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(ipaddrgroup, 1, ipaddrgroup->tenant, "ip_addrs", outnames, outnames_max));
+    return (mido_get_resources(ipaddrgroup, 1, ipaddrgroup->tenant, "ip_addrs", "application/vnd.org.midonet.collection.IpAddrGroupAddr-v1+json", outnames, outnames_max));
 }
 
 /*
@@ -670,7 +680,7 @@ int mido_create_rule(midoname * chain, midoname * outname, ...)
     myname.content_type = strdup("Rule");
 
     // check if host already has a rule in place
-    rc = mido_get_resources(chain, 1, myname.tenant, "rules", &rules, &max_rules);
+    rc = mido_get_resources(chain, 1, myname.tenant, "rules", "application/vnd.org.midonet.collection.Rule-v2+json", &rules, &max_rules);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_rules && !found; i++) {
@@ -749,10 +759,12 @@ int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname) {
     return(ret);
 }
 */
+/*
 int mido_read_rule(midoname * name)
 {
-    return (mido_read_resource("ports", name));
+    return (mido_read_resource("ports", name, NULL));
 }
+*/
 
 int mido_update_rule(midoname * name, ...)
 {
@@ -792,10 +804,12 @@ int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, ch
     return (rc);
 }
 
+/*
 int mido_read_port(midoname * name)
 {
-    return (mido_read_resource("ports", name));
+    return (mido_read_resource("ports", name, "application/vnd.org.midonet.Port-v2+json"));
 }
+*/
 
 int mido_update_port(midoname * name, ...)
 {
@@ -820,12 +834,12 @@ int mido_delete_port(midoname * name)
 
 int mido_get_ports(midoname * devname, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(devname, 1, devname->tenant, "ports", outnames, outnames_max));
+    return (mido_get_resources(devname, 1, devname->tenant, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
 }
 
 int mido_get_rules(midoname * chainname, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(chainname, 1, chainname->tenant, "rules", outnames, outnames_max));
+    return (mido_get_resources(chainname, 1, chainname->tenant, "rules", "application/vnd.org.midonet.collection.Rule-v2+json", outnames, outnames_max));
 }
 
 int mido_unlink_host_port(midoname * host, midoname * port)
@@ -954,13 +968,14 @@ int mido_update_resource(char *resource_type, char *content_type, midoname * nam
     return (ret);
 }
 
-int mido_read_resource(char *resource_type, midoname * name)
+/*
+int mido_read_resource(char *resource_type, midoname * name, char *apistr)
 {
     char url[EUCA_MAX_PATH], *outhttp = NULL;
     int rc = 0, ret = 0;
 
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s/%s", resource_type, name->uuid);
-    rc = midonet_http_get(url, &outhttp);
+    rc = midonet_http_get(url, apistr, &outhttp);
     if (rc) {
         ret = 1;
     } else {
@@ -971,6 +986,7 @@ int mido_read_resource(char *resource_type, midoname * name)
     EUCA_FREE(outhttp);
     return (ret);
 }
+*/
 
 int mido_print_resource(char *resource_type, midoname * name)
 {
@@ -1140,7 +1156,6 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
         if (outname->init) {
             LOGTRACE("ALREADY EXISTS: %s/%s\n", outname->resource_type, outname->uuid);
             return (0);
-            //            return(mido_read_resource(outname->resource_type, outname));
         }
         bzero(outname, sizeof(midoname));
     }
@@ -1176,7 +1191,7 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
     // if all goes well, store the new resource
     if (!ret) {
         if (outname && outloc) {
-            rc = midonet_http_get(outloc, &outhttp);
+            rc = midonet_http_get(outloc, NULL, &outhttp);
             if (rc) {
                 ret = 1;
             } else {
@@ -1431,15 +1446,15 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
     return (bytes_to_copy);
 }
 
-int midonet_http_get(char *url, char **out_payload)
+int midonet_http_get(char *url, char *apistr, char **out_payload)
 {
     CURL *curl = NULL;
     CURLcode curlret;
     struct mem_params_t mem_writer_params = { 0, 0 };
     int ret = 0;
     long httpcode = 0L;
-    //    struct curl_slist *headers = NULL;
-    //    char hbuf[EUCA_MAX_PATH];
+    struct curl_slist *headers = NULL;
+    char hbuf[EUCA_MAX_PATH];
 
     *out_payload = NULL;
 
@@ -1449,13 +1464,19 @@ int midonet_http_get(char *url, char **out_payload)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mem_writer);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&mem_writer_params);
 
+    if (apistr && strlen(apistr)) {
+        snprintf(hbuf, EUCA_MAX_PATH, "accept: %s", apistr);
+        headers = curl_slist_append(headers, hbuf);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    }
+
     /*
        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-v1+json", resource_type);
        headers = curl_slist_append(headers, hbuf);
        snprintf(hbuf, EUCA_MAX_PATH, "Expect:");
        headers = curl_slist_append(headers, hbuf);
        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-     */
+    */
 
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
@@ -1629,7 +1650,7 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
     myname.content_type = NULL;
 
     // only create the route if it doesn't already exist
-    rc = mido_get_resources(router, 1, myname.tenant, "routes", &routes, &max_routes);
+    rc = mido_get_resources(router, 1, myname.tenant, "routes", "application/vnd.org.midonet.collection.Route-v1+json", &routes, &max_routes);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_routes && !found; i++) {
@@ -1677,7 +1698,7 @@ int mido_delete_route(midoname * name)
 
 int mido_get_routes(midoname * router, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(router, 1, router->tenant, "routes", outnames, outnames_max));
+    return (mido_get_resources(router, 1, router->tenant, "routes", "application/vnd.org.midonet.collection.Route-v1+json", outnames, outnames_max));
 }
 
 int json_object_cmp(json_object * one, json_object * two)
@@ -1830,20 +1851,20 @@ int mido_cmp_midoname_to_input(midoname * name, ...)
 
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(NULL, 0, tenant, "routers", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "routers", "application/vnd.org.midonet.collection.Router-v2+json", outnames, outnames_max));
 }
 
 int mido_get_bridges(char *tenant, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(NULL, 0, tenant, "bridges", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "bridges", "application/vnd.org.midonet.collection.Bridge-v2+json", outnames, outnames_max));
 }
 
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(NULL, 0, tenant, "chains", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "chains", "application/vnd.org.midonet.collection.Chain-v1+json", outnames, outnames_max));
 }
 
-int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, midoname ** outnames, int *outnames_max)
+int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ** outnames, int *outnames_max)
 {
     int rc = 0, ret = 0, i = 0;
     char *payload = NULL, url[EUCA_MAX_PATH], tmpbuf[EUCA_MAX_PATH];
@@ -1868,7 +1889,7 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
         strcat(url, tmpbuf);
     }
     //    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s?tenant_id=%s", resource_type, tenant);
-    rc = midonet_http_get(url, &payload);
+    rc = midonet_http_get(url, apistr, &payload);
     //    LOGDEBUG("PAYLOAD: %s %s '%s' '%s' '%d' \n", SP(url), SP(payload), SP(resource_type), SP(tenant), max_parents);
     if (!rc) {
         struct json_object *jobj = NULL, *resource = NULL;
@@ -1935,7 +1956,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 
     bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/hosts");
-    rc = midonet_http_get(url, &payload);
+    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Host-v1+json", &payload);
     if (!rc) {
         struct json_object *jobj = NULL, *host = NULL, *el = NULL;
 
