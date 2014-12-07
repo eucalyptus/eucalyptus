@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.BucketCrossOriginConfiguration;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.BucketLoggingConfiguration;
@@ -184,6 +185,12 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
           s3c.deleteBucket(action.info.getPhysicalResourceId());
+        } catch (AmazonS3Exception ex) {
+          if ("NoSuchBucket".equalsIgnoreCase(ex.getErrorCode())) {
+            // do nothing.  (We check existence this way rather than if -> delete due to possible race conditions
+          } else {
+            throw ex;
+          }
         }
         return action;
       }

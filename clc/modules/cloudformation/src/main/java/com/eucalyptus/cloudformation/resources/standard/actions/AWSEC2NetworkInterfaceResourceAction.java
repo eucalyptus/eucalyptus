@@ -254,6 +254,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
         if (checkDeleted(action, configuration)) return action;
         throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
       }
@@ -276,7 +277,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
       return false;
     }
 
-    }
+  }
 
   @Override
   public ResourceProperties getResourceProperties() {
