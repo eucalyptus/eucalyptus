@@ -68,12 +68,10 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 
@@ -229,9 +227,4 @@ public class StorageProperties {
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
-	
-	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return ( EntityWrapper<T> ) EntityWrapper.get( VolumeInfo.class );
-	}
-
 }

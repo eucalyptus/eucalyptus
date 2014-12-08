@@ -73,8 +73,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -95,7 +93,6 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.storage.common.CheckerTask;

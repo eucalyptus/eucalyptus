@@ -79,7 +79,6 @@ import com.eucalyptus.blockstorage.entities.ISCSIVolumeInfo;
 import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 
