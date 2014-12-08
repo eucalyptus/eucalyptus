@@ -221,7 +221,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void rollback() throws EventHandlerException {
 		}
 	}
-	
+
 	public static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
 		public static final String ROLE_NAME_PREFIX = "loadbalancer-vm";
@@ -797,7 +797,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 									if(zoneView == null)
 										throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
 									final LoadBalancerSecurityGroupCoreView sgroupView = lb.getGroup();
-									if(sgroupView == null)
+									if(sgroupView == null && lb.getVpcId()==null)
 										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
 									final LoadBalancerDnsRecordCoreView dnsView = lb.getDns();
 									
@@ -806,7 +806,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 									LoadBalancerDnsRecord dns;
 									try{
 										zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-										sgroup = LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
+										sgroup = sgroupView == null ? null : LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
 										dns = LoadBalancerDnsRecordEntityTransform.INSTANCE.apply(dnsView);
 									}catch(final Exception ex){
 										LOG.error("unable to transform entity", ex);

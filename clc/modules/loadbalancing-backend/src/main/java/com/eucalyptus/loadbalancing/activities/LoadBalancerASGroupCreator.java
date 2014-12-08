@@ -77,7 +77,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -380,7 +379,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	  @Override
     public boolean check( ) throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
-        if(CheckCounter == 3){
+        if( CheckCounter == 3 && Topology.isEnabled( Eucalyptus.class ) ){
           try{
             final List<ImageDetails> emis =
                 EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.LOADBALANCER_EMI));
@@ -433,18 +432,18 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		if(LOADBALANCER_EMI == null)
 			throw new EventHandlerException("Loadbalancer's EMI is not configured");
 
-		Collection<String> eventZones = Collections.emptySet( );
+		Collection<String> eventZones = null;
 		Collection<String> eventSecurityGroupIds = Collections.emptySet( );
 		Map<String,String> zoneToSubnetIdMap = null;
 		if ( evt instanceof NewLoadbalancerEvent ) {
-			eventZones = Objects.firstNonNull( ((NewLoadbalancerEvent) evt ).getZones( ), eventZones );
+			eventZones = ((NewLoadbalancerEvent) evt ).getZones( );
 			zoneToSubnetIdMap = ((NewLoadbalancerEvent) evt ).getZoneToSubnetIdMap( );
 		} else if ( evt instanceof ApplySecurityGroupsEvent ) {
 			final Map<String,String> groupIdToNameMap = ( (ApplySecurityGroupsEvent) evt ).getSecurityGroupIdsToNames( );
 			eventSecurityGroupIds = groupIdToNameMap == null ? eventSecurityGroupIds : groupIdToNameMap.keySet( );
 		}
 
-		if( eventZones.isEmpty( ) && eventSecurityGroupIds.isEmpty( ) )
+		if( eventZones == null && eventSecurityGroupIds.isEmpty( ) )
 			return;	// do nothing when zone/groups are not specified
 
 		final LoadBalancer lbEntity;
@@ -547,9 +546,12 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 			}
 		}
 
-		int capacity;
+		Integer capacity;
 		if(!asgFound){
 			// create autoscaling group with zones and desired capacity
+			if ( eventZones == null ) {
+				throw new EventHandlerException("Availability zones required to create auto scaling group.");
+			}
 			try{
 				final List<String> availabilityZones = Lists.newArrayList( eventZones );
 				final String vpcZoneIdentifier = zoneToSubnetIdMap.isEmpty( ) ?
@@ -566,8 +568,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 			}
 		}else{
 			try{
-				final List<String> availabilityZones = Lists.newArrayList( eventZones );
-				capacity = availabilityZones.size() * this.capacityPerZone;
+				final List<String> availabilityZones = eventZones == null ? null : Lists.newArrayList( eventZones );
+				capacity = availabilityZones == null ? null : availabilityZones.size() * this.capacityPerZone;
 				EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to update the autoscaling group", ex);
@@ -584,10 +586,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		// commit ASG record to the database
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
 			try {
-				Entities.uniqueResult( LoadBalancerAutoScalingGroup.named( lbEntity ) );
+				final LoadBalancerAutoScalingGroup group = Entities.uniqueResult( LoadBalancerAutoScalingGroup.named( lbEntity ) );
+				if ( capacity != null ) group.setCapacity( capacity );
 			}catch(NoSuchElementException ex){
 				final LoadBalancerAutoScalingGroup group = LoadBalancerAutoScalingGroup.newInstance(lbEntity, groupName, this.launchConfigName);
-				group.setCapacity(capacity);
+				if ( capacity != null ) group.setCapacity(capacity);
 				Entities.persist(group);
 			}
 			db.commit();
