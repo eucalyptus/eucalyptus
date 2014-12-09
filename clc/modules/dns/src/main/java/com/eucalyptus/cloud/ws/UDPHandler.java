@@ -114,7 +114,7 @@ import com.eucalyptus.system.Threads;
 
 public class UDPHandler extends Thread {
 	@ConfigurableField( description = "Parameter controlling the number of UDP worker threads." )
-	public static Integer num_worker_threads = 32;
+	public static Integer num_worker_threads = 128;
 	private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
 	DatagramSocket socket;
