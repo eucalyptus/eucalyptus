@@ -23,7 +23,6 @@ package com.eucalyptus.walrus;
 import java.net.InetAddress;
 import java.util.NoSuchElementException;
 
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.walrus.entities.BucketInfo;

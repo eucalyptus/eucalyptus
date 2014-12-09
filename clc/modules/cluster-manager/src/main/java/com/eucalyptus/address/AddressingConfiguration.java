@@ -79,7 +79,6 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 
