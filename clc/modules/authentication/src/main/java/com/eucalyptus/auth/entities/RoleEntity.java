@@ -71,6 +71,10 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<PolicyEntity> policies;
 
+  @OneToMany( mappedBy = "role" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<InstanceProfileEntity> instanceProfiles;
+
   @ManyToOne
   @JoinColumn( name = "auth_role_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -133,6 +137,14 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   public void setPolicies( final List<PolicyEntity> policies ) {
     this.policies = policies;
+  }
+
+  public List<InstanceProfileEntity> getInstanceProfiles() {
+    return instanceProfiles;
+  }
+
+  public void setInstanceProfiles( final List<InstanceProfileEntity> instanceProfiles ) {
+    this.instanceProfiles = instanceProfiles;
   }
 
   public AccountEntity getAccount() {

@@ -339,7 +339,9 @@ public class DatabaseAccountProxy implements Account {
   private boolean roleHasResourceAttached( String roleName, String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
-      return roleEntity.getPolicies( ).size( ) > 0;
+      return
+          !roleEntity.getPolicies( ).isEmpty( ) ||
+          !roleEntity.getInstanceProfiles( ).isEmpty( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to check role " + roleName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
