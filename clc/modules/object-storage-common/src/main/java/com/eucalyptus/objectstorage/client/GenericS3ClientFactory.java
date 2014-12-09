@@ -188,14 +188,7 @@ public class GenericS3ClientFactory {
             LOG.trace("Using osg index " + osgIndex + " from list: " + osgs);
             ServiceConfiguration conf = osgs.get(osgIndex);
             if (usePublicDns) {
-                try {
-                    if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.DOMAIN) )
-                        return ServiceUris.remote(conf);
-                    else
-                        return new URI(String.format("objectstorage.%s:%s", DNSProperties.DOMAIN, conf.getPort()));
-                } catch (URISyntaxException e) {
-                    throw new NoSuchElementException("Cannot generate client with invalid OSG configuration");//TODO: better error message
-                }
+                return ServiceUris.remotePublicify(conf);
             } else {
                 return ServiceUris.remote(conf);
             }
