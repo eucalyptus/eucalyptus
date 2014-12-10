@@ -53,27 +53,29 @@ public class VpcNewAccountEventListener implements EventListener<AccountCreatedE
 
   @Override
   public void fireEvent( final AccountCreatedEvent event ) {
-    if ( VpcConfiguration.getDefaultVpc( ) && Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) try {
-      final ServiceConfiguration config = Topology.lookup( Compute.class );
-      final CreateVpcType createVpc = new CreateVpcType( );
-      createVpc.setCidrBlock( event.getMessage( ) );
-      createVpc.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
-      createVpc.setCallerContext( new BaseCallerContext( Lists.newArrayList(
-          new EvaluatedIamConditionKey( Keys.AWS_SOURCEIP, Internets.localHostAddress( ) )
-      ) ) );
-      final ListenableFuture<CreateVpcResponseType> dispatchFuture = AsyncRequests.dispatch( config, createVpc );
-      dispatchFuture.addListener( new Runnable( ) {
-        @Override
-        public void run() {
-          try {
-            dispatchFuture.get( );
-          } catch ( final InterruptedException e ) {
-            logger.info( "Interrupted while creating default vpc for account " + event.getMessage( ), e );
-          } catch ( final ExecutionException e ) {
-            logger.error( "Error creating default vpc for account " + event.getMessage( ), e );
+    try {
+      if ( VpcConfiguration.getDefaultVpc( ) && Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) {
+        final ServiceConfiguration config = Topology.lookup( Compute.class );
+        final CreateVpcType createVpc = new CreateVpcType( );
+        createVpc.setCidrBlock( event.getMessage( ) );
+        createVpc.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+        createVpc.setCallerContext( new BaseCallerContext( Lists.newArrayList(
+            new EvaluatedIamConditionKey( Keys.AWS_SOURCEIP, Internets.localHostAddress( ) )
+        ) ) );
+        final ListenableFuture<CreateVpcResponseType> dispatchFuture = AsyncRequests.dispatch( config, createVpc );
+        dispatchFuture.addListener( new Runnable( ) {
+          @Override
+          public void run() {
+            try {
+              dispatchFuture.get( );
+            } catch ( final InterruptedException e ) {
+              logger.info( "Interrupted while creating default vpc for account " + event.getMessage( ), e );
+            } catch ( final ExecutionException e ) {
+              logger.error( "Error creating default vpc for account " + event.getMessage( ), e );
+            }
           }
-        }
-      } );
+        } );
+      }
     } catch ( final Exception e ) {
       logger.error( "Error creating default vpc for account " + event.getMessage( ), e );
     }
