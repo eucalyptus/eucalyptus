@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,6 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -74,20 +73,21 @@ import com.eucalyptus.system.Ats;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessageMarker;
 
 public class ComponentMessages {
-  private static Logger                                                                  LOG       = Logger.getLogger( ComponentMessages.class );
-  private static final Map<Class<? extends BaseMessage>,Class<? extends ComponentId>> compIdMap = Maps.newHashMap( );
-  
-  public static Collection<Class<? extends BaseMessage>> forComponent( ComponentId compId ) {
+  private static Logger LOG = Logger.getLogger( ComponentMessages.class );
+  private static final Map<Class<? extends BaseMessageMarker>,Class<? extends ComponentId>> compIdMap = Maps.newHashMap();
+
+  public static Collection<Class<? extends BaseMessageMarker>> forComponent( ComponentId compId ) {
     Class<? extends ComponentId> compIdClass = compId.getClass( );
     if ( !compIdMap.containsValue( compIdClass ) ) {
-      return Collections.emptyList( );
+      return Collections.emptyList();
     } else {
-      return Maps.filterValues( (Map) compIdMap, Predicates.equalTo( compIdClass ) ).keySet( );
+      return Maps.filterValues( compIdMap, Predicates.<Object>equalTo( compIdClass ) ).keySet( );
     }
   }
-  
+
   public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msg ) {
     Class<?> msgType = Ats.inClassHierarchy( msg ).findAncestor( ComponentMessage.class );
     if ( !compIdMap.containsKey( msgType ) ) {
@@ -97,7 +97,7 @@ public class ComponentMessages {
     }
   }
   
-  public static void register( Class<? extends BaseMessage> componentMsg ) {
+  public static void register( Class<? extends BaseMessageMarker> componentMsg ) {
     @SuppressWarnings( "unchecked" )
     Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
     compIdMap.put( componentMsg, componentIdClass );
@@ -105,11 +105,11 @@ public class ComponentMessages {
   
   public static class ComponentMessageDiscovery extends ServiceJarDiscovery {
     
+    @SuppressWarnings( "unchecked" )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
-      if ( BaseMessage.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( ComponentMessage.class )
-           && !Modifier.isAbstract( candidate.getModifiers( ) )
-           && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+      if ( BaseMessageMarker.class.isAssignableFrom( candidate )
+           && candidate.getAnnotation( ComponentMessage.class ) != null ) {
         try {
           ComponentMessages.register( candidate );
         } catch ( Exception ex ) {

@@ -90,7 +90,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class BaseMessage {
+public class BaseMessage implements BaseMessageMarker {
   @Transient
   private static Logger        LOG       = Logger.getLogger( BaseMessage.class );
   private String               correlationId;
