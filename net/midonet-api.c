@@ -1956,7 +1956,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 
     bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/hosts");
-    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Host-v1+json", &payload);
+    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Host-v2+json", &payload);
     if (!rc) {
         struct json_object *jobj = NULL, *host = NULL, *el = NULL;
 
