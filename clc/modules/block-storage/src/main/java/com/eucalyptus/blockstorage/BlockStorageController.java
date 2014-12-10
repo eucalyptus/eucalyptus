@@ -881,32 +881,28 @@ public class BlockStorageController {
 	 * public AbortStorageSnapshotResponseType AbortSnapshotPoint( AbortStorageSnapshotType request ) throws EucalyptusCloudException {
 		AbortStorageSnapshotResponseType reply = ( AbortStorageSnapshotResponseType ) request.getReply();
 		String snapshotId = request.getSnapshotId();
-
-		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
-		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
-
 		reply.set_return(true);
-		if(snapshotInfos.size() > 0) {
-			SnapshotInfo  foundSnapshotInfo = snapshotInfos.get(0);
-			String status = foundSnapshotInfo.getStatus();
-			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
-				SnapshotDeleter snapshotDeleter = new SnapshotDeleter(snapshotId);
-				snapshotService.add(snapshotDeleter);
+
+		try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
+    		SnapshotInfo foundSnapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+    		String status = foundSnapshotInfo.getStatus();
+    		if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
+    			foundSnapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
+    			tr.commit();
 			} else {
 				//snapshot is still in progress.
-				foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());			
-				db.commit();
-				 if(httpTransferMap.contains(snapshotId)) {
-					LOG.info("Aborting http transfer for " + snapshotId);
-					httpTransferMap.get(snapshotId).abortTransfer();
-				}
+				foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());
+				tr.commit();
+				checker.cleanFailedSnapshot(snapshotId);
 			}
-		} else {
-			//the SC knows nothing about this snapshot.
-			db.rollback();
+    	} catch (NoSuchElementException e) {
+    		//the SC knows nothing about this snapshot.
+    		LOG.debug("Snapshot " + snapshotId + " not found");
+		} catch (Exception e) {
+			LOG.error("Failed to abort snapshot " + snapshotId, e);
+			throw new EucalyptusCloudException("Failed to abort snapshot " + snapshotId, e)
 		}
-
+		
 		return reply;
 	}*/
 
@@ -1077,30 +1073,6 @@ public class BlockStorageController {
      */
     public AttachStorageVolumeResponseType attachVolume(AttachStorageVolumeType request) throws EucalyptusCloudException {
         throw new EucalyptusCloudException("Operation not supported");
-
-		/*
-		AttachStorageVolumeResponseType reply = request.getReply();
-		String volumeId = request.getVolumeId();
-		String nodeIqn = request.getNodeIqn();
-
-		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-		try {
-			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
-		} catch (EucalyptusCloudException ex) {
-			LOG.error("Unable to find volume: " + volumeId + ex);
-			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
-		} finally {
-			db.commit();
-		}
-		try {
-			String deviceConnectString = blockManager.attachVolume(volumeId, nodeIqn);
-			reply.setRemoteDeviceString(deviceConnectString);
-		} catch (EucalyptusCloudException ex) {
-			LOG.error(ex, ex);
-			throw ex;
-		}
-		return reply;
-		 */
     }
 
     public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {

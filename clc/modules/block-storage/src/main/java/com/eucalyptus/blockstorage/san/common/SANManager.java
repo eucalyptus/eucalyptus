@@ -480,7 +480,6 @@ public class SANManager implements LogicalStorageManager {
 		String sanVolumeId = resourceIdOnSan(volumeId);
 		String sanParentVolumeId = null;
 		SANVolumeInfo volInfo = new SANVolumeInfo(volumeId);
-		//EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		int size = -1;
 
 

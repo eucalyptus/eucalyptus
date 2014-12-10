@@ -246,10 +246,6 @@
     <priority value="OFF" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="com.eucalyptus.entities.EntityWrapper" additivity="false">
-    <priority value="${euca.log.exhaustive.db}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
   <category name="bitronix.tm" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />

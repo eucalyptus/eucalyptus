@@ -352,7 +352,6 @@ public class ISCSIManager implements StorageExportManager {
 			
 			LOG.debug("Volume " + iscsiVolumeInfo.getVolumeId() + " Target allocation found tid: " + tid);
 			if(tid > 0) {
-				//db = StorageProperties.getEntityWrapper();
                 try (TransactionResource tran = Entities.transactionFor(ISCSIMetaInfo.class)) {
                     metaInfoList = Entities.query(new ISCSIMetaInfo(StorageProperties.NAME));
                     if(metaInfoList.size() > 0) {
