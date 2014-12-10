@@ -78,8 +78,8 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.net.SSLSocketFactoryWrapper;
-import com.eucalyptus.net.SimpleClientX509TrustManager;
+import com.eucalyptus.crypto.util.SSLSocketFactoryWrapper;
+import com.eucalyptus.crypto.util.SimpleClientX509TrustManager;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 

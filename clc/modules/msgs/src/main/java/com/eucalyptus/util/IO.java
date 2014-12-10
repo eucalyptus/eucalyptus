@@ -30,6 +30,22 @@ import com.google.common.collect.Lists;
 public class IO {
 
   /**
+   * Close a closable, returning any error.
+   *
+   * @param closeable The closeable to close
+   * @return The optional error
+   */
+  public static Optional<Throwable> close( final Closeable closeable ) {
+    Optional<Throwable> error = Optional.absent( );
+    if ( closeable != null ) try {
+      closeable.close( );
+    } catch ( Throwable e ) {
+      error = Optional.of( e );
+    }
+    return error;
+  }
+
+  /**
    * Close given closables, return errors.
    *
    * @param closeables The closeables to close
@@ -39,13 +55,7 @@ public class IO {
   public static Iterable<Optional<Throwable>> close( final Iterable<? extends Closeable> closeables ) {
     final List<Optional<Throwable>> results = Lists.newArrayList( );
     if ( closeables != null ) for ( final Closeable closeable : closeables ) {
-      Optional<Throwable> error = Optional.absent( );
-      try {
-        closeable.close( );
-      } catch ( Throwable e ) {
-        error = Optional.of( e );
-      }
-      results.add( error );
+      results.add( close( closeable ) );
     }
     return results;
   }
