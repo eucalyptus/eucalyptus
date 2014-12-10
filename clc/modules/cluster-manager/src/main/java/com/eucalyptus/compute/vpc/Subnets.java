@@ -124,14 +124,20 @@ public interface Subnets extends Lister<Subnet> {
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "subnet-id", CloudMetadatas.toDisplayName( ) )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+          .withStringProperty( "vpcId", FilterStringFunctions.VPC_ID )
           .withPersistenceAlias( "vpc", "vpc" )
           .withPersistenceFilter( "availability-zone", "availabilityZone" )
+          .withPersistenceFilter( "availabilityZone" )
           .withPersistenceFilter( "available-ip-address-count", "availableIpAddressCount", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "cidr" )
           .withPersistenceFilter( "cidr-block", "cidr" )
+          .withPersistenceFilter( "cidrBlock", "cidr" )
           .withPersistenceFilter( "default-for-az", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "defaultForAz", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "state", "state", Enums.valueOfFunction( Subnet.State.class ) )
           .withPersistenceFilter( "subnet-id", "displayName" )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
+          .withPersistenceFilter( "vpcId", "vpc.displayName" )
       );
     }
   }
