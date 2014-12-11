@@ -64,6 +64,8 @@ package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.AuthContext;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
@@ -78,6 +80,7 @@ import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.springframework.web.util.UriUtils;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -108,6 +111,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -119,6 +123,9 @@ import com.google.common.collect.Iterables;
 public class EuareService {
   
   private static final Logger LOG = Logger.getLogger( EuareService.class );
+
+  private static final boolean ENCODE_POLICIES =
+      Boolean.valueOf( System.getProperty( "com.eucalyptus.auth.euare.encodePolicies", "true" ) );
   
   public CreateAccountResponseType createAccount(CreateAccountType request) throws EucalyptusCloudException {
     CreateAccountResponseType reply = request.getReply( );
@@ -427,7 +434,7 @@ public class EuareService {
         GetUserPolicyResultType result = reply.getGetUserPolicyResult( );
         result.setUserName( request.getUserName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1003,7 +1010,7 @@ public class EuareService {
         GetGroupPolicyResultType result = reply.getGetGroupPolicyResult( );
         result.setGroupName( request.getGroupName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1594,7 +1601,7 @@ public class EuareService {
         GetAccountPolicyResultType result = reply.getGetAccountPolicyResult( );
         result.setAccountName( request.getAccountName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1806,7 +1813,7 @@ public class EuareService {
         GetRolePolicyResult result = reply.getGetRolePolicyResult( );
         result.setRoleName( request.getRoleName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -2077,7 +2084,7 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
     }
    
-    X509Certificate vmCert = null;
+    final X509Certificate vmCert;
     try{
       vmCert = EuareServerCertificateUtil.generateVMCertificate(pubkey, instanceId, expirationDays);
     }catch(final EuareException ex) {
@@ -2230,7 +2237,7 @@ public class EuareService {
     roleType.setRoleName( roleFound.getName( ) );
     roleType.setRoleId( roleFound.getRoleId() );
     roleType.setPath( roleFound.getPath() );
-    roleType.setAssumeRolePolicyDocument( roleFound.getAssumeRolePolicy().getText() );
+    roleType.setAssumeRolePolicyDocument( encodePolicy( roleFound.getAssumeRolePolicy().getText() ) );
     roleType.setArn( Accounts.getRoleArn( roleFound ) );
     roleType.setCreateDate( roleFound.getCreationTimestamp() );
     return roleType;
@@ -2383,5 +2390,13 @@ public class EuareService {
     return metadata;
   }
  
-
+  private String encodePolicy( final String policy ) {
+    try {
+      return ENCODE_POLICIES && policy != null ?
+          UriUtils.encodeScheme( policy, StandardCharsets.UTF_8.name( ) ) :
+          policy;
+    } catch ( final UnsupportedEncodingException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
 }
