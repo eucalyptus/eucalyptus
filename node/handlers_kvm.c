@@ -856,7 +856,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
-            save_instance_struct(instance);
             sem_v(inst_sem);
 
             // Establish migration-credential keys.
