@@ -19,17 +19,29 @@
  ************************************************************************/
 package com.eucalyptus.imaging.service.config;
 
+import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import java.io.Serializable;
+import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilders;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.upgrade.Upgrades;
+import com.google.common.base.Predicate;
 
 /**
  *
@@ -48,4 +60,47 @@ public class ImagingConfiguration extends ComponentConfiguration implements Seri
   public ImagingConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, SERVICE_PATH );
   }
+
+  @EntityUpgrade( entities = ImagingConfiguration.class, value = Imaging.class, since = Upgrades.Version.v4_1_0 )
+  public enum Imaging410RegistrationUpgrade implements Predicate<Class> {
+    INSTANCE;
+
+    private static final Logger logger = Logger.getLogger( Imaging410RegistrationUpgrade.class );
+
+    @Override
+    public boolean apply( @Nullable final Class entityClass ) {
+      try {
+        if ( ServiceConfigurations.list( Imaging.class ).isEmpty() ) {
+          final String imaging = ComponentIds.lookup( Imaging.class ).name( );
+          final String compute = ComponentIds.lookup( Compute.class ).name( );
+          final ServiceBuilder builder = ServiceBuilders.lookup( Imaging.class );
+          for ( final ServiceConfiguration configuration : ServiceConfigurations.list( Compute.class ) ) {
+            final String imagingServiceName;
+            if ( configuration.getName( ).equals( configuration.getPartition( ) + "." + compute ) ) {
+              imagingServiceName = configuration.getPartition( ) + "." + imaging;
+            } else { // use host based naming
+              imagingServiceName = configuration.getHostName( ) + "_" + imaging;
+            }
+            try {
+              ServiceConfigurations.lookupByName( Imaging.class, imagingServiceName );
+              logger.warn( "Existing imaging service found with name: " + imagingServiceName );
+            } catch ( final NoSuchElementException e ) {
+              logger.info( "Registering imaging service on host " + configuration.getHostName() );
+              ServiceConfigurations.store( builder.newInstance(
+                  configuration.getPartition( ),
+                  imagingServiceName,
+                  configuration.getHostName( ),
+                  configuration.getPort( ) ) );
+            }
+          }
+        } else {
+          logger.info( "Not registering imaging services on upgrade, existing service found" );
+        }
+      } catch ( final Exception e ) {
+        logger.error( "Error registering imaging services on upgrade", e );
+      }
+      return true;
+    }
+  }
+
 }
