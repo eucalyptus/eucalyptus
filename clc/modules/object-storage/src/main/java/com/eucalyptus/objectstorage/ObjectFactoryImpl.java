@@ -466,21 +466,15 @@ public class ObjectFactoryImpl implements ObjectFactory {
         switch(entity.getBucket().getVersioning()) {
             case Suspended:
             case Enabled:
-                if(!entity.getIsDeleteMarker()) {
-                    try {
-                        //Create a "private" acp for the delete marker
-                        AccessControlPolicy acp = AclUtils.processNewResourcePolicy(requestUser, null, entity.getBucket().getOwnerCanonicalId());
-                        //Create new deleteMarker
-                        toBeReturned = ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
-                    } catch(Exception e) {
-                        LOG.warn("Failure configuring and persisting the delete marker for object " + entity.getResourceFullName());
-                        throw new InternalErrorException(e);
-                    }
-                } else {
-                    //Do nothing, already a delete marker found. Just return it here
-                    //TODO: zhill - should this replace the delete marker with a new one?
-                	//TODO: swathi - a new delete marker should be created if the versioning state is enabled or suspended
-                	toBeReturned = entity;
+            	// EUCA-9983 - If bucket versioning is enabled/suspended, a new delete marker should be returned every time the object is deleted 
+                try {
+                    //Create a "private" acp for the delete marker
+                    AccessControlPolicy acp = AclUtils.processNewResourcePolicy(requestUser, null, entity.getBucket().getOwnerCanonicalId());
+                    //Create new deleteMarker
+                    toBeReturned = ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
+                } catch(Exception e) {
+                    LOG.warn("Failure configuring and persisting the delete marker for object " + entity.getResourceFullName());
+                    throw new InternalErrorException(e);
                 }
                 break;
             case Disabled:

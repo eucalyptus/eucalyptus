@@ -700,5 +700,81 @@ public class ObjectFactoryTest {
             assert (buffer[i] == content[i])
         }
     }
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testDeleteMarker() throws Exception {
+		User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+		String canonicalId = user.getAccount().getCanonicalId()
+		AccessControlPolicy acp = new AccessControlPolicy()
+		acp.setAccessControlList(new AccessControlList())
+		acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+		// Create bucket
+		Bucket bucket = Bucket.getInitializedBucket("testbucket", user.getUserId(), acp, null)
+		bucket = OsgBucketFactory.getFactory().createBucket(provider, bucket, UUID.randomUUID().toString(), user)
+		
+		assert (bucket != null)
+		assert (bucket.getState().equals(BucketState.extant))
+		
+		// Enable versioning
+		ObjectStorageProperties.VersioningStatus versionStatus = ObjectStorageProperties.VersioningStatus.Enabled
+		BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus)
+		
+		bucket = BucketMetadataManagers.getInstance().lookupExtantBucket("testbucket")
+		
+		assert (bucket != null)
+		assert (bucket.getVersioning().equals(ObjectStorageProperties.VersioningStatus.Enabled))
+		
+		byte[] content = 'fakecontent123'.getBytes()
+
+		ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, "testkey", content.length, user)
+		objectEntity.setAcl(acp)
+		ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), null, user)
+
+		assert (resultEntity != null)
+		assert (resultEntity.getState().equals(ObjectState.extant))
+
+		//Do the delete logically
+		ObjectEntity deleteMarker1 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker1 != null)
+		assert (deleteMarker1.getVersionId() != null)
+		
+		//Do the delete logically
+		ObjectEntity deleteMarker2 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+
+		assert (deleteMarker2 != null)
+		assert (deleteMarker2.getVersionId() != null)
+		assert (!deleteMarker1.getVersionId().equals(deleteMarker2.getVersionId()))
+		
+		// Suspend versioning
+		versionStatus = ObjectStorageProperties.VersioningStatus.Suspended
+		BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus)
+		
+		bucket = BucketMetadataManagers.getInstance().lookupExtantBucket("testbucket")
+		
+		assert (bucket != null)
+		assert (bucket.getVersioning().equals(ObjectStorageProperties.VersioningStatus.Suspended))
+		
+		resultEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, "testkey", null)
+		assert (resultEntity != null)
+		
+		//Do the delete logically
+		deleteMarker1 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker1 != null)
+		assert (ObjectStorageProperties.NULL_VERSION_ID.equals(deleteMarker1.getVersionId()))
+		
+		//Do the delete logically
+		deleteMarker2 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker2 != null)
+		assert (ObjectStorageProperties.NULL_VERSION_ID.equals(deleteMarker2.getVersionId()))
+		assert (!deleteMarker1.getObjectModifiedTimestamp().equals(deleteMarker2.getObjectModifiedTimestamp()))
+	}
 
 }

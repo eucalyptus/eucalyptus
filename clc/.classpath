@@ -48,8 +48,6 @@
 	<classpathentry kind="src" output="modules/euare/build" path="modules/euare/src/test/java"/>
 	<classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/imaging/build" path="modules/imaging/src/main/java"/>
-	<classpathentry kind="src" output="modules/imaging/build" path="modules/imaging/src/test/java"/>
 	<classpathentry kind="src" output="modules/imaging-common/build" path="modules/imaging-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/imaging-common/build" path="modules/imaging-common/src/test/java"/>
 	<classpathentry kind="src" output="modules/loadbalancing/build" path="modules/loadbalancing/src/main/java"/>
@@ -86,7 +84,6 @@
 	<classpathentry kind="src" output="modules/troubleshooting/build" path="modules/troubleshooting/src/test/java"/>
 	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
 	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/test/java"/>
-	<classpathentry kind="src" path="modules/walrus/conf/drbd"/>
 	<classpathentry kind="src" output="modules/walrus-common/build" path="modules/walrus-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/walrus-common/build" path="modules/walrus-common/src/test/java"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
