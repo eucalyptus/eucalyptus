@@ -90,10 +90,6 @@ public class DbBucketTaggingManagerImpl implements BucketTaggingManager {
       List<BucketTags> resultTags = Entities.query( new BucketTags( ).withUuid( bucketUuid ) );
       tx.commit( );
 
-      if ( resultTags.isEmpty( ) ) {
-        throw new NoSuchEntityException( );
-      }
-
       return resultTags;
     } catch ( Exception e ) {
       LOG.trace( "Error in getting entity for tagging to database: " + e );

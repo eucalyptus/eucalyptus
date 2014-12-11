@@ -1714,6 +1714,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
         List<BucketTags> bucketTagsList =
                 BucketTaggingManagers.getInstance( ).getBucketTagging( bucket.getBucketUuid( ) );
 
+        if ( bucketTagList.isEmpty( ) ) {
+          throw new NoSuchTagSetException( );
+        }
+
         for ( BucketTags bucketTags : bucketTagsList ) {
           BucketTag bucketTag = new BucketTag( );
           bucketTag.setKey( bucketTags.getKey() );
@@ -1727,7 +1731,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         reply.setTaggingConfiguration( tagging );
       } catch ( Exception ex ) {
-        if ( ex instanceof NoSuchEntityException ) {
+        if ( ex instanceof NoSuchTagSetException ) {
           throw new NoSuchTagSetException( bucket.getBucketName( ) );
         } else {
           LOG.error( "Error while getting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );

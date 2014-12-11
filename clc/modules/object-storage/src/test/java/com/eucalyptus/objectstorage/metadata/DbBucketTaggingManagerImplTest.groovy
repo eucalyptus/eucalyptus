@@ -95,12 +95,7 @@ class DbBucketTaggingManagerImplTest {
         assert (foundTags.size() == 2)
 
         mgr.deleteBucketTagging(bucketId)
-        try {
-            List<BucketTags> unexpectedTags = mgr.getBucketTagging(bucketId)
-            Assert.fail('Should have got exception for no tags found')
-        } catch (ObjectStorageException e) {
-            // expected
-        }
+        List<BucketTags> unexpectedTags = mgr.getBucketTagging(bucketId)
 
         cleanTags(bucketId)
     }
