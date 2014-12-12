@@ -194,7 +194,7 @@ public class CloudFormationService {
         }
       }
 
-      String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
+      final String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
 
       final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
 
@@ -208,6 +208,7 @@ public class CloudFormationService {
             stackEntity.setStackName(stackName);
             stackEntity.setStackId(stackId);
             stackEntity.setAccountId(accountId);
+            stackEntity.setTemplateBody(templateText);
             stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
             stackEntity.setStackStatusReason("User initiated");
             stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
