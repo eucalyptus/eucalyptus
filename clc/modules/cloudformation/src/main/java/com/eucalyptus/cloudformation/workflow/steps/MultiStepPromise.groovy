@@ -1,0 +1,84 @@
+/*************************************************************************
+ * Copyright 2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+package com.eucalyptus.cloudformation.workflow.steps
+
+import com.amazonaws.services.simpleworkflow.flow.core.Promise
+import com.eucalyptus.cloudformation.resources.ResourceAction
+import com.eucalyptus.cloudformation.workflow.StackActivity
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException
+import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
+import com.netflix.glisten.WorkflowOperations
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import groovy.transform.TypeCheckingMode
+
+/**
+ * Created by ethomas
+ */
+@CompileStatic(TypeCheckingMode.SKIP)
+@PackageScope
+abstract class MultiStepPromise {
+
+  @Delegate
+  private final WorkflowOperations<StackActivity> workflowOperations;
+  private final WorkflowUtils workflowUtils;
+  private final List<String> stepIds;
+  protected final ResourceAction resourceAction;
+
+  MultiStepPromise( WorkflowOperations<StackActivity> workflowOperations,
+                    Collection<String> stepIds,
+                    ResourceAction resourceAction
+  ) {
+    this.workflowOperations = workflowOperations;
+    this.workflowUtils = new WorkflowUtils( workflowOperations );
+    this.stepIds = stepIds;
+    this.resourceAction = resourceAction;
+  }
+
+  protected abstract Step getStep( String stepId );
+
+  protected Promise<String> getPromise( final String failureError, final Closure<Boolean> stepClosure ) {
+    Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
+    for ( String stepId : stepIds ) {
+      final String stepIdLocal = new String(stepId); // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration
+      final Step step = getStep( stepIdLocal );
+      previousPromise = waitFor( previousPromise ) {
+        Promise<Boolean> stepPromise = invokeOrPoll( step.timeout ) {
+          promiseFor( stepClosure.call( stepIdLocal ) )
+        }
+        waitFor( stepPromise ) { Boolean result ->
+          if ( !result ) {
+            throw new ValidationFailedException( failureError )
+          }
+          promiseFor( "" )
+        }
+      }
+    }
+    return previousPromise;
+  }
+
+  def <T> Promise<T> invokeOrPoll( Integer timeout, Closure<Promise<T>> activity ) {
+    if ( timeout ) {
+      workflowUtils.exponentialPollWithTimeout( timeout, activity )
+    } else {
+      activity.call( )
+    }
+  }
+}

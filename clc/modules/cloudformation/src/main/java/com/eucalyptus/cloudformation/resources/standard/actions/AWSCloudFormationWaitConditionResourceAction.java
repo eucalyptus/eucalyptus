@@ -26,7 +26,6 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3VersionSummary;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
@@ -42,9 +41,7 @@ import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
-import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
@@ -60,6 +57,7 @@ import org.apache.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -206,11 +204,12 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
           throw new ValidationFailedException("Not enough success signals yet");
         }
       }
+    };
 
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      } //dummy method
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
   private enum DeleteSteps implements Step {
@@ -219,10 +218,12 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         return resourceAction; // nothing to do really
       }
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
 
@@ -235,7 +236,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
   @Override
   public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 }
 

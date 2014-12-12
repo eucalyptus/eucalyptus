@@ -42,7 +42,6 @@ import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
-import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
@@ -197,12 +196,6 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String logInfo(String message) {
-    LOG.info(message);
-    return "";
-  }
-
-  @Override
   public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
     LOG.debug("Deleting resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
@@ -330,7 +323,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
     LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
@@ -365,9 +358,9 @@ public class StackActivityImpl implements StackActivity {
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
 
     } catch (NotAResourceFailureException ex) {
-      LOG.error(ex);
+      LOG.info( "Create step not yet complete: ${ex.message}" );
       LOG.debug(ex, ex);
-      throw ex; // not a big enough object footprint to be an issue with data converters
+      return false;
     } catch (Exception ex) {
       LOG.debug("Error creating resource " + resourceId);
       LOG.error(ex, ex);
@@ -390,10 +383,11 @@ public class StackActivityImpl implements StackActivity {
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
       throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
+    return true;
   }
 
   @Override
-  public String performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
     LOG.info("Performing delete step " + stepId + " on resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
@@ -421,9 +415,9 @@ public class StackActivityImpl implements StackActivity {
         StackResourceEntityManager.updateStackResource(stackResourceEntity);
       }
     } catch (NotAResourceFailureException ex) {
-      LOG.error(ex);
+      LOG.info( "Delete step not yet complete: ${ex.message}" );
       LOG.debug(ex, ex);
-      throw ex; // not a big enough object footprint to be an issue with data converters
+      return false;
     } catch (Exception ex) {
       LOG.debug("Error deleting resource " + resourceId);
       LOG.error(ex, ex);
@@ -431,7 +425,7 @@ public class StackActivityImpl implements StackActivity {
       throw new ResourceFailureException(rootCause.getMessage());
       // Don't put the delete failed step here as we need to return "failure" but this must be done in the caller
     }
-    return "";
+    return true;
   }
 
   @Override
