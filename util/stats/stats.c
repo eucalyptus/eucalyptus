@@ -242,6 +242,15 @@ int internal_sensor_pass(int return_on_fail) {
         get_lock_fn();
     } else {
         LOGERROR("Cannot run internal sensor pass because no lock provided to protect data.\n");
+
+        //Free up the sensor listing
+        if (names) {
+            for (int i=0; names[i]; i++) {
+                EUCA_FREE(names[i]);
+            }
+            EUCA_FREE(names);
+        }
+
         return EUCA_ERROR;
     }
 
