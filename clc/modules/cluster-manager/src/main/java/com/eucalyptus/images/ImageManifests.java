@@ -205,12 +205,13 @@ public class ImageManifests {
 
           @Override
           public boolean apply( ImageMetadata.Type input ) {
+              final String type = ImageManifest.this.xpathHelper.apply( "/manifest/image/type/text()" );
+              if ( type != null && type.equals( input.name( ) ) ) {
+                return true;
+              }
+
               String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
-              if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
-                  return true;
-              } else {
-                  return false;
-            }
+              return "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix() );
           }
       };
       if ( checkIdType.apply( ImageMetadata.Type.kernel ) && user != null && !user.isSystemAdmin( ) ) {
