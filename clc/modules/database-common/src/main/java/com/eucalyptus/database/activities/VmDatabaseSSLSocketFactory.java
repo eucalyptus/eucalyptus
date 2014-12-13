@@ -41,8 +41,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.DatabaseInfo;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.net.SSLSocketFactoryWrapper;
-import com.eucalyptus.net.SimpleClientX509TrustManager;
+import com.eucalyptus.crypto.util.SSLSocketFactoryWrapper;
+import com.eucalyptus.crypto.util.SimpleClientX509TrustManager;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Charsets;
 import com.google.common.base.Suppliers;
@@ -55,9 +55,9 @@ import com.google.common.collect.ImmutableList;
 public class VmDatabaseSSLSocketFactory extends SSLSocketFactoryWrapper {
   private static Logger  LOG = Logger.getLogger( VmDatabaseSSLSocketFactory.class );
 
-  private static final String PROP_POSTGRESQL_SSL_PROVIDER = "com.eucalyptus.postgresql.sslProvider";
-  private static final String PROP_POSTGRESQL_SSL_PROTOCOL = "com.eucalyptus.postgresql.sslProtocol";
-  private static final String PROP_POSTGRESQL_SSL_CIPHER_SUITES = "com.eucalyptus.postgresql.sslCipherSuites";
+  private static final String PROP_VMDB_SSL_PROVIDER = "com.eucalyptus.database.vmSslProvider";
+  private static final String PROP_VMDB_SSL_PROTOCOL = "com.eucalyptus.database.vmSslProtocol";
+  private static final String PROP_VMDB_SSL_CIPHER_SUITES = "com.eucalyptus.database.vmSslCipherSuites";
   private static final String DEFAULT_CIPHER_STRINGS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5";
   private static final String DEFAULT_PROTOCOL = "TLS";
   private final List<String> cipherSuites;
@@ -77,14 +77,14 @@ public class VmDatabaseSSLSocketFactory extends SSLSocketFactoryWrapper {
   }
 
   private static String getCipherStrings() {
-    return getProperty( PROP_POSTGRESQL_SSL_CIPHER_SUITES, DEFAULT_CIPHER_STRINGS );
+    return getProperty( PROP_VMDB_SSL_CIPHER_SUITES, DEFAULT_CIPHER_STRINGS );
   }
 
   private static SSLSocketFactory buildDelegate() {
-    final String provider = getProperty( PROP_POSTGRESQL_SSL_PROVIDER );
-    final String protocol = getProperty( PROP_POSTGRESQL_SSL_PROTOCOL, DEFAULT_PROTOCOL );
+    final String provider = getProperty( PROP_VMDB_SSL_PROVIDER );
+    final String protocol = getProperty( PROP_VMDB_SSL_PROTOCOL, DEFAULT_PROTOCOL );
 
-    X509Certificate certificate = null;
+    final X509Certificate certificate;
     try{
       String bodyPem = DatabaseInfo.getDatabaseInfo().getAppendOnlySslCert();
       bodyPem  = bodyPem.trim();
@@ -103,11 +103,7 @@ public class VmDatabaseSSLSocketFactory extends SSLSocketFactoryWrapper {
           new SimpleClientX509TrustManager(certificate, false);
       sslContext.init( null, new TrustManager[]{ trustManager }, Crypto.getSecureRandomSupplier( ).get( ) );
       return sslContext.getSocketFactory();
-    } catch ( NoSuchAlgorithmException e ) {
-      throw propagate(e);
-    } catch (KeyManagementException e) {
-      throw propagate(e);
-    } catch (NoSuchProviderException e) {
+    } catch ( NoSuchAlgorithmException | KeyManagementException | NoSuchProviderException e) {
       throw propagate(e);
     }
   }

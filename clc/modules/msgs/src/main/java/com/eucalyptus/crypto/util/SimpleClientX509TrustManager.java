@@ -60,76 +60,48 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.net;
+package com.eucalyptus.crypto.util;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import javax.net.ssl.SSLSocketFactory;
-import com.google.common.base.Supplier;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.X509TrustManager;
 
 /**
- * Wrapper for SSLSocketFactory.
+ * A simple X509TrustManager for client usage.
  */
-public class SSLSocketFactoryWrapper extends SSLSocketFactory {
+public class SimpleClientX509TrustManager implements X509TrustManager {
 
-  private final Supplier<SSLSocketFactory> delegate;
+  private final X509Certificate trustedCertificate;
+  private final boolean checkValidity;
 
-  public SSLSocketFactoryWrapper( final Supplier<SSLSocketFactory> delegate ) {
-    this.delegate = delegate;
+  public SimpleClientX509TrustManager( final X509Certificate trustedCertificate,
+                                       final boolean checkValidity ) {
+    this.trustedCertificate = trustedCertificate;
+    this.checkValidity = checkValidity;
   }
 
   @Override
-  public String[] getDefaultCipherSuites() {
-    return delegate().getDefaultCipherSuites();
+  public void checkClientTrusted( final X509Certificate[] chain,
+                                  final String authType ) throws CertificateException {
+    throw new IllegalStateException("This trust manager is for client use only.");
   }
 
   @Override
-  public String[] getSupportedCipherSuites() {
-    return delegate().getSupportedCipherSuites();
+  public void checkServerTrusted( final X509Certificate[] chain,
+                                  final String authType ) throws CertificateException {
+    if ( chain == null || chain.length < 1 ) {
+      throw new IllegalArgumentException("Certificate chain invalid");
+    } else if( !trustedCertificate.equals(chain[0]) ) {
+      throw new CertificateException("Certificate not trusted: " + chain[0].getSubjectX500Principal().getName());
+    }
+
+    if ( checkValidity ){
+      trustedCertificate.checkValidity();
+    }
   }
 
   @Override
-  public Socket createSocket( final Socket socket,
-                              final String host,
-                              final int port,
-                              final boolean autoClose ) throws IOException {
-    return notifyCreated(delegate().createSocket(socket, host, port, autoClose));
-  }
-
-  @Override
-  public Socket createSocket( final String host,
-                              final int port ) throws IOException {
-    return notifyCreated(delegate().createSocket(host, port));
-  }
-
-  @Override
-  public Socket createSocket( final String host,
-                              final int port,
-                              final InetAddress localHost,
-                              final int localPort ) throws IOException {
-    return notifyCreated(delegate().createSocket(host, port, localHost, localPort));
-  }
-
-  @Override
-  public Socket createSocket( final InetAddress host,
-                              final int port ) throws IOException {
-    return notifyCreated(delegate().createSocket(host, port));
-  }
-
-  @Override
-  public Socket createSocket( final InetAddress address,
-                              final int port,
-                              final InetAddress localAddress,
-                              final int localPort ) throws IOException {
-    return notifyCreated(delegate().createSocket(address, port, localAddress, localPort));
-  }
-
-  protected Socket notifyCreated( final Socket socket ) {
-    return socket;
-  }
-
-  private SSLSocketFactory delegate() {
-    return delegate.get();
+  public X509Certificate[] getAcceptedIssuers() {
+    return new X509Certificate[0];
   }
 }

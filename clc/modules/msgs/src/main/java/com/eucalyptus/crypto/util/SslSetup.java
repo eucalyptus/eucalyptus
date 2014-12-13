@@ -62,8 +62,16 @@
 
 package com.eucalyptus.crypto.util;
 
+import static java.lang.System.getProperty;
+import static com.eucalyptus.crypto.util.SslUtils.getEnabledCipherSuites;
+import static com.google.common.base.Throwables.propagate;
+import static com.google.common.collect.Iterables.toArray;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
+import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyManagementException;
@@ -75,15 +83,24 @@ import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509ExtendedKeyManager;
+import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
+import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -94,9 +111,19 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.IO;
+import com.eucalyptus.util.Pair;
+import com.google.common.base.Objects;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
 
@@ -118,6 +145,14 @@ public class SslSetup {
   public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
   @ConfigurableField( description = "SSL protocols for webservices." )
   public static String        SERVER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
+  @ConfigurableField( description = "Use default CAs with SSL for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static Boolean       USER_SSL_DEFAULT_CAS = true;
+  @ConfigurableField( description = "SSL ciphers for external use." )
+  public static String        USER_SSL_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+  @ConfigurableField( description = "SSL protocols for external use." )
+  public static String        USER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
+  @ConfigurableField( description = "SSL hostname validation for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static Boolean       USER_SSL_ENABLE_HOSTNAME_VERIFICATION = true;
 
   public static class SslCertChangeListener implements PropertyChangeListener<String> {
     
@@ -204,6 +239,21 @@ public class SslSetup {
     engine.setEnabledProtocols( SslUtils.getEnabledProtocols( SERVER_SSL_PROTOCOLS, engine.getSupportedProtocols( ) ) );
     engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( SERVER_SSL_CIPHERS, engine.getSupportedCipherSuites( ) ) );
     return engine;
+  }
+
+  /**
+   * Configure an unconnected HttpsURLConnection for trust.
+   */
+  public static URLConnection configureHttpsUrlConnection( final URLConnection urlConnection ) {
+    if ( urlConnection instanceof HttpsURLConnection ) {
+      final HttpsURLConnection httpsURLConnection = (HttpsURLConnection) urlConnection;
+      httpsURLConnection.setHostnameVerifier(
+          Objects.firstNonNull( USER_SSL_ENABLE_HOSTNAME_VERIFICATION, Boolean.TRUE ) ?
+            new BrowserCompatHostnameVerifier( ) :
+            new AllowAllHostnameVerifier( ) );
+      httpsURLConnection.setSSLSocketFactory( UserSSLSocketFactory.get( ) );
+    }
+    return urlConnection;
   }
   
   public static SSLContext getClientContext( ) {
@@ -498,5 +548,104 @@ public class SslSetup {
       public void checkServerTrusted( X509Certificate[] arg0, String arg1, String arg2, String arg3 ) throws CertificateException {}
     }
     
+  }
+
+  public static class UserSSLSocketFactory extends SSLSocketFactoryWrapper {
+    private static final String PROP_USER_SSL_PROVIDER = "com.eucalyptus.crypto.util.userSslProvider";
+    private static final String PROP_USER_SSL_PROTOCOL = "com.eucalyptus.crypto.util.userSslProtocol";
+    private static final String PROP_USER_SSL_TRUSTSTORE_PASSWORD = "com.eucalyptus.crypto.util.userSslTrustStorePassword";
+    private static final String PROP_USER_SSL_TRUSTSTORE_TYPE = "com.eucalyptus.crypto.util.userSslTrustStoreType";
+    private static final String PROP_USER_SSL_TRUSTSTORE_PATH = "com.eucalyptus.crypto.util.userSslTrustStorePath";
+    private static final String DEFAULT_PROTOCOL = "TLS";
+    private static final String DEFAULT_TRUSTSTORE_PASSWORD = "changeit";
+    private static final String DEFAULT_TRUSTSTORE_PATH = "lib/security/cacerts";
+    private final List<String> cipherSuites;
+    private final static AtomicReference<Pair<Long,KeyStore>> sslTrustStore = new AtomicReference<>( );
+
+    private static final Supplier<UserSSLSocketFactory> supplier = new Supplier<UserSSLSocketFactory>( ){
+      @Override
+      public UserSSLSocketFactory get( ) {
+        return new UserSSLSocketFactory( );
+      }
+    };
+
+    private static final Supplier<UserSSLSocketFactory> memoizedSupplier =
+        Suppliers.memoizeWithExpiration( supplier, 60l, TimeUnit.SECONDS );
+
+    public static UserSSLSocketFactory get( ) {
+      return memoizedSupplier.get( );
+    }
+
+    public UserSSLSocketFactory( ) {
+      super( Suppliers.ofInstance( buildDelegate( ) ) );
+      this.cipherSuites =
+          ImmutableList.copyOf( getEnabledCipherSuites( USER_SSL_CIPHERS, getSupportedCipherSuites( ) ) );
+    }
+
+    @Override
+    protected Socket notifyCreated(final Socket socket) {
+      if ( socket instanceof SSLSocket ) {
+        final SSLSocket sslSocket = (SSLSocket) socket;
+        sslSocket.setEnabledCipherSuites( toArray( cipherSuites, String.class ) );
+        sslSocket.setEnabledProtocols( SslUtils.getEnabledProtocols( USER_SSL_PROTOCOLS, sslSocket.getSupportedProtocols( ) ) );
+      }
+      return socket;
+    }
+
+    private static KeyStore getTrustStore( final File trustStore ) throws GeneralSecurityException, IOException {
+      final Pair<Long,KeyStore> currentTrustStore = sslTrustStore.get( );
+      InputStream trustStoreIn = null;
+      if ( currentTrustStore != null && currentTrustStore.getLeft( ) == trustStore.lastModified( ) ) {
+        return currentTrustStore.getRight( );
+      } else try {
+        final String trustStoreType = getProperty( PROP_USER_SSL_TRUSTSTORE_TYPE, KeyStore.getDefaultType( ) );
+        final String trustStorePassword = getProperty( PROP_USER_SSL_TRUSTSTORE_PASSWORD, DEFAULT_TRUSTSTORE_PASSWORD );
+        final KeyStore userTrustStore = KeyStore.getInstance( trustStoreType );
+        userTrustStore.load( trustStoreIn = new FileInputStream( trustStore ), trustStorePassword.toCharArray() );
+        sslTrustStore.set( Pair.pair( trustStore.lastModified( ), userTrustStore ) );
+        return userTrustStore;
+      } finally {
+        IO.close( trustStoreIn );
+      }
+    }
+
+    private static List<TrustManager> trustManagersForStore( final KeyStore trustStore ) throws GeneralSecurityException {
+      final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance( "PKIX", "SunJSSE" );
+      trustManagerFactory.init( trustStore );
+      return Arrays.asList( trustManagerFactory.getTrustManagers( ) );
+    }
+
+    private static SSLSocketFactory buildDelegate( ) {
+      final String provider = getProperty( PROP_USER_SSL_PROVIDER );
+      final String protocol = getProperty( PROP_USER_SSL_PROTOCOL, DEFAULT_PROTOCOL );
+      final String trustStorePath = getProperty( PROP_USER_SSL_TRUSTSTORE_PATH, DEFAULT_TRUSTSTORE_PATH );
+
+      final SSLContext sslContext;
+      try {
+        sslContext = provider!=null ?
+            SSLContext.getInstance( protocol, provider ) :
+            SSLContext.getInstance( protocol );
+
+        final List<TrustManager> trustManagers = Lists.newArrayList( );
+        trustManagers.addAll( trustManagersForStore( ((AbstractKeyStore)SystemCredentials.getKeyStore( )).getKeyStore( ) ) );
+        final File trustStore = new File( System.getProperty( "java.home" ), trustStorePath );
+        if ( Objects.firstNonNull( USER_SSL_DEFAULT_CAS, false ) && trustStore.isFile( ) ) {
+          trustManagers.addAll( trustManagersForStore( getTrustStore( trustStore ) ) );
+        }
+
+        sslContext.init(
+            null,
+            new TrustManager[]{ new DelegatingX509ExtendedTrustManager(
+                Iterables.transform(
+                    Iterables.filter(
+                        trustManagers,
+                        Predicates.instanceOf( javax.net.ssl.X509ExtendedTrustManager.class ) ),
+                    CollectionUtils.cast( javax.net.ssl.X509ExtendedTrustManager.class ) ) ) },
+            Crypto.getSecureRandomSupplier( ).get( ) );
+        return sslContext.getSocketFactory( );
+      } catch ( final GeneralSecurityException | IOException e ) {
+        throw propagate(e);
+      }
+    }
   }
 }

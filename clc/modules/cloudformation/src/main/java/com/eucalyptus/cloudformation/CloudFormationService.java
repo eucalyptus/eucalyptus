@@ -62,11 +62,13 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.IO;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
@@ -86,12 +88,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.net.ssl.SSLHandshakeException;
 
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationService {
@@ -114,7 +118,6 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -293,7 +296,6 @@ public class CloudFormationService {
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -309,18 +311,29 @@ public class CloudFormationService {
     // First try straight HTTP GET if url is in whitelist
     boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
     if (inWhitelist) {
+      InputStream templateIn = null;
       try {
-        return copyStreamToString(new BoundedInputStream(url.openStream(), Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1));
-      } catch (UnknownHostException ex) {
+        final URLConnection connection = SslSetup.configureHttpsUrlConnection( url.openConnection( ) );
+        templateIn = connection.getInputStream( );
+        long contentLength = connection.getContentLengthLong( );
+        if ( contentLength > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+        }
+        return copyStreamToString( new BoundedInputStream( templateIn, Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1 ) );
+      } catch ( UnknownHostException ex ) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
-      } catch (javax.net.ssl.SSLHandshakeException ex) {
-        throw new ValidationErrorException(ex.getMessage());
+      } catch ( SSLHandshakeException ex ) {
+        throw new ValidationErrorException("HTTPS connection error for " + templateUrl );
       } catch (IOException ex) {
+        if ( Strings.nullToEmpty( ex.getMessage( ) ).startsWith( "HTTPS hostname wrong" ) ) {
+          throw new ValidationErrorException( "HTTPS connection failed hostname verification for " + templateUrl );
+        }
         LOG.info("Unable to connect to whitelisted URL, trying S3 instead");
         LOG.debug(ex, ex);
+      } finally {
+        IO.close( templateIn );
       }
     }
-
 
     // Otherwise, assume the URL is a eucalyptus S3 url...
     String[] validHostBucketSuffixes = new String[]{"walrus", "objectstorage"};
@@ -439,7 +452,6 @@ public class CloudFormationService {
         }
       }
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -464,7 +476,6 @@ public class CloudFormationService {
       describeStackEventsResult.setStackEvents(stackEvents);
       reply.setDescribeStackEventsResult(describeStackEventsResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -500,7 +511,6 @@ public class CloudFormationService {
       describeStackResourceResult.setStackResourceDetail(stackResourceDetail);
       reply.setDescribeStackResourceResult(describeStackResourceResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -548,7 +558,6 @@ public class CloudFormationService {
       describeStackResourcesResult.setStackResources(stackResources);
       reply.setDescribeStackResourcesResult(describeStackResourcesResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -646,7 +655,6 @@ public class CloudFormationService {
       describeStacksResult.setStacks(stacks );
       reply.setDescribeStacksResult(describeStacksResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -660,7 +668,6 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -688,7 +695,6 @@ public class CloudFormationService {
       getStackPolicyResult.setStackPolicyBody(stackEntity.getStackPolicy());
       reply.setGetStackPolicyResult(getStackPolicyResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -716,7 +722,6 @@ public class CloudFormationService {
       getTemplateResult.setTemplateBody(stackEntity.getTemplateBody());
       reply.setGetTemplateResult(getTemplateResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -756,7 +761,6 @@ public class CloudFormationService {
       listStackResourcesResult.setStackResourceSummaries(stackResourceSummaries);
       reply.setListStackResourcesResult(listStackResourcesResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -804,7 +808,6 @@ public class CloudFormationService {
       listStacksResult.setStackSummaries(stackSummaries);
       reply.setListStacksResult(listStacksResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -835,7 +838,6 @@ public class CloudFormationService {
       stackEntity.setStackPolicy(stackPolicyBody);
       StackEntityManager.updateStack(stackEntity);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -849,7 +851,6 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -895,7 +896,6 @@ public class CloudFormationService {
       final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues);
       reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -908,6 +908,8 @@ public class CloudFormationService {
     if (cause != null) {
       throw cause;
     }
+
+    LOG.error( e, e );
 
     final InternalFailureException exception = new InternalFailureException(
       String.valueOf(e.getMessage()));
