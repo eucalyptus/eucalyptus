@@ -509,7 +509,7 @@ int do_midonet_populate(mido_config * mido)
                         vpcsubnet->max_instances++;
                         snprintf(vpcinstance->name, 16, "%s", instanceId);
 
-                        rc = populate_mido_vpc_instance(mido, mido->midocore, vpcsubnet, vpcinstance);
+                        rc = populate_mido_vpc_instance(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
                         if (rc) {
                             LOGERROR("could not populate instance: check mido health\n");
                             ret = 1;
@@ -734,9 +734,15 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             strptra = hex2dot(gniinstance->publicIp);
                             LOGINFO("setting up floating IP '%s' for instance '%s'\n", strptra, vpcinstance->name);
                             EUCA_FREE(strptra);
+
+			    rc = disconnect_mido_vpc_instance_elip(vpcinstance);
+			    if (rc) {
+			      LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
+			    }
+			    
                             rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
                             if (rc) {
-                                LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
+			      LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
                             }
                         }
                     } else {
@@ -822,10 +828,8 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
                             if (vpcsecgroup) {
                                 // found one
-                                LOGTRACE("MEH: found secgroup %s\n", vpcsecgroup->name);
                                 vpcsecgroup->gniSecgroup = gnisecgroup;
                             } else {
-                                LOGTRACE("MEH: did not find secgroup %s, creating it\n", gnisecgroup->name);
                                 mido->vpcsecgroups = realloc(mido->vpcsecgroups, sizeof(mido_vpc_secgroup) * (mido->max_vpcsecgroups + 1));
                                 vpcsecgroup = &(mido->vpcsecgroups[mido->max_vpcsecgroups]);
                                 bzero(vpcsecgroup, sizeof(mido_vpc_secgroup));
@@ -846,8 +850,10 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             EUCA_FREE(tmpstr);
 
                             tmpstr = hex2dot(gniinstance->publicIp);
-                            rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpstr, NULL);
-                            rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
+			    if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
+			      rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpstr, NULL);
+			      rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
+			    }
                             EUCA_FREE(tmpstr);
 
                             vpcsecgroup->gnipresent = 1;
@@ -1310,15 +1316,12 @@ int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secg
 {
     int i = 0;
 
-    LOGTRACE("MEH: %s\n", SP(secgroupname));
-
     if (!mido || !secgroupname || !outvpcsecgroup) {
         return (1);
     }
 
     *outvpcsecgroup = NULL;
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
-        LOGTRACE("MEH: %s - %s\n", SP(mido->vpcsecgroups[i].name), SP(secgroupname));
         if (mido->vpcsecgroups[i].name && !strcmp(mido->vpcsecgroups[i].name, secgroupname)) {
             *outvpcsecgroup = &(mido->vpcsecgroups[i]);
             return (0);
@@ -1341,10 +1344,14 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
     return (ret);
 }
 
-int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
+int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc *vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
 {
     int ret = 0, rc = 0, found = 0, i = 0, founda = 0, j = 0;
     char *tmpstr = NULL, fstr[64], tmp_name[32];
+    midoname *ips = NULL, *rules = NULL, *routes = NULL;
+    int max_ips = 0, max_rules = 0, max_routes = 0;
+    char *ip = NULL, *targetIP = NULL, *rdst = NULL;
+
 
     if (vpcsubnet->midos[VPCBR].init) {
         for (i = 0; i < vpcsubnet->max_brports && !found; i++) {
@@ -1388,7 +1395,6 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
             tmpstr = NULL;
             rc = mido_getel_midoname(&(vpcsubnet->dhcphosts[i]), "name", &tmpstr);
             if (!rc && tmpstr && strlen(tmpstr) && !strcmp(tmpstr, vpcinstance->name)) {
-                LOGTRACE("HELLOFOO: %d/%s\n", vpcinstance->midos[VPCBR_DHCPHOST].init, tmpstr);
                 mido_copy_midoname(&(vpcinstance->midos[VPCBR_DHCPHOST]), &(vpcsubnet->dhcphosts[i]));
                 found = 1;
             }
@@ -1412,11 +1418,68 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
         }
     }
 
-    if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init && midocore->midos[EUCART].init) {
-        midoname *routes = NULL, *ips = NULL;
-        int max_routes = 0, max_ips = 0;
-        char *ip = NULL, *rdst = NULL;
+    // this is the public IP
+    if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init) {
 
+        found = 0;
+
+        rc = mido_get_ipaddrgroup_ips(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &ips, &max_ips);
+        for (i = 0; i < max_ips && !found; i++) {
+	  rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
+	  if (ip) {
+	    // found it
+	    mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]), &(ips[i]));
+	    found = 1;
+
+	    // now find the associated chain rule
+	    rc = mido_get_rules(&(vpc->midos[VPCRT_POSTCHAIN]), &rules, &max_rules);
+	    for (j=0; j<max_rules; j++) {
+	      rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
+	      if (targetIP && ip && !strstr(ip, targetIP)) {
+		mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE]), &(rules[j]));
+		EUCA_FREE(targetIP);
+	      }
+	    }
+	    mido_free_midoname_list(rules, max_rules);
+	    EUCA_FREE(rules);
+	    EUCA_FREE(ip);
+	  }
+	}
+        mido_free_midoname_list(ips, max_ips);
+        EUCA_FREE(ips);
+    }
+
+    // this is the private IP
+    if (vpcinstance->midos[ELIP_POST_IPADDRGROUP].init) {
+        found = 0;
+
+        rc = mido_get_ipaddrgroup_ips(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &ips, &max_ips);
+        for (i = 0; i < max_ips && !found; i++) {
+	  rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
+	  if (ip) {
+	    // found it
+	    mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]), &(ips[i]));
+	    found = 1;
+
+	    // now find the associated chain rule
+	    rc = mido_get_rules(&(vpc->midos[VPCRT_PREELIPCHAIN]), &rules, &max_rules);
+	    for (j=0; j<max_rules; j++) {
+	      rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
+	      if (targetIP && ip && !strstr(ip, targetIP)) {
+		mido_copy_midoname(&(vpcinstance->midos[ELIP_POST]), &(rules[j]));
+		EUCA_FREE(targetIP);
+	      }
+	    }
+	    mido_free_midoname_list(rules, max_rules);
+	    EUCA_FREE(rules);
+	    EUCA_FREE(ip);
+	  }
+	}
+        mido_free_midoname_list(ips, max_ips);
+        EUCA_FREE(ips);
+    }
+
+    if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init && midocore->midos[EUCART].init) {
         found = 0;
 
         rc = mido_get_ipaddrgroup_ips(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &ips, &max_ips);
@@ -1453,8 +1516,9 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
         }
     }
 
-    {
-        LOGDEBUG("AFTER POPULATE: VPCBR_VMPORT: %d VPCBR_DHCPHOST: %d\n", vpcinstance->midos[VPCBR_VMPORT].init, vpcinstance->midos[VPCBR_DHCPHOST].init);
+    LOGTRACE("vpc instance: AFTER POPULATE\n");
+    for (i=0; i<VPCINSTANCEEND; i++) {
+      LOGTRACE("\tmidos[%d]: |%d|\n", i, vpcinstance->midos[i].init);
     }
     return (ret);
 }
@@ -1755,7 +1819,6 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
                 EUCA_FREE(tmpstr);
             }
 
-            //MEHE
             rc = mido_getel_midoname(&(vpcsubnet->brports[i]), "interfaceName", &tmpstr);
             LOGDEBUG("RERRO: %s\n", SP(tmpstr));
             if (!rc && tmpstr && strlen(tmpstr) && strstr(tmpstr, "vn0_")) {
@@ -1929,18 +1992,36 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
 {
     int ret = 0, rc = 0;
 
+    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
+    rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
+    if (rc) {
+      LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+      ret = 1;
+    }
+    
+    mido_print_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
+    rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
+    if (rc) {
+      LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+      ret = 1;
+    }
+
+    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE]));
     rc = mido_delete_rule(&(vpcinstance->midos[ELIP_PRE]));
     if (rc) {
         //TODO
         ret = 1;
     }
 
+    mido_print_midoname(&(vpcinstance->midos[ELIP_POST]));
     rc = mido_delete_rule(&(vpcinstance->midos[ELIP_POST]));
     if (rc) {
         //TODO
         ret = 1;
     }
 
+    LOGDEBUG("FIVE:\n");
+    mido_print_midoname(&(vpcinstance->midos[ELIP_ROUTE]));
     rc = mido_delete_route(&(vpcinstance->midos[ELIP_ROUTE]));
     if (rc) {
         ret = 1;
@@ -1959,6 +2040,7 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         LOGERROR("input ip is 0.0.0.0\n");
         return (1);
     }
+
     // TODO - check for a change, and do a DC if the pub/priv mapping has changed
     /*
        rc = disconnect_mido_vpc_instance_elip(vpcinstance);
@@ -1975,11 +2057,11 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     ipAddr_pub = hex2dot(vpcinstance->gniInst->publicIp);
     ipAddr_priv = hex2dot(vpcinstance->gniInst->privateIp);
 
-    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), ipAddr_pub, NULL);
+    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), ipAddr_pub, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
     if (rc) {
     }
 
-    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, NULL);
+    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
     }
 

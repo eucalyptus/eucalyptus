@@ -1396,6 +1396,10 @@ int mido_delete_resource(midoname * parentname, midoname * name)
     if (rc) {
         ret = 1;
     }
+
+    if (!ret) {
+        mido_free_midoname(name);
+    }
     return (ret);
 }
 
@@ -1675,6 +1679,11 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
     }
     // route doesn't already exist, create it
     if (!found) {
+        // delete old resource, if present
+        if (outname && outname->init) {
+            mido_delete_route(outname);
+        }
+        
         if (strcmp(next_hop_ip, "UNSET")) {
             rc = mido_create_resource(router, 1, &myname, outname, "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
                                       "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);

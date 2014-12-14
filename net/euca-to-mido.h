@@ -12,7 +12,7 @@ typedef struct mido_vpc_secgroup_t {
 
 } mido_vpc_secgroup;
 
-enum { VPCBR_VMPORT, VPCBR_DHCPHOST, VMHOST, ELIP_PRE, ELIP_POST, ELIP_PRE_IPADDRGROUP, ELIP_POST_IPADDRGROUP, ELIP_ROUTE, INST_PRECHAIN, INST_POSTCHAIN, VPCINSTANCEEND };
+enum { VPCBR_VMPORT, VPCBR_DHCPHOST, VMHOST, ELIP_PRE, ELIP_POST, ELIP_PRE_IPADDRGROUP, ELIP_POST_IPADDRGROUP, ELIP_PRE_IPADDRGROUP_IP, ELIP_POST_IPADDRGROUP_IP, ELIP_ROUTE, INST_PRECHAIN, INST_POSTCHAIN, VPCINSTANCEEND };
 typedef struct mido_vpc_instance_t {
     gni_instance *gniInst;
     char name[16];
@@ -87,7 +87,7 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
 int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * subnet);
 int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
 
-int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance);
+int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc *vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance);
 int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname);
 int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance);
 int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido_vpc_instance ** outvpcinstance);
