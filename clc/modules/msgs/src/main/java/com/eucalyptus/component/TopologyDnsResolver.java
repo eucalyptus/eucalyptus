@@ -131,7 +131,7 @@ public class TopologyDnsResolver implements DnsResolver {
   public static Boolean enabled = Boolean.TRUE;
 
   @ConfigurableField(
-      description = "",
+      description = "Comma separated list of listener address CIDRs to desired host address CIDRS for services",
       initial = "",
       changeListener = HostMappingPropertyChangeListener.class
   )
