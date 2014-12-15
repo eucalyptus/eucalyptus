@@ -27,11 +27,14 @@ import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.component.annotation.ComponentPart
+import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
+
+import java.util.concurrent.TimeUnit
 
 @ComponentPart(CloudFormation)
 @CompileStatic(TypeCheckingMode.SKIP)
@@ -39,18 +42,23 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
   private static final Logger LOG = Logger.getLogger(MonitorCreateStackWorkflowImpl.class);
 
   @Delegate
-  WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity);
+  WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity)
+  WorkflowUtils workflowUtils = new WorkflowUtils( workflowOperations )
 
   @Override
-  public void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+  void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
     try {
-      ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(30L).withMaximumRetryIntervalSeconds(30L).withExceptionsToRetry([ValidationFailedException.class])
-      Promise<String> createWorkflowClosedPromise = retry(retryPolicy) {
-        promiseFor(activities.checkCreateStackWorkflowClosed(stackId))
-      };
-      waitFor(createWorkflowClosedPromise) { String closedStatus ->
-        waitFor(promiseFor(activities.getStackStatus(stackId, accountId))) { String stackStatus ->
-          determineRollbackAction(closedStatus, stackStatus, stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
+      Promise<String> closeStatusPromise = workflowUtils.exponentialPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ) ) {
+        retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
+          promiseFor( activities.getWorkflowExecutionStatus( stackId ) )
+        }
+      }
+      waitFor( closeStatusPromise ) { String closedStatus ->
+        if ( !closedStatus ) {
+          throw new InternalFailureException( "Stack create timeout stack id ${stackId}" );
+        }
+        waitFor( promiseFor( activities.getStackStatus( stackId, accountId ) ) ) { String stackStatus ->
+          determineRollbackAction( closedStatus, stackStatus, stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure );
         }
       }
     } catch (Exception ex) {
@@ -59,7 +67,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
     }
   }
 
-  Promise<String> determineRollbackAction(String closedStatus, String stackStatus, String stackId, String accountId,
+  private Promise<String> determineRollbackAction(String closedStatus, String stackStatus, String stackId, String accountId,
    String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
   if ("CREATE_COMPLETE".equals(stackStatus)) {
       return promiseFor(""); // just done...
@@ -97,7 +105,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
     }
   }
 
-  Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+  private Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
     if ("DO_NOTHING".equals(onFailure)) {
       return promiseFor("");
     } else if ("DELETE".equals(onFailure)) {

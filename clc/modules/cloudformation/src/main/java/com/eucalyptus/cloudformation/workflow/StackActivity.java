@@ -44,7 +44,7 @@ public interface StackActivity {
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
-  public String checkCreateStackWorkflowClosed(String stackId);
+  public String getWorkflowExecutionStatus( String stackId );
   public String getStackStatus(String stackId, String accountId);
   public String setStackStatus(String stackId, String accountId, String status, String statusReason);
   public String cancelCreateAndMonitorWorkflows(String stackId);

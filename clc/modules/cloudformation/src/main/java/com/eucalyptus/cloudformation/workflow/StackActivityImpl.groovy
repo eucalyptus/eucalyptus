@@ -60,6 +60,8 @@ import com.netflix.glisten.impl.swf.SwfActivityOperations
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
+import static com.eucalyptus.cloudformation.entity.StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW
+
 @ComponentPart(CloudFormation)
 @CompileStatic
 public class StackActivityImpl implements StackActivity {
@@ -526,28 +528,29 @@ public class StackActivityImpl implements StackActivity {
     return ""; // promiseFor() doesn't work on void return types
   }
 
-  public String checkCreateStackWorkflowClosed(String stackId) {
-    AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
-    List<StackWorkflowEntity> createStackWorkflowEntities = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW);
+  public String getWorkflowExecutionStatus( final String stackId ) {
+    final AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.simpleWorkflowClient
+    final List<StackWorkflowEntity> createStackWorkflowEntities =
+        StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
     // TODO: is it really appropriate to fail if no workflows exist
-    if (createStackWorkflowEntities == null || createStackWorkflowEntities.isEmpty()) {
-      throw new InternalFailureException("There is no create stack workflow for stack id " + stackId);
+    if ( createStackWorkflowEntities == null || createStackWorkflowEntities.empty ) {
+      throw new InternalFailureException( "There is no create stack workflow for stack id ${stackId}" );
     }
-    if (createStackWorkflowEntities.size() > 1) {
-      throw new InternalFailureException("More than one create stack workflow was found for stack id " + stackId);
+    if ( createStackWorkflowEntities.size( ) > 1 ) {
+      throw new InternalFailureException( "More than one create stack workflow was found for stack id ${stackId}" );
     }
-    StackWorkflowEntity createStackWorkflowEntity = createStackWorkflowEntities.get(0);
-    DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
-    describeWorkflowExecutionRequest.setDomain(createStackWorkflowEntity.getDomain());
-    WorkflowExecution execution = new WorkflowExecution();
-    execution.setRunId(createStackWorkflowEntity.getRunId());
-    execution.setWorkflowId(createStackWorkflowEntity.getWorkflowId());
-    describeWorkflowExecutionRequest.setExecution(execution);
-    WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
-    if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
-      throw new ValidationFailedException("Create workflow is not yet closed");
-    } else {
-      return workflowExecutionDetail.getExecutionInfo().getCloseStatus();
+    createStackWorkflowEntities.get( 0 ).with{
+      simpleWorkflowClient.describeWorkflowExecution(
+          new DescribeWorkflowExecutionRequest(
+              domain: domain,
+              execution: new WorkflowExecution(
+                  runId: runId,
+                  workflowId: workflowId
+              )
+          )
+      ).with{
+        executionInfo.closeStatus
+      }
     }
   }
 
@@ -575,7 +578,7 @@ public class StackActivityImpl implements StackActivity {
   public String cancelCreateAndMonitorWorkflows(String stackId) {
     AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
     cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW));
-    cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW));
+    cancelOpenWorkflows(simpleWorkflowClient, StackWorkflowEntityManager.getStackWorkflowEntities(stackId, CREATE_STACK_WORKFLOW));
     return "";
   }
 
@@ -622,7 +625,7 @@ public class StackActivityImpl implements StackActivity {
         }
       }
     }
-    List<StackWorkflowEntity> createWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW);
+    List<StackWorkflowEntity> createWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackId, CREATE_STACK_WORKFLOW);
     if (createWorkflows != null) {
       for (StackWorkflowEntity workflow : createWorkflows) {
         if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
