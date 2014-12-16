@@ -111,7 +111,7 @@ public class Logs {
 	  // Logger.getLogger() is called will initialize everything with default values, with no
 	  // easy way to change references to things already created.
 	  // Hence, we force the simplest initialization of the normal log4j. (creating only the root logger)
-	  BasicConfigurator.configure();
+	  BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d{yyyy-MM-dd HH:mm:ss} %p %m%n")));
 	  
 	  // Hack: If we pass "EXTREME" or "EXHAUST" to the dom configurator,
 	  // by default it will use the DEBUG level when we want it to use the trace level
