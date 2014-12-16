@@ -90,9 +90,13 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.dns.InstanceDomainNames;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.net.InetAddresses;
 
 /**
  * Implementation of a recursive resolver. The resolver works by taking whatever the QNAME and QTYPE
@@ -160,6 +164,23 @@ public class RecursiveDnsResolver implements DnsResolver {
     final Set<Record> answer = Sets.newLinkedHashSet( );
     final Set<Record> authority = Sets.newLinkedHashSet( );
     final Set<Record> additional = Sets.newLinkedHashSet( );
+    
+    boolean iamAuthority = false;
+    for ( Record aRec : queriedrrs ) {
+      List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
+      for ( Record nsRec : nsRecs ) {
+        if(nsRec.getName().equals(DomainNames.externalSubdomain()))
+          iamAuthority = true;
+        authority.add( nsRec );        
+        Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), type );
+        nsLookup.setCache( cache );
+        Record[] nsAnswers = nsLookup.run( );
+        if ( nsAnswers != null ) {
+          additional.addAll( Arrays.asList( nsAnswers ) );
+        }
+      }
+    }
+     
     for ( Name cnameRec : cnames ) {
       SetResponse sr = cache.lookupRecords( cnameRec, Type.CNAME, Credibility.ANY );
       if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
@@ -173,6 +194,7 @@ public class RecursiveDnsResolver implements DnsResolver {
         }
       }
     }
+   
     for ( Record queriedRec : queriedrrs ) {
       SetResponse sr = cache.lookupRecords( queriedRec.getName( ),
         queriedRec.getType( ),
@@ -182,21 +204,24 @@ public class RecursiveDnsResolver implements DnsResolver {
           Iterator rrs = result.rrs( false );
           if ( rrs != null ) {
             for ( Object record : ImmutableSet.copyOf( rrs ) ) {
-              answer.add( ( Record ) record );
+              if(iamAuthority && DomainNames.isExternalSubdomain(((Record)record).getName())){
+                final Name resolvedName = ((Record)record).getName();
+                final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( resolvedName );
+                final InetAddress publicIp = InstanceDomainNames.toInetAddress( resolvedName.relativize( instanceDomain ) );
+                try{
+                  final VmInstance vm = VmInstances.lookupByPublicIp( publicIp.getHostAddress( ) );
+                  final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+                  final Record privateARecord = DomainNameRecords.addressRecord( resolvedName, instanceAddress );
+                  answer.add(privateARecord);
+                }catch(final Exception ex) {
+                  answer.add((Record) record);
+                  continue;
+                }
+              }else{
+                answer.add( ( Record ) record );
+              }
             }
           }
-        }
-      }
-    }
-    for ( Record aRec : queriedrrs ) {
-      List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
-      for ( Record nsRec : nsRecs ) {
-        authority.add( nsRec );
-        Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), type );
-        nsLookup.setCache( cache );
-        Record[] nsAnswers = nsLookup.run( );
-        if ( nsAnswers != null ) {
-          additional.addAll( Arrays.asList( nsAnswers ) );
         }
       }
     }

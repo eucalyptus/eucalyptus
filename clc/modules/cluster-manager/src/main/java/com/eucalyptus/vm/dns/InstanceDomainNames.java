@@ -180,7 +180,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
     return DomainNames.absolute( Name.fromConstantString( instancePart ), instanceDomain.get( ) );
   }
   
-  static InetAddress toInetAddress( Name name ) {
+  public static InetAddress toInetAddress( Name name ) {
     return InetAddresses.forString( PATTERN.matcher( name.toString( ) ).replaceAll( DNS_TO_IP_REGEX ) );
   }
   
