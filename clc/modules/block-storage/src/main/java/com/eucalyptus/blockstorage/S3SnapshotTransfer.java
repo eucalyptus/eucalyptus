@@ -676,13 +676,12 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 				role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
 			} catch (Exception e) {
 				LOG.error("Failed to initialize account for snapshot transfers due to " + e);
-				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfes", e);
+				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfers", e);
 			}
 		}
 
 		try {
-			SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
-			eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
+			eucaS3Client = EucaS3ClientFactory.getEucaS3ClientByRole(role, (int)TimeUnit.HOURS.toSeconds(1));
 		} catch (Exception e) {
 			LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
 			throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);

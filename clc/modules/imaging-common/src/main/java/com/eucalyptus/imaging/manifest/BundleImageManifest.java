@@ -24,6 +24,8 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.EucalyptusCloudException;
 
+import java.util.concurrent.TimeUnit;
+
 public enum BundleImageManifest implements ImageManifest {
   INSTANCE;
 
@@ -59,8 +61,8 @@ public enum BundleImageManifest implements ImageManifest {
     int index = cleanLocation.indexOf('/');
     String bucketName = cleanLocation.substring(0, index);
     String manifestKey = cleanLocation.substring(index + 1);
-    try (final EucaS3Client s3Client = EucaS3ClientFactory
-        .getEucaS3Client(Accounts.lookupSystemAdmin())) {
+    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 ))) {
       return s3Client.getObjectContent(bucketName, manifestKey, maximumSize);
     } catch (Exception e) {
       throw new EucalyptusCloudException("Failed to read manifest file: "

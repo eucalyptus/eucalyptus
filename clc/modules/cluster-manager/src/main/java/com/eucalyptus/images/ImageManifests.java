@@ -71,6 +71,7 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -127,7 +128,8 @@ public class ImageManifests {
   
   static String requestManifestData( String bucketName, String objectName ) throws EucalyptusCloudException {
     try {
-      try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client( Accounts.lookupAwsExecReadAdmin(true) ) ) {
+      try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+              Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
         return s3Client.getObjectContent(
             bucketName,
             objectName,

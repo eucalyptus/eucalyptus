@@ -28,6 +28,7 @@ import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
@@ -110,8 +111,8 @@ public class DownloadManifestFactory {
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
-    try (final EucaS3Client s3Client = EucaS3ClientFactory
-        .getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true))) {
+    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
       // prepare to do pre-signed urls
       if (!urlForNc)
         s3Client.refreshEndpoint(true);
@@ -281,8 +282,8 @@ public class DownloadManifestFactory {
 
   public static String generatePresignedUrl(final String manifestName)
       throws DownloadManifestException {
-    try (final EucaS3Client s3Client = EucaS3ClientFactory
-        .getEucaS3Client(Accounts.lookupAwsExecReadAdmin(true))) {
+    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
       final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
