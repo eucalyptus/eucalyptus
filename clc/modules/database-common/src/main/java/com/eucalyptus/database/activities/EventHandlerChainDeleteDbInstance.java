@@ -65,8 +65,8 @@ public class EventHandlerChainDeleteDbInstance extends EventHandlerChain<DeleteD
       createChain.append(new AuthorizeServerCertificate(createChain));
       createChain.append(new AuthorizeVolumeOperations(createChain));
       createChain.append(new UserDataSetup(createChain));
-      createChain.append(new CreateLaunchConfiguration(createChain, DatabaseServerProperties.DB_SERVER_EMI, DatabaseServerProperties.DB_SERVER_INSTANCE_TYPE, 
-            ( DatabaseServerProperties.DB_SERVER_KEYNAME != null && DatabaseServerProperties.DB_SERVER_KEYNAME.length()>0) ? DatabaseServerProperties.DB_SERVER_KEYNAME : null));
+      createChain.append(new CreateLaunchConfiguration(createChain, DatabaseServerProperties.IMAGE, DatabaseServerProperties.INSTANCE_TYPE, 
+            ( DatabaseServerProperties.KEYNAME != null && DatabaseServerProperties.KEYNAME.length()>0) ? DatabaseServerProperties.KEYNAME : null));
       createChain.append(new CreateAutoScalingGroup(createChain));
       createChain.append(new CreateTags(createChain));
       createChain.append(new ExceptionThrower(createChain));

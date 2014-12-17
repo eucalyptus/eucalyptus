@@ -85,21 +85,21 @@ import com.google.common.collect.Lists;
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
+@ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent> {
 	private static Logger LOG  = Logger.getLogger( EventHandlerChainNew.class );
-	@ConfigurableField( displayName = "loadbalancer_num_vm",
+	@ConfigurableField( displayName = "number_of_vm_per_zone",
 			description = "number of VMs per loadbalancer zone",
 			initial = "1",
 			readonly = false,
 			type = ConfigurableFieldType.KEYVALUE
 			)
-	public static String LOADBALANCER_NUM_VM = "1";
+	public static String VM_PER_ZONE = "1";
 
 	public static int getCapacityPerZone( ) {
 		int numVm = 1;
 		try{
-			numVm = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+			numVm = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 		}catch(NumberFormatException ex){
 			LOG.warn("unable to parse loadbalancer_num_vm");
 		}
@@ -127,7 +127,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
 			// is the loadbalancer_emi found?
-			final String emi = LoadBalancerASGroupCreator.LOADBALANCER_EMI;
+			final String emi = LoadBalancerASGroupCreator.IMAGE;
 			List<ImageDetails> images;
 			try{
 				images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
@@ -156,10 +156,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}
 			
 			// are there enough resources?
-			final String instanceType = LoadBalancerASGroupCreator.LOADBALANCER_INSTANCE_TYPE;
+			final String instanceType = LoadBalancerASGroupCreator.INSTANCE_TYPE;
 			int numVm = 1;
 		  	try{
-		  		numVm = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+		  		numVm = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 		  	}catch(final NumberFormatException ex){
 		  		LOG.warn("unable to parse loadbalancer_num_vm");
 		  	}
@@ -171,7 +171,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}
 			
 			// check if the keyname is configured and exists
-			final String keyName = LoadBalancerASGroupCreator.LOADBALANCER_VM_KEYNAME;
+			final String keyName = LoadBalancerASGroupCreator.KEYNAME;
 			if(keyName!=null && keyName.length()>0){
 				try{
 					final List<DescribeKeyPairsResponseItemType> keypairs = EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyName));

@@ -53,7 +53,7 @@ import com.eucalyptus.scripting.Groovyness;
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_database" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "cloud.db", description = "Parameters controlling database information.", singleton = true)
+@ConfigurableClass(root = "services.database", description = "Parameters controlling database information.", singleton = true)
 public class DatabaseInfo extends AbstractPersistent {
   private static final Logger  LOG   = Logger.getLogger( DatabaseInfo.class );
   

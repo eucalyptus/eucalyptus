@@ -52,7 +52,7 @@ import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -276,7 +276,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
       String conversionTaskId = ResourceIdentifiers.generateString("import-i");
       conversionTaskId = conversionTaskId.toLowerCase();
       ct.setConversionTaskId( conversionTaskId );
-      ct.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+      ct.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImportTaskProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
       ct.setState( ImportTaskState.NEW.getExternalTaskStateName() );
       ct.setStatusMessage( "" );
       

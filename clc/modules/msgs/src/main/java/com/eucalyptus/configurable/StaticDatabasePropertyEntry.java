@@ -64,6 +64,7 @@ package com.eucalyptus.configurable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -86,6 +87,7 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -369,6 +371,67 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       configureIdentifierCanonicalizer( );
       deleteRemovedProperties( Lists.newArrayList( "authentication.websession_life_in_minutes" ) );
       return true;
+    }
+  }
+
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_1_0, value = Empyrean.class )
+  public enum StaticPropertyEntryRenameServiceVMPropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameServiceVMPropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      ImmutableMap<String, String> changes = ImmutableMap.<String, String>builder()
+          .put("imaging.imaging_worker_availability_zones", "services.imaging.worker.availability_zones")
+          .put("imaging.imaging_worker_emi", "services.imaging.worker.image")
+          .put("imaging.imaging_worker_enabled", "services.imaging.worker.configured")
+          .put("imaging.imaging_worker_healthcheck", "services.imaging.worker.healthcheck")
+          .put("imaging.imaging_worker_instance_type", "services.imaging.worker.instance_type")
+          .put("imaging.imaging_worker_keyname", "services.imaging.worker.keyname")
+          .put("imaging.imaging_worker_log_server", "services.imaging.worker.log_server")
+          .put("imaging.imaging_worker_log_server_port", "services.imaging.worker.log_server_port")
+          .put("imaging.imaging_worker_ntp_server", "services.imaging.worker.ntp_server")
+          .put("imaging.import_task_expiration_hours", "services.imaging.import_task_expiration_hours")
+          .put("imaging.import_task_timeout_minutes", "services.imaging.import_task_timeout_minutes")
+          .put("loadbalancing.loadbalancer_app_cookie_duration", "services.loadbalancing.worker.app_cookie_duration")
+          .put("loadbalancing.loadbalancer_dns_subdomain", "services.loadbalancing.dns_subdomain")
+          .put("loadbalancing.loadbalancer_dns_ttl", "services.loadbalancing.dns_ttl")
+          .put("loadbalancing.loadbalancer_emi", "services.loadbalancing.worker.image")
+          .put("loadbalancing.loadbalancer_instance_type", "services.loadbalancing.worker.instance_type")
+          .put("loadbalancing.loadbalancer_num_vm", "services.loadbalancing.vm_per_zone")
+          .put("loadbalancing.loadbalancer_restricted_ports", "services.loadbalancing.restricted_ports")
+          .put("loadbalancing.loadbalancer_vm_keyname", "services.loadbalancing.worker.keyname")
+          .put("loadbalancing.loadbalancer_vm_ntp_server", "services.loadbalancing.worker.ntp_server")
+          .build();
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      LOG.info("Updating service VM properties");
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (entry.getPropName() != null && changes.containsKey(entry.getPropName())) {
+            String newPropertyName = changes.get(entry.getPropName());
+            LOG.debug( "Upgrading: Copying property value of'" + entry.getPropName() + "' to '" + newPropertyName + "'");
+            StaticDatabasePropertyEntry newEntry = findNewEntity(entities, newPropertyName);
+            if (newEntry != null) {
+              newEntry.setValue(entry.getValue());
+            }
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      } finally {
+        if (db.isActive())
+          db.rollback();
+      }
+    }
+
+    private StaticDatabasePropertyEntry findNewEntity(List<StaticDatabasePropertyEntry> entities, String name) {
+      for ( StaticDatabasePropertyEntry entry : entities ) {
+        if (name.equals( entry.getPropName() ))
+          return entry;
+      }
+      return null;
     }
   }
 }

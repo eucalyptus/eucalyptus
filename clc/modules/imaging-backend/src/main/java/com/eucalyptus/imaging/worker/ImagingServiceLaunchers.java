@@ -47,7 +47,7 @@ import com.google.common.collect.Maps;
  * In case we want to create multiple instances(ASG) of the imaging service,
  * we should implement the additional methods here.
  */
-@ConfigurableClass(root = "imaging",  description = "Parameters controlling image conversion service")
+@ConfigurableClass(root = "services.imaging.worker",  description = "Parameters controlling image conversion service")
 public class ImagingServiceLaunchers {
   private static Logger LOG = Logger.getLogger(ImagingServiceLaunchers.class);
 
@@ -57,13 +57,14 @@ public class ImagingServiceLaunchers {
   public static final String launcherId = "worker-01"; // version 4.0.0, but it can be any string
   public static final String SERVER_CERTIFICATE_NAME = "euca-internal-imaging-service";
   
-  @ConfigurableField( displayName="enabled",
-      description = "enabling imaging worker",
+  @ConfigurableField( displayName="configured",
+      description = "Configure imaging so a worker can be launched. If something goes south with the service there"
+          + "is a chance that setting it to false and back to true would solve issues",
       initial = "true",
       readonly = false,
       type = ConfigurableFieldType.BOOLEAN,
       changeListener = EnabledChangeListener.class)
-  public static Boolean IMAGING_WORKER_ENABLED = true;
+  public static Boolean CONFIGURED = true;
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
@@ -127,9 +128,9 @@ public class ImagingServiceLaunchers {
     
     this.lockLauncher(launcherId);
     try{
-      final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
-      final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
-      final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
+      final String emi = ImagingServiceProperties.IMAGE;
+      final String instanceType = ImagingServiceProperties.INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.KEYNAME;
 
       ImagingServiceLauncher launcher = null;
       try{
@@ -170,10 +171,10 @@ public class ImagingServiceLaunchers {
     this.lockLauncher(launcherId);
 
     try{
-      final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
-      final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
-      final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
-      final String ntpServers = ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER;
+      final String emi = ImagingServiceProperties.IMAGE;
+      final String instanceType = ImagingServiceProperties.INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.KEYNAME;
+      final String ntpServers = ImagingServiceProperties.NTP_SERVER;
 
       ImagingServiceLauncher launcher = null;
       try{

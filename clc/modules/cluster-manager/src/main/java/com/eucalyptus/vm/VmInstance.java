@@ -2044,7 +2044,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public byte[] getUserData( ) {
     return this.bootRecord.getUserData( );
   }
-  
+
+  public void setUserDataAsString( final String userData ){
+    if(userData == null || userData.length()<=0){
+      this.bootRecord.setUserData(new byte[0]);
+    } else {
+      this.bootRecord.setUserData(userData.getBytes());
+    }
+  }
+
   /**
    *
    */

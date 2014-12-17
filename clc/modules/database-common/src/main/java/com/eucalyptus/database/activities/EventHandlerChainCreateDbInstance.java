@@ -81,8 +81,8 @@ public class EventHandlerChainCreateDbInstance extends
     this.append(new AuthorizeServerCertificate(this));
     this.append(new AuthorizeVolumeOperations(this));
     this.append(new UserDataSetup(this));
-    this.append(new CreateLaunchConfiguration(this, DatabaseServerProperties.DB_SERVER_EMI, DatabaseServerProperties.DB_SERVER_INSTANCE_TYPE, 
-          ( DatabaseServerProperties.DB_SERVER_KEYNAME != null && DatabaseServerProperties.DB_SERVER_KEYNAME.length()>0) ? DatabaseServerProperties.DB_SERVER_KEYNAME : null));
+    this.append(new CreateLaunchConfiguration(this, DatabaseServerProperties.IMAGE, DatabaseServerProperties.INSTANCE_TYPE, 
+          ( DatabaseServerProperties.KEYNAME != null && DatabaseServerProperties.KEYNAME.length()>0) ? DatabaseServerProperties.KEYNAME : null));
     this.append(new CreateAutoScalingGroup(this));
     this.append(new CreateTags(this));
     return this;
@@ -136,7 +136,7 @@ public class EventHandlerChainCreateDbInstance extends
         throw new EventHandlerException("Existing autoscaling group ("+asgName+") found");
      
       // this will stop the whole instance launch chain
-      final String emi = DatabaseServerProperties.DB_SERVER_EMI;
+      final String emi = DatabaseServerProperties.IMAGE;
       List<ImageDetails> images = null;
       try{
         images = Ec2Client.getInstance().describeImages(systemUserId, Lists.newArrayList(emi));
@@ -148,7 +148,7 @@ public class EventHandlerChainCreateDbInstance extends
         throw new EventHandlerException("failed to validate the db server EMI", ex);
       }
       
-      final String volumeId = DatabaseServerProperties.DB_SERVER_VOLUME;
+      final String volumeId = DatabaseServerProperties.VOLUME;
       List<Volume> volumes = null;
       try{
         volumes = Ec2Client.getInstance().describeVolumes(systemUserId, Lists.newArrayList(volumeId));
@@ -171,7 +171,7 @@ public class EventHandlerChainCreateDbInstance extends
       }
     
       // are there enough resources?
-      final String instanceType = DatabaseServerProperties.DB_SERVER_INSTANCE_TYPE;
+      final String instanceType = DatabaseServerProperties.INSTANCE_TYPE;
       int numVm = 1;
       boolean resourceAvailable= false;
       for(final ClusterInfoType cluster : clusters){
@@ -186,7 +186,7 @@ public class EventHandlerChainCreateDbInstance extends
         throw new EventHandlerException("not enough resource in the cloud");
       
       // check if the keyname is configured and exists
-      final String keyName = DatabaseServerProperties.DB_SERVER_KEYNAME;
+      final String keyName = DatabaseServerProperties.KEYNAME;
       if(keyName!=null && keyName.length()>0){
         try{
           final List<DescribeKeyPairsResponseItemType> keypairs = 
@@ -195,7 +195,7 @@ public class EventHandlerChainCreateDbInstance extends
             throw new Exception();
         }catch(Exception ex){
           throw new EventHandlerException(String.format("The configured keyname %s is not found", 
-              DatabaseServerProperties.DB_SERVER_KEYNAME));
+              DatabaseServerProperties.KEYNAME));
         }
       }
     }
@@ -844,14 +844,15 @@ public class EventHandlerChainCreateDbInstance extends
 
     @Override
     public List<String> getResult() {
-      final String userData = B64.standard.encString(String.format("%s\n%s\n%s\n%s",
+      final String userData = B64.standard.encString(String.format("%s\n%s",
           DatabaseServerProperties.getCredentialsString(),
-          this.serverCertArn,
-          this.encryptedPassword,
-          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
-              DatabaseServerProperties.DB_SERVER_NTP_SERVER,
-              null,
-              null)));
+          DatabaseServerProperties.getServerUserData(DatabaseServerProperties.VOLUME, 
+              DatabaseServerProperties.NTP_SERVER,
+              DatabaseServerProperties.LOG_SERVER,
+              DatabaseServerProperties.LOG_SERVER_PORT,
+              DatabaseServerProperties.INIT_SCRIPT,
+              this.encryptedPassword,
+              this.serverCertArn)));
       return Lists.newArrayList(userData);
     }
   }

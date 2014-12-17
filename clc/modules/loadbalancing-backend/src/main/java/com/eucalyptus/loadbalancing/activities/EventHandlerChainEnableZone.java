@@ -188,7 +188,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 				final Set<String> newZones = Sets.newHashSet( Iterables.concat( availableZones, requestedZones ) );
 				if( Sets.difference( newZones, availableZones ).size( ) > 0 ){
 					try{
-						int capacityPerZone = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+						int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 						if(capacityPerZone <= 0)
 							capacityPerZone = 1;
 						final int newCapacity = capacityPerZone * newZones.size();
@@ -225,7 +225,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		public void rollback() throws EventHandlerException {
 			if(this.oldZones != null && this.groupName !=null){
 				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 					if(capacityPerZone <= 0)
 						capacityPerZone = 1;
 					final int oldCapacity = capacityPerZone * this.oldZones.size();

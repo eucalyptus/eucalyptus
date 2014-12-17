@@ -62,7 +62,7 @@ public class ImagingWorkers {
       if (!( Bootstrap.isFinished() &&
           Topology.isEnabledLocally( Imaging.class ) ) )
         return;
-      if(!ImagingServiceProperties.IMAGING_WORKER_HEALTHCHECK)
+      if(!ImagingServiceProperties.HEALTHCHECK)
         return;
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},
       /// reschedule the task assigned to the worker and terminate the instance

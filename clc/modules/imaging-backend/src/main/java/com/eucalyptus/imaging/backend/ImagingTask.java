@@ -46,7 +46,7 @@ import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.imaging.common.ImagingMetadata;
-import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -164,7 +164,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
     
     Calendar cal = Calendar.getInstance(); // creates calendar
     cal.setTime(new Date()); // sets calendar time/date
-    cal.add(Calendar.MINUTE, Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_TIMEOUT_MINUTES)); // adds one hour
+    cal.add(Calendar.MINUTE, Integer.parseInt(ImportTaskProperties.IMPORT_TASK_TIMEOUT_MINUTES)); // adds one hour
     this.workerTimeOut = cal.getTime(); //
   }
   

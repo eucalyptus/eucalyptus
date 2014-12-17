@@ -394,24 +394,6 @@ public class Allocations {
       return this.allocationTokens;
     }
 
-    public void setUserDataAsString( final String userData ){
-      if(userData == null || userData.length()<=0){
-        try {
-          this.userData = new byte[0];
-          this.request.setUserData(new String(Base64.encode(new byte[0])));
-        } catch (Exception ex) {
-          LOG.error(ex, ex);
-        }
-      }else{
-        try {
-          this.userData = userData.getBytes();
-          this.request.setUserData(new String(Base64.encode(this.userData)));
-        } catch (Exception ex) {
-          LOG.error(ex, ex);
-        }
-      }
-    }
-
     public void setUserData( final byte[] userData ) {
       this.userData = userData;
     }

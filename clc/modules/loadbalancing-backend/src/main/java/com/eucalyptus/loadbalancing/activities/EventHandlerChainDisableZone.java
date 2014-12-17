@@ -316,7 +316,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 				}
 				
 				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 					if(capacityPerZone <= 0)
 						capacityPerZone = 1;
 					final int newCapacity = capacityPerZone * updatedZones.size();
@@ -353,7 +353,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		public void rollback() throws EventHandlerException {
 			if(this.groupName!=null && this.beforeUpdate != null){
 				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.LOADBALANCER_NUM_VM);
+					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
 					if(capacityPerZone <= 0)
 						capacityPerZone = 1;
 					final int oldCapacity = capacityPerZone * this.beforeUpdate.size();

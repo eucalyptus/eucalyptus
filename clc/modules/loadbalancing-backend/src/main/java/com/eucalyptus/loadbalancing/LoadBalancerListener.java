@@ -72,7 +72,7 @@ import com.google.common.collect.Lists;
  *
  */
 @SuppressWarnings("deprecation")
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
+@ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
@@ -146,7 +146,7 @@ public class LoadBalancerListener extends AbstractPersistent
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ELBPortRestrictionChangeListener.class
 			)
-	public static String LOADBALANCER_RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
+	public static String RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
 	
 	public enum PROTOCOL{
 		HTTP, HTTPS, TCP, SSL, NONE
@@ -355,7 +355,7 @@ public class LoadBalancerListener extends AbstractPersistent
 			
 			int lbPort =listener.getLoadBalancerPort();
 			int instancePort = listener.getInstancePort();
-			return ! PortRangeMapper.apply(LOADBALANCER_RESTRICTED_PORTS).contains(lbPort);
+			return ! PortRangeMapper.apply(RESTRICTED_PORTS).contains(lbPort);
 		}catch(Exception e){
 			return false;
 		}

@@ -41,7 +41,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.ImportDiskImage;
 import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
-import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -133,7 +133,7 @@ public class DiskImagingTask extends ImagingTask {
       conversionTaskId = conversionTaskId.toLowerCase();
       ct.setConversionTaskId( conversionTaskId );
       ct.setExpirationTime( new Date( Dates.hoursFromNow( 
-          Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+          Integer.parseInt(ImportTaskProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
       ct.setState( ImportTaskState.NEW.getExternalTaskStateName() );
       ct.setStatusMessage( "" );
 

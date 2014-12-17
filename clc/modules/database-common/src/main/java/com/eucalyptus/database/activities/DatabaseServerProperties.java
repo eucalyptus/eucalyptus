@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.database.activities;
 
+import java.net.InetAddress;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -28,10 +30,14 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.crypto.Cipher;
+
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.springframework.util.StringUtils;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
@@ -50,6 +56,7 @@ import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -59,97 +66,119 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.UploadServerCertificate;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.resources.AbstractEventHandler;
+import com.eucalyptus.resources.EventHandlerChain;
+import com.eucalyptus.resources.EventHandlerException;
+import com.eucalyptus.resources.StoredResult;
 import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
+import com.eucalyptus.resources.client.EuareClient;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
-/**
- * @author Sang-Min Park
- *
- */
-
-  @ConfigurableClass(root = "cloud.db", description = "Parameters controlling database information.", singleton = true)
- public class DatabaseServerProperties {
+@ConfigurableClass(root = "services.database.worker", description = "Parameters controlling database information.", singleton = true)
+public class DatabaseServerProperties {
    private static Logger  LOG = Logger.getLogger( DatabaseServerProperties.class );
-   @ConfigurableField( displayName = "db_server_enabled",
-       description = "enable db server within a VM",
+   @ConfigurableField( displayName = "configured",
+       description = "Configure DB service so a VM can be launched. If something goes south with the service there"
+          + "is a chance that setting it to false and back to true would solve issues",
        initial = "false",
        readonly = false,
        type = ConfigurableFieldType.BOOLEAN,
        changeListener = EnabledChangeListener.class)
-   public static boolean DB_SERVER_ENABLED = false;
+   public static boolean CONFIGURED = false;
    
-   @ConfigurableField( displayName = "db_server_emi",
+   @ConfigurableField( displayName = "image",
        description = "EMI containing database server",
        initial = "NULL",
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = EmiChangeListener.class)
-   public static String DB_SERVER_EMI = "NULL";
+   public static String IMAGE = "NULL";
    
-   @ConfigurableField( displayName = "db_server_volume", 
+   @ConfigurableField( displayName = "volume", 
        description = "volume containing database files",
        initial = "NULL",
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = VolumeChangeListener.class)
-   public static String DB_SERVER_VOLUME = "NULL";
+   public static String VOLUME = "NULL";
 
-   @ConfigurableField( displayName = "db_server_instance_type", 
+   @ConfigurableField( displayName = "instance_type", 
        description = "instance type for database server",
        initial = "m1.small", 
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = InstanceTypeChangeListener.class)
-   public static String DB_SERVER_INSTANCE_TYPE = "m1.small";
+   public static String INSTANCE_TYPE = "m1.small";
    
-   @ConfigurableField( displayName = "db_server_availability_zones", 
+   @ConfigurableField( displayName = "availability_zones", 
        description = "availability zones for database server", 
        initial = "",
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = AvailabilityZonesChangeListener.class )
-   public static String DB_SERVER_AVAILABILITY_ZONES = "";
+   public static String AVAILABILITY_ZONES = "";
 
-   @ConfigurableField( displayName = "db_server_keyname",
+   @ConfigurableField( displayName = "keyname",
        description = "keyname to use when debugging database server",
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = KeyNameChangeListener.class)
-   public static String DB_SERVER_KEYNAME = null;
-   
+   public static String KEYNAME = null;
 
-   @ConfigurableField( displayName = "db_server_ntp_server", 
+   @ConfigurableField( displayName = "ntp_server", 
        description = "address of the NTP server used by database server", 
        readonly = false,
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = NTPServerChangeListener.class
        )
-   public static String DB_SERVER_NTP_SERVER = null;
+   public static String NTP_SERVER = null;
    
-   @ConfigurableField( displayName = "db_server_vm_expiration_days", 
+   @ConfigurableField( displayName = "expiration_days", 
        description = "days after which the VMs expire", 
        readonly = false,
        initial = "180",
        type = ConfigurableFieldType.KEYVALUE,
        changeListener = VMExpirationDaysChangeListener.class
        )
-   public static String DB_SERVER_VM_EXPIRATION_DAYS = "180";
+   public static String EXPIRATION_DAYS = "180";
    
+   @ConfigurableField(displayName = "init_script",
+       description = "bash script that will be executed before service configuration and start up",
+       readonly = false, 
+       type = ConfigurableFieldType.KEYVALUE, changeListener = InitScriptChangeListener.class)
+   public static String INIT_SCRIPT = null;
+
+   @ConfigurableField(displayName = "log_server",
+       description = "address/ip of the server that collects logs from database server",
+       readonly = false,
+       type = ConfigurableFieldType.KEYVALUE,
+       changeListener = LogServerAddressChangeListener.class)
+   public static String LOG_SERVER = null;
+
+   @ConfigurableField(displayName = "log_server_port",
+       description = "UDP port that log server is listerning to",
+       readonly = false, initial = "514",
+       type = ConfigurableFieldType.KEYVALUE,
+       changeListener = LogServerPortChangeListener.class)
+   public static String LOG_SERVER_PORT = "514";
+
    @Provides(Reporting.class)
    @RunDuring(Bootstrap.Stage.Final)
    @DependsLocal(Reporting.class)
@@ -215,8 +244,8 @@ import com.google.common.net.HostSpecifier;
    private static final int DB_PORT = 5432;
    
    public static String getCredentialsString() {
-     final String credStr = String.format("euca-%s:expiration_day=%s;",
-         B64.standard.encString("setup-credential"), DB_SERVER_VM_EXPIRATION_DAYS);
+     final String credStr = String.format("euca-%s:%s;",
+         B64.standard.encString("setup-credential"), EXPIRATION_DAYS);
      return credStr;
    }
    
@@ -243,6 +272,9 @@ import com.google.common.net.HostSpecifier;
           vmCreated = false;
         }
         
+        if (!vmCreated)
+          return false;
+
         try {
           final EnableDBInstanceEvent evt = new EnableDBInstanceEvent(Accounts.lookupSystemAdmin().getUserId());
           evt.setMasterUserName(masterUserName);
@@ -337,14 +369,47 @@ import com.google.common.net.HostSpecifier;
        }
      }
    }
-   
+
+  public static class LogServerAddressChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+      throws ConfigurablePropertyException {
+      try {
+       // check address
+        InetAddress.getByName(newValue);
+        if (t.getValue() != null && !t.getValue().equals(newValue) && newValue.length() > 0)
+          onPropertyChange(null, null, null, null, null, newValue, null, null);
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException(
+         "Could not change log server to " + newValue, e);
+      }
+    }
+  }
+
+  public static class LogServerPortChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+       throws ConfigurablePropertyException {
+      try {
+         Integer.parseInt(newValue);
+         if (t.getValue() != null && !t.getValue().equals(newValue) && newValue.length() > 0)
+           onPropertyChange(null, null, null, null, null, null, newValue, null);
+      } catch (final NumberFormatException ex) {
+         throw new ConfigurablePropertyException("Invalid number");
+      } catch (final Exception e) {
+         throw new ConfigurablePropertyException(
+             "Could not change log server port to " + newValue, e);
+      }
+    }
+  }
+
    public static class EmiChangeListener implements PropertyChangeListener {
      @Override
      public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
        try {
          if ( newValue instanceof String  ) {
            if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
-             onPropertyChange((String)newValue, null, null, null, null, null, null);
+             onPropertyChange((String)newValue, null, null, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change EMI ID", e);
@@ -359,7 +424,7 @@ import com.google.common.net.HostSpecifier;
       try {
         if ( newValue instanceof String  ) {
           if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
-            onPropertyChange(null, (String)newValue, null, null, null, null, null);
+            onPropertyChange(null, (String)newValue, null, null, null, null, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change VOLUME ID", e);
@@ -375,7 +440,7 @@ import com.google.common.net.HostSpecifier;
            if(newValue == null || ((String) newValue).equals(""))
              throw new EucalyptusCloudException("Instance type cannot be unset");
            if(t.getValue()!=null && ! t.getValue().equals(newValue))
-             onPropertyChange(null, null, (String)newValue, null, null, null, null);
+             onPropertyChange(null, null, (String)newValue, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change instance type", e);
@@ -389,7 +454,7 @@ import com.google.common.net.HostSpecifier;
        try {
          if ( newValue instanceof String ) {   
            if(t.getValue()!=null && ! t.getValue().equals(newValue))
-             onPropertyChange(null, null, null, (String)newValue, null, null, null);
+             onPropertyChange(null, null, null, (String)newValue, null, null, null, null);
          }
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change key name", e);
@@ -448,7 +513,7 @@ import com.google.common.net.HostSpecifier;
        try {
          if ( newValue instanceof String ) {
            if(((String) newValue).contains(",")){
-             final String[] addresses = ((String)newValue).split(",");
+             final String[] addresses = (newValue).split(",");
              if((addresses.length-1) != StringUtils.countOccurrencesOf((String) newValue, ","))
                throw new EucalyptusCloudException("Invalid address");
                  
@@ -457,7 +522,7 @@ import com.google.common.net.HostSpecifier;
                  throw new EucalyptusCloudException("Invalid address");
              }
            }else{
-             final String address = (String) newValue;
+             final String address = newValue;
              if(address != null && ! address.equals("")){
                if(!HostSpecifier.isValid(String.format("%s.com", address)))
                  throw new EucalyptusCloudException("Invalid address");
@@ -466,7 +531,7 @@ import com.google.common.net.HostSpecifier;
          }else
            throw new EucalyptusCloudException("Address is not string type");
          
-         onPropertyChange(null, null, null, null, (String) newValue, null, null);
+         onPropertyChange(null, null, null, null, newValue, null, null, null);
        } catch ( final Exception e ) {
          throw new ConfigurablePropertyException("Could not change ntp server address", e);
        }
@@ -487,8 +552,23 @@ import com.google.common.net.HostSpecifier;
     }
    }
 
+   public static class InitScriptChangeListener implements PropertyChangeListener<String> {
+     @Override
+     public void fireChange(ConfigurableProperty t, String newValue)
+         throws ConfigurablePropertyException {
+       try {
+         // init script can be set to empty
+         if (t.getValue() != null && !t.getValue().equals(newValue))
+           onPropertyChange(null, null, null, null, null, null, null, newValue);
+       } catch (final Exception e) {
+         throw new ConfigurablePropertyException("Could not change init script", e);
+       }
+     }
+   }
+
    private static void onPropertyChange(final String emi, final String volumeId, final String instanceType, 
-       final String keyname, final String ntpServers, String logServer, String logServerPort) throws EucalyptusCloudException{
+       final String keyname, final String ntpServers, String logServer, String logServerPort,
+       String initScript) throws EucalyptusCloudException{
      if (!( Bootstrap.isFinished() && Topology.isEnabled( Eucalyptus.class ) ) )
        return;
      
@@ -550,7 +630,8 @@ import com.google.common.net.HostSpecifier;
      // then create a new launch config and replace the old one
      if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) 
          || (keyname!=null && keyname.length()>0) || (ntpServers!=null && ntpServers.length()>0)
-         || (logServer!=null && logServer.length()>0) || (logServerPort!=null && logServerPort.length()>0) ){
+         || (logServer!=null && logServer.length()>0) || (logServerPort!=null && logServerPort.length()>0)
+         | initScript!=null ) {
        String asgName = null;
        LOG.warn("Changing launch configuration");//TODO: remove
        try{
@@ -598,48 +679,73 @@ import com.google.common.net.HostSpecifier;
            final String newType = instanceType != null? instanceType : lc.getInstanceType();
            String newKeyname = keyname != null ? keyname : lc.getKeyName();
            
-           // update only the last line of the user data
-           final String oldUserData = B64.standard.decString(lc.getUserData());
-           final List<String> lines = Lists.newArrayList(oldUserData.split("\n"));
-           String prefix = "";
-           if(lines != null && lines.size()>0){
-             lines.remove(lines.size()-1);
-             prefix = Joiner.on("\n").join(lines);
+           if (lc.getUserData() == null || lc.getUserData().length() < 0)
+             throw new EucalyptusCloudException("ASG group for internal-db has invalid user data");
+           String newUserdata = new String(Base64.decode(lc.getUserData().getBytes()));
+           String encryptedPasword = null;
+           String serverCertArn = null;
+           int start = newUserdata.indexOf(CONFIG_COMMMENT);
+           if (start < 0) {
+             throw new EucalyptusCloudException("ASG group for internal-db has invalid user data");
+           } else {
+             int i = newUserdata.indexOf(PASSWORD_PROPERTY, start);
+             int j = newUserdata.indexOf("\n", i);
+             encryptedPasword = newUserdata.substring(i + PASSWORD_PROPERTY.length() + 1, j);
+             i = newUserdata.indexOf(CERT_PROPERTY, start);
+             j = newUserdata.indexOf("\n", i);
+             serverCertArn = newUserdata.substring(i + CERT_PROPERTY.length() + 1, j);
            }
-           String newUserdata = lc.getUserData();
            
            if(volumeId != null) {
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                 prefix,
-                 getServerUserData(volumeId, DatabaseServerProperties.DB_SERVER_NTP_SERVER,
-                     null,
-                     null)));
+                 getCredentialsString(),
+                 getServerUserData(volumeId, DatabaseServerProperties.NTP_SERVER,
+                     DatabaseServerProperties.LOG_SERVER,
+                     DatabaseServerProperties.LOG_SERVER_PORT,
+                     DatabaseServerProperties.INIT_SCRIPT,
+                     encryptedPasword, serverCertArn)));
+           }
+
+           if(initScript != null) {
+             newUserdata = B64.standard.encString(String.format("%s\n%s",
+                 getCredentialsString(),
+                 getServerUserData(DatabaseServerProperties.VOLUME, NTP_SERVER,
+                     DatabaseServerProperties.LOG_SERVER,
+                     DatabaseServerProperties.LOG_SERVER_PORT,
+                     DatabaseServerProperties.INIT_SCRIPT,
+                     encryptedPasword, serverCertArn)));
            }
            
            if(ntpServers!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                     prefix,
-                     getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, ntpServers,
-                         null,
-                         null)));
+                 getCredentialsString(),
+                 getServerUserData(DatabaseServerProperties.VOLUME, ntpServers,
+                     DatabaseServerProperties.LOG_SERVER,
+                     DatabaseServerProperties.LOG_SERVER_PORT,
+                     DatabaseServerProperties.INIT_SCRIPT,
+                     encryptedPasword, serverCertArn)));
            }
            
            if(logServer!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                 prefix,
-                 getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
-                     DatabaseServerProperties.DB_SERVER_NTP_SERVER,
-                         logServer,
-                         null)));
+                 getCredentialsString(),
+                 getServerUserData(DatabaseServerProperties.VOLUME,
+                     DatabaseServerProperties.NTP_SERVER,
+                     logServer,
+                     DatabaseServerProperties.LOG_SERVER_PORT,
+                     DatabaseServerProperties.INIT_SCRIPT,
+                     encryptedPasword, serverCertArn)));
            }
            
            if(logServerPort!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
-                 prefix,
-                 getServerUserData(DatabaseServerProperties.DB_SERVER_VOLUME, 
-                     DatabaseServerProperties.DB_SERVER_NTP_SERVER,
-                         null,
-                         logServerPort)));
+                 getCredentialsString(),
+                 getServerUserData(DatabaseServerProperties.VOLUME, 
+                     DatabaseServerProperties.NTP_SERVER,
+                     DatabaseServerProperties.LOG_SERVER,
+                     logServerPort,
+                     DatabaseServerProperties.INIT_SCRIPT,
+                     encryptedPasword, serverCertArn)));
            }
            
            try{
@@ -681,7 +787,18 @@ import com.google.common.net.HostSpecifier;
              AutoScalingClient.getInstance().deleteLaunchConfiguration(null, tmpLaunchConfigName);
            }catch(final Exception ex){
              LOG.warn("unable to delete the temporary launch configuration", ex);
-           } 
+           }
+
+           // copy all tags from image to ASG
+           try {
+             final List<ImageDetails> images =
+                 Ec2Client.getInstance().describeImages(null, Lists.newArrayList(emi));
+             // image should exist at this point
+             for(ResourceTag tag:images.get(0).getTagSet())
+               AutoScalingClient.getInstance().createOrUpdateAutoscalingTags(null, tag.getKey(), tag.getValue(), asgName);
+           } catch (final Exception ex) {
+             LOG.warn("unable to propogate tags from image to ASG", ex);
+           }
            
            LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
          }
@@ -693,7 +810,12 @@ import com.google.common.net.HostSpecifier;
      }
    }
    
-   static String getServerUserData(final String volumeId, final String ntpServer, final String logServer, final String logServerPort) {
+   static final private String CONFIG_COMMMENT = "#System generated DB worker config";
+   static final private String PASSWORD_PROPERTY = "master_password_encrypted";
+   static final private String CERT_PROPERTY = "server_cert_arn";
+
+   static String getServerUserData(final String volumeId, final String ntpServer, final String logServer,
+       final String logServerPort, String initScript, String masterPasswordEnc, String serverCertArn) {
      Map<String,String> kvMap = new HashMap<String,String>();
      if(volumeId != null)
        kvMap.put("volume_id", volumeId);
@@ -703,15 +825,29 @@ import com.google.common.net.HostSpecifier;
        kvMap.put("log_server", logServer);
      if(logServerPort != null)
        kvMap.put("log_server_port", logServerPort);
-     
+
+     kvMap.put(PASSWORD_PROPERTY, masterPasswordEnc);
+     kvMap.put(CERT_PROPERTY, serverCertArn);
      kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
      kvMap.put("compute_service_url", String.format("compute.%s", DNSProperties.DOMAIN));
    
-     final StringBuilder sb = new StringBuilder();
-     for (String key : kvMap.keySet()){
+     final StringBuilder sb = new StringBuilder("#!/bin/bash").append("\n");
+     if (initScript != null && initScript.length()>0)
+       sb.append(initScript);
+     sb.append("\n");
+     sb.append(CONFIG_COMMMENT);
+     sb.append("\n");
+     sb.append("mkdir -p /etc/eucalyptus-database-server/\n");
+     sb.append("yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-database-server\n");
+     sb.append("echo \"");
+     for (String key : kvMap.keySet()) {
        String value = kvMap.get(key);
-       sb.append(String.format("%s=%s;", key, value));
+       sb.append(String.format("\n%s=%s", key, value));
      }
+     sb.append("\n\" > /etc/eucalyptus-database-server/database-server.conf");
+     sb.append("\ntouch /var/lib/eucalyptus-database-server/ntp.lock");
+     sb.append("\nchown -R eucalyptus:eucalyptus /etc/eucalyptus-database-server");
+     sb.append("\nservice eucalyptus-database-server start");
      return sb.toString();
    }
    
@@ -728,17 +864,17 @@ import com.google.common.net.HostSpecifier;
          throw new Exception("failed to lookup availability zones", ex);
        }
 
-       if(DB_SERVER_AVAILABILITY_ZONES!= null &&
-           DB_SERVER_AVAILABILITY_ZONES.length()>0){
-         if(DB_SERVER_AVAILABILITY_ZONES.contains(",")){
-           final String[] tokens = DB_SERVER_AVAILABILITY_ZONES.split(",");
+       if(AVAILABILITY_ZONES!= null &&
+           AVAILABILITY_ZONES.length()>0){
+         if(AVAILABILITY_ZONES.contains(",")){
+           final String[] tokens = AVAILABILITY_ZONES.split(",");
            for(final String zone : tokens){
              if(allZones.contains(zone))
                configuredZones.add(zone);
            } 
          }else{
-           if(allZones.contains(DB_SERVER_AVAILABILITY_ZONES))
-             configuredZones.add(DB_SERVER_AVAILABILITY_ZONES);
+           if(allZones.contains(AVAILABILITY_ZONES))
+             configuredZones.add(AVAILABILITY_ZONES);
          }
        }else{
          configuredZones.addAll(allZones);

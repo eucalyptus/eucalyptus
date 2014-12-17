@@ -50,6 +50,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -65,53 +66,46 @@ import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
 import com.google.common.collect.Sets;
 
-/**
- * @author Sang-Min Park
- * 
- */
-@ConfigurableClass(root = "imaging", description = "Parameters controlling image conversion service")
+@ConfigurableClass(root = "services.imaging.worker", description = "Parameters controlling image conversion service")
 public class ImagingServiceProperties {
   private static Logger LOG = Logger.getLogger(ImagingServiceProperties.class);
-  // IMAGING_WORKER_ENABLED in in the ImagingServiceLaunchers
-  @ConfigurableField(displayName = "imaging_worker_emi", description = "EMI containing imaging worker", initial = "NULL", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = EmiChangeListener.class)
-  public static String IMAGING_WORKER_EMI = "NULL";
+  // CONFIGURED is in the ImagingServiceLaunchers
+  @ConfigurableField(displayName = "image", description = "EMI containing imaging worker", initial = "NULL", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = EmiChangeListener.class)
+  public static String IMAGE = "NULL";
 
-  @ConfigurableField(displayName = "imaging_worker_instance_type", description = "instance type for imaging worker", initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = InstanceTypeChangeListener.class)
-  public static String IMAGING_WORKER_INSTANCE_TYPE = "m1.small";
+  @ConfigurableField(displayName = "instance_type", description = "instance type for imaging worker", initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = InstanceTypeChangeListener.class)
+  public static String INSTANCE_TYPE = "m1.small";
 
-  @ConfigurableField(displayName = "imaging_worker_availability_zones", description = "availability zones for imaging worker", initial = "", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = AvailabilityZonesChangeListener.class)
-  public static String IMAGING_WORKER_AVAILABILITY_ZONES = "";
+  @ConfigurableField(displayName = "availability_zones", description = "availability zones for imaging worker", initial = "", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = AvailabilityZonesChangeListener.class)
+  public static String AVAILABILITY_ZONES = "";
 
-  @ConfigurableField(displayName = "imaging_worker_keyname", description = "keyname to use when debugging imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = KeyNameChangeListener.class)
-  public static String IMAGING_WORKER_KEYNAME = null;
+  @ConfigurableField(displayName = "keyname", description = "keyname to use when debugging imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = KeyNameChangeListener.class)
+  public static String KEYNAME = null;
 
-  @ConfigurableField(displayName = "imaging_worker_ntp_server", description = "address of the NTP server used by imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = NTPServerChangeListener.class)
-  public static String IMAGING_WORKER_NTP_SERVER = null;
+  @ConfigurableField(displayName = "ntp_server", description = "address of the NTP server used by imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = NTPServerChangeListener.class)
+  public static String NTP_SERVER = null;
 
-  @ConfigurableField(displayName = "import_task_expiration_hours", description = "expiration hours of import volume/instance tasks", readonly = false, initial = "168", type = ConfigurableFieldType.KEYVALUE, changeListener = ImportTaskExpirationHoursListener.class)
-  public static String IMPORT_TASK_EXPIRATION_HOURS = "168";
+  @ConfigurableField(displayName = "log_server", description = "address/ip of the server that collects logs from imaging wokrers", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerAddressChangeListener.class)
+  public static String LOG_SERVER = null;
 
-  @ConfigurableField(displayName = "import_task_timeout_minutes", description = "expiration time in minutes of import tasks", readonly = false, initial = "180", type = ConfigurableFieldType.KEYVALUE, changeListener = ImportTaskTimeoutMinutesListener.class)
-  public static String IMPORT_TASK_TIMEOUT_MINUTES = "180";
-
-  @ConfigurableField(displayName = "imaging_worker_log_server", description = "address/ip of the server that collects logs from imaging wokrers", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerAddressChangeListener.class)
-  public static String IMAGING_WORKER_LOG_SERVER = null;
-
-  @ConfigurableField(displayName = "imaging_worker_log_server_port", description = "UDP port that log server is listerning to", readonly = false, initial = "514", type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerPortChangeListener.class)
-  public static String IMAGING_WORKER_LOG_SERVER_PORT = "514";
+  @ConfigurableField(displayName = "log_server_port", description = "UDP port that log server is listerning to", readonly = false, initial = "514", type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerPortChangeListener.class)
+  public static String LOG_SERVER_PORT = "514";
 
   @ConfigurableField(displayName = "enabled", description = "enabling imaging worker healthcheck", initial = "true", readonly = false, type = ConfigurableFieldType.BOOLEAN)
-  public static Boolean IMAGING_WORKER_HEALTHCHECK = true;
+  public static Boolean HEALTHCHECK = true;
 
-  @ConfigurableField(displayName = "imaging_worker_vm_expiration_days", description = "the days after which imaging work VMs expire", initial = "180", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = VmExpirationDaysChangeListener.class)
-  public static String IMAGING_WORKER_VM_EXPIRATION_DAYS = "180";
+  @ConfigurableField(displayName = "expiration_days", description = "the days after which imaging work VMs expire", initial = "180", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = VmExpirationDaysChangeListener.class)
+  public static String EXPIRATION_DAYS = "180";
+
+  @ConfigurableField(displayName = "init_script", description = "bash script that will be executed before service configuration and start up", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = InitScriptChangeListener.class)
+  public static String INIT_SCRIPT = null;
 
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
 
   public static String getCredentialsString() {
-    final String credStr = String.format("euca-%s:expiration_day=%s;",
+    final String credStr = String.format("euca-%s:%s",
         B64.standard.encString("setup-credential"),
-        IMAGING_WORKER_VM_EXPIRATION_DAYS);
+        EXPIRATION_DAYS);
     return credStr;
   }
 
@@ -142,13 +136,13 @@ public class ImagingServiceProperties {
 
     @Override
     public boolean check() throws Exception {
-      if (CloudMetadatas.isMachineImageIdentifier(IMAGING_WORKER_EMI)) {
+      if (CloudMetadatas.isMachineImageIdentifier(IMAGE)) {
         if (CheckCounter == 3) {
           try {
             final List<ImageDetails> emis = EucalyptusActivityTasks
                 .getInstance().describeImages(
-                    Lists.newArrayList(IMAGING_WORKER_EMI), false);
-            if (IMAGING_WORKER_EMI.equals(emis.get(0).getImageId()))
+                    Lists.newArrayList(IMAGE), false);
+            if (IMAGE.equals(emis.get(0).getImageId()))
               EmiCheckResult = true;
             else
               EmiCheckResult = false;
@@ -243,7 +237,7 @@ public class ImagingServiceProperties {
         InetAddress.getByName(newValue);
         if (t.getValue() != null && !t.getValue().equals(newValue)
             && newValue.length() > 0)
-          onPropertyChange(null, null, null, null, newValue, null);
+          onPropertyChange(null, null, null, null, newValue, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
             "Could not change log server to " + newValue, e);
@@ -260,7 +254,7 @@ public class ImagingServiceProperties {
         Integer.parseInt(newValue);
         if (t.getValue() != null && !t.getValue().equals(newValue)
             && newValue.length() > 0)
-          onPropertyChange(null, null, null, null, null, newValue);
+          onPropertyChange(null, null, null, null, null, newValue, null);
       } catch (final NumberFormatException ex) {
         throw new ConfigurablePropertyException("Invalid number");
       } catch (final Exception e) {
@@ -270,43 +264,28 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static class ImportTaskTimeoutMinutesListener implements
-      PropertyChangeListener<String> {
-
+  public static class InitScriptChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
       try {
-        Integer.parseInt(newValue);
-      } catch (final NumberFormatException ex) {
-        throw new ConfigurablePropertyException("Invalid number");
+        // init script can be empty
+        if (t.getValue() != null && !t.getValue().equals(newValue))
+          onPropertyChange(null, null, null, null, null, null, (String) newValue);
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException("Could not change init script", e);
       }
     }
   }
 
-  public static class ImportTaskExpirationHoursListener implements
-      PropertyChangeListener<String> {
+  public static class EmiChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
       try {
-        Integer.parseInt(newValue);
-      } catch (final NumberFormatException ex) {
-        throw new ConfigurablePropertyException("Invalid number");
-      }
-    }
-  }
-
-  public static class EmiChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
-        throws ConfigurablePropertyException {
-      try {
-        if (newValue instanceof String) {
-          if (t.getValue() != null && !t.getValue().equals(newValue)
-              && ((String) newValue).length() > 0)
-            onPropertyChange((String) newValue, null, null, null, null, null);
-        }
+        if (t.getValue() != null && !t.getValue().equals(newValue)
+            && ((String) newValue).length() > 0)
+          onPropertyChange((String) newValue, null, null, null, null, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException("Could not change EMI ID", e);
       }
@@ -323,7 +302,7 @@ public class ImagingServiceProperties {
           if (newValue == null || ((String) newValue).equals(""))
             throw new EucalyptusCloudException("Instance type cannot be unset");
           if (t.getValue() != null && !t.getValue().equals(newValue))
-            onPropertyChange(null, (String) newValue, null, null, null, null);
+            onPropertyChange(null, (String) newValue, null, null, null, null, null);
         }
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
@@ -339,7 +318,7 @@ public class ImagingServiceProperties {
       try {
         if (newValue instanceof String) {
           if (t.getValue() != null && !t.getValue().equals(newValue))
-            onPropertyChange(null, null, (String) newValue, null, null, null);
+            onPropertyChange(null, null, (String) newValue, null, null, null, null);
         }
       } catch (final Exception e) {
         throw new ConfigurablePropertyException("Could not change key name", e);
@@ -374,7 +353,7 @@ public class ImagingServiceProperties {
         } else
           throw new EucalyptusCloudException("Address is not string type");
 
-        onPropertyChange(null, null, null, (String) newValue, null, null);
+        onPropertyChange(null, null, null, (String) newValue, null, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
             "Could not change ntp server address", e);
@@ -399,7 +378,7 @@ public class ImagingServiceProperties {
   }
 
   public static String getWorkerUserData(String ntpServer, String logServer,
-      String logServerPort) {
+      String logServerPort, String initScript) {
     Map<String, String> kvMap = new HashMap<String, String>();
     if (ntpServer != null)
       kvMap.put("ntp_server", ntpServer);
@@ -415,17 +394,27 @@ public class ImagingServiceProperties {
     kvMap.put("compute_service_url",
         String.format("compute.%s", DNSProperties.DOMAIN));
 
-    final StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder("#!/bin/bash").append("\n");
+    if (initScript != null && initScript.length()>0)
+      sb.append(initScript);
+    sb.append("\n#System generated Imaging worker config\n");
+    sb.append("mkdir -p /etc/eucalyptus-imaging-worker/\n");
+    sb.append("yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-imaging-worker\n");
+    sb.append("echo \"");
     for (String key : kvMap.keySet()) {
       String value = kvMap.get(key);
-      sb.append(String.format("%s=%s;", key, value));
+      sb.append(String.format("\n%s=%s", key, value));
     }
+    sb.append("\" > /etc/eucalyptus-imaging-worker/imaging-worker.conf");
+    sb.append("\ntouch /var/lib/eucalyptus-imaging-worker/ntp.lock");
+    sb.append("\nchown -R imaging-worker:imaging-worker /etc/eucalyptus-imaging-worker");
+    sb.append("\nservice eucalyptus-imaging-worker start");
     return sb.toString();
   }
 
   private static void onPropertyChange(final String emi,
       final String instanceType, final String keyname, final String ntpServers,
-      String logServer, String logServerPort) throws EucalyptusCloudException {
+      String logServer, String logServerPort, String initScript) throws EucalyptusCloudException {
     if (!(Bootstrap.isFinished() &&
     // Topology.isEnabledLocally( Imaging.class ) &&
     Topology.isEnabled(Eucalyptus.class)))
@@ -483,7 +472,8 @@ public class ImagingServiceProperties {
         || (keyname != null && keyname.length() > 0)
         || (ntpServers != null && ntpServers.length() > 0)
         || (logServer != null && logServer.length() > 0)
-        || (logServerPort != null && logServerPort.length() > 0)) {
+        || (logServerPort != null && logServerPort.length() > 0)
+        || (initScript != null)) {
       String asgName = null;
       LOG.warn("Changing launch configuration");// TODO: remove
       try {
@@ -544,28 +534,40 @@ public class ImagingServiceProperties {
           if (ntpServers != null) {
             newUserdata = B64.standard.encString(String.format(
                 "%s\n%s",
-                ImagingServiceProperties.getCredentialsString(),
+                getCredentialsString(),
                 getWorkerUserData(ntpServers,
-                    ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
-                    ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
+                    ImagingServiceProperties.LOG_SERVER,
+                    ImagingServiceProperties.LOG_SERVER_PORT,
+                    ImagingServiceProperties.INIT_SCRIPT)));
           }
           if (logServer != null) {
             newUserdata = B64.standard.encString(String.format(
                 "%s\n%s",
-                ImagingServiceProperties.getCredentialsString(),
+                getCredentialsString(),
                 getWorkerUserData(
-                    ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+                    ImagingServiceProperties.NTP_SERVER,
                     logServer,
-                    ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
+                    ImagingServiceProperties.LOG_SERVER_PORT,
+                    ImagingServiceProperties.INIT_SCRIPT)));
           }
           if (logServerPort != null) {
             newUserdata = B64.standard.encString(String.format(
                 "%s\n%s",
-                ImagingServiceProperties.getCredentialsString(),
+                getCredentialsString(),
                 getWorkerUserData(
-                    ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
-                    ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
-                    logServerPort)));
+                    ImagingServiceProperties.NTP_SERVER,
+                    ImagingServiceProperties.LOG_SERVER,
+                    logServerPort, ImagingServiceProperties.INIT_SCRIPT)));
+          }
+          if (initScript != null) {
+            newUserdata = B64.standard.encString(String.format(
+                "%s\n%s",
+                getCredentialsString(),
+                getWorkerUserData(
+                    ImagingServiceProperties.NTP_SERVER,
+                    ImagingServiceProperties.LOG_SERVER,
+                    ImagingServiceProperties.LOG_SERVER_PORT,
+                    initScript)));
           }
           try {
             EucalyptusActivityTasks.getInstance().createLaunchConfiguration(
@@ -620,6 +622,16 @@ public class ImagingServiceProperties {
             LOG.warn("unable to delete the temporary launch configuration", ex);
           }
 
+          // copy all tags from image to ASG
+          try {
+            final List<ImageDetails> images = EucalyptusActivityTasks.getInstance().describeImages(
+                  Lists.newArrayList(emi), false);
+            // image should exist at this point
+            for(ResourceTag tag:images.get(0).getTagSet())
+              EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
+          } catch (final Exception ex) {
+            LOG.warn("unable to propogate tags from image to ASG", ex);
+          }
           LOG.debug(String
               .format("autoscaling group '%s' was updated", asgName));
         }
@@ -646,12 +658,12 @@ public class ImagingServiceProperties {
         throw new Exception("failed to lookup availability zones", ex);
       }
 
-      if (ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES != null
-          && ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES
+      if (ImagingServiceProperties.AVAILABILITY_ZONES != null
+          && ImagingServiceProperties.AVAILABILITY_ZONES
               .length() > 0) {
-        if (ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES
+        if (ImagingServiceProperties.AVAILABILITY_ZONES
             .contains(",")) {
-          final String[] tokens = ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES
+          final String[] tokens = ImagingServiceProperties.AVAILABILITY_ZONES
               .split(",");
           for (final String zone : tokens) {
             if (allZones.contains(zone))
@@ -659,9 +671,9 @@ public class ImagingServiceProperties {
           }
         } else {
           if (allZones
-              .contains(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES))
+              .contains(ImagingServiceProperties.AVAILABILITY_ZONES))
             configuredZones
-                .add(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES);
+                .add(ImagingServiceProperties.AVAILABILITY_ZONES);
         }
       } else {
         configuredZones.addAll(allZones);

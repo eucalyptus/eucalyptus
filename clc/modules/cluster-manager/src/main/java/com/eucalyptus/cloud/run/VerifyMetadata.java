@@ -277,8 +277,8 @@ public class VerifyMetadata {
     private static long MB = 1048576l;
     // check if image can be converted
     private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException{
-      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
-      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_EMI;
+      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.INSTANCE_TYPE;
+      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGE;
       if (workerType == null )
         return false;
       if (emiName == null || "NULL".equals(emiName))

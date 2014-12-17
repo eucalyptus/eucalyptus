@@ -137,6 +137,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
@@ -145,6 +146,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.tracking.MessageContexts;
+import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -325,7 +327,7 @@ public class ClusterAllocator implements Runnable {
       final VmInstances.VmSpecialUserData specialData = new VmInstances.VmSpecialUserData(userData);
       if(! VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.equals(specialData.getKey() ))
         return;
-      final String strExpDay = specialData.getArgValue("expiration_day");
+      final String strExpDay = specialData.getExpirationDays();
       if (strExpDay != null )
         expirationDays = Integer.parseInt(strExpDay);
       payload = specialData.getPayload();
@@ -333,8 +335,16 @@ public class ClusterAllocator implements Runnable {
       LOG.error("Failed to parse VM user data", ex);
       return;
     }
-   
-    this.allocInfo.setUserDataAsString( payload );
+    // update user data for instances in the reservation
+    for(String s : this.allocInfo.getInstanceIds()) {
+      try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+        final VmInstance instance = VmInstances.lookup( s );
+        instance.setUserDataAsString(payload);
+      } catch ( NoSuchElementException e ) {
+        LOG.error("Can't find instance " + s + " to change its user data");
+      }
+    }
+
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();

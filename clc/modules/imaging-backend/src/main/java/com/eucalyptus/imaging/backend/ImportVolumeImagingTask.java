@@ -44,7 +44,7 @@ import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
-import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -203,7 +203,7 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
       conversionTaskId = conversionTaskId.toLowerCase();
       ConversionTask conversionTask = new ConversionTask( );
       conversionTask.setConversionTaskId( conversionTaskId );
-      conversionTask.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+      conversionTask.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImportTaskProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
       conversionTask.setState( ImportTaskState.NEW.getExternalTaskStateName() );
       conversionTask.setStatusMessage( "" );
 //    conversionTask.setResourceTagSet( request.get );//GRZE:TODO: fill this in, where the hell does it come from?

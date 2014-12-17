@@ -57,7 +57,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
+@ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_dns" )
@@ -99,7 +99,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ELBDnsChangeListener.class
 			)
-	public static String LOADBALANCER_DNS_SUBDOMAIN = "lb";
+	public static String DNS_SUBDOMAIN = "lb";
 	
 	@ConfigurableField( displayName = "loadbalancer_dns_ttl",
 	    description = "loadbalancer dns ttl value",
@@ -108,9 +108,9 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	    type = ConfigurableFieldType.KEYVALUE,
 	    changeListener = ELBDnsTtlChangeListener.class
 	    )
-	public static String LOADBALANCER_DNS_TTL = "60";
+	public static String DNS_TTL = "60";
 	public static int getLoadbalancerTTL(){
-	  return Integer.parseInt(LOADBALANCER_DNS_TTL);
+	  return Integer.parseInt(DNS_TTL);
 	}
 	
 	@Transient
@@ -142,7 +142,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		dnsPrefix = dnsPrefix.replace(".", "_");
 		
 		final int maxPrefixLength = 253 - 
-				String.format(".%s.%s", LOADBALANCER_DNS_SUBDOMAIN, 
+				String.format(".%s.%s", DNS_SUBDOMAIN, 
 						SystemConfiguration.getSystemConfiguration().getDnsDomain()).length();
 		if(maxPrefixLength < 0 )
 			throw Exceptions.toUndeclared("invalid dns name length");
@@ -150,7 +150,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			dnsPrefix = dnsPrefix.substring(0, maxPrefixLength);
 				
 		instance.dnsName = dnsPrefix;
-		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
+		instance.dnsZone = DNS_SUBDOMAIN;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}

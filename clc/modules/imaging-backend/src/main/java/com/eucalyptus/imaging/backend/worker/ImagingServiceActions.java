@@ -91,7 +91,7 @@ public class ImagingServiceActions {
         if(asgFound)
           return false; // this will stop the whole instance launch chain
         
-        final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
+        final String emi = ImagingServiceProperties.IMAGE;
         List<ImageDetails> images = null;
         try{
           images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi), false);
@@ -111,7 +111,7 @@ public class ImagingServiceActions {
         }
       
         // are there enough resources?
-        final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
+        final String instanceType = ImagingServiceProperties.INSTANCE_TYPE;
         int numVm = 1;
         boolean resourceAvailable= false;
         for(final ClusterInfoType cluster : clusters){
@@ -126,7 +126,7 @@ public class ImagingServiceActions {
           throw new ImagingServiceActionException("not enough resource in the cloud");
         
         // check if the keyname is configured and exists
-        final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
+        final String keyName = ImagingServiceProperties.KEYNAME;
         if(keyName!=null && keyName.length()>0){
           try{
             final List<DescribeKeyPairsResponseItemType> keypairs =
@@ -135,7 +135,7 @@ public class ImagingServiceActions {
               throw new Exception();
           }catch(Exception ex){
             throw new ImagingServiceActionException(String.format("The configured keyname %s is not found", 
-                ImagingServiceProperties.IMAGING_WORKER_KEYNAME));
+                ImagingServiceProperties.KEYNAME));
           }
         }
         
@@ -513,9 +513,9 @@ public class ImagingServiceActions {
       public String getResult() {
         final String userData = B64.standard.encString(String.format("%s\n%s",
             ImagingServiceProperties.getCredentialsString(),
-            ImagingServiceProperties.getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
-                ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
-                ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
+            ImagingServiceProperties.getWorkerUserData(ImagingServiceProperties.NTP_SERVER,
+                ImagingServiceProperties.LOG_SERVER,
+                ImagingServiceProperties.LOG_SERVER_PORT, ImagingServiceProperties.INIT_SCRIPT)));
         return userData;
       }
     }

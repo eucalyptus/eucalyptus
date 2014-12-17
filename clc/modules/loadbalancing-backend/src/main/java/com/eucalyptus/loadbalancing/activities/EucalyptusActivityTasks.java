@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -63,6 +64,8 @@ import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
@@ -134,6 +137,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Optional;
@@ -144,8 +148,10 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
+
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
+
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
 import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
@@ -407,7 +413,18 @@ public class EucalyptusActivityTasks {
 				"failed to create autoscaling group"
 		);
 	}
-	
+
+  public void createOrUpdateAutoscalingTags(final String tagKey,
+      final String tagValue, final String asgName) {
+    final AutoscalingCreateOrUpdateTagsTask task = new AutoscalingCreateOrUpdateTagsTask(
+        tagKey, tagValue, asgName);
+    checkResult(
+        task,
+        new AutoScalingSystemActivity(),
+        "failed to create/update autoscaling tags"
+    );
+  }
+  
 	public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName){
 		return resultOf(
 				new AutoScalingDescribeLaunchConfigsTask(launchConfigName),
@@ -1232,7 +1249,34 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
+  private class AutoscalingCreateOrUpdateTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling> {
+    private String tagKey = null;
+    private String tagValue = null;
+    private String asgName = null;
+
+    private AutoscalingCreateOrUpdateTagsTask(final String tagKey, final String tagValue, final String asgName) {
+      this.tagKey = tagKey;
+      this.tagValue = tagValue;
+      this.asgName = asgName;
+    }
+
+    @Override
+    AutoScalingMessage getRequest() {
+      final CreateOrUpdateTagsType req = new CreateOrUpdateTagsType();
+      final Tags tags = new Tags();
+      final TagType tag = new TagType();
+      tag.setKey(this.tagKey);
+      tag.setValue(this.tagValue);
+      tag.setPropagateAtLaunch(true);
+      tag.setResourceType("auto-scaling-group");
+      tag.setResourceId(this.asgName);
+      tags.setMember(Lists.newArrayList(tag));
+      req.setTags(tags);
+      return req;
+    }
+  }
+
 	private class AutoScalingDeleteGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private boolean terminateInstances = false;
@@ -1633,6 +1677,7 @@ public class EucalyptusActivityTasks {
 			return modifyInstanceAttribute;
 		}
 	}
+
 
 	private static Filter filter( final String name, String value ) {
 		return filter( name, Collections.singleton( value ) );
