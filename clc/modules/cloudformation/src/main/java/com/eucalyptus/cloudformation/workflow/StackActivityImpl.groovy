@@ -528,7 +528,7 @@ public class StackActivityImpl implements StackActivity {
     return ""; // promiseFor() doesn't work on void return types
   }
 
-  public String getWorkflowExecutionStatus( final String stackId ) {
+  public String getWorkflowExecutionCloseStatus( final String stackId ) {
     final AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.simpleWorkflowClient
     final List<StackWorkflowEntity> createStackWorkflowEntities =
         StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );

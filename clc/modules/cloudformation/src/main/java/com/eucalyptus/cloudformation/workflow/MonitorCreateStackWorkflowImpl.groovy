@@ -48,9 +48,9 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
   @Override
   void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
     try {
-      Promise<String> closeStatusPromise = workflowUtils.exponentialPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ) ) {
+      Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 30 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
-          promiseFor( activities.getWorkflowExecutionStatus( stackId ) )
+          promiseFor( activities.getWorkflowExecutionCloseStatus( stackId ) )
         }
       }
       waitFor( closeStatusPromise ) { String closedStatus ->

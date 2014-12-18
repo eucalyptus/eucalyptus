@@ -29,6 +29,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.TypeCheckingMode
 
+import java.util.concurrent.TimeUnit
+
 /**
  * Created by ethomas
  */
@@ -76,7 +78,7 @@ abstract class MultiStepPromise {
 
   def <T> Promise<T> invokeOrPoll( Integer timeout, Closure<Promise<T>> activity ) {
     if ( timeout ) {
-      workflowUtils.exponentialPollWithTimeout( timeout, activity )
+      workflowUtils.exponentialPollWithTimeout( timeout, 10, 1.15, (int)TimeUnit.MINUTES.toSeconds( 2 ), activity )
     } else {
       activity.call( )
     }
