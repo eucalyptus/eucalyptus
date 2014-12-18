@@ -369,7 +369,7 @@ public class EuareService {
       Privileged.putUserPolicy( requestUser, account, userFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -731,7 +731,7 @@ public class EuareService {
       Privileged.putGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1549,7 +1549,7 @@ public class EuareService {
       Privileged.putAccountPolicy( requestUser, accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ) + " due to " + e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1654,7 +1654,7 @@ public class EuareService {
       reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getAssumeRolePolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1686,7 +1686,7 @@ public class EuareService {
       Privileged.updateAssumeRolePolicy( requestUser, account, roleFound, request.getPolicyDocument() );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1785,7 +1785,7 @@ public class EuareService {
       Privileged.putRolePolicy( requestUser, account, roleFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
