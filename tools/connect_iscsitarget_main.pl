@@ -103,7 +103,7 @@ if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
   # Fetch the ceph key from keyring file
   if (open KEYRING_FH, "$ceph_keyring") {
     $founduser = "0";
-	  while (<KEYRING_FH>) {
+	while (<KEYRING_FH>) {
       chomp;
       if (/^\[client\.(.*)\]$/) {
         $founduser = "1" if ($1 eq $ceph_user);  
@@ -139,24 +139,56 @@ if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
     }
   }
 
-  # Get the monitoring host
+  # Get the monitoring hosts
+  # All monitors may be listed on one line in ceph.conf: 
+  # [mon]
+  #       mon host = hostname1,hostname2,hostname3
+  #       mon addr = a.b.c.d:xyz,a.b.c.d:xyz,a.b.c.d:xyz
+  # 
+  # ceph.conf may also have specific entries for each monitor:
+  # [mon.a]
+  #      host = hostname1
+  #      mon addr = a.b.c.d:xyz
+  # [mon.b]
+  #      host = hostname2
+  #      mon addr = a.b.c.d:xyz
+  
+  $ceph_host_line = "";       
   if (open CONF_FH, "$ceph_conf") {
     while (<CONF_FH>) {
       chomp;
-      if (/^mon_initial_members\s*=\s*(.*)$/) {
-        $ceph_host = $1;
+      if (/^\s*mon addr\s*=\s*(.*)$/) {
+        @addrs = split(/,/, $1);
+        foreach (@addrs) {
+          $monip = "";
+          $monport = "";
+          ($monip, $monport) = split(/:/, $_);
+          if (!is_null_or_empty($monip) and !is_null_or_empty($monport)) {
+            $ceph_host_line .= "    <host name='$monip' port='$monport'/>\n";
+          } else {
+            close CONF_FH;
+            print STDERR "Either monitor address or port information not found. Looking for 'mon addr = a.b.c.d:xyz' like configuration in the $ceph_conf\n";
+            do_exit(1);
+          }
+        }
       } 
     }
     close CONF_FH;
+    
+    if (is_null_or_empty($ceph_host_line)) {
+      print STDERR "Monitor address and port information not found. Looking for 'mon addr = a.b.c.d:xyz' like configuration in the $ceph_conf\n";
+      do_exit(1);            
+    }
+    
   } else {
-    print STDERR "Unable to open ceph conf file $ceph_keyring.\n";
+    print STDERR "Unable to open $ceph_conf.\n";
     do_exit(1);
   }
 
   # Generate the libvirt.xml
   $libvirtxml = "<disk type='network' device='disk'>\n";
   $libvirtxml .= "  <source protocol='rbd' name='$lun'>\n";
-  $libvirtxml .= "    <host name='$ceph_host' port='6789'/>\n";
+  $libvirtxml .= $ceph_host_line;
   $libvirtxml .= "  </source>\n";
   $libvirtxml .= "  <auth username='$ceph_user'>\n";
   $libvirtxml .= "    <secret type='$SECRET_TYPE_CEPH' uuid='$encrypted_password'/>\n";
