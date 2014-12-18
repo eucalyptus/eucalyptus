@@ -1036,7 +1036,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
             while (TRUE) {
                 s[offset - 16] = s[offset];
                 c = s[offset++];
-                if (c == '\n' || c == '\0' || offset >= LOGLINEBUF)
+                if (c == '\0' || offset >= LOGLINEBUF)
                     break;
             }
             s[offset - 16] = '\0';
