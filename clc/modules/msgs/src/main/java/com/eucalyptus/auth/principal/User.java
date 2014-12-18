@@ -86,9 +86,6 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
   // LDAP user SASL ID
   String SASLID = "saslid";
   
-  Long PASSWORD_LIFETIME = 1000 * 60 * 60 * 24 * 60L; // 2 months
-  Long RECOVERY_EXPIRATION = 1000 * 60 * 30L; // 30 minutes
-  
   enum RegistrationStatus {
     REGISTERED,
     APPROVED,

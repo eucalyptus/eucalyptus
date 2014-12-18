@@ -23,6 +23,7 @@ import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -31,27 +32,45 @@ import com.google.common.collect.Lists;
  */
 public interface AuthenticationLimitProvider {
 
+  long getDefaultPasswordExpirySpi( );
+
   int getAccessKeyLimitSpi( );
 
   int getSigningCertificateLimitSpi( );
 
   static class Values {
+    static long getDefaultPasswordExpiry( ) {
+      return getLongValue( AuthenticationLongProperties.DEFAULT_PASSWORD_EXPIRY );
+    }
+
     static int getAccessKeyLimit( ) {
-      return getValue( AuthenticationLimit.ACCESS_KEY );
+      return getIntValue( AuthenticationLimit.ACCESS_KEY );
     }
 
     static int getSigningCertificateLimit( ) {
-      return getValue( AuthenticationLimit.SIGNING_CERTIFICATE );
+      return getIntValue( AuthenticationLimit.SIGNING_CERTIFICATE );
     }
 
-    static int getValue( final NonNullFunction<AuthenticationLimitProvider, Integer> valueFunction ) {
+    static int getIntValue( final NonNullFunction<AuthenticationLimitProvider, Integer> valueFunction ) {
+      return getValue( valueFunction, Integer.MAX_VALUE, CollectionUtils.min( ) );
+    }
+
+    static long getLongValue( final NonNullFunction<AuthenticationLimitProvider, Long> valueFunction ) {
+      return getValue( valueFunction, Long.MAX_VALUE, CollectionUtils.lmin( ) );
+    }
+
+    static <VT> VT getValue(
+        final NonNullFunction<AuthenticationLimitProvider, VT> valueFunction,
+        final VT initial,
+        final Function<VT,Function<VT,VT>> reducer
+    ) {
       return CollectionUtils.reduce(
           Lists.newArrayList( Iterators.transform(
-              ServiceLoader.load( AuthenticationLimitProvider.class ).iterator(),
+              ServiceLoader.load( AuthenticationLimitProvider.class ).iterator( ),
               valueFunction
           ) ),
-          Integer.MAX_VALUE,
-          CollectionUtils.min( )
+          initial,
+          reducer
       );
     }
   }
@@ -69,6 +88,16 @@ public interface AuthenticationLimitProvider {
       @Override
       public Integer apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
         return authenticationLimitProvider.getSigningCertificateLimitSpi( );
+      }
+    },
+  }
+
+  enum AuthenticationLongProperties implements NonNullFunction<AuthenticationLimitProvider, Long> {
+    DEFAULT_PASSWORD_EXPIRY {
+      @Nonnull
+      @Override
+      public Long apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
+        return authenticationLimitProvider.getDefaultPasswordExpirySpi();
       }
     },
   }
