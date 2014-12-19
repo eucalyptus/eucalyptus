@@ -163,29 +163,29 @@ public class DNSControl {
 			changeListener = DnsAddressChangeListener.class)
 	public static volatile String dns_listener_address_match = "";
 
-	@ConfigurableField( displayName = "server_system_property",
-			description = "Sets the value of 'dns.server' system property",
+	@ConfigurableField( displayName = "server",
+			description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
 			initial = "",
 			readonly = false,
-			changeListener = DnsServerSystemProperty.class)
-	public static volatile String server_system_property = "";
+			changeListener = DnsServerChangeListener.class)
+	public static volatile String server = "";
 
-	@ConfigurableField( displayName = "search_system_property",
-			description = "Sets the value of 'dns.search' system property",
+	@ConfigurableField( displayName = "search",
+			description = "Comma separated list of domains to search, OS settings used if none specified (change requires restart)",
 			initial = "",
 			readonly = false,
-			changeListener = DnsSearchSystemProperty.class)
-	public static volatile String search_system_property = "";
+			changeListener = DnsSearchChangeListener.class)
+	public static volatile String search = "";
 
-	public static class DnsServerSystemProperty implements PropertyChangeListener {
+	public static class DnsServerChangeListener implements PropertyChangeListener {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			if (newValue == null || (newValue instanceof String)) {
 				try {
 					String newValueStr = (String) newValue;
 					if (Strings.isNullOrEmpty(newValueStr)) {
-						LOG.debug("Setting dns.server property to null (by removing it)");
-						System.getProperties().remove("dns.server");
+						LOG.debug("Setting dns.server property to null (by clearing it)");
+						System.clearProperty("dns.server");
 					} else {
 						LOG.debug("Setting dns.server property to " + newValueStr);
 						System.setProperty("dns.server", newValueStr);
@@ -198,15 +198,15 @@ public class DNSControl {
 		}
 	}
 
-	public static class DnsSearchSystemProperty implements PropertyChangeListener {
+	public static class DnsSearchChangeListener implements PropertyChangeListener {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			if (newValue == null || (newValue instanceof String)) {
 				try {
 					String newValueStr = (String) newValue;
 					if (Strings.isNullOrEmpty(newValueStr)) {
-						LOG.debug("Setting dns.search property to null (by removing it)");
-						System.getProperties().remove("dns.search");
+						LOG.debug("Setting dns.search property to null (by clearing it)");
+						System.clearProperty("dns.search");
 					} else {
 						LOG.debug("Setting dns.search property to " + newValueStr);
 						System.setProperty("dns.search", newValueStr);
