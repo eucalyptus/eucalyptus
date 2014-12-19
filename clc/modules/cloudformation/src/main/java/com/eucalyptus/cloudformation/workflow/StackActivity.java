@@ -22,7 +22,6 @@ package com.eucalyptus.cloudformation.workflow;
 
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 
 @ActivityRegistrationOptions(
   defaultTaskScheduleToStartTimeoutSeconds = 900,
@@ -33,20 +32,19 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 @Activities(version="1.0")
 public interface StackActivity {
   public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
-  public String performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
   public String determineCreateResourceFailures(String stackId, String accountId);
   public String determineDeleteResourceFailures(String stackId, String accountId);
   public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String stackId, String accountId);
-  public String logInfo(String message);
   public String deleteAllStackRecords(String stackId, String accountId);
   public String getResourceType(String stackId, String accountId, String resourceId);
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
-  public String checkCreateStackWorkflowClosed(String stackId);
+  public String getWorkflowExecutionCloseStatus( String stackId );
   public String getStackStatus(String stackId, String accountId);
   public String setStackStatus(String stackId, String accountId, String status, String statusReason);
   public String cancelCreateAndMonitorWorkflows(String stackId);

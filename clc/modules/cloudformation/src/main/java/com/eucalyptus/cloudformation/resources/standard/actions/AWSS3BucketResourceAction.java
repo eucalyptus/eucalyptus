@@ -38,7 +38,6 @@ import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.TagSet;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
@@ -61,8 +60,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3WebsiteC
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3WebsiteConfigurationRoutingRule;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceUris;
@@ -77,6 +76,7 @@ import com.netflix.glisten.WorkflowOperations;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -111,11 +111,6 @@ public class AWSS3BucketResourceAction extends ResourceAction {
           action.info.setPhysicalResourceId(bucketName);
         }
         return action;
-      }
-
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
       }
     },
     ADD_BUCKET_STUFF {
@@ -167,13 +162,13 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
+    };
 
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      }
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
-
   }
 
   private enum DeleteSteps implements Step {
@@ -194,11 +189,12 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         }
         return action;
       }
+    };
 
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      }
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
 
@@ -358,13 +354,13 @@ public class AWSS3BucketResourceAction extends ResourceAction {
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
   public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

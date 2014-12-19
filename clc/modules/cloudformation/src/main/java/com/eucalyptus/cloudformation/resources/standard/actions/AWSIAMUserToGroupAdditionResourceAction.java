@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
 import com.eucalyptus.auth.euare.AddUserToGroupType;
 import com.eucalyptus.auth.euare.GetGroupResponseType;
@@ -43,8 +42,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSIAMUser
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -59,6 +58,7 @@ import com.netflix.glisten.WorkflowOperations;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -148,11 +148,12 @@ public class AWSIAMUserToGroupAdditionResourceAction extends ResourceAction {
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
+    };
 
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      }
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
 
@@ -222,11 +223,12 @@ public class AWSIAMUserToGroupAdditionResourceAction extends ResourceAction {
         }
         return action;
       }
+    };
 
-      @Override
-      public RetryPolicy getRetryPolicy() {
-        return null;
-      }
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
 
@@ -253,13 +255,13 @@ public class AWSIAMUserToGroupAdditionResourceAction extends ResourceAction {
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
   public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

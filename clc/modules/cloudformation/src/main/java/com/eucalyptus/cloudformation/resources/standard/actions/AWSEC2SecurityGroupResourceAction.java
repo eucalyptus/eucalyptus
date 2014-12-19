@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -36,9 +35,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
-import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -73,6 +71,7 @@ import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -251,13 +250,11 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
       }
     };
 
-    // None of these tasks require retry...
-
+    @Nullable
     @Override
-    public RetryPolicy getRetryPolicy() {
+    public Integer getTimeout() {
       return null;
     }
-
   }
 
   private enum DeleteSteps implements Step {
@@ -291,8 +288,8 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
       }
 
       @Override
-      public RetryPolicy getRetryPolicy() {
-        return new StandardResourceRetryPolicy(SECURITY_GROUP_MAX_DELETE_RETRY_SECS).getPolicy();
+      public Integer getTimeout() {
+        return SECURITY_GROUP_MAX_DELETE_RETRY_SECS;
       }
     }
   }
@@ -308,13 +305,13 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
   public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

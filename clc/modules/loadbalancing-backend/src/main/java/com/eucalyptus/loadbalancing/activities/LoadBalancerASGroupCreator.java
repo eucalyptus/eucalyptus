@@ -404,7 +404,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	  @Override
     public boolean check( ) throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.IMAGE ) ) {
-        if( CheckCounter == 3 && Topology.isEnabled( Eucalyptus.class ) ){
+        if( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ){
           try{
             final List<ImageDetails> emis =
                 EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));

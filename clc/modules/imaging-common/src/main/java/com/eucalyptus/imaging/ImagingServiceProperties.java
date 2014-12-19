@@ -137,7 +137,7 @@ public class ImagingServiceProperties {
     @Override
     public boolean check() throws Exception {
       if (CloudMetadatas.isMachineImageIdentifier(IMAGE)) {
-        if (CheckCounter == 3) {
+        if ( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ) {
           try {
             final List<ImageDetails> emis = EucalyptusActivityTasks
                 .getInstance().describeImages(
