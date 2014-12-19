@@ -140,8 +140,8 @@ public class CloudFormationService {
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      if (!stackName.matches("^[\\p{Alpha}][\\p{Alnum}]*$")) {
-        throw new ValidationErrorException("Stack name " + stackName + " must be alphanumeric and start with a letter.");
+      if (!stackName.matches("^[\\p{Alpha}][\\p{Alnum}-]*$")) {
+        throw new ValidationErrorException("Stack name " + stackName + " must contain only letters, numbers, dashes and start with an alpha character.");
       }
       if (stackName.length() > Limits.STACK_NAME_MAX_LENGTH_CHARS) {
         throw new ValidationErrorException("Stack name " + stackName + " must be no longer than " + Limits.STACK_NAME_MAX_LENGTH_CHARS + " characters.");
