@@ -108,7 +108,7 @@ public class Privileged {
     admin.createConfirmationCode( );
     if ( password != null ) {
       admin.setPassword( Crypto.generateEncryptedPassword( password ) );
-      admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+      admin.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
     }
     return newAccount;
   }
@@ -807,7 +807,7 @@ public class Privileged {
     }
     String newEncrypted = Crypto.generateEncryptedPassword( newPass );
     user.setPassword( newEncrypted );
-    user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+    user.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
   }
   
   public static void createServerCertificate( final AuthContext requestUser,

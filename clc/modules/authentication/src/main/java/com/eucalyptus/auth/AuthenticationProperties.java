@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,11 @@
 
 package com.eucalyptus.auth;
 
+import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
 import com.eucalyptus.auth.ldap.LdapSync;
@@ -74,6 +78,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.Intervals;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
@@ -102,6 +107,11 @@ public class AuthenticationProperties {
 
   @ConfigurableField( description = "Process quotas for system accounts", initial = "true" )
   public static volatile Boolean SYSTEM_ACCOUNT_QUOTA_ENABLED = true;
+
+  @ConfigurableField( description = "Default password expiry time", initial = "60d", changeListener = AuthenticationIntervalPropertyChangeListener.class )
+  public static String DEFAULT_PASSWORD_EXPIRY = "60d";
+
+  private static AtomicLong DEFAULT_PASSWORD_EXPIRY_MILLIS = new AtomicLong( TimeUnit.DAYS.toMillis( 60 ) );
 
   public static class LicChangeListener implements PropertyChangeListener {
     @Override
@@ -146,6 +156,11 @@ public class AuthenticationProperties {
 
   public static class PropertiesAuthenticationLimitProvider implements AuthenticationLimitProvider {
     @Override
+    public long getDefaultPasswordExpirySpi() {
+      return DEFAULT_PASSWORD_EXPIRY_MILLIS.get( );
+    }
+
+    @Override
     public int getAccessKeyLimitSpi( ) {
       return ACCESS_KEYS_LIMIT;
     }
@@ -155,4 +170,24 @@ public class AuthenticationProperties {
       return SIGNING_CERTIFICATES_LIMIT;
     }
   }
+
+  public static final class AuthenticationIntervalPropertyChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty configurableProperty,
+                            final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        final String fieldName = configurableProperty.getField().getName() + "_MILLIS";
+        final Field field = AuthenticationProperties.class.getDeclaredField( fieldName );
+        final long value = Intervals.parse( String.valueOf( newValue ), TimeUnit.MILLISECONDS );
+        field.setAccessible( true );
+        LOG.info( "Authentication configuration updated " + field.getName() + ": " + value + "ms" );
+        ( (AtomicLong) field.get( null ) ).set( value );
+      } catch ( ParseException e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ), e );
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+      }
+    }
+  }
+
 }
