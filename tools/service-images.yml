@@ -1,0 +1,16 @@
+services:
+    database.worker:
+        api-version: 1
+        install-images:
+          - eucalyptus-database-worker = 1
+        set-image-property: services.database.worker.image
+    imaging.worker:
+        api-version: 1
+        install-images:
+          - eucalyptus-imaging-worker = 1
+        set-image-property: services.imaging.worker.image
+    loadbalancing.worker:
+        api-version: 1
+        install-images:
+          - eucalyptus-loadbalancing-worker = 1
+        set-image-property: services.loadbalancing.worker.image
