@@ -2393,7 +2393,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
                   networkInterface.getAssociation( ).getPublicIp( ),
                   networkInterface.getAssociation( ).getPublicDnsName( ),
-                  networkInterface.getAssociation( ).getIpOwnerId( )
+                  networkInterface.getAssociation( ).getDisplayIpOwnerId( )
               ) : null,
               new InstancePrivateIpAddressesSetType( Lists.newArrayList(
                 new InstancePrivateIpAddressesSetItemType(
@@ -2403,7 +2403,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                     networkInterface.isAssociated( ) ? new InstanceNetworkInterfaceAssociationType(
                         networkInterface.getAssociation( ).getPublicIp( ),
                         networkInterface.getAssociation( ).getPublicDnsName( ),
-                        networkInterface.getAssociation( ).getIpOwnerId( )
+                        networkInterface.getAssociation( ).getDisplayIpOwnerId( )
                     ) : null
                 )
               ) )

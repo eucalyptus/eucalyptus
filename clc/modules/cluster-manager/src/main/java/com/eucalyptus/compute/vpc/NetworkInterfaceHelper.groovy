@@ -87,9 +87,16 @@ class NetworkInterfaceHelper {
       if ( networkInterface.isAssociated( ) ) try {
         Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
         try {
+          if ( address.started ) {
+            address.stop( );
+          }
+        } catch ( final Exception e1 ) {
+          logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e1 )
+        }
+        try {
           address.unassign( networkInterface )
-        } catch ( final Exception e ) {
-          logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e )
+        } catch ( final Exception e2 ) {
+          logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e2 )
         }
         if ( address.isSystemOwned( ) ) {
           resources << new PublicIPResource(

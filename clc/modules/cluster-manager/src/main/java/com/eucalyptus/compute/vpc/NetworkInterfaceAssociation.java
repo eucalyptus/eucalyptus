@@ -22,6 +22,7 @@ package com.eucalyptus.compute.vpc;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import com.eucalyptus.auth.principal.Principals;
 
 /**
  *
@@ -98,6 +99,12 @@ public class NetworkInterfaceAssociation implements Serializable {
 
   public void setIpOwnerId( final String ipOwnerId ) {
     this.ipOwnerId = ipOwnerId;
+  }
+
+  public String getDisplayIpOwnerId( ) {
+    return Principals.isFakeIdentityAccountNumber( ipOwnerId ) ?
+        Principals.systemAccount( ).getName( ) :
+        ipOwnerId;
   }
 
   public String getPublicIp( ) {
