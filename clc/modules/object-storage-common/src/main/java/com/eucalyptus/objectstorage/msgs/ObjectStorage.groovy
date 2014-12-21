@@ -478,6 +478,33 @@ public class CopyObjectType extends ObjectStorageRequestType {
     Date copySourceIfModifiedSince;
     Date copySourceIfUnmodifiedSince;
     Map<String,String> copiedHeaders = Maps.newHashMap();
+    
+    def GetObjectType getGetObjectRequest() {
+      GetObjectType request = new GetObjectType()
+      request.setBucket(this.sourceBucket);
+      request.setKey(this.sourceObject);
+      request.setVersionId(this.sourceVersionId);
+      
+      // common elements
+      request.setCorrelationId(this.correlationId);
+      request.setEffectiveUserId(this.getEffectiveUserId());
+      
+      return request;
+    }
+    
+    def PutObjectType getPutObjectRequest() {
+      PutObjectType request = new PutObjectType();
+      request.setBucket(this.destinationBucket);
+      request.setKey(this.destinationObject);
+      request.setAccessControlList(this.accessControlList);
+      request.setCopiedHeaders(this.copiedHeaders);
+      
+      // common elements
+      request.setCorrelationId(this.correlationId);
+      request.setEffectiveUserId(this.getEffectiveUserId());
+      
+      return request;
+    }
 }
 
 /* HEAD /bucket/object */

@@ -74,6 +74,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
@@ -90,6 +91,8 @@ import com.eucalyptus.objectstorage.pipeline.handlers.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.Permission;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.X_AMZ_GRANT;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
@@ -118,12 +121,15 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
@@ -135,6 +141,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.w3c.dom.Node;
+
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -489,14 +496,16 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                                 operationParams.put("MetadataDirective", metaDataDirective);
                             }
 
-                            AccessControlList accessControlList = null;
+                            // TODO check with Wes if this is even necessary. copy object does not accept acl in the body, it allows acl via headers only
+                            /*AccessControlList accessControlList = null;
                             if (contentLength > 0) {
                                 accessControlList = getAccessControlList(httpRequest);
                             }
                             else {
                                 accessControlList = new AccessControlList();
-                            }
-                            String aclHeader = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
+                            }*/
+                            // Commenting out this code as populateObjectFromBindingMap() extracts acl from header. It gets invoked for any operation that includes acls in header 
+                            /*String aclHeader = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
                             if (aclHeader != null && !"".equals(aclHeader)) {
                                 validateCannedAcl(aclHeader);
                                 CanonicalUser aws = new CanonicalUser();
@@ -507,7 +516,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                                 accessControlList.getGrants().addAll(grants);
                             }
 
-                            operationParams.put("AccessControlList", accessControlList);
+                            operationParams.put("AccessControlList", accessControlList);*/
                             operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
                             Set<String> headerNames = httpRequest.getHeaderNames();
                             for(String key : headerNames) {
@@ -1065,10 +1074,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     protected void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws S3Exception, BindingException
     {
         //process headers
-        String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
-        if (aclString != null) {
-            addAccessControlList(obj, paramFieldMap, bindingMap, aclString);
-        }
+        // String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
+        // if (aclString != null) {
+        //    addAccessControlList(obj, paramFieldMap, bindingMap, aclString);
+        // }
+    	// above logic only accounts for x-amz-acl. x-amz-grant-* headers are dropped
+        processHeaderGrants(obj, paramFieldMap, bindingMap, httpRequest);
 
         //add meta data
         String metaDataString = paramFieldMap.remove("MetaData");
@@ -1214,6 +1225,97 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             obj.setProperty(acl, accessControlList );
         }
     }
+    
+  protected static void processHeaderGrants(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, MappingHttpRequest httpRequest)
+      throws S3Exception {
+
+    if (paramFieldMap.containsKey("AccessControlList") || paramFieldMap.containsKey("AccessControlPolicy")) {
+
+      ArrayList<Grant> grants = new ArrayList<Grant>();
+
+      // Parse and construct grant from x-amz-acl in header
+      String cannedACLString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
+      if (!Strings.isNullOrEmpty(cannedACLString)) {
+        validateCannedAcl(cannedACLString);
+        grants.add(new Grant(new Grantee(new CanonicalUser("", "")), cannedACLString));
+      }
+
+      // Parse and construct grants from x-amz-grant-* headers, examples:
+      // x-amz-grant-read: emailAddress="xyz@amazon.com", uri="http://some-uri", id="canonical-id"
+      // x-amz-grant-write: emailAddress="xyz@amazon.com", uri="http://some-uri", id="canonical-id"
+
+      for (Map.Entry<X_AMZ_GRANT, Permission> mapEntry : ObjectStorageProperties.HEADER_PERMISSION_MAP.entrySet()) {
+
+        String grantsString = httpRequest.getAndRemoveHeader(mapEntry.getKey().toString());
+        String[] grantsArray = null;
+
+        if (StringUtils.isNotBlank(grantsString) && (grantsArray = grantsString.split(",")) != null && grantsArray.length > 0) {
+          for (int i = 0; i < grantsArray.length; i++) {
+            // emailAddress="xyz@amazon.com"
+            String[] grantIdentityArray = grantsArray[0].split("=");
+            if (grantIdentityArray != null && grantIdentityArray.length == 2) {
+              switch (grantIdentityArray[0]) {
+                case "emailAddress":
+                  grants.add(new Grant(new Grantee(StringUtils.strip(grantIdentityArray[1], "'\"")), mapEntry.getValue().toString()));
+                  break;
+                case "id":
+                  grants.add(new Grant(new Grantee(new CanonicalUser(StringUtils.strip(grantIdentityArray[1], "'\""), "")), mapEntry.getValue().toString()));
+                  break;
+                case "uri":
+                  grants.add(new Grant(new Grantee(new Group(StringUtils.strip(grantIdentityArray[1], "'\""))), mapEntry.getValue().toString()));
+                  break;
+                default:
+                  throw new InvalidRequestException(mapEntry.getKey().toString(), "Invalid type specification for grantee: " + grantIdentityArray[0]
+                      + ". Valid types are emailAddress, id or url"); 
+              }
+            } else {
+              throw new InvalidRequestException(mapEntry.getKey().toString(), "Invalid specification for grantee: " + grantsArray[0]
+                  + ". Valid format for grantee is 'type=value' where type is emailAddress, id or url");
+            }
+          }
+        } else {
+          // no header, nothing to do
+        }
+      }
+
+      if (!grants.isEmpty()) {
+
+        // Objects can either contain ACL or ACP
+        if (paramFieldMap.containsKey("AccessControlList")) { // Object has ACL
+
+          AccessControlList accessControlList;
+
+          // Set up the AccessControlList in the binding map
+          if (bindingMap.containsKey("AccessControlList")) {// ACL only comes from the headers, nevertheless check
+            accessControlList = (AccessControlList) bindingMap.get("AccessControlList");
+          } else {
+            accessControlList = new AccessControlList();
+            bindingMap.put("AccessControlList", accessControlList);
+          }
+
+          accessControlList.getGrants().addAll(grants);
+
+        } else { // Object has ACP
+
+          AccessControlPolicy accessControlPolicy;
+
+          // Set up the AccessControlPolicy in the binding map
+          if (bindingMap.containsKey("AccessControlPolicy")) { // ACP could come from request body
+            accessControlPolicy = (AccessControlPolicy) bindingMap.get("AccessControlPolicy");
+          } else {
+            accessControlPolicy = new AccessControlPolicy(new CanonicalUser("", ""), new AccessControlList());
+            bindingMap.put("AccessControlPolicy", accessControlPolicy);
+          }
+
+          accessControlPolicy.getAccessControlList().getGrants().addAll(grants);
+        }
+      } else {
+        // no new grants to add, let the ACL and ACP be
+      }
+    } else {
+      // nothing to do here as the result class definition does not contain ACL or ACP
+    }
+  }
 
     protected String toUpperFirst(String string) {
         return string.substring(0, 1).toUpperCase().concat(string.substring(1));

@@ -83,7 +83,9 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
@@ -226,6 +228,32 @@ public class ObjectStorageProperties {
     public enum Permission {
         READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
     }
+    
+    public enum X_AMZ_GRANT {
+      READ("x-amz-grant-read"),
+      WRITE("x-amz-grant-write"),
+      READ_ACP("x-amz-grant-read-acp"),
+      WRITE_ACP("x-amz-grant-write-acp"),
+      FULL_CONTROL("x-amz-grant-full-control");
+      
+      private final String header;
+      
+      private X_AMZ_GRANT(String header) {
+        this.header = header;
+      }
+      
+      @Override
+      public String toString() {
+        return this.header;
+      }
+    }
+    
+    public static final Map<X_AMZ_GRANT, Permission> HEADER_PERMISSION_MAP = ImmutableMap.<X_AMZ_GRANT, Permission>builder()
+      .put(X_AMZ_GRANT.READ, Permission.READ)
+      .put(X_AMZ_GRANT.WRITE, Permission.WRITE)
+      .put(X_AMZ_GRANT.READ_ACP, Permission.READ_ACP)
+      .put(X_AMZ_GRANT.WRITE_ACP, Permission.WRITE_ACP)
+      .put(X_AMZ_GRANT.FULL_CONTROL, Permission.FULL_CONTROL).build();
 
     public enum VersioningStatus {
         Enabled, Disabled, Suspended

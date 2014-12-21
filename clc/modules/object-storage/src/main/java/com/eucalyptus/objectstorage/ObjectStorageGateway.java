@@ -177,8 +177,9 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
-
+import com.google.common.collect.Maps;
 import com.google.common.net.HttpHeaders;
+
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -1213,208 +1214,184 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return reply;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.eucalyptus.objectstorage.ObjectStorageService#CopyObject(com.eucalyptus.objectstorage.msgs.CopyObjectType)
-	 */
-	@Override
-	public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception {
-        logRequest(request);
-        User requestUser = Contexts.lookup().getUser();
-        final Bucket srcBucket = ensureBucketExists(request.getSourceBucket());
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.eucalyptus.objectstorage.ObjectStorageService#CopyObject(com.eucalyptus.objectstorage.msgs.CopyObjectType)
+   */
+  @Override
+  public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception {
+    logRequest(request);
+    
+    String sourceBucket = request.getSourceBucket();
+    String sourceKey = request.getSourceObject();
+    String sourceVersionId = request.getSourceVersionId();
+    User requestUser = Contexts.lookup().getUser();
+    
+    // Check for source bucket
+    final Bucket srcBucket = ensureBucketExists(sourceBucket);
 
-        final ObjectEntity srcObject;
-        try {
-            srcObject = ObjectMetadataManagers.getInstance().lookupObject(srcBucket, request.getSourceObject(), request.getSourceVersionId());
-        } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getSourceBucket() + "/" + request.getSourceObject());
-        } catch(Exception e) {
-            throw new InternalErrorException(request.getSourceBucket());
-        }
+    // Check for source object
+    final ObjectEntity srcObject;
+    try {
+      srcObject = ObjectMetadataManagers.getInstance().lookupObject(srcBucket, sourceKey, sourceVersionId);
+    } catch (NoSuchElementException e) {
+      throw new NoSuchKeyException(sourceBucket + "/" + sourceKey);
+    } catch (Exception e) {
+      throw new InternalErrorException(sourceBucket);
+    }
 
-        if(OsgAuthorizationHandler.getInstance().operationAllowed(request, srcBucket, srcObject, 0)) {
-            CopyObjectResponseType reply = request.getReply();
+    // Check authorization for GET operation on source bucket and object
+    if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getGetObjectRequest(), srcBucket, srcObject, 0)) {
+      CopyObjectResponseType reply = request.getReply();
+      String destinationBucket = request.getDestinationBucket();
+      String destinationKey = request.getDestinationObject();
+      
+      // Check for destination bucket
+      Bucket destBucket = ensureBucketExists(destinationBucket);
+      
+      // Initialize entity for destination object
+      ObjectEntity destObject;
+      try {
+        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey, srcObject.getSize().longValue(), requestUser);
+      } catch (Exception e) {
+        LOG.error("Error initializing entity for persisting object metadata for " +  destinationBucket + "/" + destinationKey);
+        throw new InternalErrorException(destinationBucket + "/" + destinationKey);
+      }
 
-            Bucket destBucket = ensureBucketExists(request.getDestinationBucket());
+      // Check authorization for PUT operation on destination bucket and object
+      if(OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject, srcObject.getSize().longValue())) {
+        
+        String metadataDirective = request.getMetadataDirective();
+        String copyIfMatch = request.getCopySourceIfMatch();
+        String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+        Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+        Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+        boolean updateMetadataOnly = false;
 
-            String destinationKey = request.getDestinationObject();
-            String metadataDirective = request.getMetadataDirective();
-            String copyIfMatch = request.getCopySourceIfMatch();
-            String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
-            Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
-            Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
-
-            if (Strings.isNullOrEmpty(metadataDirective)) {
-				metadataDirective = MetadataDirective.COPY.toString();
-			} else {
-				try {
-					metadataDirective = (MetadataDirective.valueOf(metadataDirective)).toString();
-				} catch (IllegalArgumentException e) {
-					throw new InvalidArgumentException(ObjectStorageProperties.METADATA_DIRECTIVE, "Unknown metadata directive: " + metadataDirective);
-				}
-			}
-
-			// If the object is copied on to itself (without version ID), metadata directive must be REPLACE
-			if (request.getSourceBucket().equals(request.getDestinationBucket()) && request.getSourceObject().equals(destinationKey)
-					&& Strings.isNullOrEmpty(request.getSourceVersionId()) && !MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
-				throw new InvalidRequestException(
-						request.getDestinationBucket() + "/" + destinationKey,
-						"This copy request is illegal because it is trying to copy an object to itself without changing the object's metadata, storage class, website redirect location or encryption attributes.");
-			}
-
-            long newBucketSize = ( destBucket.getBucketSize() == null ? 0l : destBucket.getBucketSize().longValue() )
-                    + srcObject.getSize().longValue();
-
-            ObjectEntity destObject = null;
-            Long origDestObjectSize = null; // used in reporting event
-            try {
-                destObject = ObjectMetadataManagers.getInstance().lookupObject(destBucket, destinationKey, null);
-                origDestObjectSize = destObject.getSize();
-            } catch (NoSuchElementException nse) {
-                // is okay, creating a new ObjectEntity
-            } catch (Exception e) {
-                LOG.error("exception occurred while checking if destination object in bucket "
-                        + destBucket.getBucketName() + " with key " + destinationKey + " already exists", e);
-                throw new InternalErrorException(destBucket.getBucketName() + "/" + destinationKey);
-            }
-
-                try {
-                    // we need to create a new instance of the object entity if versioning is enabled on the bucket
-					Map<String,String> modded = srcObject.getStoredHeaders();
-                    if (destObject == null ||
-                            ( destBucket.getVersioning() != null
-                                    && destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) ) {
-                        if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
-							// on copy, the incoming headers are ignored and prior headers are retained
-							// on replace, all metadata and headers are dumped and ones coming in on requests are stored
-							modded.clear();
-							Map<String,String> copiedHeaders = request.getCopiedHeaders();
-							if (copiedHeaders != null && copiedHeaders.size() > 0) {
-								for (Map.Entry<String,String> entry : copiedHeaders.entrySet()) {
-									modded.put(entry.getKey(), entry.getValue());
-								}
-							}
-						}
-
-                        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
-                                srcObject.getSize().longValue(), requestUser, modded);
-                    }
-					else if (destObject != null) {
-						// if the object already existed and we are this far, we need to consider the metadata and headers
-						if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
-							modded.clear();
-							Map<String,String> copiedHeaders = request.getCopiedHeaders();
-							if (copiedHeaders != null && copiedHeaders.size() > 0) {
-								for (Map.Entry<String,String> entry : copiedHeaders.entrySet()) {
-									modded.put(entry.getKey(), entry.getValue());
-								}
-							}
-						}
-						destObject.setStoredHeaders(modded);
-					}
-                } catch (Exception e) {
-                    LOG.error("Error initializing entity for persisting object metadata for " + destBucket.getBucketName()
-                            + "/" + request.getDestinationObject());
-                    throw new InternalErrorException(destBucket.getBucketName() + "/" + destinationKey);
-                }
-
-
-            if(OsgAuthorizationHandler.getInstance().operationAllowed(request, destBucket, destObject, newBucketSize)) {
-                if (copyIfMatch != null) {
-                    if (!copyIfMatch.equals(srcObject.geteTag())) {
-                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfMatch: " + copyIfMatch);
-                    }
-                }
-                if (copyIfNoneMatch != null) {
-                    if (copyIfNoneMatch.equals(srcObject.geteTag())) {
-                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfNoneMatch: " + copyIfNoneMatch);
-                    }
-                }
-                if (copyIfUnmodifiedSince != null) {
-                    long unmodifiedTime = copyIfUnmodifiedSince.getTime();
-                    long objectTime = srcObject.getObjectModifiedTimestamp().getTime();
-                    if (unmodifiedTime < objectTime) {
-                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfUnmodifiedSince: " + copyIfUnmodifiedSince.toString());
-                    }
-                }
-                if (copyIfModifiedSince != null) {
-                    long modifiedTime = copyIfModifiedSince.getTime();
-                    long objectTime = srcObject.getObjectModifiedTimestamp().getTime();
-                    if (modifiedTime > objectTime) {
-                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfModifiedSince: " + copyIfModifiedSince.toString());
-                    }
-                }
-
-                try {
-                    String requestUserCanonicalId = requestUser.getAccount() != null ? requestUser.getAccount().getCanonicalId() : null;
-                    AccessControlPolicy acp = getFullAcp(
-                            AclUtils.expandCannedAcl( request.getAccessControlList(), destBucket.getOwnerCanonicalId(), requestUserCanonicalId ),
-                            requestUser,
-                            requestUserCanonicalId);
-                    destObject.setAcl(acp);
-                } catch (Exception e) {
-                    LOG.warn("encountered an exception while constructing access control policy to set on "
-                            + destBucket.getBucketName() + "/" + destObject.getObjectKey(), e);
-                    throw new InternalErrorException(destBucket.getBucketName() + "/"
-                            + destObject.getObjectKey() + "?acl");
-                }
-
-                destObject.setSize(srcObject.getSize());
-                destObject.setStorageClass(srcObject.getStorageClass());
-                String etag = srcObject.geteTag();
-                destObject.seteTag(etag);
-                destObject.setIsLatest(Boolean.TRUE);
-
-                if (destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) {
-                    reply.setCopySourceVersionId(srcObject.getVersionId());
-                    reply.setVersionId(destObject.getVersionId());
-                }
-
-                String sourceObjUuid = srcObject.getObjectUuid();
-                String sourceBckUuid = srcBucket.getBucketUuid();
-                String destObjUuid = destObject.getObjectUuid();
-                String destBckUuid = destBucket.getBucketUuid();
-                request.setSourceObject(sourceObjUuid);
-                request.setSourceBucket(sourceBckUuid);
-                request.setSourceVersionId(ObjectStorageProperties.NULL_VERSION_ID);
-                request.setDestinationObject(destObjUuid);
-                request.setDestinationBucket(destBckUuid);
-                try {
-                    ObjectEntity objectEntity = OsgObjectFactory.getFactory().copyObject(ospClient, destObject, request, requestUser, metadataDirective);
-                    reply.setLastModified(DateFormatter.dateToListingFormattedString(objectEntity.getObjectModifiedTimestamp()));
-                    reply.setEtag(objectEntity.geteTag());
-                    try {
-                        // send the event if we aren't doing a metadata update only
-                        if (! (destBucket.getBucketName().equals(srcBucket.getBucketName())
-                                && destObject.getObjectKey().equals(srcObject.getObjectKey())) )  {
-                            fireObjectCreationEvent(destBucket.getBucketName(), destObject.getObjectKey(), destObject.getVersionId(),
-                                    requestUser.getUserId(), destObject.getSize(), origDestObjectSize);
-                        }
-                    } catch (Exception ex) {
-                        LOG.debug("Failed to fire reporting event for OSG COPY object operation", ex);
-                    }
-                }
-                catch (Exception ex) {
-                	// Wrap the error from back-end with a 500 error
-                	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", ex);
-                    throw new InternalErrorException("Could not copy " + srcBucket.getBucketName() +
-                            "/" + srcObject.getObjectKey() + " to " + destBucket.getBucketName() +
-                            "/" + destObject.getObjectKey(), ex);
-                }
-                request.setSourceObject(srcObject.getObjectKey());
-                request.setSourceVersionId(srcObject.getVersionId());
-                request.setDestinationObject(destinationKey);
-                request.setSourceBucket(srcBucket.getBucketName());
-                request.setDestinationBucket(destBucket.getBucketName());
-                return reply;
-            }
-            else {
-                throw new AccessDeniedException(destBucket.getBucketName() + "/" + destinationKey);
-            }
+        // Parse metadata directive
+        if (Strings.isNullOrEmpty(metadataDirective)) {
+          metadataDirective = MetadataDirective.COPY.toString();
         } else {
-            throw new AccessDeniedException(srcBucket.getBucketName());
+          try {
+            metadataDirective = (MetadataDirective.valueOf(metadataDirective)).toString();
+          } catch (IllegalArgumentException e) {
+            throw new InvalidArgumentException(ObjectStorageProperties.METADATA_DIRECTIVE, "Unknown metadata directive: " + metadataDirective);
+          }
         }
+        
+        // If the object is copied on to itself (without version ID), metadata directive must be REPLACE
+        if (sourceBucket.equals(destinationBucket) && sourceKey.equals(destinationKey) && Strings.isNullOrEmpty(request.getSourceVersionId())) {
+          if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+            updateMetadataOnly = true;
+          } else {
+            throw new InvalidRequestException(destinationBucket + "/" + destinationKey,
+                "This copy request is illegal because it is trying to copy an object to itself without changing the "
+                    + "object's metadata, storage class, website redirect location or encryption attributes.");
+          }
+        }
+        
+        // Copy the headers either from request or from source object
+        Map<String, String> modded = null;
+        if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
+          if (request.getCopiedHeaders() != null && !request.getCopiedHeaders().isEmpty()) {
+            modded = Maps.newHashMap(request.getCopiedHeaders());
+          } else {
+            modded = Maps.newHashMap();
+          }
+        } else {
+          modded = srcObject.getStoredHeaders();
+        }
+        destObject.setStoredHeaders(modded);
+        
+        // Check copy conditions
+        if (copyIfMatch != null) {
+          if (!copyIfMatch.equals(srcObject.geteTag())) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfMatch: " + copyIfMatch);
+          }
+        }
+        
+        if (copyIfNoneMatch != null) {
+          if (copyIfNoneMatch.equals(srcObject.geteTag())) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfNoneMatch: " + copyIfNoneMatch);
+          }
+        }
+        
+        if (copyIfUnmodifiedSince != null) {
+          if (copyIfUnmodifiedSince.getTime() < srcObject.getObjectModifiedTimestamp().getTime()) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfUnmodifiedSince: " + copyIfUnmodifiedSince.toString());
+          }
+        }
+        
+        if (copyIfModifiedSince != null) {
+          if (copyIfModifiedSince.getTime() > srcObject.getObjectModifiedTimestamp().getTime()) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfModifiedSince: " + copyIfModifiedSince.toString());
+          }
+        }
+        
+        // Construct ACL for destination object
+        try {
+          String requestUserCanonicalId = requestUser.getAccount() != null ? requestUser.getAccount().getCanonicalId() : null;
+          // TODO swathi: check with wes why populating acl looks different when compared to put object
+          AccessControlPolicy acp =
+              getFullAcp(AclUtils.expandCannedAcl(request.getAccessControlList(), destBucket.getOwnerCanonicalId(), requestUserCanonicalId),
+                  requestUser, destBucket.getOwnerCanonicalId());
+          destObject.setAcl(acp);
+        } catch (Exception e) {
+          LOG.warn("Encountered an exception while constructing access control policy to set on " + destinationBucket + "/" + destinationKey, e);
+          throw new InternalErrorException(destinationBucket + "/" + destinationKey + "?acl");
+        }
+        
+        // Fill in other details for destination object
+        destObject.setSize(srcObject.getSize());
+        destObject.setStorageClass(srcObject.getStorageClass());
+        destObject.seteTag(srcObject.geteTag());
+        destObject.setIsLatest(Boolean.TRUE);
 
-	}
+        // Prep the request to be sent to the backend
+        request.setSourceObject(srcObject.getObjectUuid());
+        request.setSourceBucket(srcBucket.getBucketUuid());
+        request.setSourceVersionId(ObjectStorageProperties.NULL_VERSION_ID);
+        request.setDestinationObject(destObject.getObjectUuid());
+        request.setDestinationBucket(destBucket.getBucketUuid());
+        
+        try {
+          // Fire copy object request to backend
+          ObjectEntity objectEntity = OsgObjectFactory.getFactory().copyObject(ospClient, destObject, request, requestUser, metadataDirective);
+          reply.setLastModified(DateFormatter.dateToListingFormattedString(objectEntity.getObjectModifiedTimestamp()));
+          reply.setEtag(objectEntity.geteTag());
+          try {
+            // send the event if we aren't doing a metadata update only
+            if (!updateMetadataOnly) {
+              fireObjectCreationEvent(destinationBucket, destinationKey, destObject.getVersionId(), requestUser.getUserId(),
+                  destObject.getSize(), null);
+            }
+          } catch (Exception ex) {
+            LOG.debug("Failed to fire reporting event for OSG COPY object operation", ex);
+          }
+        } catch (Exception ex) {
+          // Wrap the error from back-end with a 500 error
+          LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", ex);
+          throw new InternalErrorException("Could not copy " + srcBucket.getBucketName() + "/" + srcObject.getObjectKey() + " to "
+              + destBucket.getBucketName() + "/" + destObject.getObjectKey(), ex);
+        }
+        
+        // TODO verify this against S3
+        // Copy source version either from the request if its not null or from the source object only if its not "null"
+        reply.setCopySourceVersionId(sourceVersionId != null ? sourceVersionId : (!srcObject.getVersionId().equals(
+            ObjectStorageProperties.NULL_VERSION_ID) ? srcObject.getVersionId() : null));
+        // Copy the version if the destination object was assigned one
+        reply.setVersionId(!destObject.getVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID) ? destObject.getVersionId() : null);
+        
+        return reply;
+        
+      } else {
+        throw new AccessDeniedException(destinationBucket + "/" + destinationKey);
+      }
+    } else {
+      throw new AccessDeniedException(sourceBucket + "/" + sourceKey);
+    } 
+  }
 
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#GetBucketLoggingStatus(com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType)
