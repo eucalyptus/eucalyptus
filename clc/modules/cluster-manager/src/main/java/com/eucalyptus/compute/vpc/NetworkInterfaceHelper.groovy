@@ -30,8 +30,11 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
+import com.google.common.base.Optional
 import com.google.common.base.Strings
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
@@ -80,11 +83,43 @@ class NetworkInterfaceHelper {
     allocatedIp
   }
 
+  /**
+   * Caller must have open transaction on ENI
+   */
+  static void associate( final Address address,
+                         final VpcNetworkInterface networkInterface ) {
+    associate( address, networkInterface, Optional.fromNullable( networkInterface.instance ) )
+  }
+
+  /**
+   * Caller must have open transaction on ENI / instance
+   */
+  static void associate( final Address address,
+                         final VpcNetworkInterface networkInterface,
+                         final Optional<VmInstance> instanceOption ) {
+    address.assign( networkInterface )
+    if ( instanceOption.present && VmInstance.VmStateSet.RUN.apply( instanceOption.get( ) ) ) {
+      address.start( instanceOption.get( ) )
+    }
+    networkInterface.associate( NetworkInterfaceAssociation.create(
+        address.associationId,
+        address.allocationId,
+        address.ownerAccountNumber,
+        address.displayName,
+        networkInterface.vpc.dnsHostnames ?
+            VmInstances.dnsName( address.displayName, DomainNames.externalSubdomain( ) ) :
+            null as String
+    ) )
+    if ( instanceOption.present ) {
+      instanceOption.get( ).updatePublicAddress( address.displayName )
+    }
+  }
+
   static void releasePublic( final VpcNetworkInterface networkInterface ) {
     try {
       List<NetworkResource> resources = Lists.newArrayList( );
 
-      if ( networkInterface.isAssociated( ) ) try {
+      if ( networkInterface.associated ) try {
         Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
         try {
           if ( address.started ) {
@@ -98,7 +133,7 @@ class NetworkInterfaceHelper {
         } catch ( final Exception e2 ) {
           logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e2 )
         }
-        if ( address.isSystemOwned( ) ) {
+        if ( address.systemOwned ) {
           resources << new PublicIPResource(
               value: networkInterface.association.publicIp
           )
@@ -164,17 +199,17 @@ class NetworkInterfaceHelper {
         Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
         try {
           if ( address.started ) {
-            address.stop( );
+            address.stop( )
           }
-        } catch ( final Exception e ) {
-          logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e )
+        } catch ( final Exception e1 ) {
+          logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e1 )
         }
         try {
           address.unassign( networkInterface )
-        } catch ( final Exception e ) {
-          logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e )
+        } catch ( final Exception e2 ) {
+          logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e2 )
         }
-        if ( address.isSystemOwned( ) ) {
+        if ( address.systemOwned ) {
           resources << new PublicIPResource(
               value: networkInterface.association.publicIp
           )

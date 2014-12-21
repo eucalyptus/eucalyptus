@@ -529,6 +529,8 @@ class VmInstanceLifecycleHelpers {
             prepareNetworkResourcesType.resources.addAll( resources )
           }
         }
+      } else if ( isVpc ) {
+        allocation.usePrivateAddressing = true
       }
     }
 
@@ -960,17 +962,7 @@ class VmInstanceLifecycleHelpers {
           ) )
           Address address = getAddress( resourceToken )
           if ( address != null ) {
-            address.assign( networkInterface ).start( instance )
-            networkInterface.associate( NetworkInterfaceAssociation.create(
-                address.associationId,
-                address.allocationId,
-                address.ownerAccountNumber,
-                address.displayName,
-                networkInterface.vpc.dnsHostnames ?
-                    VmInstances.dnsName( address.displayName, DomainNames.externalSubdomain( ) ) :
-                    null as String
-            ) )
-            instance.updatePublicAddress( address.displayName );
+            NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
           } else {
             NetworkInterfaceHelper.start( networkInterface, instance )
           }
