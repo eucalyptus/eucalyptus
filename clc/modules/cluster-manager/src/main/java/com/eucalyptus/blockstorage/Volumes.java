@@ -539,7 +539,12 @@ public class Volumes {
 	  ATTACHMENT_DEVICE {
 		  @Override
 		  public String apply(final Volume vol){
-			return vol.getLocalDevice();
+				try{
+					VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( vol.getDisplayName( ) );
+					return attachment.getDevice( );
+				}catch (final Throwable e) {
+					return null;
+				}
 		  }
 	  },
 	  ATTACHMENT_INSTANCE_ID {
