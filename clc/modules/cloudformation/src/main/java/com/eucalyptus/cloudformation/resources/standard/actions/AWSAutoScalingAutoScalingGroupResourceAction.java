@@ -62,6 +62,8 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
@@ -124,11 +126,8 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         if (action.properties.getTerminationPolicies() != null) {
           createAutoScalingGroupType.setTerminationPolicies(new TerminationPolicies(action.properties.getTerminationPolicies()));
         }
-        if (action.properties.getVpcZoneIdentifier() != null && action.properties.getVpcZoneIdentifier().size() > 1) {
-//        createAutoScalingGroupType.setVpcZoneIdentifier(Joiner.on(",").join(action.properties.getVpcZoneIdentifier()));
-          throw new Exception("Multiple values for vpc zone identifier not supported");
-        } else if (action.properties.getVpcZoneIdentifier() != null && action.properties.getVpcZoneIdentifier().size() == 1) {
-          createAutoScalingGroupType.setVpcZoneIdentifier(action.properties.getVpcZoneIdentifier().get(0));
+        if ( action.properties.getVpcZoneIdentifier() != null ) {
+          createAutoScalingGroupType.setVpcZoneIdentifier(Strings.emptyToNull(Joiner.on( "," ).join(action.properties.getVpcZoneIdentifier())));
         }
         List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(action.info, action.getStackEntity());
         if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
