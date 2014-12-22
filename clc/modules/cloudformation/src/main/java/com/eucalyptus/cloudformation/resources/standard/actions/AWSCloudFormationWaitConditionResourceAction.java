@@ -229,8 +229,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
 
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name(), this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-
+    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override

@@ -637,7 +637,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId) {
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
       StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
@@ -648,8 +648,7 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setResourceInfo(resourceInfo);
       ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
       Integer timeout = ((AWSCloudFormationWaitConditionProperties) resourceAction.getResourceProperties()).getTimeout(); // not proud of this hard coding.
-      if (timeout == null) return null;
-      return String.valueOf(timeout);
+      return timeout
     } catch (Exception ex) {
         Throwable rootCause = Throwables.getRootCause(ex);
         LOG.debug("Error getting timeout for resource " + resourceId);
