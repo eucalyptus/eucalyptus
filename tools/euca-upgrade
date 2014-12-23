@@ -87,8 +87,12 @@ usage() {
 	echo
 }
 
+timestamp() {
+	echo $(date '+%F %T')
+}
+
 log() {
-  FSTR="${1}\n"
+  FSTR="$(timestamp) ${1}\n"
   shift
   printf "${FSTR}" ${@} | tee -a ${UP_LOG}
 }
@@ -165,9 +169,9 @@ upgrade_db() {
   UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA}"
   UPGRADE_ARGS="--upgrade  ${UPGRADE_OLD_ARGS}"
   UPGRADE_CMD="${EUCALYPTUS}/usr/sbin/eucalyptus-cloud -u ${EUCA_USER} -h ${EUCALYPTUS} ${UPGRADE_ARGS}"
-  echo "${UPGRADE_CMD}" >> ${UP_LOG} 
+  log "Upgrade command: ${UPGRADE_CMD}" 
   
-  echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
+  log "Upgrading your database..." 
   chown $EUCA_USER $UP_LOG
   
   # This is to deal with possible database connection leaks in the upgrade script
@@ -175,7 +179,7 @@ upgrade_db() {
 
   ${UPGRADE_CMD} | tee -a ${UP_LOG} 2>&1
   if [ ${PIPESTATUS[0]} -ne 0 ]; then
-    echo "Database upgrade failed! Please ${UP_LOG} for details and contact Eucalyptus support for assistance."
+    echo "Database upgrade failed! Please examine ${UP_LOG} for details and contact Eucalyptus support for assistance."
     exit 1
   fi
 }
@@ -212,7 +216,8 @@ if [ "${NEW_EUCA_VERSION}" == "eee-2.0.1" -a "${OLD_EUCA_VERSION}" == "eee-2.0.0
 
 if [ ! -d "${NEW_EUCA}/var/lib/eucalyptus" ]; then echo "${NEW_EUCA} does not point to a valid Eucalyptus installation. Aborting." ; exit 1 ; fi
 ## NOTE: Add an externalized v.old -> v.new upgrade-path check.
-log "#                           UPGRADE INFORMATION\n#================================================================================" 
+log "#                           UPGRADE INFORMATION"
+log "#================================================================================" 
 log "# Old Version:              %-12.12s" "${OLD_EUCA_VERSION}"
 log "# New Version:              %-12.12s" "${NEW_EUCA_VERSION}"
 log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_KEYS})" ${UP_KEYS}
