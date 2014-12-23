@@ -1,5 +1,3 @@
-package com.eucalyptus.component.events;
-
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  * 
@@ -61,6 +59,7 @@ package com.eucalyptus.component.events;
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.component.events;
 
 import java.util.concurrent.Future;
 

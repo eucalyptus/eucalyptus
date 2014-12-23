@@ -1,5 +1,3 @@
-package com.eucalyptus.empyrean.configuration;
-
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  * 
@@ -61,6 +59,7 @@ package com.eucalyptus.empyrean.configuration;
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.empyrean.configuration;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
