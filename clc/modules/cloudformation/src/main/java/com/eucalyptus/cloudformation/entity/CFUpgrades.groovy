@@ -53,9 +53,12 @@ class CFUpgrades {
       Sql sql = null
       try {
         sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloudformation" )
+        sql.execute( "ALTER TABLE stacks ALTER COLUMN stack_id TYPE varchar(400)" )
         sql.execute( "ALTER TABLE stacks ALTER COLUMN stack_policy TYPE text" )
         sql.execute( "ALTER TABLE stacks ALTER COLUMN template_body TYPE text" )
+        sql.execute( "ALTER TABLE stack_events ALTER COLUMN stack_id TYPE varchar(400)" )
         sql.execute( "ALTER TABLE stack_events ALTER COLUMN physical_resource_id TYPE text" )
+        sql.execute( "ALTER TABLE stack_resources ALTER COLUMN stack_id TYPE varchar(400)" )
         sql.execute( "ALTER TABLE stack_resources ALTER COLUMN physical_resource_id TYPE text" )
         return true
       } catch ( Exception ex ) {

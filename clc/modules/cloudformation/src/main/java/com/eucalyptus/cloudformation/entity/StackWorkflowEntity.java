@@ -39,7 +39,7 @@ import javax.persistence.Table;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackWorkflowEntity extends AbstractPersistent {
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
 
   @Column(name = "domain", nullable = false )

@@ -128,7 +128,7 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
   @Type(type="org.hibernate.type.StringClobType")
   String parametersJson;
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
 
   @Column( name = "stack_policy")

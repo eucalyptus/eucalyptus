@@ -76,7 +76,7 @@ public class StackEventEntity extends AbstractPersistent {
     this.recordDeleted = recordDeleted;
   }
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
