@@ -76,7 +76,6 @@ import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.vpc.InternetGateways;
 import com.eucalyptus.compute.vpc.NetworkInterface;
-import com.eucalyptus.compute.vpc.NetworkInterfaceAssociation;
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper;
 import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
@@ -92,7 +91,6 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
@@ -334,27 +332,8 @@ public class AddressManager {
             }
           }
 
-          address.assign( eni );
-          if ( eni.isAttached( ) && VmInstance.VmStateSet.RUN.apply( eni.getAttachment( ).getInstance( ) ) ) {
-            address.start( eni.getAttachment( ).getInstance( ) );
-          }
-          final boolean hostnamesEnabled = eni.getVpc( ).getDnsHostnames( );
-          eni.associate( NetworkInterfaceAssociation.create(
-            address.getAssociationId( ),
-            address.getAllocationId( ),
-            address.getOwnerAccountNumber( ),
-            address.getName( ),
-            hostnamesEnabled ?
-                VmInstances.dnsName( address.getName( ), DomainNames.externalSubdomain( ) ) :
-                null
-          ) );
-          eni.setPrivateDnsName( hostnamesEnabled ?
-                  VmInstances.dnsName( eni.getPrivateIpAddress( ), DomainNames.internalSubdomain( ) ) :
-                  null
-          );
-          if ( eni.isAttached( ) ) {
-            eni.getAttachment( ).getInstance( ).updatePublicAddress( address.getName( ) );
-          }
+          NetworkInterfaceHelper.associate( address, eni );
+
           tx.commit( );
         } catch ( final VpcMetadataNotFoundException e ) {
           throw new ClientComputeException( "Gateway.NotAttached", "Internet gateway not found for VPC" );
@@ -423,7 +402,12 @@ public class AddressManager {
         address.unassign( eni );
         eni.disassociate( );
         if ( eni.isAttached( ) ) {
-          eni.getAttachment( ).getInstance( ).updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+          final VmInstance vm = eni.getAttachment( ).getInstance( );
+          vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+          if( !vm.isUsePrivateAddressing( ) &&
+              ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+            NetworkInterfaceHelper.associate( Addresses.allocateSystemAddress( ), eni );
+          }
         }
         tx.commit( );
       }

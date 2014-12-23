@@ -134,7 +134,7 @@ public class Allocations {
     private String rootDirective;
     private final int minCount;
     private final int maxCount;
-    private final boolean usePrivateAddressing;
+    private boolean usePrivateAddressing;
     private final boolean monitoring;
     @Nullable
     private final String clientToken;
@@ -499,6 +499,10 @@ public class Allocations {
 
     public boolean isUsePrivateAddressing() {
       return usePrivateAddressing;
+    }
+
+    public void setUsePrivateAddressing( final boolean usePrivateAddressing ) {
+      this.usePrivateAddressing = usePrivateAddressing;
     }
 
     public final boolean isMonitoring() {

@@ -138,7 +138,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
           new NetworkInterfaceAssociationType(
               networkInterfaceAssociation.getPublicIp(),
               networkInterfaceAssociation.getPublicDnsName(),
-              networkInterfaceAssociation.getIpOwnerId(),
+              networkInterfaceAssociation.getDisplayIpOwnerId(),
               networkInterfaceAssociation.getAllocationId(),
               networkInterfaceAssociation.getAssociationId()
           );
@@ -254,7 +254,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
     ASSOCIATION_IP_OWNER_ID {
       @Override
       public String apply( final NetworkInterface networkInterface ){
-        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getIpOwnerId( );
+        return networkInterface.getAssociation( ) == null ? null : networkInterface.getAssociation( ).getDisplayIpOwnerId( );
       }
     },
     ASSOCIATION_PUBLIC_IP {
