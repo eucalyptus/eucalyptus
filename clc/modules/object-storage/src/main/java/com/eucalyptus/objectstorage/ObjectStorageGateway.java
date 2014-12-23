@@ -1331,11 +1331,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         
         // Construct ACL for destination object
         try {
-          String requestUserCanonicalId = requestUser.getAccount() != null ? requestUser.getAccount().getCanonicalId() : null;
-          // TODO swathi: check with wes why populating acl looks different when compared to put object
-          AccessControlPolicy acp =
-              getFullAcp(AclUtils.expandCannedAcl(request.getAccessControlList(), destBucket.getOwnerCanonicalId(), requestUserCanonicalId),
-                  requestUser, destBucket.getOwnerCanonicalId());
+          AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, destBucket.getOwnerCanonicalId());
           destObject.setAcl(acp);
         } catch (Exception e) {
           LOG.warn("Encountered an exception while constructing access control policy to set on " + destinationBucket + "/" + destinationKey, e);
@@ -1376,7 +1372,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
               + destBucket.getBucketName() + "/" + destObject.getObjectKey(), ex);
         }
         
-        // TODO verify this against S3
         // Copy source version either from the request if its not null or from the source object only if its not "null"
         reply.setCopySourceVersionId(sourceVersionId != null ? sourceVersionId : (!srcObject.getVersionId().equals(
             ObjectStorageProperties.NULL_VERSION_ID) ? srcObject.getVersionId() : null));

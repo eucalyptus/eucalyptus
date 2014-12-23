@@ -496,27 +496,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                                 operationParams.put("MetadataDirective", metaDataDirective);
                             }
 
-                            // TODO check with Wes if this is even necessary. copy object does not accept acl in the body, it allows acl via headers only
-                            /*AccessControlList accessControlList = null;
-                            if (contentLength > 0) {
-                                accessControlList = getAccessControlList(httpRequest);
-                            }
-                            else {
-                                accessControlList = new AccessControlList();
-                            }*/
-                            // Commenting out this code as populateObjectFromBindingMap() extracts acl from header. It gets invoked for any operation that includes acls in header 
-                            /*String aclHeader = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
-                            if (aclHeader != null && !"".equals(aclHeader)) {
-                                validateCannedAcl(aclHeader);
-                                CanonicalUser aws = new CanonicalUser();
-                                aws.setDisplayName("");
-                                Grant grant = new Grant(new Grantee(aws), aclHeader);
-                                ArrayList<Grant> grants = Lists.newArrayList();
-                                grants.add(grant);
-                                accessControlList.getGrants().addAll(grants);
-                            }
-
-                            operationParams.put("AccessControlList", accessControlList);*/
                             operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
                             Set<String> headerNames = httpRequest.getHeaderNames();
                             for(String key : headerNames) {
@@ -1226,8 +1205,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
     }
     
-  protected static void processHeaderGrants(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, MappingHttpRequest httpRequest)
-      throws S3Exception {
+  protected static void processHeaderGrants(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap,
+      MappingHttpRequest httpRequest) throws S3Exception {
 
     if (paramFieldMap.containsKey("AccessControlList") || paramFieldMap.containsKey("AccessControlPolicy")) {
 
@@ -1259,17 +1238,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                   grants.add(new Grant(new Grantee(StringUtils.strip(grantIdentityArray[1], "'\"")), mapEntry.getValue().toString()));
                   break;
                 case "id":
-                  grants.add(new Grant(new Grantee(new CanonicalUser(StringUtils.strip(grantIdentityArray[1], "'\""), "")), mapEntry.getValue().toString()));
+                  grants.add(new Grant(new Grantee(new CanonicalUser(StringUtils.strip(grantIdentityArray[1], "'\""), "")), mapEntry.getValue()
+                      .toString()));
                   break;
                 case "uri":
                   grants.add(new Grant(new Grantee(new Group(StringUtils.strip(grantIdentityArray[1], "'\""))), mapEntry.getValue().toString()));
                   break;
                 default:
-                  throw new InvalidRequestException(mapEntry.getKey().toString(), "Invalid type specification for grantee: " + grantIdentityArray[0]
-                      + ". Valid types are emailAddress, id or url"); 
+                  throw new InvalidArgumentException(mapEntry.getKey().toString(), "Argument format not recognized: " + grantIdentityArray[0]
+                      + ". Valid types are emailAddress, id or url");
               }
             } else {
-              throw new InvalidRequestException(mapEntry.getKey().toString(), "Invalid specification for grantee: " + grantsArray[0]
+              throw new InvalidArgumentException(mapEntry.getKey().toString(), "Argument format not recognized: " + grantsArray[0]
                   + ". Valid format for grantee is 'type=value' where type is emailAddress, id or url");
             }
           }
