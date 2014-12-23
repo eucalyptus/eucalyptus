@@ -1,5 +1,5 @@
-/*
- * Copyright 2009-$year Eucalyptus Systems, Inc.
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- */
+ ************************************************************************/
 
 package com.eucalyptus.stats.configuration;
 
