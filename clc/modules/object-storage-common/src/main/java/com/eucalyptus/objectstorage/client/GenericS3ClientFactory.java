@@ -34,6 +34,8 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Predicate;
@@ -43,6 +45,9 @@ import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,19 +64,12 @@ import java.util.Random;
 public class GenericS3ClientFactory {
     private static final Logger LOG = Logger.getLogger(GenericS3ClientFactory.class);
 
-    /*
-    S3 SDK Client config defaults for Euca
-     */
-    private static final int CONNECTION_TIMEOUT_MS = 10 * 1000; //10 sec timeout
-    private static final int DEFAULT_MAX_CONNECTIONS = 64; //64 http connections. default for SDK is 50
-    private static final int DEFAULT_SOCKET_READ_TIMEOUT_MS = 30 * 1000; //30 second socket read timeout. default is 50s
-    private static final int DEFAULT_MAX_ERROR_RETRY = 3; //3 retries on a failure
-    private static final int DEFAULT_BUFFER_SIZE = 512 * 1024; //512KB.
     private static final Random randomizer = new Random(System.currentTimeMillis());
 
     static {
         System.setProperty(SDKGlobalConfiguration.DISABLE_REMOTE_REGIONS_FILE_SYSTEM_PROPERTY, "disable"); //anything non-null disables it
-        System.setProperty(SDKGlobalConfiguration.DEFAULT_S3_STREAM_BUFFER_SIZE, String.valueOf(DEFAULT_BUFFER_SIZE));  //512KB upload buffer, to handle most small objects
+        System.setProperty(SDKGlobalConfiguration.DEFAULT_S3_STREAM_BUFFER_SIZE,
+                String.valueOf( GenericS3ClientFactoryConfiguration.getInstance().getBuffer_size()) );  //512KB upload buffer, to handle most small objects
         System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", "disable"); //disable etag validation on GETs
     }
 
@@ -140,11 +138,11 @@ public class GenericS3ClientFactory {
 
     protected static ClientConfiguration getDefaultConfiguration(boolean withHttps) {
         ClientConfiguration config = new ClientConfiguration();
-        config.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
-        config.setMaxConnections(DEFAULT_MAX_CONNECTIONS);
-        config.setMaxErrorRetry(DEFAULT_MAX_ERROR_RETRY);
+        config.setConnectionTimeout(GenericS3ClientFactoryConfiguration.getInstance().getConnection_timeout_ms());
+        config.setMaxConnections(GenericS3ClientFactoryConfiguration.getInstance().getMax_connections());
+        config.setMaxErrorRetry(GenericS3ClientFactoryConfiguration.getInstance().getMax_error_retries());
         config.setUseReaper(true);
-        config.setSocketTimeout(DEFAULT_SOCKET_READ_TIMEOUT_MS);
+        config.setSocketTimeout(GenericS3ClientFactoryConfiguration.getInstance().getSocket_read_timeout_ms());
         config.setProtocol(withHttps ? Protocol.HTTPS : Protocol.HTTP);
         return config;
     }
