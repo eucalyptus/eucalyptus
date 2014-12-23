@@ -1,11 +1,3 @@
-@GroovyAddClassUUID
-package com.eucalyptus.empyrean.configuration
-
-import com.eucalyptus.empyrean.EmpyreanMessage
-import com.eucalyptus.empyrean.ServiceId
-import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
-
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
@@ -67,6 +59,14 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+@GroovyAddClassUUID
+package com.eucalyptus.empyrean.configuration
+
+import com.eucalyptus.empyrean.EmpyreanMessage
+import com.eucalyptus.empyrean.ServiceId
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
