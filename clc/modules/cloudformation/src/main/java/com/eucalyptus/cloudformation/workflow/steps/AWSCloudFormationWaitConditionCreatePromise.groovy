@@ -1,12 +1,33 @@
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy
-import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.workflow.StackActivity
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException
+import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by ethomas on 9/28/14.
@@ -14,26 +35,27 @@ import groovy.transform.TypeCheckingMode
 @CompileStatic(TypeCheckingMode.SKIP)
 public class AWSCloudFormationWaitConditionCreatePromise {
 
-  public AWSCloudFormationWaitConditionCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String stepId, ResourceAction resourceAction) {
-    this.workflowOperations = workflowOperations;
-    this.stepId = stepId;
-    this.resourceAction = resourceAction;
+  public AWSCloudFormationWaitConditionCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String stepId) {
+    this.workflowOperations = workflowOperations
+    this.workflowUtils = new WorkflowUtils( workflowOperations )
+    this.stepId = stepId
   }
   @Delegate
-  private final WorkflowOperations<StackActivity> workflowOperations;
-  private final String stepId;
-  private final ResourceAction resourceAction;
+  private final WorkflowOperations<StackActivity> workflowOperations
+  private final WorkflowUtils workflowUtils
+  private final String stepId
 
   public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
-    String stepIdLocal = new String(stepId);
-    // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration
-    Step createStep = resourceAction.getCreateStep(stepIdLocal);
-    Promise<String> timeoutPromise = promiseFor(activities.getAWSCloudFormationWaitConditionTimeout(resourceId, stackId, accountId, effectiveUserId));
-    return waitFor(timeoutPromise) { String result ->
-      RetryPolicy retryPolicy = new StandardResourceRetryPolicy(Integer.valueOf(result)).getPolicy();
-      retry(retryPolicy) {
-        promiseFor(activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId));
+    Promise<Integer> timeoutPromise =
+        promiseFor(activities.getAWSCloudFormationWaitConditionTimeout(resourceId, stackId, accountId, effectiveUserId))
+    return waitFor( timeoutPromise ) { Integer timeout ->
+      waitFor( workflowUtils.exponentialPollWithTimeout( timeout, 10, 1.15, (int)TimeUnit.MINUTES.toSeconds( 2 ) ) {
+        promiseFor( activities.performCreateStep( stepId, resourceId, stackId, accountId, effectiveUserId ) )
+      } ) { Boolean created ->
+        if ( !created ) {
+          throw new ValidationFailedException( "Resource ${resourceId} timeout for stack ${stackId}" )
+        }
+        promiseFor( "" )
       }
     }
   }
