@@ -95,7 +95,7 @@ public class StackEventEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEventEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEventEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
+        .add(accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ))
         .add(Restrictions.or(
             Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
             Restrictions.eq("stackId", stackNameOrId))

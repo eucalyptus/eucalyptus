@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,25 +20,13 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.AlreadyExistsException;
-import com.eucalyptus.cloudformation.Output;
-import com.eucalyptus.cloudformation.Outputs;
-import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.Parameters;
-import com.eucalyptus.cloudformation.ResourceList;
-import com.eucalyptus.cloudformation.Stack;
-import com.eucalyptus.cloudformation.Tag;
-import com.eucalyptus.cloudformation.Tags;
-import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -71,11 +59,11 @@ public class StackEntityManager {
   }
 
   public static List<StackEntity> describeStacks(String accountId, String stackNameOrId) {
-    List<StackEntity> returnValue = Lists.newArrayList();
+    final List<StackEntity> returnValue;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId));
+        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) );
       if (stackNameOrId != null) {
         // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         criteria.add(Restrictions.or(
@@ -92,7 +80,7 @@ public class StackEntityManager {
   }
 
   public static List<StackEntity> listStacks(String accountId, List<StackEntity.Status> statusValues) {
-    List<StackEntity> returnValue = Lists.newArrayList();
+    List<StackEntity> returnValue;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -132,7 +120,7 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
+        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) )
           // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         .add(Restrictions.or(Restrictions.eq("stackName", stackNameOrId), Restrictions.eq("stackId", stackNameOrId)))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
@@ -150,7 +138,7 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
+        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) )
           // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         .add(Restrictions.or(
           Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),

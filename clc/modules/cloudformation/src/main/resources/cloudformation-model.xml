@@ -50,6 +50,7 @@
             <inbound>
                 <vm:inbound-endpoint ref="CloudFormationRequestQueueEndpoint" />
             </inbound>
+            <component class="com.eucalyptus.cloudformation.CloudFormationValidator" />
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="CloudFormationWS" />

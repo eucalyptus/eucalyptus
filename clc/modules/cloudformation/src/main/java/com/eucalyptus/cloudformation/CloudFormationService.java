@@ -25,6 +25,7 @@ import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequ
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
@@ -74,22 +75,25 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Name;
 
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -108,34 +112,22 @@ public class CloudFormationService {
 
   private static final String NO_ECHO_PARAMETER_VALUE = "****";
 
+  private static final String STACK_ID_PREFIX = "arn:aws:cloudformation:";
+
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);
 
-  public CancelUpdateStackResponseType cancelUpdateStack(CancelUpdateStackType request)
-      throws CloudFormationException {
-    CancelUpdateStackResponseType reply = request.getReply();
-    try {
-      final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
-    } catch (Exception ex) {
-      handleException(ex);
-    }
-    return reply;
+  public CancelUpdateStackResponseType cancelUpdateStack( CancelUpdateStackType request ) throws CloudFormationException {
+    return request.getReply( );
   }
 
-  public CreateStackResponseType createStack(final CreateStackType request)
-      throws CloudFormationException {
+  public CreateStackResponseType createStack( final CreateStackType request ) throws CloudFormationException {
     CreateStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_CREATESTACK, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
       final String accountName = user.getAccount().getName();
-
-
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
@@ -155,7 +147,7 @@ public class CloudFormationService {
       }
 
       final String stackIdLocal = UUID.randomUUID().toString();
-      final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
+      final String stackId = STACK_ID_PREFIX + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
       final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
@@ -210,6 +202,7 @@ public class CloudFormationService {
             StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
             stackEntity.setStackName(stackName);
             stackEntity.setStackId(stackId);
+            stackEntity.setNaturalId(stackIdLocal);
             stackEntity.setAccountId(accountId);
             stackEntity.setTemplateBody(templateText);
             stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
@@ -302,8 +295,8 @@ public class CloudFormationService {
     return reply;
   }
 
-  private String extractTemplateTextFromURL(String templateUrl, User user) throws ValidationErrorException {
-    URL url = null;
+  private static String extractTemplateTextFromURL(String templateUrl, User user) throws ValidationErrorException {
+    final URL url;
     try {
       url = new URL(templateUrl);
     } catch (MalformedURLException e) {
@@ -320,7 +313,11 @@ public class CloudFormationService {
         if ( contentLength > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
           throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
         }
-        return copyStreamToString( new BoundedInputStream( templateIn, Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1 ) );
+        final byte[] templateData = ByteStreams.toByteArray( new BoundedInputStream( templateIn, Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1 ) );
+        if ( templateData.length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+        }
+        return new String( templateData, StandardCharsets.UTF_8 );
       } catch ( UnknownHostException ex ) {
         throw new ValidationErrorException("Invalid template url " + templateUrl);
       } catch ( SSLHandshakeException ex ) {
@@ -339,7 +336,7 @@ public class CloudFormationService {
     // Otherwise, assume the URL is a eucalyptus S3 url...
     String[] validHostBucketSuffixes = new String[]{"walrus", "objectstorage"};
     String[] validServicePaths = new String[]{ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH, ComponentIds.lookup(ObjectStorage.class).getServicePath()};
-    String[] validDomains = new String[]{removeLastDot(DomainNames.externalSubdomain().toString())};
+    String[] validDomains = new String[]{DomainNames.externalSubdomain().relativize( Name.root ).toString( )};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( user ) ) {
       if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
@@ -356,30 +353,8 @@ public class CloudFormationService {
     }
   }
 
-  private String removeLastDot(String input) {
-    if (input == null) return null;
-    if (input.endsWith(".")) {
-      return input.substring(0, input.length() - 1);
-    }
-    return input;
-  }
 
-  private static String copyStreamToString(InputStream in) throws IOException, ValidationErrorException {
-    ByteArrayOutputStream bout = new ByteArrayOutputStream();
-    byte[] buffer = new byte[4096];
-    int length = -1;
-    while ((length = in.read(buffer)) != -1) {
-      bout.write(buffer, 0, length);
-    }
-    bout.flush();
-    if (bout.toByteArray().length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
-      throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
-    }
-    return new String(bout.toByteArray());
-  }
-
-
-  private List<String> describeAvailabilityZones(String userId) throws Exception {
+  private static List<String> describeAvailabilityZones(String userId) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
     DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
     describeAvailabilityZonesType.setEffectiveUserId(userId);
@@ -394,21 +369,25 @@ public class CloudFormationService {
     return availabilityZones;
   }
 
-  public DeleteStackResponseType deleteStack(DeleteStackType request)
-      throws CloudFormationException {
+  public DeleteStackResponseType deleteStack( final DeleteStackType request ) throws CloudFormationException {
     DeleteStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DELETESTACK, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      final String accountName = user.getAccount().getName();
-      String stackName = request.getStackName();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
-      if (stackEntity != null) {
+      if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
+        stackEntity = StackEntityManager.getNonDeletedStackByNameOrId( stackName, null );
+      }
+      if ( stackEntity != null ) {
+        if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+          throw new AccessDeniedException( "Not authorized." );
+        }
+        final String stackAccountId = stackEntity.getAccountId( );
+
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
         boolean existingOpenDeleteWorkflow = false;
         List<StackWorkflowEntity> deleteWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW);
@@ -437,14 +416,15 @@ public class CloudFormationService {
         }
         if (!existingOpenDeleteWorkflow) {
           String stackId = stackEntity.getStackId();
-          StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+          StackWorkflowTags stackWorkflowTags =
+              new StackWorkflowTags(stackId, stackName, stackAccountId, AccountFullName.getInstance(stackAccountId).getAccountName( ) );
 
           WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
           WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
           InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
             .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
           DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
-          deleteStackWorkflow.deleteStack(stackId, accountId, stackEntity.getResourceDependencyManagerJson(), userId);
+          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId);
           StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
             StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
             CloudFormationBootstrapper.SWF_DOMAIN,
@@ -458,19 +438,19 @@ public class CloudFormationService {
     return reply;
   }
 
-  public DescribeStackEventsResponseType describeStackEvents(DescribeStackEventsType request)
-      throws CloudFormationException {
+  public DescribeStackEventsResponseType describeStackEvents( final DescribeStackEventsType request ) throws CloudFormationException {
     DescribeStackEventsResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKEVENTS, ctx);
       User user = ctx.getUser();
-      String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      ArrayList<StackEvent> stackEventList = StackEventEntityManager.getStackEventsByNameOrId(stackName, accountId);
+      checkStackPermission( ctx, stackName, accountId );
+      ArrayList<StackEvent> stackEventList = StackEventEntityManager.getStackEventsByNameOrId( stackName, accountId );
+      if ( stackEventList.isEmpty( ) && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
+        stackEventList = StackEventEntityManager.getStackEventsByNameOrId( stackName, null );
+      }
       StackEvents stackEvents = new StackEvents();
       stackEvents.setMember(stackEventList);
       DescribeStackEventsResult describeStackEventsResult = new DescribeStackEventsResult();
@@ -487,17 +467,18 @@ public class CloudFormationService {
     DescribeStackResourceResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCE, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      String logicalResourceId = request.getLogicalResourceId();
+      checkStackPermission( ctx, stackName, accountId );
+      final String logicalResourceId = request.getLogicalResourceId();
       if (logicalResourceId == null) throw new ValidationErrorException("logicalResourceId is null");
-      StackResourceEntity stackResourceEntity = StackResourceEntityManager.describeStackResource(accountId, stackName, logicalResourceId);
-      StackResourceDetail stackResourceDetail = new StackResourceDetail();
+      final StackResourceEntity stackResourceEntity = StackResourceEntityManager.describeStackResource(
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId,
+          stackName,
+          logicalResourceId );
+      final StackResourceDetail stackResourceDetail = new StackResourceDetail();
       stackResourceDetail.setDescription(stackResourceEntity.getDescription());
       stackResourceDetail.setLastUpdatedTimestamp(stackResourceEntity.getLastUpdateTimestamp());
       stackResourceDetail.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
@@ -508,7 +489,7 @@ public class CloudFormationService {
       stackResourceDetail.setResourceType(stackResourceEntity.getResourceType());
       stackResourceDetail.setStackId(stackResourceEntity.getStackId());
       stackResourceDetail.setStackName(stackResourceEntity.getStackName());
-      DescribeStackResourceResult describeStackResourceResult = new DescribeStackResourceResult();
+      final DescribeStackResourceResult describeStackResourceResult = new DescribeStackResourceResult();
       describeStackResourceResult.setStackResourceDetail(stackResourceDetail);
       reply.setDescribeStackResourceResult(describeStackResourceResult);
     } catch (Exception ex) {
@@ -517,19 +498,16 @@ public class CloudFormationService {
     return reply;
   }
 
-  public DescribeStackResourcesResponseType describeStackResources(DescribeStackResourcesType request)
+  public DescribeStackResourcesResponseType describeStackResources(final DescribeStackResourcesType request)
       throws CloudFormationException {
     DescribeStackResourcesResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCES, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
-      String logicalResourceId = request.getLogicalResourceId();
-      String physicalResourceId = request.getPhysicalResourceId();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
+      final String logicalResourceId = request.getLogicalResourceId();
+      final String physicalResourceId = request.getPhysicalResourceId();
       if (stackName != null && logicalResourceId != null) {
         throw new ValidationErrorException("Only one of StackName or LogicalResourceId can be set");
       }
@@ -537,8 +515,13 @@ public class CloudFormationService {
         throw new ValidationErrorException("StackName or LogicalResourceId must be set");
       }
       ArrayList<StackResource> stackResourceList = Lists.newArrayList();
-      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.describeStackResources(accountId, stackName, physicalResourceId, logicalResourceId);
-      if (stackResourceEntityList != null) {
+      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.describeStackResources(
+          ctx.isAdministrator( ) && stackName!=null && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId,
+          stackName,
+          physicalResourceId,
+          logicalResourceId);
+      if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
+        checkStackPermission( ctx, stackResourceEntityList.get( 0 ).getStackId( ), accountId );
         for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
           StackResource stackResource = new StackResource();
           stackResource.setDescription(stackResourceEntity.getDescription());
@@ -569,16 +552,14 @@ public class CloudFormationService {
     DescribeStacksResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBESTACKS, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
-      // TODO: support next token
-      List<StackEntity> stackEntities = StackEntityManager.describeStacks(accountId, stackName);
-      ArrayList<Stack> stackList = new ArrayList<Stack>();
-      for (StackEntity stackEntity: stackEntities) {
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
+      final List<StackEntity> stackEntities = StackEntityManager.describeStacks(
+          ctx.isAdministrator( ) && stackName!=null && ("verbose".equals(stackName) || stackName.startsWith( STACK_ID_PREFIX )) ? null : accountId,
+          ctx.isAdministrator( ) && "verbose".equals(stackName) ? null : stackName );
+      final ArrayList<Stack> stackList = new ArrayList<Stack>();
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
         Stack stack = new Stack();
         if (stackEntity.getCapabilitiesJson() != null && !stackEntity.getCapabilitiesJson().isEmpty()) {
           ResourceList capabilities = new ResourceList();
@@ -663,32 +644,23 @@ public class CloudFormationService {
 
   public EstimateTemplateCostResponseType estimateTemplateCost(EstimateTemplateCostType request)
       throws CloudFormationException {
-    EstimateTemplateCostResponseType reply = request.getReply();
-    try {
-      final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
-    } catch (Exception ex) {
-      handleException(ex);
-    }
-    return reply;
+    return request.getReply();
   }
 
-  public GetStackPolicyResponseType getStackPolicy(GetStackPolicyType request)
-      throws CloudFormationException {
+  public GetStackPolicyResponseType getStackPolicy(final GetStackPolicyType request) throws CloudFormationException {
     GetStackPolicyResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETSTACKPOLICY, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
       }
-      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      checkStackPermission( ctx, stackName, accountId );
+      final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+          stackName,
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
@@ -701,21 +673,21 @@ public class CloudFormationService {
     return reply;
   }
 
-  public GetTemplateResponseType getTemplate(GetTemplateType request)
+  public GetTemplateResponseType getTemplate(final GetTemplateType request)
       throws CloudFormationException {
     GetTemplateResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETTEMPLATE, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
       }
-      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      checkStackPermission( ctx, stackName, accountId );
+      final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+          stackName,
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
@@ -733,17 +705,17 @@ public class CloudFormationService {
     ListStackResourcesResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_LISTSTACKRESOURCES, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      String stackName = request.getStackName();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
       }
+      checkStackPermission( ctx, stackName, accountId );
       ArrayList<StackResourceSummary> stackResourceSummaryList = Lists.newArrayList();
-      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.listStackResources(accountId, stackName);
+      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.listStackResources(
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId,
+          stackName );
       if (stackResourceEntityList != null) {
         for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
           StackResourceSummary stackResourceSummary = new StackResourceSummary();
@@ -772,13 +744,10 @@ public class CloudFormationService {
     ListStacksResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_LISTSTACKS, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
-      ResourceList stackStatusFilter = request.getStackStatusFilter();
-      List<StackEntity.Status> statusFilterList = Lists.newArrayList();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
+      final ResourceList stackStatusFilter = request.getStackStatusFilter();
+      final List<StackEntity.Status> statusFilterList = Lists.newArrayList();
       if (stackStatusFilter != null && stackStatusFilter.getMember() != null) {
         for (String statusFilterStr: stackStatusFilter.getMember()) {
           try {
@@ -792,7 +761,7 @@ public class CloudFormationService {
       // TODO: support next token
       List<StackEntity> stackEntities = StackEntityManager.listStacks(accountId, statusFilterList);
       ArrayList<StackSummary> stackSummaryList = new ArrayList<StackSummary>();
-      for (StackEntity stackEntity: stackEntities) {
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
         StackSummary stackSummary = new StackSummary();
         stackSummary.setCreationTime(stackEntity.getCreateOperationTimestamp());
         stackSummary.setDeletionTime(stackEntity.getDeleteOperationTimestamp());
@@ -819,11 +788,8 @@ public class CloudFormationService {
     SetStackPolicyResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_SETSTACKPOLICY, ctx);
-      User user = ctx.getUser();
-      String userId = user.getUserId();
-      String accountId = user.getAccount().getAccountNumber();
+      final User user = ctx.getUser();
+      final String accountId = user.getAccount().getAccountNumber();
       // TODO: validate policy
       final String stackName = request.getStackName();
       final String stackPolicyBody = request.getStackPolicyBody();
@@ -832,9 +798,14 @@ public class CloudFormationService {
       }
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       // body could be null (?) (i.e. remove policy)
-      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+          stackName,
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        throw new AccessDeniedException( "Not authorized." );
       }
       stackEntity.setStackPolicy(stackPolicyBody);
       StackEntityManager.updateStack(stackEntity);
@@ -846,15 +817,7 @@ public class CloudFormationService {
 
   public UpdateStackResponseType updateStack(UpdateStackType request)
       throws CloudFormationException {
-    UpdateStackResponseType reply = request.getReply();
-    try {
-      final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
-    } catch (Exception ex) {
-      handleException(ex);
-    }
-    return reply;
+    return request.getReply();
   }
 
   public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
@@ -870,7 +833,6 @@ public class CloudFormationService {
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       String stackName = "stackName"; // just some value to make the validate code work
-      if (stackName == null) throw new ValidationErrorException("Stack name is null");
       if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
       if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
 
@@ -919,7 +881,18 @@ public class CloudFormationService {
     }
     throw exception;
   }
-  private void checkActionPermission(final String actionType, final Context ctx)
+
+  private static void checkStackPermission( Context ctx, String stackName, String accountId ) throws AccessDeniedException {
+    StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId( stackName, accountId );
+    if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
+      stackEntity = StackEntityManager.getAnyStackByNameOrId( stackName, null );
+    }
+    if ( stackEntity != null && !RestrictedTypes.filterPrivileged().apply( stackEntity ) ) {
+      throw new AccessDeniedException( "Not authorized." );
+    }
+  }
+
+  private static void checkActionPermission(final String actionType, final Context ctx)
     throws AccessDeniedException {
     if (!Permissions.isAuthorized(CloudFormationPolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
