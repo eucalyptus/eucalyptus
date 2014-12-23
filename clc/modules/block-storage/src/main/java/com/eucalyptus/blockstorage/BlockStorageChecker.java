@@ -156,17 +156,31 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanFailedVolumes() {
-		TransactionResource tran = Entities.transactionFor(VolumeInfo.class);
-		VolumeInfo volumeInfo = new VolumeInfo();
-		volumeInfo.setStatus(StorageProperties.Status.failed.toString());
-		List<VolumeInfo> volumeInfos = Entities.query(volumeInfo);
-		for(VolumeInfo volInfo : volumeInfos) {
-			String volumeId = volInfo.getVolumeId();
-			LOG.info("Cleaning failed volume " + volumeId);
-			blockManager.cleanVolume(volumeId);
-		}
-		tran.commit();
-	}
+      VolumeInfo volumeInfo = new VolumeInfo();
+      volumeInfo.setStatus(StorageProperties.Status.failed.toString());
+      List<VolumeInfo> volumeInfos = null;
+      try {
+        volumeInfos = Transactions.findAll(volumeInfo);
+      } catch (Exception e) {
+        LOG.warn("Error querying database for failed volumes", e);
+      }
+  
+      if (volumeInfos == null || volumeInfos.size() == 0) {
+        LOG.info("No failed volumes found to clean");
+        return;
+      }
+  
+      for (VolumeInfo volInfo : volumeInfos) {
+        try {
+          LOG.info("Cleaning failed volume " + volInfo.getVolumeId());
+          blockManager.cleanVolume(volInfo.getVolumeId());
+          // We don't remove deleted volumes, but failed are okay to delete.
+          Transactions.delete(volInfo);
+        } catch (Exception e) {
+          LOG.warn("Erorr cleaning failed volume " + volInfo.getVolumeId(), e);
+        }
+      }
+    }
 
 	public void cleanFailedVolume(String volumeId) {
         try {
