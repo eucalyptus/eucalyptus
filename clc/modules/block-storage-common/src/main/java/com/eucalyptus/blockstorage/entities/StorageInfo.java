@@ -63,8 +63,10 @@
 package com.eucalyptus.blockstorage.entities;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_1_0;
+import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import javax.persistence.Column;
@@ -413,31 +415,50 @@ public class StorageInfo extends AbstractPersistent {
 		}
 	}
 
-	@PreUpgrade(since = v4_1_0, value = Storage.class)
-	public static class RenameColumns implements Callable<Boolean> {
-
-		private static final Logger LOG = Logger.getLogger(RenameColumns.class);
-
-		@Override
-		public Boolean call() throws Exception {
-
-			LOG.info("Renaming columns in table storage_info");
-			Sql sql = null;
-
-			try {
-				sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
-				sql.execute("alter table storage_info rename column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
-				sql.execute("alter table storage_info rename column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
-
-				return Boolean.TRUE;
-			} catch (Exception e) {
-				LOG.warn("Failed to rename columns in table storage_info", e);
-				return Boolean.TRUE;
-			} finally {
-				if (sql != null) {
-					sql.close();
-				}
-			}
-		}
-	}
+    @PreUpgrade(since = v4_1_0, value = Storage.class)
+    public static class RenameColumns implements Callable<Boolean> {
+  
+      private static final Logger LOG = Logger.getLogger(RenameColumns.class);
+  
+      @Override
+      public Boolean call() throws Exception {
+  
+        LOG.info("Renaming columns in table storage_info");
+        Sql sql = null;
+  
+        try {
+  
+          sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+  
+          // check if the column exists before renaming it
+          List<GroovyRowResult> result =
+              sql.rows("select column_name from information_schema.columns where table_name='storage_info' and column_name='max_concurrent_snapshot_uploads'");
+          if (result != null && !result.isEmpty()) {
+            LOG.info("Renaming column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
+            sql.execute("alter table storage_info rename column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
+          } else {
+            LOG.debug("Column max_concurrent_snapshot_uploads not found, nothing to rename");
+          }
+  
+          // check if the column exists before renaming it
+          result =
+              sql.rows("select column_name from information_schema.columns where table_name='storage_info' and column_name='snapshot_upload_timeout_hours'");
+          if (result != null && !result.isEmpty()) {
+            LOG.info("Renaming column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
+            sql.execute("alter table storage_info rename column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
+          } else {
+            LOG.debug("Column snapshot_upload_timeout_hours not found, nothing to rename");
+          }
+  
+          return Boolean.TRUE;
+        } catch (Exception e) {
+          LOG.warn("Failed to rename columns in table storage_info", e);
+          return Boolean.TRUE;
+        } finally {
+          if (sql != null) {
+            sql.close();
+          }
+        }
+      }
+    }
 }
