@@ -430,24 +430,38 @@ public class StorageInfo extends AbstractPersistent {
   
           sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
   
-          // check if the column exists before renaming it
+          String table = "storage_info";
+  
+          // check if the old column exists before renaming it
+          String oldName = "max_concurrent_snapshot_uploads";
+          String newName = "max_concurrent_snapshot_transfers";
           List<GroovyRowResult> result =
-              sql.rows("select column_name from information_schema.columns where table_name='storage_info' and column_name='max_concurrent_snapshot_uploads'");
+              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
           if (result != null && !result.isEmpty()) {
-            LOG.info("Renaming column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
-            sql.execute("alter table storage_info rename column max_concurrent_snapshot_uploads to max_concurrent_snapshot_transfers");
+            // drop new column if it exists
+            LOG.info("Dropping column if it exists " + newName);
+            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+            // rename the new column
+            LOG.info("Renaming column " + oldName + " to " + newName);
+            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
           } else {
-            LOG.debug("Column max_concurrent_snapshot_uploads not found, nothing to rename");
+            LOG.debug("Column " + oldName + " not found, nothing to rename");
           }
   
-          // check if the column exists before renaming it
+          // check if the old column exists before renaming it
+          oldName = "snapshot_upload_timeout_hours";
+          newName = "snapshot_transfer_timeout_hours";
           result =
-              sql.rows("select column_name from information_schema.columns where table_name='storage_info' and column_name='snapshot_upload_timeout_hours'");
+              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
           if (result != null && !result.isEmpty()) {
-            LOG.info("Renaming column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
-            sql.execute("alter table storage_info rename column snapshot_upload_timeout_hours to snapshot_transfer_timeout_hours");
+            // drop new column if it exists
+            LOG.info("Dropping column if it exists " + newName);
+            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+            // rename the new column
+            LOG.info("Renaming column " + oldName + " to " + newName);
+            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
           } else {
-            LOG.debug("Column snapshot_upload_timeout_hours not found, nothing to rename");
+            LOG.debug("Column " + oldName + " not found, nothing to rename");
           }
   
           return Boolean.TRUE;
