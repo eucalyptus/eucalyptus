@@ -64,7 +64,6 @@
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.crypto.Signatures
-import com.eucalyptus.system.BaseDirectory
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -658,7 +657,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
     // dump all databases
     LOG.info( 'Dumping databases' )
-    String databaseDumpAllFile = File.createTempFile( "euca-db-", ".dumpall.sql", BaseDirectory.LIB.getChildFile( "upgrade") )
+    String databaseDumpAllFile = File.createTempFile( "euca-db-", ".dumpall.sql", SubDirectory.UPGRADE.file )
     try {
       runLibpqProcess([
           newCommands.dumpall, // use more recent version
@@ -900,7 +899,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
                            String destinationDatabase,
                            String destinationSchema ) {
     LOG.info("Copying database/schema ${sourceDatabase}/${sourceSchema} to ${destinationDatabase}/${destinationSchema}")
-    String databaseDumpFile = File.createTempFile( "euca-sdb-", ".dump.tar", BaseDirectory.LIB.getChildFile( "upgrade") )
+    String databaseDumpFile = File.createTempFile( "euca-sdb-", ".dump.tar", SubDirectory.UPGRADE.file )
     try {
       if ( !listDatabases( ).contains( destinationDatabase ) ) {
         LOG.info( "Destination database ${destinationDatabase} not found, creating." )
