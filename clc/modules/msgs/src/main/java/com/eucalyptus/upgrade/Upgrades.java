@@ -42,10 +42,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
@@ -60,7 +56,6 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -70,7 +65,6 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -81,6 +75,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.net.InetAddresses;
 
 public class Upgrades {
   private static Logger LOG = Logger.getLogger( Upgrades.class );
@@ -1068,7 +1063,7 @@ public class Upgrades {
                                              String schema,
                                              String... databasePath ) {
       final String ctxUrl = String.format( "jdbc:%s",
-          ServiceUris.remote( Components.lookup( Database.class ), databasePath ) );
+          ServiceUris.remote( Database.class, InetAddresses.forString( "127.0.0.1" ), databasePath ) );
       properties.put( "hibernate.connection.url", ctxUrl );
       if ( schema != null ) properties.put( "hibernate.default_schema", schema );
     }
@@ -1131,36 +1126,4 @@ public class Upgrades {
       throw Exceptions.toUndeclared( e );
     }
   }
-
-  /**
-   * Perform upgrade work in a callback for the given context.
-   */
-  public static boolean transactionalForEntity( final Class entityClass,
-                                                final Function<EntityManager,Boolean> callback ) {
-    final String context = Ats.inClassHierarchy( entityClass ).get( PersistenceContext.class ).name();
-    final EntityManagerFactory entityManagerFactory = PersistenceContexts.getEntityManagerFactory( context );
-    final EntityManager entityManager = entityManagerFactory.createEntityManager( );
-    try {
-      final EntityTransaction transaction = entityManager.getTransaction( );
-      transaction.begin();
-      boolean success = false;
-      try {
-        success = callback.apply( entityManager );
-      } finally {
-        if ( success && !transaction.getRollbackOnly( ) ) {
-          transaction.commit();
-        } else {
-          transaction.rollback();
-        }
-      }
-      return success;
-    } finally {
-      if ( entityManager.isOpen( ) ) try {
-        entityManager.close( );
-      } catch ( final Exception e ) {
-        LOG.error( "Error closing entity manager for entity " + entityClass.getSimpleName( ), e );
-      }
-    }
-  }
-
 }

@@ -142,7 +142,7 @@ public enum SubDirectory {
       }
     }
   },
-  UPGRADE( BaseDirectory.CONF, "upgrade" ),
+  UPGRADE( BaseDirectory.VAR, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
