@@ -64,7 +64,6 @@ package com.eucalyptus.objectstorage.config;
 
 import javax.persistence.EntityTransaction;
 
-import com.eucalyptus.objectstorage.entities.ObjectStorageConfiguration;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Handles;
@@ -76,11 +75,12 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.objectstorage.entities.ObjectStorageConfiguration;
 import com.eucalyptus.objectstorage.msgs.DeregisterObjectStorageGatewayType;
 import com.eucalyptus.objectstorage.msgs.DescribeObjectStorageGatewaysType;
 import com.eucalyptus.objectstorage.msgs.ModifyObjectStorageAttributeType;
 import com.eucalyptus.objectstorage.msgs.RegisterObjectStorageGatewayType;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;

@@ -25,117 +25,38 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Modifier;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.persistence.EntityTransaction;
-
-import com.eucalyptus.objectstorage.ObjectStorage;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
-import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.objectstorage.entities.ObjectStorageConfiguration;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ComputationException;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * Manages the set of installed provider clients, returning the currently selected item
  * @author zhill
  *
  */
-
-@ConfigurableClass( root = "objectstorage", description = "Basic object storage configuration.")
+// Moved provider client configuration to ObjectStorageGlobalConfiguration - EUCA-9421
 public class ObjectStorageProviders extends ServiceJarDiscovery {
 	private static Logger LOG = Logger.getLogger( ObjectStorageProviders.class );
 	private static final String UNSET = "unset";
-
-	@ConfigurableField( description = "Object Storage Provider client to use for backend", displayName = "objectstorage.providerclient", changeListener = ObjectStorageProviderChangeListener.class)
-	public static volatile String providerClient = ""; //configured by user to specify which back-end client to use
-
-	/**
-	 * Change listener for the osg provider client setting.
-	 * @author zhill
-	 *
-	 */
-	public static class ObjectStorageProviderChangeListener implements PropertyChangeListener<String> {
-		/*
-		 * Ensures that the proposed value is valid based on the set of valid values for OSGs
-		 * Additional DB lookup required for remote OSGs where the CLC doesn't have the OSG bits
-		 * installed and therefore doesn't have the same view of the set of valid values.
-		 * (non-Javadoc)
-		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty, java.lang.Object)
-		 */
-		@Override
-		public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {
-			String existingValue = (String)t.getValue();
-
-			List<ServiceConfiguration> objConfigs = null;
-			try {
-				objConfigs = ServiceConfigurations.list(ObjectStorage.class);
-			} catch(NoSuchElementException e) {
-				throw new ConfigurablePropertyException("No ObjectStorage configurations found");
-			}
-			
-			final String proposedValue = newValue;
-			final Set<String> validEntries = Sets.newHashSet();
-			EntityTransaction tx = Entities.get(ObjectStorageConfiguration.class);
-			try {
-				if(!Iterables.any(Components.lookup(ObjectStorage.class).services(), new Predicate<ServiceConfiguration>( ) {
-					@Override
-					public boolean apply(ServiceConfiguration config) {
-						if(config.isVmLocal()) {
-							//Service is local, so add entries to the valid list (in case of HA configs)
-							// and then check the local memory state
-							validEntries.addAll(ObjectStorageProviders.list());
-							return ObjectStorageProviders.contains(proposedValue);
-						} else {
-							try {
-								//Remote SC, so check the db for the list of valid entries.
-								ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration)config);
-								for(String entry : Splitter.on(",").split(objConfig.getAvailableClients())) {
-									validEntries.add(entry);
-								}
-								return validEntries.contains(proposedValue);
-							} catch(Exception e) {
-								return false;
-							}
-						}
-					}
-				})) {
-					//Nothing matched.
-					throw new ConfigurablePropertyException("Cannot modify " + t.getQualifiedName() + "." + t.getFieldName() + " new value is not a valid value.  " +
-					"Legal values are: " + Joiner.on( "," ).join( validEntries) );
-				}
-			} finally {
-				tx.rollback();
-			}
-		}
-	}
 	
+	// Moved provider client configuration to ObjectStorageGlobalConfiguration - EUCA-9421
+
 	/**
 	 * The annotation for indicating that a given class is an ObjectStorageProviderClient and to specify the name
 	 * to use for configuring it.
@@ -197,6 +118,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 	   */
 	  public static ObjectStorageProviderClient getInstance( ) throws NoSuchElementException {
 		  if ( lastClient.get( ) == null || UNSET.equals(lastClient.get())) {
+		      String providerClient = lookupProviderClient();
 			  if(!Strings.isNullOrEmpty(providerClient)) {
 				  if ( clients.containsKey( providerClient ) ) {
 					  lastClient.set( providerClient );
@@ -206,6 +128,12 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 			  }
 		  }
 		  return clientInstances.getUnchecked( lastClient.get( ) );
+	  }
+	  
+	  private static String lookupProviderClient() {
+	    // swathi - could prime cache and fetch config using ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class)
+	    // swathi - going with direct access for now to avoid cache eviction delays during provider client initialization
+	    return ObjectStorageGlobalConfiguration.getConfiguration().getProviderClient();
 	  }
 	  
 	  /**
@@ -232,13 +160,13 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 	  }
 	  
 	  public static synchronized void flushClientInstances() throws EucalyptusCloudException {
-	  	LOG.debug("Flushing all block storage manager instances");
+	  	LOG.debug("Flushing all object storage manager instances");
 	  	clientInstances.invalidateAll();
 	  	lastClient.set(UNSET);
 	  }
 	  
 	  public static synchronized void flushClientInstance(String key) throws EucalyptusCloudException {
-	  	LOG.debug("Flusing block storage manager instance: " + key);
+	  	LOG.debug("Flusing block object manager instance: " + key);
 		lastClient.set(UNSET);
 		clientInstances.invalidate(key);
 	  }

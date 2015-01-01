@@ -20,6 +20,25 @@
 
 package com.eucalyptus.objectstorage.providers.s3;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import javax.annotation.Nonnull;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -64,7 +83,7 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.storage.config.ConfigurationCache;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
@@ -132,10 +151,9 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.util.AclUtils;
-import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -156,23 +174,6 @@ import com.eucalyptus.storage.msgs.s3.VersionEntry;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Socket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * Base class for S3-api based backends. Uses the Amazon Java SDK as the client.

@@ -22,17 +22,17 @@ package com.eucalyptus.objectstorage.asynctask;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
-import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.OsgObjectFactory;
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
+import com.eucalyptus.objectstorage.entities.PartEntity;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**

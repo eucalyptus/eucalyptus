@@ -20,7 +20,20 @@
 
 package com.eucalyptus.objectstorage.providers
 
+import static org.junit.Assert.*
+import groovy.transform.CompileStatic
+
+import org.apache.commons.codec.digest.DigestUtils
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import org.junit.After
+import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Ignore
+import org.junit.Test
+
 import com.eucalyptus.objectstorage.UnitTestSupport
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType
@@ -54,7 +67,6 @@ import com.eucalyptus.objectstorage.msgs.PutObjectType
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType
 import com.eucalyptus.objectstorage.msgs.UploadPartType
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
-import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.BucketListEntry
@@ -62,16 +74,6 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.util.EucalyptusCloudException
 import com.google.common.base.Strings
-import groovy.transform.CompileStatic
-import org.apache.commons.codec.digest.DigestUtils
-import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import org.junit.After
-import org.junit.AfterClass
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.Ignore
-import org.junit.Test
-import static org.junit.Assert.*
 
 /**
  * Intended for testing the InMemoryProvider. Will need
