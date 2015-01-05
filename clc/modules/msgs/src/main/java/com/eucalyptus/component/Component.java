@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
@@ -391,7 +392,13 @@ public class Component implements HasName<Component> {
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
       } else if ( config.isVmLocal( ) ) {
-        this.localService.compareAndSet( ret, null );
+        final Optional<ServiceConfiguration> newLocal =
+            Iterables.tryFind( this.services.keySet( ), ServiceConfigurations.filterVmLocal( ) );
+        if ( newLocal.isPresent( ) ) {
+          this.localService.compareAndSet( ret, this.services.get( newLocal.get( ) ) );
+        } else {
+          this.localService.compareAndSet( ret, null );
+        }
       }
       return ret;
     }

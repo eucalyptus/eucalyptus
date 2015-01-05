@@ -27,8 +27,8 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloudformation.bootstrap.CloudFormationBootstrapper;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
+import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
@@ -53,6 +53,7 @@ import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
+import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -250,7 +251,7 @@ public class CloudFormationService {
 
             StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
             Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
-            StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+            StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
             WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
             InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
               .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
@@ -259,11 +260,11 @@ public class CloudFormationService {
             createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure);
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
-              CloudFormationBootstrapper.SWF_DOMAIN,
+              CloudFormationProperties.SWF_DOMAIN,
               createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
               createStackWorkflowClient.getWorkflowExecution().getRunId());
 
-            WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+            WorkflowClientFactory monitorCreateStackWorkflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
             WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
             InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
               .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags);
@@ -274,7 +275,7 @@ public class CloudFormationService {
 
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
-              CloudFormationBootstrapper.SWF_DOMAIN,
+              CloudFormationProperties.SWF_DOMAIN,
               monitorCreateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
               monitorCreateStackWorkflowClient.getWorkflowExecution().getRunId());
 
@@ -397,7 +398,7 @@ public class CloudFormationService {
           }
           // see if the workflow is open
           try {
-            AmazonSimpleWorkflow simpleWorkflowClient = CloudFormationBootstrapper.getSimpleWorkflowClient();
+            AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
             StackWorkflowEntity deleteStackWorkflowEntity = deleteWorkflows.get(0);
             DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
             describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
@@ -419,7 +420,7 @@ public class CloudFormationService {
           StackWorkflowTags stackWorkflowTags =
               new StackWorkflowTags(stackId, stackName, stackAccountId, AccountFullName.getInstance(stackAccountId).getAccountName( ) );
 
-          WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(CloudFormationBootstrapper.getSimpleWorkflowClient(), CloudFormationBootstrapper.SWF_DOMAIN, CloudFormationBootstrapper.SWF_TASKLIST);
+          WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
           WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
           InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
             .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
@@ -427,7 +428,7 @@ public class CloudFormationService {
           deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId);
           StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
             StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
-            CloudFormationBootstrapper.SWF_DOMAIN,
+            CloudFormationProperties.SWF_DOMAIN,
             client.getWorkflowExecution().getWorkflowId(),
             client.getWorkflowExecution().getRunId());
         }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -507,7 +507,16 @@ public class ServiceConfigurations {
     }
     
   }
-  
+
+  enum ServiceIsVmLocal implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return input!=null && input.isVmLocal( );
+    }
+  }
+
   enum EnabledServiceConfiguration implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -524,7 +533,11 @@ public class ServiceConfigurations {
   public static Predicate<ServiceConfiguration> filterHostLocal( ) {
     return ServiceIsHostLocal.INSTANCE;
   }
-  
+
+  public static Predicate<ServiceConfiguration> filterVmLocal( ) {
+    return ServiceIsVmLocal.INSTANCE;
+  }
+
   /**
    * Filter for enabled services in the specified partition.
    * @param partition

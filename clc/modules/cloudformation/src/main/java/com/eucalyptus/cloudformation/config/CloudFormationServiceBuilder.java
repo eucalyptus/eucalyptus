@@ -19,14 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -39,6 +44,8 @@ import com.eucalyptus.component.annotation.ComponentPart;
     RegisterCloudFormationType.class,
 } )
 public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFormationConfiguration> {
+
+  private static final Logger logger = Logger.getLogger( CloudFormationServiceBuilder.class );
 
   @Override
   public CloudFormationConfiguration newInstance( ) {
@@ -56,18 +63,37 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
   }
 
   @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException { }
+  public void fireStart( ServiceConfiguration config ) { }
 
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException { }
+  public void fireStop( ServiceConfiguration config ) { }
 
   @Override
-  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException { }
+  public void fireEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    if ( noOtherEnabled( config ) ) try {
+      WorkflowClientManager.start( );
+    } catch ( Exception e ) {
+      throw new ServiceRegistrationException( "Error creating workflow client", e );
+    }
+  }
 
   @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException { }
+  public void fireDisable( final ServiceConfiguration config ) {
+    if ( noOtherEnabled( config ) ) try {
+      WorkflowClientManager.stop( );
+    } catch ( Exception e ) {
+      logger.error( "Error stopping workflow client", e );
+    }
+  }
 
   @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException { }
+  public void fireCheck( ServiceConfiguration config ) { }
 
+  @SuppressWarnings( "unchecked" )
+  private boolean noOtherEnabled( final ServiceConfiguration config ) {
+    return Iterables.isEmpty( ServiceConfigurations.filter( CloudFormation.class, Predicates.and(
+        ServiceConfigurations.filterHostLocal( ),
+        ServiceConfigurations.filterEnabled( ),
+        Predicates.not( Predicates.equalTo( config ) ) ) ) );
+  }
 }
