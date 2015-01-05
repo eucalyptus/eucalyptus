@@ -62,6 +62,9 @@
 
 package com.eucalyptus.www;
 
+import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy;
+import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy.Absent;
+import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy.Limited;
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.ByteArrayOutputStream;
@@ -233,7 +236,12 @@ public class X509Download extends HttpServlet {
       if ( userAccessKey == null ) {
         throw new IllegalStateException( "Access key limit exceeded" );
       }
-      if ( !Iterables.tryFind( u.getCertificates( ), propertyPredicate( false, revoked( ) ) ).isPresent( ) ) {
+      final CredentialDownloadGenerateCertificateStrategy certificateStrategy =
+          AuthenticationProperties.getCredentialDownloadGenerateCertificateStrategy( );
+      final int nonRevokedCertificateCount = Iterables.size(
+          Iterables.filter( u.getCertificates( ), propertyPredicate( false, revoked( ) ) ) );
+      if ( ( certificateStrategy == Absent && nonRevokedCertificateCount == 0 ) ||
+          ( certificateStrategy == Limited && nonRevokedCertificateCount < AuthenticationProperties.SIGNING_CERTIFICATES_LIMIT ) ) {
         // Include a certificate only if the user does not have one
         keyPair = Certs.generateKeyPair( );
         x509 = Certs.generateCertificate( keyPair, u.getName( ) );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,11 +62,14 @@
 
 package com.eucalyptus.auth;
 
+import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import static com.eucalyptus.upgrade.Upgrades.Version.*;
 import java.lang.reflect.Field;
 import java.text.ParseException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
 import com.eucalyptus.auth.ldap.LdapSync;
@@ -77,9 +80,13 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
+import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Intervals;
+import com.google.common.base.Enums;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 
@@ -89,6 +96,8 @@ public class AuthenticationProperties {
   private static final Logger LOG = Logger.getLogger( AuthenticationProperties.class );
 
   private static final String LDAP_SYNC_DISABLED = "{ 'sync': { 'enable':'false' } }";
+
+  private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Limited";
   
   @ConfigurableField( description = "LDAP integration configuration, in JSON", initial = LDAP_SYNC_DISABLED, changeListener = LicChangeListener.class, displayName = "lic" )
   public static volatile String LDAP_INTEGRATION_CONFIGURATION;
@@ -98,6 +107,12 @@ public class AuthenticationProperties {
 
   @ConfigurableField( description = "Port to use in service URLs when 'bootstrap.webservices.port' is not appropriate.", changeListener = PortChangeListener.class )
   public static volatile String CREDENTIAL_DOWNLOAD_PORT; // String as null value is valid
+
+  @ConfigurableField(
+      description = "Strategy for generation of certificates on credential download ( Never | Absent | Limited )",
+      initial = DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE,
+      changeListener = CredentialDownloadGenerateCertificateChangeListener.class )
+  public static volatile String CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE;
 
   @ConfigurableField( description = "Limit for access keys per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public static volatile Integer ACCESS_KEYS_LIMIT = 2;
@@ -112,6 +127,36 @@ public class AuthenticationProperties {
   public static String DEFAULT_PASSWORD_EXPIRY = "60d";
 
   private static AtomicLong DEFAULT_PASSWORD_EXPIRY_MILLIS = new AtomicLong( TimeUnit.DAYS.toMillis( 60 ) );
+
+  private static volatile CredentialDownloadGenerateCertificateStrategy credentialDownloadGenerateCertificateStrategy =
+      Enums.getIfPresent(
+          CredentialDownloadGenerateCertificateStrategy.class,
+          DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE
+      ).orNull( );
+
+  public enum CredentialDownloadGenerateCertificateStrategy {
+    /**
+     * Include a certificate if the user has no (non-deprecated) certificates
+     */
+    Absent,
+
+    /**
+     * Include a certificate if permitted by IAM limits
+     */
+    Limited,
+
+    /**
+     * Never generated a certificate for credential downloads
+     */
+    Never,
+  }
+
+  @Nonnull
+  public static CredentialDownloadGenerateCertificateStrategy getCredentialDownloadGenerateCertificateStrategy( ) {
+    return com.google.common.base.Objects.firstNonNull(
+        credentialDownloadGenerateCertificateStrategy,
+        CredentialDownloadGenerateCertificateStrategy.Never );
+  }
 
   public static class LicChangeListener implements PropertyChangeListener {
     @Override
@@ -154,6 +199,23 @@ public class AuthenticationProperties {
     }
   }
 
+  public static class CredentialDownloadGenerateCertificateChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty configurableProperty,
+                            final Object newValue ) throws ConfigurablePropertyException {
+
+      final Optional<CredentialDownloadGenerateCertificateStrategy> strategy =
+          Enums.getIfPresent( CredentialDownloadGenerateCertificateStrategy.class, String.valueOf( newValue ) );
+      if ( strategy.isPresent( ) ) {
+        credentialDownloadGenerateCertificateStrategy = strategy.get( );
+      } else {
+        credentialDownloadGenerateCertificateStrategy = Enum.valueOf(
+            CredentialDownloadGenerateCertificateStrategy.class, DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE );
+        throw new ConfigurablePropertyException( "Invalid certificate download value: " + newValue );
+      }
+    }
+  }
+
   public static class PropertiesAuthenticationLimitProvider implements AuthenticationLimitProvider {
     @Override
     public long getDefaultPasswordExpirySpi() {
@@ -190,4 +252,35 @@ public class AuthenticationProperties {
     }
   }
 
+  /**
+   * Upgrade to raise credential limits on upgraded systems.
+   */
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = v4_1_0, value = Empyrean.class )
+  public enum RaiseCredentialLimitPropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+
+    private static Logger LOG = Logger.getLogger( RaiseCredentialLimitPropertyUpgrade.class );
+
+    private static final String CREDENTIAL_LIMIT = "1000000";
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      try {
+        LOG.info( "Setting limit authentication.access_keys_limit to " + CREDENTIAL_LIMIT );
+        StaticDatabasePropertyEntry.update(
+            AuthenticationProperties.class.getName( ) + ".access_keys_limit",
+            "authentication.access_keys_limit",
+            CREDENTIAL_LIMIT );
+        LOG.info( "Setting limit authentication.signing_certificates_limit to " + CREDENTIAL_LIMIT );
+        StaticDatabasePropertyEntry.update(
+            AuthenticationProperties.class.getName( ) + ".signing_certificates_limit",
+            "authentication.signing_certificates_limit",
+            CREDENTIAL_LIMIT );
+        return true;
+      } catch ( final Exception ex ) {
+        LOG.error( "Error raising credential limits", ex );
+      }
+      return true;
+    }
+  }
 }

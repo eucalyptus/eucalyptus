@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,6 @@ package com.eucalyptus.configurable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.TreeMap;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -117,30 +116,24 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     this.value = value;
   }
   
-  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) throws Exception {
-    final EntityTransaction db = Entities.get(StaticDatabasePropertyEntry.class);
+  public static StaticDatabasePropertyEntry update(
+      final String fieldName,
+      final String propName,
+      final String newFieldValue ) throws Exception {
+    final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class );
     try {
-      final StaticDatabasePropertyEntry dbEntry = Entities.uniqueResult(new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      final StaticDatabasePropertyEntry dbEntry =
+          Entities.uniqueResult( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
       dbEntry.setValue( newFieldValue );
-      Entities.persist(dbEntry);
       db.commit( );
       return dbEntry;
     } catch ( final NoSuchElementException ex ) {
-      final StaticDatabasePropertyEntry dbEntry =  
-          new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
-      try {
-        Entities.persist( dbEntry );
-        db.commit( );
-      } catch ( final Exception ex1 ) {
-        db.rollback();
-        throw ex1;
-      }
+      final StaticDatabasePropertyEntry dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
+      Entities.persist( dbEntry );
+      db.commit( );
       return dbEntry;
-    } catch(final Exception ex){
-      throw ex;
-    } finally{
-      if(db.isActive())
-        db.rollback();
+    } finally {
+      db.close( );
     }
   }
   
