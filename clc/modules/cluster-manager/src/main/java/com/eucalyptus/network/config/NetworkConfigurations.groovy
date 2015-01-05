@@ -125,7 +125,7 @@ class NetworkConfigurations {
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with{
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult( config )
-          clusterConfiguration.networkMode = 'EDGE'
+          clusterConfiguration.networkMode = networkConfiguration.mode ?: 'EDGE'
           clusterConfiguration.addressesPerNetwork = -1
           clusterConfiguration.useNetworkTags = false
           clusterConfiguration.minNetworkTag = -1
