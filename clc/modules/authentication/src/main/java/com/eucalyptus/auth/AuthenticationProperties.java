@@ -97,7 +97,7 @@ public class AuthenticationProperties {
 
   private static final String LDAP_SYNC_DISABLED = "{ 'sync': { 'enable':'false' } }";
 
-  private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Limited";
+  private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Absent";
   
   @ConfigurableField( description = "LDAP integration configuration, in JSON", initial = LDAP_SYNC_DISABLED, changeListener = LicChangeListener.class, displayName = "lic" )
   public static volatile String LDAP_INTEGRATION_CONFIGURATION;
@@ -262,16 +262,22 @@ public class AuthenticationProperties {
     private static Logger LOG = Logger.getLogger( RaiseCredentialLimitPropertyUpgrade.class );
 
     private static final String CREDENTIAL_LIMIT = "1000000";
+    private static final String CERTIFICATE_STRATEGY = CredentialDownloadGenerateCertificateStrategy.Limited.name( );
 
     @Override
     public boolean apply( Class arg0 ) {
       try {
-        LOG.info( "Setting limit authentication.access_keys_limit to " + CREDENTIAL_LIMIT );
+        LOG.info( "Setting authentication.credential_download_generate_certificate to " + CERTIFICATE_STRATEGY );
+        StaticDatabasePropertyEntry.update(
+            AuthenticationProperties.class.getName( ) + ".credential_download_generate_certificate",
+            "authentication.credential_download_generate_certificate",
+            CERTIFICATE_STRATEGY );
+        LOG.info( "Setting authentication.access_keys_limit to " + CREDENTIAL_LIMIT );
         StaticDatabasePropertyEntry.update(
             AuthenticationProperties.class.getName( ) + ".access_keys_limit",
             "authentication.access_keys_limit",
             CREDENTIAL_LIMIT );
-        LOG.info( "Setting limit authentication.signing_certificates_limit to " + CREDENTIAL_LIMIT );
+        LOG.info( "Setting authentication.signing_certificates_limit to " + CREDENTIAL_LIMIT );
         StaticDatabasePropertyEntry.update(
             AuthenticationProperties.class.getName( ) + ".signing_certificates_limit",
             "authentication.signing_certificates_limit",
