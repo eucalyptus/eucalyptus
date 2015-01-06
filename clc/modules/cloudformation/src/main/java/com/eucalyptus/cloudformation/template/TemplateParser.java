@@ -618,7 +618,7 @@ public class TemplateParser {
       try {
         type = ParameterType.valueOf(typeStr);
       } catch (IllegalArgumentException ex) {
-        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + typeStr +".  Valid values are " + Arrays.toString(ParameterType.values()));
       }
       return type;
     }
