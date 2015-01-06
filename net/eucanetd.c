@@ -659,137 +659,139 @@ int update_isolation_rules(void)
         rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     }
 
-    for (i = 0; i < max_instances; i++) {
-        if (instances[i].privateIp && maczero(instances[i].macAddress)) {
-            strptra = strptrb = NULL;
-            strptra = hex2dot(instances[i].privateIp);
-            hex2mac(instances[i].macAddress, &strptrb);
+    gwip = hex2dot(config->vmGatewayIP);
+    brmac = interface2mac(config->bridgeDev);
 
-            // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
-            vnetinterface = mac2interface(strptrb);
+    if (gwip && brmac) {
+        // If we're using the "fake" router option and have some instance running,
+        // we need to respond for out of network ARP request.
+        if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {
+            snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", gwip, brmac);
+            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+        }
 
-            //gwip = hex2dot(mycluster->private_subnet.gateway);
-            gwip = hex2dot(config->vmGatewayIP);
-            brmac = interface2mac(config->bridgeDev);
+        for (i = 0; i < max_instances; i++) {
+            if (instances[i].privateIp && maczero(instances[i].macAddress)) {
+                strptra = strptrb = NULL;
+                strptra = hex2dot(instances[i].privateIp);
+                hex2mac(instances[i].macAddress, &strptrb);
 
-            if (strptra && strptrb && vnetinterface && gwip && brmac) {
-                if (!config->disable_l2_isolation) {
-                    //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
+                // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
+                vnetinterface = mac2interface(strptrb);
 
-                    // PRE Routing
+                if (strptra && strptrb && vnetinterface) {
+                    if (!config->disable_l2_isolation) {
+                        //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
 
-                    // basic MAC check
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -s ! %s -j DROP", vnetinterface, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                        // PRE Routing
 
-                    // IPv4
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -s %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetinterface, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    // ARP
-                    if (config->nc_router && !config->nc_router_ip) {
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                        // basic MAC check
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -s ! %s -j DROP", vnetinterface, strptrb);
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // IPv4
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -s %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetinterface, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-src ! %s -j DROP", vnetinterface, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Request -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Reply -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP -j DROP", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // RARP
+                        snprintf(cmd, EUCA_MAX_PATH,
+                                 "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                                 vnetinterface, strptrb, strptrb, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // pass KVM migration weird packet
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x835 -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // POST routing
+
+                        // IPv4
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -d ! %s --ip-proto udp --ip-dport 67:68 -j DROP", vnetinterface, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        // ARP
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply --arp-mac-dst ! %s -j DROP", vnetinterface, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-ip-dst ! %s -j DROP", vnetinterface, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply -j ACCEPT", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s -j DROP", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        // RARP
+                        snprintf(cmd, EUCA_MAX_PATH,
+                                 "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                                 vnetinterface, strptrb, strptrb);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    } else {
+                        if (config->nc_router && !config->nc_router_ip) {
+                            snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                        }
                     }
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-src ! %s -j DROP", vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Request -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Reply -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    // RARP
-                    snprintf(cmd, EUCA_MAX_PATH,
-                             "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
-                             vnetinterface, strptrb, strptrb, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    // pass KVM migration weird packet
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x835 -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    // DROP everything else
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                    // POST routing
-
-                    // IPv4
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -d ! %s --ip-proto udp --ip-dport 67:68 -j DROP", vnetinterface, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    // ARP
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply --arp-mac-dst ! %s -j DROP", vnetinterface, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-ip-dst ! %s -j DROP", vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply -j ACCEPT", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    // RARP
-                    snprintf(cmd, EUCA_MAX_PATH,
-                             "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
-                             vnetinterface, strptrb, strptrb);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    // DROP everything else
-                    snprintf(cmd, EUCA_MAX_PATH, "-o %s -j DROP", vnetinterface);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
                 } else {
-                    if (config->nc_router && !config->nc_router_ip) {
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-                    }
+                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
+                            SP(strptrb), SP(gwip), SP(brmac));
+                    ret = 1;
                 }
-            } else {
-                LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
-                        SP(strptrb), SP(gwip), SP(brmac));
-                ret = 1;
+                EUCA_FREE(vnetinterface);
+                EUCA_FREE(strptra);
+                EUCA_FREE(strptrb);
             }
-            EUCA_FREE(vnetinterface);
-            EUCA_FREE(strptra);
-            EUCA_FREE(strptrb);
-            EUCA_FREE(brmac);
-            EUCA_FREE(gwip);
         }
     }
 
+    // DROP everything from the instance by default
+    snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP", vnetinterface);
+    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+    // DROP everything to the instance by default
+    snprintf(cmd, EUCA_MAX_PATH, "-o vn_i+ -j DROP");
+    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+    EUCA_FREE(brmac);
+    EUCA_FREE(gwip);
     EUCA_FREE(instances);
 
     rc = ebt_handler_print(config->ebt);
@@ -1164,10 +1166,10 @@ int update_public_ips(void)
 
             snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-            
+
             snprintf(cmd, EUCA_MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
             rc = se_add(&cmds, cmd, NULL, ignore_exit);
-            
+
             se_print(&cmds);
             rc = se_execute(&cmds);
             if (rc) {
@@ -1217,10 +1219,10 @@ int update_public_ips(void)
     }
     // if all has gone well, now clear any public IPs that have not been mapped to private IPs
     if (!ret) {
-        
+
         for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
             int found = 0;
-            
+
             if (max_instances > 0) {
                 // only clear IPs that are not assigned to instances running on this node
                 for (j = 0; j < max_instances && !found; j++) {
@@ -1229,14 +1231,14 @@ int update_public_ips(void)
                     }
                 }
             }
-            
+
             if (!found) {
                 se_init(&cmds, config->cmdprefix, 2, 1);
-                
+
                 strptra = hex2dot(globalnetworkinfo->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
                 EUCA_FREE(strptra);
-                
+
                 rc = se_add(&cmds, cmd, NULL, ignore_exit2);
                 se_print(&cmds);
                 rc = se_execute(&cmds);
@@ -1245,7 +1247,7 @@ int update_public_ips(void)
                     ret = 1;
                 }
                 se_free(&cmds);
-                
+
                 }
         }
     }
@@ -1720,7 +1722,7 @@ int read_config(void)
     snprintf(config->vnetMode, sizeof(config->vnetMode), "%s", cvals[EUCANETD_CVAL_MODE]);
 
     // mido config opts
-    
+
     if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
         snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
@@ -1917,7 +1919,7 @@ int read_latest_network(void)
     int brdev_len = 0, i = 0, found_ip = 0;
     char *strptra = NULL, *strptrb = NULL, *strptrc = NULL, *strptrd = NULL;
     gni_cluster *mycluster = NULL;
-    
+
     LOGDEBUG("reading latest network view into eucanetd\n");
 
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
