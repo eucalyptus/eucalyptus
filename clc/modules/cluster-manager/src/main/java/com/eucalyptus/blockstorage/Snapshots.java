@@ -124,7 +124,9 @@ public class Snapshots {
   private static Logger           LOG                     = Logger.getLogger( Snapshots.class );
   private static final long       SNAPSHOT_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
   private static final Set<State> SNAPSHOT_TIMEOUT_STATES = unmodifiableSet(of(State.NIHIL, State.GENERATING));
-  
+
+  public static final String SELF = "self";
+
   public static class SnapshotUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
     
@@ -262,7 +264,22 @@ public class Snapshots {
       }
     }
   }
-  
+
+  public static Predicate<Snapshot> filterRestorableBy( final Collection<String> restorableSet,
+                                                        final String callerAccountNumber ) {
+    final boolean restorableSelf = restorableSet.remove( SELF );
+    final boolean restorableAll = restorableSet.remove( "all" );
+    return new Predicate<Snapshot>( ) {
+      @Override
+      public boolean apply( Snapshot snapshot ) {
+        return restorableSet.isEmpty( ) && !restorableSelf && !restorableAll ||
+            ( restorableAll && snapshot.getSnapshotPublic() ) ||
+            ( restorableSelf && snapshot.hasPermission( callerAccountNumber ) ) ||
+            snapshot.hasPermission( restorableSet.toArray( new String[ restorableSet.size() ] ) );
+      }
+    };
+  }
+
   @QuantityMetricFunction( SnapshotMetadata.class )
   public enum CountSnapshots implements Function<OwnerFullName, Long> {
     INSTANCE;

@@ -284,24 +284,26 @@ public class SnapshotManager {
   }
   
   public DescribeSnapshotsResponseType describe( final DescribeSnapshotsType request ) throws EucalyptusCloudException {
-    final DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
-    if(!request.getRestorableBySet().isEmpty()) { return reply; } //TODO:KEN EUCA-5759 Need to implement RestorableBy, for now ignore
+    final DescribeSnapshotsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
-    final Set<String> snapshotIds = Sets.newHashSet( normalizeSnapshotIdentifiers( request.getSnapshotSet() ) );
-    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ?
-        null :
-        AccountFullName.getInstance( ctx.getAccount( ) );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final Set<String> snapshotIds = Sets.newHashSet( normalizeSnapshotIdentifiers( request.getSnapshotSet( ) ) );
+    final List<String> ownersSet = request.getOwnersSet( );
+    if ( ownersSet.remove( Snapshots.SELF ) ) {
+      ownersSet.add( requestAccountId );
+    }
     final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );
-    final EntityTransaction db = Entities.get( Snapshot.class );
-    try {
+    try ( final TransactionResource tx = Entities.transactionFor( Snapshot.class ) ){
       final List<Snapshot> unfilteredSnapshots =
-          Entities.query( Snapshot.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
-      final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor(Snapshot.class)
+          Entities.query( Snapshot.named( null, null ), true, filter.asCriterion(), filter.getAliases() );
+      final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor( Snapshot.class )
           .byId( snapshotIds )
-          .byPredicate( filter.asPredicate() )
-          .byPrivileges()
-          .buildPredicate();
+          .byOwningAccount( request.getOwnersSet( ) )
+          .byPredicate( Snapshots.filterRestorableBy( request.getRestorableBySet( ), requestAccountId ) )
+          .byPredicate( filter.asPredicate( ) )
+          .byPredicate( Snapshots.FilterPermissions.INSTANCE )
+          .byPrivilegesWithoutOwner( )
+          .buildPredicate( );
 
       final Iterable<Snapshot> snapshots = Iterables.filter( unfilteredSnapshots, requestedAndAccessible );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class )
@@ -319,8 +321,6 @@ public class SnapshotManager {
           LOG.debug( e, e );
         }
       }
-    } finally {
-      db.rollback( );
     }
     return reply;
   }
