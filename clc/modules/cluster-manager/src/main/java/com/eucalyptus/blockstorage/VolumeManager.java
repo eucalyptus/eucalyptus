@@ -261,7 +261,7 @@ public class VolumeManager {
           }
           try {
             VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
-            throw new IllegalStateException( "Volume is currently attached: " + attachment );
+            throw Exceptions.toUndeclared( new ClientComputeException( "VolumeInUse", "Volume is currently attached to: " + attachment.getVmInstance( ).getDisplayName( ) ) );
           } catch ( NoSuchElementException ex ) {
             /** no such volume attached, move along... **/
           }
