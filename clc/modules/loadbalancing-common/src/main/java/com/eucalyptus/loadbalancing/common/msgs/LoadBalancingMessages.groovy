@@ -631,7 +631,9 @@ class DescribeInstanceHealthType extends LoadBalancingMessage {
   DescribeInstanceHealthType( String loadBalancerName,
                                      Collection<String> instanceIds ) {
     this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+    this.instances = instanceIds ?
+        new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> ) :
+        null
   }
 }
 class CreateLBCookieStickinessPolicyType extends LoadBalancingMessage {
