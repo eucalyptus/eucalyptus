@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
@@ -28,6 +29,8 @@ import com.eucalyptus.autoscaling.common.msgs.AutoScalingNotificationTypes;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
@@ -129,16 +132,51 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         if ( action.properties.getVpcZoneIdentifier() != null ) {
           createAutoScalingGroupType.setVpcZoneIdentifier(Strings.emptyToNull(Joiner.on( "," ).join(action.properties.getVpcZoneIdentifier())));
         }
-        List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(action.info, action.getStackEntity());
-        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
-          TagHelper.checkReservedAutoScalingTemplateTags(action.properties.getTags());
-          tags.addAll(action.properties.getTags());
-        }
-        createAutoScalingGroupType.setTags(action.convertTags(tags));
         AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
         action.info.setPhysicalResourceId(autoScalingGroupName);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        // Create 'system' tags as admin user
+        String effectiveAdminUserId = Accounts.lookupUserById(action.info.getEffectiveUserId()).getAccount().lookupAdmin().getUserId();
+        CreateOrUpdateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateOrUpdateTagsType.class, effectiveAdminUserId);
+        createSystemTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(action.info.getPhysicalResourceId(), TagHelper.getAutoScalingStackTags(action.getStackEntity())));
+        AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createSystemTagsType);
+        // Create non-system tags as regular user
+        List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedAutoScalingTemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        if (!tags.isEmpty()) {
+          CreateOrUpdateTagsType createOrUpdateTagsType = MessageHelper.createMessage(CreateOrUpdateTagsType.class, action.info.getEffectiveUserId());
+          createSystemTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(action.info.getPhysicalResourceId(), tags));
+          AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createOrUpdateTagsType);
+        }
+        return action;
+      }
+
+      private Tags convertAutoScalingTagsToCreateOrUpdateTags(String physicalResourceId, List<AutoScalingTag> autoScalingTags) {
+        if (autoScalingTags == null) return null;
+        Tags tags = new Tags();
+        ArrayList<TagType> member = Lists.newArrayList();
+        for (AutoScalingTag autoScalingTag: autoScalingTags) {
+          TagType tagType = new TagType();
+          tagType.setResourceType("CreateOrUpdateTagsResponseType");
+          tagType.setResourceId(physicalResourceId);
+          tagType.setKey(autoScalingTag.getKey());
+          tagType.setValue(autoScalingTag.getValue());
+          tagType.setPropagateAtLaunch(autoScalingTag.getPropagateAtLaunch());
+          member.add(tagType);
+        }
+        tags.setMember(member);
+        return tags;
       }
     },
     ADD_NOTIFICATION_CONFIGURATIONS {
@@ -280,20 +318,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSAutoScalingAutoScalingGroupResourceInfo) resourceInfo;
-  }
-
-  private Tags convertTags(List<AutoScalingTag> autoScalingTags) {
-    Tags tags = new Tags();
-    ArrayList<TagType> member = Lists.newArrayList();
-    for (AutoScalingTag autoScalingTag: autoScalingTags) {
-      TagType tagType = new TagType();
-      tagType.setKey(autoScalingTag.getKey());
-      tagType.setValue(autoScalingTag.getValue());
-      tagType.setPropagateAtLaunch(autoScalingTag.getPropagateAtLaunch());
-      member.add(tagType);
-    }
-    tags.setMember(member);
-    return tags;
   }
 
   private boolean doesGroupNotExist(DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType) {
