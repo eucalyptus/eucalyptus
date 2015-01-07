@@ -1278,9 +1278,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void updatePrivateAddress( final String privateAddr ) {
     final String ip = VmNetworkConfig.ipOrDefault( privateAddr );
     this.getNetworkConfig( ).setPrivateAddress( ip );
-    this.getNetworkConfig( ).setPrivateDnsName( dnsHostnamesEnabled( ) ?
-        VmNetworkConfig.generateDnsName( ip, DomainNames.internalSubdomain( ) ) :
-        ""  );
+    this.getNetworkConfig( ).setPrivateDnsName(
+        VmNetworkConfig.generateDnsName( ip, DomainNames.internalSubdomain( ) ) );
   }
 
   public void updateMacAddress( final String macAddress ) {
