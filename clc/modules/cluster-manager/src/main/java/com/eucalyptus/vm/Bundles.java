@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -236,7 +236,7 @@ public class Bundles {
   
   static void checkAndCreateBucket( final User user, final String bucketName, final String prefix ) throws ComputeException {
     try ( final EucaS3Client s3c =
-              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ).getCredentials( ) ) ) {
+              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
       boolean foundBucket = false;
       final List<Bucket> buckets = s3c.listBuckets( );
       for( final Bucket bucket : buckets ) {
@@ -273,7 +273,7 @@ public class Bundles {
                                    final String prefix,
                                    final boolean deleteEmptyBucket ) throws ComputeException {
     try ( final EucaS3Client s3c =
-              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ).getCredentials( ) ) ) {
+              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
       final List<Bucket> buckets = s3c.listBuckets( );
       boolean bucketFound = false;
       for(final Bucket bucket : buckets){
