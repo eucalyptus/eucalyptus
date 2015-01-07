@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources;
 
-import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.crypto.Crypto;
 
 /**
@@ -41,26 +40,18 @@ public class ResourceActionHelper {
       if (prefix.length() < prefixLength) {
         int difference = prefixLength - prefix.length();
         prefixLength -= difference;
-        prefixAndDashLength -= difference;
         middleLength += difference;
-        middleAndDashLength += difference;
       } else if (middle.length() < middleLength) {
         int difference = middleLength - middle.length();
         middleLength -= difference;
-        middleAndDashLength -= difference;
         prefixLength += difference;
-        prefixAndDashLength += difference;
       }
       if (prefix.charAt(prefixLength - 1) == '-' && middleLength < middle.length()) {
         prefixLength -= 1;
-        prefixAndDashLength -= 1;
         middleLength += 1;
-        middleAndDashLength += 1;
-      } else if (middle.charAt(prefixLength - 1) == '-' && prefixLength < prefix.length()) {
+      } else if (middle.charAt(middleLength - 1) == '-' && prefixLength < prefix.length()) {
         middleLength -= 1;
-        middleAndDashLength -= 1;
         prefixLength += 1;
-        prefixAndDashLength += 1;
       }
       return prefix.substring(0, prefixLength) + "-" + middle.substring(0, middleLength) + "-" + suffix;
     }
