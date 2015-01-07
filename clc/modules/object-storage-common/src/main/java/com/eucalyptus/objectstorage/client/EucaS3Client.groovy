@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage.client
 
 import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
@@ -28,8 +29,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
 import com.amazonaws.services.s3.model.S3ObjectInputStream
 import com.amazonaws.util.Md5Utils
-import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.auth.principal.User
 import com.eucalyptus.auth.tokens.SecurityToken
@@ -40,7 +39,6 @@ import org.apache.log4j.Logger
 import org.apache.xml.security.utils.Base64
 
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
 
 /**
  * This is how any internal eucalyptus component should get an s3 client and use it for object-storage access.
@@ -64,6 +62,14 @@ class EucaS3ClientFactory {
     }
 
     public static EucaS3Client getEucaS3Client(AWSCredentials credentials, boolean https) throws NoSuchElementException {
+        return new EucaS3Client(credentials, https);
+    }
+
+    public static EucaS3Client getEucaS3Client(AWSCredentialsProvider credentials) throws NoSuchElementException {
+        return new EucaS3Client(credentials, USE_HTTPS_DEFAULT);
+    }
+
+    public static EucaS3Client getEucaS3Client(AWSCredentialsProvider credentials, boolean https) throws NoSuchElementException {
         return new EucaS3Client(credentials, https);
     }
 
@@ -111,6 +117,10 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
 
     protected EucaS3Client(AWSCredentials credentials, boolean useHttps) {
         this.s3Client = GenericS3ClientFactory.getS3Client(credentials, useHttps);
+    }
+
+    protected EucaS3Client(AWSCredentialsProvider credentialsProvider, boolean useHttps) {
+        this.s3Client = GenericS3ClientFactory.getS3Client(credentialsProvider, useHttps);
     }
 
     /**

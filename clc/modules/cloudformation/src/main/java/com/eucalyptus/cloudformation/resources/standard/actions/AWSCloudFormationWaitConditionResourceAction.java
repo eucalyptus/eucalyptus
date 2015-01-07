@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -132,7 +132,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
         LOG.trace("keyName=" + bucketName);
         boolean foundFailure = false;
         final Map<String, String> dataMap = Maps.newHashMap();
-        try (final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials())) {
+        try (final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider())) {
           LOG.trace("Handle:" + action.properties.getHandle());
           VersionListing versionListing = s3c.listVersions(bucketName, "");
           LOG.trace("Found " + versionListing.getVersionSummaries() + " versions to check");

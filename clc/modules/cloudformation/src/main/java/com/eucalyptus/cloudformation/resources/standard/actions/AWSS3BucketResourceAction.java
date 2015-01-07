@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -100,9 +101,8 @@ public class AWSS3BucketResourceAction extends ResourceAction {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
-        URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
           if (s3c.doesBucketExist(bucketName)) {
             throw new Exception("Bucket " + bucketName + " exists");
@@ -120,7 +120,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
         String bucketName = action.info.getPhysicalResourceId();
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           if ( action.properties.getAccessControl() != null ) {
             s3c.setBucketAcl( bucketName, CannedAccessControlList.valueOf( action.properties.getAccessControl() ) );
           }
@@ -178,7 +178,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         if (action.info.getPhysicalResourceId() == null) return action;
         User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           s3c.deleteBucket(action.info.getPhysicalResourceId());
         } catch (AmazonS3Exception ex) {
           if ("NoSuchBucket".equalsIgnoreCase(ex.getErrorCode())) {

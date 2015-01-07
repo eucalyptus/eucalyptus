@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         final AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new CloudFormationAWSCredentialsProvider().getCredentials() ) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new CloudFormationAWSCredentialsProvider() ) ) {
           // look for an existing bucket...
           String bucketName = null;
           ObjectNode objectNode = null;
@@ -112,7 +112,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
           if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
           String bucketName = objectNode.get("bucket").asText();
@@ -136,7 +136,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
         if (action.info.getPhysicalResourceId() == null) return action;
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider().getCredentials()) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
           if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
           String bucketName = objectNode.get("bucket").asText();
