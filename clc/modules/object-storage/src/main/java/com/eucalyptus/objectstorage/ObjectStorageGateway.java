@@ -1125,29 +1125,29 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception {
-	Long byteRangeStart = request.getByteRangeStart();
-	Long byteRangeEnd = request.getByteRangeEnd();
+	 Long byteRangeStart = request.getByteRangeStart();
+	 Long byteRangeEnd = request.getByteRangeEnd();
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, null);
-	Long objectSize = objectEntity.getSize();
+	 Long objectSize = objectEntity.getSize();
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
-	if(byteRangeStart == null) {
-	    byteRangeStart = 0L;
-	}
-	if (byteRangeEnd == null) {
-	    byteRangeEnd = -1L;
-	}
-	if(byteRangeEnd==-1 || (byteRangeEnd + 1) > objectSize) {
-	    byteRangeEnd = objectSize - 1;
-	}
-	if ((byteRangeStart > objectSize) || (byteRangeStart > byteRangeEnd) || (byteRangeStart < 0 || byteRangeEnd < 0)) {
-	    throw new InvalidRangeException("Range: " + byteRangeStart + "-" + byteRangeEnd + "object: " + objectEntity.getBucket().getBucketUuid() + "/" + objectEntity.getObjectUuid());
-	}
+	 if(byteRangeStart == null) {
+	     byteRangeStart = 0L;
+	 }
+	 if (byteRangeEnd == null) {
+	     byteRangeEnd = -1L;
+	 }
+	 if(byteRangeEnd==-1 || (byteRangeEnd + 1) > objectSize) {
+	     byteRangeEnd = objectSize - 1;
+	 }
+	 if ((byteRangeStart > objectSize) || (byteRangeStart > byteRangeEnd) || (byteRangeStart < 0 || byteRangeEnd < 0)) {
+	     throw new InvalidRangeException("Range: " + byteRangeStart + "-" + byteRangeEnd + "object: " + objectEntity.getBucket().getBucketUuid() + "/" + objectEntity.getObjectUuid());
+	 }
         try {
             request.setBucket(objectEntity.getBucket().getBucketUuid());
             request.setKey(objectEntity.getObjectUuid());
-	    request.setByteRangeStart(byteRangeStart);
-	    request.setByteRangeEnd(byteRangeEnd);
+	     request.setByteRangeStart(byteRangeStart);
+	     request.setByteRangeEnd(byteRangeEnd);
 
             GetObjectExtendedResponseType response = ospClient.getObjectExtended(request);
 
