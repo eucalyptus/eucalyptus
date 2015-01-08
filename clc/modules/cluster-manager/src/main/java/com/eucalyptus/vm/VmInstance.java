@@ -213,7 +213,8 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
-import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
+import com.eucalyptus.vm.VmVolumeState.VmVolumeAttachmentName;
+import com.eucalyptus.vm.VmVolumeState.VmVolumeAttachmentStateInfo;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.StackConfiguration;
@@ -1859,6 +1860,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  /* Commenting out this function as its incorrect and no longer used
   public VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
 	final EntityTransaction db = Entities.get( VmInstance.class );
 	try {
@@ -1883,7 +1885,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } finally {
 	  if ( db.isActive() ) db.rollback();
 	}
-  }
+  }*/
   
   public void addTransientVolume( final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
@@ -1900,6 +1902,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
+  /*Commenting out this function as it duplicates code and is no longer used
   public void addRootVolumeToStoppedInstance( final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
       public Volume apply( final Volume input ) {
@@ -1913,7 +1916,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 	  }
     };
 	Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
-  }
+  }*/
 
   public void addPersistentVolume( final String deviceName, final Volume vol, final Boolean isRootDevice ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
@@ -2006,11 +2009,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
       } catch (NoSuchElementException ex) {
         // EUCA-5033 allow volume detachment from stopped instances
-        if ( VmState.STOPPED.equals(entity.getState()) ) {
+        /*if ( VmState.STOPPED.equals(entity.getState()) ) {
           ret = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
           entity.getBootRecord( ).getPersistentVolumes( ).remove(ret);
         } else
-          throw ex;
+          throw ex;*/
+        // Allow detachment of persistent volumes i.e. volumes attached at run-instance time
+        // Check for stopped state is performed in a higher layer - VolumeManager
+        try {
+          ret = Iterables.find(entity.getBootRecord().getPersistentVolumes(), VmVolumeAttachment.volumeIdFilter(volumeId));
+          entity.getBootRecord().getPersistentVolumes().remove(ret);
+        } catch (NoSuchElementException ex1) {
+          throw ex1;
+        }
       }
       if ( State.BUSY.equals( volEntity.getState( ) ) ) {
         volEntity.setState( State.EXTANT );
@@ -2056,15 +2067,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    *
    */
   public void updateVolumeAttachment( final String volumeId, final AttachmentState newState ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+    try (TransactionResource db = Entities.transactionFor(VmInstance.class)){
       final VmInstance entity = Entities.merge( this );
-      entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
+      try {
+        entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
+      } catch (NoSuchElementException ex) {
+        VmVolumeAttachment ret = Iterables.find(entity.getBootRecord().getPersistentVolumes(), VmVolumeAttachment.volumeIdFilter(volumeId));
+        ret.setStatus(newState.name());
+      }
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -2156,16 +2169,99 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    *
    */
   private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
+    try (TransactionResource db = Entities.transactionFor(VmInstance.class)) {
       final VmInstance entity = Entities.merge( this );
-      entity.getTransientVolumeState( ).updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( entity ) ) );
+      // Moved following logic from VmVolumeState in order to update both transient and persistent attachments
+      
+      final List<VmVolumeAttachment> ncAttachedVols = Lists.transform(volumes, VmVolumeAttachment.fromAttachedVolume(entity));
+      Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeAttachmentName.INSTANCE ) );
+      Set<String> localVolumes = Sets.newHashSet( Collections2.transform( entity.getTransientVolumeState().getAttachments( ), VmVolumeAttachmentName.INSTANCE ) );
+      localVolumes.addAll(Collections2.transform( entity.getBootRecord().getPersistentVolumes(), VmVolumeAttachmentName.INSTANCE ));
+      Set<String> intersection = Sets.intersection( remoteVolumes, localVolumes );
+      Set<String> remoteOnly = Sets.difference( remoteVolumes, localVolumes );
+      Set<String> localOnly = Sets.difference( localVolumes, remoteVolumes );
+      if ( !intersection.isEmpty( ) || !remoteOnly.isEmpty( ) || !localOnly.isEmpty( ) ) {
+        LOG.debug( "Updating volume attachments for: " + entity.getInstanceId( )
+                   + " intersection=" + intersection
+                   + " local=" + localOnly
+                   + " remote=" + remoteOnly );
+        LOG.debug( "Reported state for: " + entity.getInstanceId( )
+                   + Collections2.transform( ncAttachedVols, VmVolumeAttachmentStateInfo.INSTANCE ) );
+      }
+      final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
+        
+        {
+          for ( final VmVolumeAttachment v : ncAttachedVols ) {
+            this.put( v.getVolumeId( ), v );
+          }
+        }
+      };
+      for ( String volId : intersection ) {
+        try {
+          VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
+          VmVolumeAttachment localVolumeAttachment = this.lookupVolumeAttachment( volId );
+          final AttachmentState localState = localVolumeAttachment.getAttachmentState( );
+          final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );
+          if ( !localState.isVolatile( ) ) {
+            if ( AttachmentState.detached.equals( remoteState ) ) {
+              this.removeVolumeAttachment( volId );
+            } else if ( AttachmentState.attaching_failed.equals( remoteState ) ) {
+              this.removeVolumeAttachment( volId );
+            } else if ( AttachmentState.detaching_failed.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+              this.updateVolumeAttachment( volId, AttachmentState.attached );
+            } else if ( AttachmentState.attached.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+              this.updateVolumeAttachment( volId, AttachmentState.attached );
+            }
+          } else {
+            if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detached.equals( remoteState ) ) {
+              this.removeVolumeAttachment( volId );
+            } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attached.equals( remoteState ) ) {
+              this.updateVolumeAttachment( volId, AttachmentState.attached );
+            } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attaching_failed.equals( remoteState ) ) {
+              this.removeVolumeAttachment( volId );
+            } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detaching_failed.equals( remoteState ) ) {
+              this.updateVolumeAttachment( volId, AttachmentState.attached );
+            }
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+        }
+      }
+      for ( String volId : remoteOnly ) {
+        try {
+          Volumes.lookup( null, volId );
+        } catch ( NoSuchElementException e ) {
+          LOG.error("Invalid volume id " + volId + " passed from back-end");
+          continue; // Throw an error up?
+        }
+        try {
+          VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
+          final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );
+          if ( AttachmentState.attached.equals( remoteState ) || AttachmentState.detaching_failed.equals( remoteState ) ) {
+            LOG.warn( "Restoring volume attachment state for " + entity.getInstanceId( ) + " with " + ncVolumeAttachment.toString( ) );
+            // swathi: how do we know if this is a transient or a persistent attachment?
+            // swathi: going with transient attachment for now assuming that persistent attachments are always known to CLC since they originate in the CLC
+            entity.getTransientVolumeState().addVolumeAttachment( ncVolumeAttachment );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+        }
+      }
+      for ( String volId : localOnly ) {
+        try {
+          final AttachmentState localState = this.lookupVolumeAttachment( volId ).getAttachmentState( );
+          if ( !localState.isVolatile( ) ) {
+
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+        }
+      }
+      
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-    } finally {
-      if ( db.isActive() ) db.rollback();
-    }
+    } 
   }
   
   /**

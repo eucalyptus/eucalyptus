@@ -63,9 +63,6 @@
 package com.eucalyptus.vm;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -79,14 +76,11 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 
-import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
@@ -171,6 +165,7 @@ public class VmVolumeState {
     }
   }
   
+  /* Moved this to VmInstance in order to update both transient and persistent attachments
   public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
     Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeAttachmentName.INSTANCE ) );
     Set<String> localVolumes = Sets.newHashSet( Collections2.transform( this.getAttachments( ), VmVolumeAttachmentName.INSTANCE ) );
@@ -252,7 +247,7 @@ public class VmVolumeState {
         LOG.error( ex );
       }
     }
-  }
+  }*/
   
   private VmInstance getVmInstance( ) {
     return this.vmInstance;

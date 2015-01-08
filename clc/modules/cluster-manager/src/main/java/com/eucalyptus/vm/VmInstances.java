@@ -605,6 +605,7 @@ public class VmInstances {
     }
   }
   
+  /*Commenting out this function as its incorrect and no longer used
   public static VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
 	 VmVolumeAttachment ret = null;
      try ( TransactionResource db =
@@ -632,7 +633,7 @@ public class VmInstances {
 	 } catch ( Exception ex ) {
 	   throw new NoSuchElementException( ex.getMessage( ) );
 	 }
- }
+ }*/
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
     VmVolumeAttachment ret = null;
