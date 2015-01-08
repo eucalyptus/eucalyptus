@@ -1643,7 +1643,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw ex;
         }
         return response;
-  }
+    }
 
     @Override
     public SetBucketTaggingResponseType setBucketTagging(SetBucketTaggingType request) throws S3Exception {
@@ -1655,23 +1655,22 @@ public class ObjectStorageGateway implements ObjectStorageService {
         List<BucketTag> bucketTagList = taggingConfiguration.getBucketTagSet( ).getBucketTags( );
 
         if ( bucketTagList.isEmpty( ) || bucketTagList.size( ) > 10 ) {
-          throw new MalformedXMLException( );
+          throw new MalformedXMLException(bucket.getBucketName());
         }
 
         BucketTaggingManagers.getInstance( ).addBucketTagging( bucketTagList, bucket.getBucketUuid( ) );
+      } catch (S3Exception ex) {
+        LOG.error("Error while setting TagSet for bucket '" + bucket.getBucketName() + "' ", ex);
+        throw ex;
       } catch ( Exception ex ) {
-        if ( ex instanceof MalformedXMLException ) {
-          throw new MalformedXMLException( bucket.getBucketName( ) );
-        } else if ( ex instanceof InvalidTagErrorException ) {
-          throw new InvalidTagErrorException( bucket.getBucketName( ) );
-        } else {
-          LOG.error( "Error while setting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
-          InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
-          e.setMessage("An exception was caught while setting TagSets for bucket - " + bucket.getBucketName( ) );
-          throw e;
-        }
+        LOG.error( "Error while setting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging", ex);
+        e.setMessage("An exception was caught while setting TagSets for bucket - " + bucket.getBucketName( ) );
+        throw e;
       }
-
+      
+      // AWS returns in a 204, rather than a 200 like other requests for SetBucketTaggingResponseType
+      reply.setStatus(HttpResponseStatus.NO_CONTENT);
       return reply;
     }
 
@@ -1687,7 +1686,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 BucketTaggingManagers.getInstance( ).getBucketTagging( bucket.getBucketUuid( ) );
 
         if ( bucketTagList.isEmpty( ) ) {
-          throw new NoSuchTagSetException( );
+          throw new NoSuchTagSetException(bucket.getBucketName());
         }
 
         for ( BucketTags bucketTags : bucketTagsList ) {
@@ -1702,15 +1701,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
         tagging.setBucketTagSet( tagSet );
 
         reply.setTaggingConfiguration( tagging );
+      } catch (S3Exception ex) {
+        LOG.error("Error while getting TagSet for bucket '" + bucket.getBucketName() + "' ", ex);
+        throw ex;
       } catch ( Exception ex ) {
-        if ( ex instanceof NoSuchTagSetException ) {
-          throw new NoSuchTagSetException( bucket.getBucketName( ) );
-        } else {
-          LOG.error( "Error while getting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
-          InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
-          e.setMessage("An exception was caught while getting TagSets for bucket - " + bucket.getBucketName( ) );
-          throw e;
-        }
+        LOG.error( "Error while getting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging", ex);
+        e.setMessage("An exception was caught while getting TagSets for bucket - " + bucket.getBucketName( ) );
+        throw e;
       }
 
       return reply;

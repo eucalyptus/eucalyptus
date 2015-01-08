@@ -179,14 +179,16 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 				// Remove the content in response for certain operations
 				if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
 						|| msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-						|| msg instanceof SetObjectAccessControlPolicyResponseType) {
+						|| msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType) {
 					if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
 						httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
 					}
-					// AWS returns in a 204, rather than a 200 like other requests for SetBucketTaggingResponseType
+					
+					// Moved the below logic to the actual operation in ObjectStorageGateway.java. 
+					/*// AWS returns in a 204, rather than a 200 like other requests for SetBucketTaggingResponseType
 					if ( msg instanceof SetBucketTaggingResponseType ) {
 						httpResponse.setStatus( HttpResponseStatus.NO_CONTENT );
-					}
+					}*/
 					removeResponseBody(msg, httpResponse);
 				}
 			}
