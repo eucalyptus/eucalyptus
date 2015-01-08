@@ -110,7 +110,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         } else {
           createLoadBalancerType.setLoadBalancerName(action.properties.getLoadBalancerName());
         }
-        if (action.properties.getAvailabilityZones() != null) {
+        if ( action.properties.getAvailabilityZones( ) != null && !action.properties.getAvailabilityZones( ).isEmpty( ) ) {
           AvailabilityZones availabilityZones = new AvailabilityZones();
           ArrayList<String> member = Lists.newArrayList(action.properties.getAvailabilityZones());
           availabilityZones.setMember(member);
@@ -133,13 +133,13 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
           createLoadBalancerType.setListeners(listeners);
         }
         createLoadBalancerType.setScheme(action.properties.getScheme());
-        if (action.properties.getSecurityGroups() != null) {
+        if ( action.properties.getSecurityGroups( ) != null && !action.properties.getSecurityGroups( ).isEmpty( ) ) {
           SecurityGroups securityGroups = new SecurityGroups();
           ArrayList<String> member = Lists.newArrayList(action.properties.getSecurityGroups());
           securityGroups.setMember(member);
           createLoadBalancerType.setSecurityGroups(securityGroups);
         }
-        if (action.properties.getSubnets() != null) {
+        if ( action.properties.getSubnets( ) != null && !action.properties.getSubnets( ).isEmpty( ) ) {
           Subnets subnets = new Subnets();
           ArrayList<String> member = Lists.newArrayList(action.properties.getSubnets());
           subnets.setMember(member);
@@ -157,7 +157,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-        if (action.properties.getInstances()!= null) {
+        if ( action.properties.getInstances( ) != null && !action.properties.getInstances( ).isEmpty( ) ) {
           RegisterInstancesWithLoadBalancerType registerInstancesWithLoadBalancerType = MessageHelper.createMessage(RegisterInstancesWithLoadBalancerType.class, action.info.getEffectiveUserId());
           registerInstancesWithLoadBalancerType.setLoadBalancerName(action.info.getPhysicalResourceId());
           Instances instances = new Instances();
@@ -340,15 +340,14 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         loadBalancerNames.setMember(member);
         describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
         DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
-        if (describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null
-          && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() > 0) {
-          return action;
+        if ( describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null &&
+            describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
+            describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
+            describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() == 1 ) {
+          DeleteLoadBalancerType deleteLoadBalancerType = MessageHelper.createMessage(DeleteLoadBalancerType.class, action.info.getEffectiveUserId());
+          deleteLoadBalancerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          AsyncRequests.<DeleteLoadBalancerType,DeleteLoadBalancerResponseType> sendSync(configuration, deleteLoadBalancerType);
         }
-        DeleteLoadBalancerType deleteLoadBalancerType = MessageHelper.createMessage(DeleteLoadBalancerType.class, action.info.getEffectiveUserId());
-        deleteLoadBalancerType.setLoadBalancerName(action.info.getPhysicalResourceId());
-        AsyncRequests.<DeleteLoadBalancerType,DeleteLoadBalancerResponseType> sendSync(configuration, deleteLoadBalancerType);
         return action;
       }
     };
