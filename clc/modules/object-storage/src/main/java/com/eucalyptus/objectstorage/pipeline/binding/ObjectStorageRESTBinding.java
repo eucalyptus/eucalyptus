@@ -62,31 +62,34 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedPOSTRequestException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
 import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
+import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
@@ -106,13 +109,12 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -142,34 +144,37 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
+public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected static Logger LOG = Logger.getLogger( ObjectStorageRESTBinding.class );
     protected static final String SERVICE = "service";
     protected static final String BUCKET = "bucket";
     protected static final String OBJECT = "object";
-    protected static final Map<String, String> operationMap = populateOperationMap();
-    private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
+    protected Map<String, String> operationMap;
+    protected Map<String, String> unsupportedOperationMap;
     protected String key;
-    protected String randomKey;
 
     public ObjectStorageRESTBinding( ) {
         super( "http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION );
+        operationMap = populateOperationMap();
+        unsupportedOperationMap = populateUnsupportedOperationMap();
     }
 
     @Override
     public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-        LOG.trace( LogUtil.dumpObject( channelEvent ) );
+        if(Logs.isExtrrreeeme()) {
+            Logs.extreme().trace( LogUtil.dumpObject(channelEvent) );
+        }
         if ( channelEvent instanceof MessageEvent ) {
             final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
             try {
                 this.incomingMessage( channelHandlerContext, msgEvent );
             } catch ( Exception e ) {
-                LOG.error( e, e );
+                Logs.extreme().trace("Error binding request", e);
                 Channels.fireExceptionCaught( channelHandlerContext, e );
                 return;
             }
         }
-        channelHandlerContext.sendUpstream( channelEvent );
+        channelHandlerContext.sendUpstream(channelEvent);
     }
 
     @Override
@@ -191,14 +196,6 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     if(expect.toLowerCase().equals("100-continue")) {
                         ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
                         request.setExpectHeader(true);
-                        /*HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
-                        DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
-                        final Channel channel = ctx.getChannel();
-                        if ( channel.isConnected( ) ) {
-                            ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
-                            Channels.write(ctx, writeFuture, response);
-                        }
-                        ctx.sendDownstream( newEvent );*/
                     }
                 }
 
@@ -230,9 +227,9 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
                 httpResponse.setHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
-                httpResponse.setHeader( HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
-                httpResponse.setHeader( "x-amz-request-id", msg.getCorrelationId());
-                httpResponse.setContent( buffer );
+                httpResponse.setHeader( HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+                httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
+                httpResponse.setContent(buffer);
             }
         }
     }
@@ -242,101 +239,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         dataRequest.setData(stream);
     }
 
-    protected static Map<String, String> populateOperationMap() {
-        Map<String, String> newMap = new HashMap<String, String>();
-        //Service operations
-        newMap.put(SERVICE + ObjectStorageProperties.HTTPVerb.GET.toString(), "ListAllMyBuckets");
-
-        //Bucket operations
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.HEAD.toString(), "HeadBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.prefix.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.maxkeys.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.marker.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.delimiter.toString(), "ListBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString(), "CreateBucket");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString(), "DeleteBucket");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.location.toString(), "GetBucketLocation");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-        // Multipart uploads
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
-
-
-        //Object operations
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
-
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.POST.toString(), "PostObject");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString(), "PutObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.COPY_SOURCE.toString(), "CopyObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString(), "GetObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.torrent.toString(), "GetObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString(), "DeleteObject");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.HEAD.toString(), "HeadObject");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
-
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
-
-        // Multipart Uploads
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "ListParts");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload");
-
-        return newMap;
-    }
-
-    private static Map<String, String> populateUnsupportedOperationMap() {
-        Map<String, String> opsMap = new HashMap<String, String>();
-
-        // Bucket operations
-        // Cross-Origin Resource Sharing (cors)
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GET Bucket cors");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
-        // Policy
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "GET Bucket policy");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
-        // Notification
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "GET Bucket notification");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
-        // Tagging
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GET Bucket tagging");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "PUT Bucket tagging");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DELETE Bucket tagging");
-        // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment");
-        // Website
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "GET Bucket website");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
-        opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-
-        // Object operations
-        return opsMap;
-    }
+    protected abstract Map<String, String> populateOperationMap();
+    protected abstract Map<String, String> populateUnsupportedOperationMap();
 
     @Override
     public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
-        String servicePath = httpRequest.getServicePath();
         Map bindingArguments = new HashMap();
         final String operationName = getOperation(httpRequest, bindingArguments);
         if(operationName == null)
@@ -390,7 +297,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
             throw new BindingException( errMsg.toString() );
         }
 
-        LOG.trace(groovyMsg.toString());
+        Logs.extreme().trace(groovyMsg.toString());
         try
         {
             Binding binding = BindingManager.getDefaultBinding( );
@@ -419,19 +326,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     }
 
     protected void setRequiredParams(final GroovyObject msg, User user) throws Exception {
-        if(user != null && !user.equals(Principals.nobodyUser())) {
-            //Change to handle IAM roles, can't find the key this way
-            if (user instanceof RoleUser) {
-                RoleUser roleUser = (RoleUser) user;
-                msg.setProperty("accessKeyID", roleUser.getUserId());
-            } else {
-                msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId(user));
-            }
-        }
         msg.setProperty("timeStamp", new Date());
     }
 
-    protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException, NotImplementedException {
+    protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
         String[] target = null;
         String path = getOperationPath(httpRequest);
         boolean objectstorageInternalOperation = false;
@@ -439,6 +337,9 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
         if(targetHost.contains(".objectstorage")) {
             String bucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
+            path = "/" + bucket + path;
+        } else if(targetHost.contains(".walrus")) {
+            String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
             path = "/" + bucket + path;
         }
 
@@ -451,7 +352,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         Map<String, String> params = httpRequest.getParameters();
         String operationName = null;
         long contentLength = 0;
-        String contentLengthString = httpRequest.getHeader(ObjectStorageProperties.CONTENT_LEN);
+        String contentLengthString = httpRequest.getHeader(HttpHeaders.Names.CONTENT_LENGTH);
         if(contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
         }
@@ -466,12 +367,14 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 operationParams.put("Bucket", target[0]);
                 operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
                 if(verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-                    //TODO: handle POST.
+                    //Handle POST form upload.
+                    /*
+                    For multipart-form uploads we get the metadata from the from fields
+                    and the first data chunk from the "file" form field
+                     */
                     Map formFields = httpRequest.getFormFields();
-
                     String objectKey = null;
                     String file = (String) formFields.get(ObjectStorageProperties.FormField.file.toString());
-                    String authenticationHeader = "";
                     if(formFields.containsKey(ObjectStorageProperties.FormField.key.toString())) {
                         objectKey = (String) formFields.get(ObjectStorageProperties.FormField.key.toString());
                         objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
@@ -491,28 +394,38 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     }
                     if(formFields.containsKey(ObjectStorageProperties.FormField.success_action_status.toString())) {
                         Integer successActionStatus = Integer.parseInt((String)formFields.get(ObjectStorageProperties.FormField.success_action_status.toString()));
-                        if(successActionStatus == 200 || successActionStatus == 201)
+                        if(successActionStatus == 200 || successActionStatus == 201) {
                             operationParams.put("SuccessActionStatus", successActionStatus);
-                        else
+                        } else {
+                            //Default is 204, as per S3 spec
                             operationParams.put("SuccessActionStatus", 204);
+                        }
                     } else {
                         operationParams.put("SuccessActionStatus", 204);
                     }
-                    if(formFields.containsKey(ObjectStorageProperties.CONTENT_TYPE)) {
-                        operationParams.put("ContentType", formFields.get(ObjectStorageProperties.CONTENT_TYPE));
+
+                    //Get the content-type of the upload content, not the form itself
+                    if(formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()) != null) {
+                        operationParams.put("ContentType", formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()));
+                    }
+
+
+                    if(formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
+                        operationParams.put("ContentLength", (long)formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
+                    } else {
+                        throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
+                        //if(contentLengthString != null) {
+                        //    operationParams.put("ContentLength", (new Long(contentLength).toString()));
+                        //}
                     }
                     key = target[0] + "." + objectKey;
-                    randomKey = key + "." + Hashes.getRandom(10);
-                    if(contentLengthString != null)
-                        operationParams.put("ContentLength", (new Long(contentLength).toString()));
-                    operationParams.put(ObjectStorageProperties.Headers.RandomKey.toString(), randomKey);
 
-                    //TODO: This is PostObject.
-                    //handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
-
-                    //Set the message content to the first-data chunk if found. This is used later for processing the message like a PUT request
-                    httpRequest.setContent((ChannelBuffer)formFields.get(ObjectStorageProperties.IGNORE_PREFIX + "FirstDataChunk"));
-
+                    //Verify the message content is found.
+                    ChannelBuffer buffer = (ChannelBuffer)formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
+                    if(buffer == null) {
+                        //No content found.
+                        throw new MalformedPOSTRequestException("No upload content found");
+                    }
                 } else if(ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {
                     if(params.containsKey(ObjectStorageProperties.BucketParameter.logging.toString())) {
                         //read logging params
@@ -576,21 +489,36 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                             if(metaDataDirective != null) {
                                 operationParams.put("MetadataDirective", metaDataDirective);
                             }
-                            AccessControlList accessControlList;
-                            if(contentLength > 0) {
-                                accessControlList = null;
+
+                            AccessControlList accessControlList = null;
+                            if (contentLength > 0) {
                                 accessControlList = getAccessControlList(httpRequest);
-                            } else {
+                            }
+                            else {
                                 accessControlList = new AccessControlList();
                             }
+                            String aclHeader = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
+                            if (aclHeader != null && !"".equals(aclHeader)) {
+                                validateCannedAcl(aclHeader);
+                                CanonicalUser aws = new CanonicalUser();
+                                aws.setDisplayName("");
+                                Grant grant = new Grant(new Grantee(aws), aclHeader);
+                                ArrayList<Grant> grants = Lists.newArrayList();
+                                grants.add(grant);
+                                accessControlList.getGrants().addAll(grants);
+                            }
+
                             operationParams.put("AccessControlList", accessControlList);
                             operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
                             Set<String> headerNames = httpRequest.getHeaderNames();
                             for(String key : headerNames) {
-                                for(ObjectStorageProperties.CopyHeaders header: ObjectStorageProperties.CopyHeaders.values()) {
-                                    if(key.replaceAll("-", "").equals(header.toString().toLowerCase())) {
-                                        String value = httpRequest.getHeader(key);
-                                        parseExtendedHeaders(operationParams, header.toString(), value);
+                                if (key.startsWith("x-amz-")) {
+                                    String stripped = key.replaceFirst("x-amz-", "");
+                                    for(ObjectStorageProperties.CopyHeaders header: ObjectStorageProperties.CopyHeaders.values()) {
+                                        if(stripped.replaceAll("-", "").equals(header.toString().toLowerCase())) {
+                                            String value = httpRequest.getHeader(key);
+                                            parseExtendedHeaders(operationParams, header.toString(), value);
+                                        }
                                     }
                                 }
                             }
@@ -601,30 +529,17 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     } else {
                         //handle PUTs
                         key = target[0] + "." + objectKey;
-                        randomKey = key + "." + Hashes.getRandom(10);
-                        String contentType = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
+                        String contentType = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
                         if(contentType != null)
                             operationParams.put("ContentType", contentType);
                         String contentDisposition = httpRequest.getHeader("Content-Disposition");
                         if(contentDisposition != null)
                             operationParams.put("ContentDisposition", contentDisposition);
-                        String contentMD5 = httpRequest.getHeader(ObjectStorageProperties.CONTENT_MD5);
+                        String contentMD5 = httpRequest.getHeader(HttpHeaders.Names.CONTENT_MD5);
                         if(contentMD5 != null)
                             operationParams.put("ContentMD5", contentMD5);
                         if(contentLengthString != null)
                             operationParams.put("ContentLength", (new Long(contentLength).toString()));
-
-                        //Not used in this pipeline
-                        //operationParams.put(ObjectStorageProperties.Headers.RandomKey.toString(), randomKey);
-                        //putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
-                        //handleFirstChunk(httpRequest, contentLength);
-
-                        //Not needed for binding anymore
-						/*try {
-							operationParams.put("Data", getFirstChunk(httpRequest, contentLength));
-						} catch (Exception ex) {
-							throw new BindingException("Unable to get data from PUT request for: " + key, ex);
-						}*/
                     }
                 } else if(verb.equals(ObjectStorageProperties.HTTPVerb.GET.toString())) {
                     if(!objectstorageInternalOperation) {
@@ -801,7 +716,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     }
 
     protected void getTargetBucketParams(Map operationParams,
-                                         MappingHttpRequest httpRequest) throws BindingException {
+                                         MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         String message = getMessageString(httpRequest);
         if(message.length() > 0) {
             try {
@@ -814,11 +729,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
                 List<String> permissions = xmlParser.getValues("//TargetGrants/Grant/Permission");
                 if(permissions == null)
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/TargetGrants/Grant/Permission");
 
                 DTMNodeList grantees = xmlParser.getNodes("//TargetGrants/Grant/Grantee");
                 if(grantees == null)
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//TargetGrants/Grant/Grantee");
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
                     String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -833,7 +748,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0)
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("ACL group URI");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setGroup(new Group(groupUri));
@@ -845,14 +760,17 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 TargetGrants targetGrants = new TargetGrants(grants);
                 LoggingEnabled loggingEnabled = new LoggingEnabled(targetBucket, targetPrefix, new TargetGrants(grants));
                 operationParams.put("LoggingEnabled", loggingEnabled);
+            } catch(S3Exception e) {
+                throw e;
             } catch(Exception ex) {
-                LOG.warn(ex);
-                throw new BindingException("Unable to parse logging configuration " + ex.getMessage());
+                MalformedXMLException malEx = new MalformedXMLException("//TargetBucket");
+                malEx.initCause(ex);
+                throw malEx;
             }
         }
     }
 
-    protected void getVersioningStatus(Map operationParams, MappingHttpRequest httpRequest) throws BindingException {
+    protected void getVersioningStatus(Map operationParams, MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         String message = getMessageString(httpRequest);
         if(message.length() > 0) {
             try {
@@ -862,8 +780,9 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     return;
                 operationParams.put("VersioningStatus", status);
             } catch(Exception ex) {
-                LOG.warn(ex);
-                throw new BindingException("Unable to parse versioning status " + ex.getMessage());
+                MalformedXMLException malEx = new MalformedXMLException(message);
+                malEx.initCause(ex);
+                throw malEx;
             }
         }
     }
@@ -894,8 +813,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 try {
                     operationParams.put(headerString, DateUtils.parseIso8601DateTime(value));
                 } catch (ParseException e) {
-                    LOG.error(e);
-                    throw new BindingException(e);
+                    throw new BindingException("Error parsing date: " + value, e);
                 }
             }
         } else {
@@ -903,12 +821,13 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         }
     }
 
-    protected AccessControlPolicy getAccessControlPolicy(MappingHttpRequest httpRequest) throws BindingException {
+    protected AccessControlPolicy getAccessControlPolicy(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         AccessControlPolicy accessControlPolicy = new AccessControlPolicy();
         AccessControlList accessControlList = new AccessControlList();
         ArrayList<Grant> grants = new ArrayList<Grant>();
+        String aclString = "";
         try {
-            String aclString = getMessageString(httpRequest);
+            aclString = getMessageString(httpRequest);
             if(aclString.length() > 0) {
                 XMLParser xmlParser = new XMLParser(aclString);
                 String ownerId = xmlParser.getValue("//Owner/ID");
@@ -919,11 +838,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
                 List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
                 if(permissions == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//AccessControlList/Grant/Permission");
                 }
                 DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
                 if(grantees == null){
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("//AccessControlList/Grant/Grantee");
                 }
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
                     String id = xmlParser.getValue(grantees.item(i), "ID");
@@ -947,7 +866,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0) {
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("Group-URI");
                         }
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
@@ -958,9 +877,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     }
                 }
             }
+        } catch(S3Exception e) {
+            //pass it up
+            throw e;
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException("Unable to parse access control policy " + ex.getMessage());
+            throw new MalformedACLErrorException(aclString);
         }
         accessControlList.setGrants(grants);
         accessControlPolicy.setAccessControlList(accessControlList);
@@ -968,11 +889,12 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     }
 
 
-    protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws BindingException {
+    protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
         AccessControlList accessControlList = new AccessControlList();
         ArrayList<Grant> grants = new ArrayList<Grant>();
+        String aclString = "";
         try {
-            String aclString = getMessageString(httpRequest);
+            aclString = getMessageString(httpRequest);
             if(aclString.length() > 0) {
                 XMLParser xmlParser = new XMLParser(aclString);
                 String ownerId = xmlParser.getValue("//Owner/ID");
@@ -980,11 +902,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
                 List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
                 if(permissions == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/AccessControlList/Grant/Permission");
                 }
                 DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
                 if(grantees == null) {
-                    throw new BindingException("malformed access control list");
+                    throw new MalformedACLErrorException("/AccessControlList/Grant/Grantee");
                 }
 
                 for(int i = 0 ; i < grantees.getLength() ; ++i) {
@@ -1000,7 +922,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     } else {
                         String groupUri = xmlParser.getValue(grantees.item(i), "URI");
                         if(groupUri.length() == 0)
-                            throw new BindingException("malformed access control list");
+                            throw new MalformedACLErrorException("Group-URI");
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         grantee.setGroup(new Group(groupUri));
@@ -1010,9 +932,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                     }
                 }
             }
+        } catch(S3Exception e) {
+            throw e;
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException("Unable to parse access control list " + ex.getMessage());
+            throw new MalformedACLErrorException("Unable to parse access control list: " + aclString);
         }
         accessControlList.setGrants(grants);
         return accessControlList;
@@ -1035,17 +958,35 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 }
             }
         }catch(Exception ex) {
-            LOG.warn(ex);
             throw new BindingException("Unable to parse part list " + ex.getMessage());
         }
         return partList;
     }
 
+    /**
+     * Removes the service path for processing the bucket/key split.
+     * @param httpRequest
+     * @return
+     */
     protected String getOperationPath(MappingHttpRequest httpRequest) {
-        return httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
+        for(String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
+            if(httpRequest.getServicePath().startsWith(pathCandidate)) {
+                String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
+                if(!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
+                    //The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
+                    //So, don't remove the service path because that changes the semantics.
+                    break;
+                } else {
+                    return opPath;
+                }
+            }
+        }
+
+        return httpRequest.getServicePath();
     }
 
-    protected String getLocationConstraint(MappingHttpRequest httpRequest) throws BindingException {
+
+    protected String getLocationConstraint(MappingHttpRequest httpRequest) throws S3Exception {
         String locationConstraint = null;
         try {
             String bucketConfiguration = getMessageString(httpRequest);
@@ -1054,8 +995,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 locationConstraint = xmlParser.getValue("/CreateBucketConfiguration/LocationConstraint");
             }
         } catch(Exception ex) {
-            LOG.warn(ex);
-            throw new BindingException(ex.getMessage());
+            MalformedXMLException malEx = new MalformedXMLException("/CreateBucketConfiguration/LocationConstraint");
+            malEx.initCause(ex);
+            throw malEx;
+
         }
         return locationConstraint;
     }
@@ -1075,7 +1018,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         return failedMappings;
     }
 
-    protected void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws BindingException
+    protected void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws S3Exception, BindingException
     {
         //process headers
         String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
@@ -1173,7 +1116,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
     protected List<String> populateEmbedded( final Class genericType, final Map<String, String> params, final ArrayList theList ) throws InstantiationException, IllegalAccessException {
         GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
-        Map<String, String> embeddedFields = buildFieldMap( genericType );
+        Map<String, String> embeddedFields = buildFieldMap(genericType);
         int startSize = params.size( );
         List<String> embeddedFailures = populateObject( embedded, embeddedFields, params );
         if ( embeddedFailures.isEmpty( ) && !( params.size( ) - startSize == 0 ) ) theList.add( embedded );
@@ -1193,7 +1136,13 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         return fieldMap;
     }
 
-    protected static void addAccessControlList (final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) {
+    protected static void validateCannedAcl(String cannedAcl) throws InvalidArgumentException {
+        if(!AclUtils.isValidCannedAcl(cannedAcl)) {
+            throw new InvalidArgumentException(cannedAcl);
+        }
+    }
+
+    protected static void addAccessControlList (final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) throws S3Exception {
 
         AccessControlList accessControlList;
         ArrayList<Grant> grants;
@@ -1207,6 +1156,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
             grants = new ArrayList<Grant>();
         }
 
+        validateCannedAcl(cannedACLString);
 
         CanonicalUser aws = new CanonicalUser();
         aws.setDisplayName("");
@@ -1225,52 +1175,6 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         return string.substring(0, 1).toUpperCase().concat(string.substring(1));
     }
 
-    protected boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
-        Iterator<String> iterator = jsonObject.keys();
-        boolean returnValue = false;
-        while(iterator.hasNext()) {
-            String key = iterator.next();
-            key = key.replaceAll("\\$", "");
-            policyItemNames.add(key);
-            try {
-                if(jsonObject.get(key).equals(formFields.get(key)))
-                    returnValue = true;
-                else
-                    returnValue = false;
-            } catch(Exception ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-        return returnValue;
-    }
-
-    protected boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
-        boolean returnValue = false;
-        if(jsonArray.size() != 3)
-            return false;
-        try {
-            String condition = (String) jsonArray.get(0);
-            String key = (String) jsonArray.get(1);
-            key = key.replaceAll("\\$", "");
-            policyItemNames.add(key);
-            String value = (String) jsonArray.get(2);
-            if(condition.contains("eq")) {
-                if(value.equals(formFields.get(key)))
-                    returnValue = true;
-            } else if(condition.contains("starts-with")) {
-                if(!formFields.containsKey(key))
-                    return false;
-                if(formFields.get(key).startsWith(value))
-                    returnValue = true;
-            }
-        } catch(Exception ex) {
-            ex.printStackTrace();
-            return false;
-        }
-        return returnValue;
-    }
-
     protected String getMessageString(MappingHttpRequest httpRequest) {
         ChannelBuffer buffer = httpRequest.getContent( );
         buffer.markReaderIndex( );
@@ -1279,7 +1183,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         return new String( read );
     }
 
-    private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws BindingException {
+    private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws S3Exception {
         LifecycleConfiguration lifecycleConfigurationType = new LifecycleConfiguration();
         lifecycleConfigurationType.setRules( new ArrayList<LifecycleRule>() );
         String message = getMessageString(httpRequest);
@@ -1288,21 +1192,25 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 XMLParser xmlParser = new XMLParser(message);
                 DTMNodeList rules = xmlParser.getNodes("//LifecycleConfiguration/Rule");
                 if (rules == null) {
-                    throw new BindingException("malformed lifecycle configuration");
+                    throw new MalformedXMLException("/LifecycleConfiguration/Rule");
                 }
                 for (int idx = 0; idx < rules.getLength(); idx++) {
                     lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, rules.item(idx) ) );
                 }
             }
+            catch (S3Exception e) {
+                throw e;
+            }
             catch (Exception ex) {
-                LOG.warn(ex);
-                throw new BindingException("Unable to parse lifecycle " + ex.getMessage());
+                MalformedXMLException e = new MalformedXMLException("/LifecycleConfiguration");
+                ex.initCause(ex);
+                throw e;
             }
         }
         return lifecycleConfigurationType;
     }
 
-    private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws BindingException{
+    private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws S3Exception{
         LifecycleRule lifecycleRule = new LifecycleRule();
         String id = parser.getValue(node, "ID");
         String prefix = parser.getValue(node, "Prefix");
@@ -1358,10 +1266,14 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
             }
         }
         catch (ParseException e) {
-            throw new BindingException("caught a parsing exception while translating the transition or expiration date - " + e.getMessage());
+            MalformedXMLException ex = new MalformedXMLException("Expiration|Transition Date");
+            ex.initCause(e);
+            throw ex;
         }
         catch (Exception ex) {
-            throw new BindingException("caught general exception while parsing lifecycle input - " + ex.getMessage());
+            MalformedXMLException e = new MalformedXMLException("LifecycleRule");
+            ex.initCause(ex);
+            throw e;
         }
 
         return lifecycleRule;

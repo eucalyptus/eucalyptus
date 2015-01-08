@@ -20,13 +20,11 @@
 package com.eucalyptus.objectstorage;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -35,16 +33,18 @@ import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.entities.ScheduledJob;
 import com.eucalyptus.objectstorage.entities.TorrentInfo;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.google.common.base.Predicates;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import org.hibernate.ejb.Ejb3Configuration;
 
 import com.eucalyptus.auth.entities.*;
 
 import javax.persistence.EntityTransaction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 public class UnitTestSupport {
     private static Map<String, List<String>> userMap = new HashMap<String, List<String>>();
@@ -74,7 +74,8 @@ public class UnitTestSupport {
                         .addAnnotatedClass(LifecycleRule.class)
                         .addAnnotatedClass(ScheduledJob.class)
                         .addAnnotatedClass(ObjectStorageGlobalConfiguration.class)
-                        .addAnnotatedClass(S3AccessControlledEntity.class);
+                        .addAnnotatedClass(S3AccessControlledEntity.class)
+                        .addAnnotatedClass(S3ProviderConfiguration.class);
 
         PersistenceContexts.registerPersistenceContext("eucalyptus_osg", config);
     }
@@ -142,7 +143,7 @@ public class UnitTestSupport {
                 props = new HashMap<>();
                 userName = "unittestuser" + j;
                 props.put("email", userName + "@unit-test.com");
-                User usr = accnt.addUser(userName, "/", true, true, props);
+                User usr = accnt.addUser(userName, "/", true, props);
                 userMap.get(accountName).add(usr.getUserId());
             }
         }

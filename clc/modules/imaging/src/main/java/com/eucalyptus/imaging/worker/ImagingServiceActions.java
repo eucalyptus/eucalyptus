@@ -21,9 +21,7 @@ package com.eucalyptus.imaging.worker;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -38,13 +36,11 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.imaging.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -62,8 +58,8 @@ import edu.ucsb.eucalyptus.msgs.TagInfo;
  */
 public class ImagingServiceActions {
 
-    public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
-    private static Logger  LOG = Logger.getLogger( ImagingServiceActions.class );
+    
+    private static Logger LOG = Logger.getLogger( ImagingServiceActions.class );
 
     // make sure the cloud is ready to launch imaging service instances
     // e.g., lack of resources will keep the launcher from creating resources
@@ -439,6 +435,64 @@ public class ImagingServiceActions {
       }
     }
     
+    public static class IamRoleAuthorization extends AbstractAction {
+      public static final String IMAGING_SERVICE_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-service-api";
+      public static final String IMAGING_ROLE_POLICY_DOCUMENT=
+      "{\"Statement\":[{\"Action\": [\"eucaimaging:GetInstanceImportTask\", \"eucaimaging:PutInstanceImportTaskStatus\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+      private String createdPolicyName = null;
+      private String roleName = null;
+      public IamRoleAuthorization(
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup,
+          String groupId) {
+        super(lookup, groupId);
+      }
+
+      @Override
+      public boolean apply() throws ImagingServiceActionException {
+        try{
+          roleName = this.getResult(IamRoleSetup.class);
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("failed to find the created role name", ex);
+        }
+      
+        final String policyName = String.format("%s-%s", IMAGING_SERVICE_ROLE_POLICY_NAME_PREFIX, this.getGroupId());
+        final String rolePolicyDoc = IMAGING_ROLE_POLICY_DOCUMENT;
+        try{
+          final GetRolePolicyResult rolePolicy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, policyName);
+          if(rolePolicy!=null && policyName.equals(rolePolicy.getPolicyName()))
+            this.createdPolicyName = policyName;
+        }catch(final Exception ex){
+          ;
+        }
+       
+        if(this.createdPolicyName==null){
+          try{
+            EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+            createdPolicyName = policyName;
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to authorize imaging service api", ex);
+          }
+        }
+        return true;      
+      }
+
+      @Override
+      public void rollback() throws ImagingServiceActionException{
+        if(this.createdPolicyName!=null){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to delete role policy for imaging service api", ex);
+          }
+        }
+      }
+
+      @Override
+      public String getResult() {
+        return this.createdPolicyName;
+      }
+    }
+    
     public static class UserDataSetup extends AbstractAction {
       public UserDataSetup(
           Function<Class<? extends AbstractAction>, AbstractAction> lookup,
@@ -459,35 +513,12 @@ public class ImagingServiceActions {
       @Override
       public String getResult() {
         final String userData = B64.standard.encString(String.format("%s\n%s",
-            CREDENTIALS_STR,
-            getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+            ImagingServiceProperties.CREDENTIALS_STR,
+            ImagingServiceProperties.getWorkerUserData(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
                 ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
         return userData;
       }
-    }
-    
-    public static String getUserDataMap(String ntpServer, String logServer, String logServerPort) {
-      Map<String,String> kvMap = new HashMap<String,String>();
-      if(ntpServer != null)
-        kvMap.put("ntp_server", ntpServer);
-      if(logServer != null)
-        kvMap.put("log_server", logServer);
-      if(logServerPort != null)
-        kvMap.put("log_server_port", logServerPort);
-
-      ServiceConfiguration service = Topology.lookup( Eucalyptus.class );
-      kvMap.put("eucalyptus_port", Integer.toString( service.getPort() ) );
-      kvMap.put("ec2_path", service.getServicePath());
-      service = Topology.lookup( Imaging.class );
-      kvMap.put("imaging_path", service.getServicePath());
-
-      final StringBuilder sb = new StringBuilder();
-      for (String key : kvMap.keySet()){
-        String value = kvMap.get(key);
-        sb.append(String.format("%s=%s;", key, value));
-      }
-      return sb.toString();
     }
 
     public static class CreateLaunchConfiguration extends AbstractAction {
@@ -613,27 +644,15 @@ public class ImagingServiceActions {
           throw new ImagingServiceActionException("failed to find the launch configuration name", ex);
         }
         
-        List<String> availabilityZones = Lists.newArrayList();
-        if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES!= null &&
-            ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.length()>0){
-          if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.contains(",")){
-            final String[] tokens = ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.split(",");
-            for(final String zone : tokens)
-              availabilityZones.add(zone);
-          }else{
-            availabilityZones.add(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES);
-          }
-        }else{
-          try{
-            final List<ClusterInfoType> clusters = 
-                EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-            for(final ClusterInfoType c : clusters)
-              availabilityZones.add(c.getZoneName());
-          }catch(final Exception ex){
-            throw new ImagingServiceActionException("failed to lookup availability zones", ex);
-          }
+        List<String> availabilityZones = null;
+        try{
+          availabilityZones = ImagingServiceProperties.listConfiguredZones();
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("Failed to lookup configured availability zones for imaging workers", ex);
         }
-        final int capacity = NUM_INSTANCES;
+        if(availabilityZones.size()<=0)
+          throw new ImagingServiceActionException("No availability zone is found for deploying imaging workers");
+        final int capacity = NUM_INSTANCES * availabilityZones.size();
         try{
           EucalyptusActivityTasks.getInstance().createAutoScalingGroup(asgName, availabilityZones, 
               capacity, launchConfigName);
@@ -665,10 +684,48 @@ public class ImagingServiceActions {
           }
           
           try{
-            EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.createdAutoScalingGroup, true);
+            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.createdAutoScalingGroup, null, 0);
           }catch(final Exception ex){
-            throw new ImagingServiceActionException("failed to delete autoscaling group", ex);
+            LOG.warn(String.format("Unable to set desired capacity for %s", this.createdAutoScalingGroup), ex);
           }
+          
+          boolean error = false;
+          final int NUM_DELETE_ASG_RETRY = 4;
+          for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
+            try{
+              EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.createdAutoScalingGroup, true);
+              boolean asgFound=false;
+              try{
+                final DescribeAutoScalingGroupsResponseType resp = 
+                    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(this.createdAutoScalingGroup));
+                for(final AutoScalingGroupType asg :
+                  resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()){
+                  if(this.createdAutoScalingGroup.equals(asg.getAutoScalingGroupName()))
+                    asgFound=true; 
+                }
+              }catch(final Exception ex){
+                asgFound=false;
+              }
+              if(asgFound)
+                throw new Exception("Autoscaling group was not deleted");
+              error = false;
+              // willl terminate all instances
+            }catch(final Exception ex){
+              error = true;
+              LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), this.createdAutoScalingGroup));
+              try{
+                long sleepMs = (i+1) * 500;
+                Thread.sleep(sleepMs);
+              }catch(final Exception ex2){
+                ;
+              }
+            }
+            if(!error)
+              break;
+          }
+          
+          if(error)
+            throw new ImagingServiceActionException("Failed to delete autoscaling group");
           
           // poll the state of instances
           do{
@@ -710,22 +767,23 @@ public class ImagingServiceActions {
     }
     
     public static class UploadServerCertificate extends AbstractAction {
-      private static final String DEFAULT_SERVER_CERT_PATH = "/";
-      private static final String DEFAULT_SERVER_CERT_NAME_PREFIX= "euca-internal-imaging";
+      /// EUARE will not list and delete certificates under this path
+      private static final String DEFAULT_SERVER_CERT_PATH = "/euca-internal";
       private String createdServerCert = null;
+      private String certificateName = null;
       public UploadServerCertificate(
-          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId, final String certName) {
         super(lookup, groupId);
+        this.certificateName = certName;
       }
 
       @Override
       public boolean apply() throws ImagingServiceActionException{
-        final String certName = String.format("%s-%s",DEFAULT_SERVER_CERT_NAME_PREFIX,this.getGroupId());
         final String certPath = DEFAULT_SERVER_CERT_PATH;
         
         try{
           final ServerCertificateType cert = 
-              EucalyptusActivityTasks.getInstance().getServerCertificate(certName);
+              EucalyptusActivityTasks.getInstance().getServerCertificate(this.certificateName);
           if(cert!=null && cert.getServerCertificateMetadata()!=null)
             this.createdServerCert = cert.getServerCertificateMetadata().getServerCertificateName();
         }catch(final Exception ex){
@@ -747,8 +805,8 @@ public class ImagingServiceActions {
           }
           
           try{
-            EucalyptusActivityTasks.getInstance().uploadServerCertificate(certName, certPath, certPem, pkPem, null);
-            this.createdServerCert = certName;
+            EucalyptusActivityTasks.getInstance().uploadServerCertificate(this.certificateName, certPath, certPem, pkPem, null);
+            this.createdServerCert = this.certificateName;
           }catch(final Exception ex){
             throw new ImagingServiceActionException("failed to upload server cert", ex);
           }
@@ -894,6 +952,65 @@ public class ImagingServiceActions {
             EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
           }catch(final Exception ex){
             throw new ImagingServiceActionException("failed to delete role policy for volume operations", ex);
+          }
+        }
+      }
+
+      @Override
+      public String getResult() {
+        return this.createdPolicyName;
+      }
+    }
+    
+    public static class AuthorizeS3Operations extends AbstractAction {
+      public static final String S3_OPS_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-s3";
+      public static final String ROLE_S3_OPS_POLICY_DOCUMENT=
+        "{\"Statement\":[{\"Action\":[\"s3:*\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+
+      private String roleName = null;
+      private String createdPolicyName = null;
+      public AuthorizeS3Operations(
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+        super(lookup, groupId);
+      }
+
+      @Override
+      public boolean apply() throws ImagingServiceActionException{
+        try{
+          roleName = this.getResult(IamRoleSetup.class);
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("failed to find the created role name", ex);
+        }
+      
+        final String policyName = String.format("%s-%s", S3_OPS_ROLE_POLICY_NAME_PREFIX, this.getGroupId());
+        final String rolePolicyDoc = ROLE_S3_OPS_POLICY_DOCUMENT;
+        try{
+          final GetRolePolicyResult rolePolicy = 
+              EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, policyName);
+          if(rolePolicy!=null && policyName.equals(rolePolicy.getPolicyName()))
+            this.createdPolicyName = policyName;
+        }catch(final Exception ex){
+          ;
+        }
+       
+        if(this.createdPolicyName==null){
+          try{
+            EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+            createdPolicyName = policyName;
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to authorize S3 operations", ex);
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public void rollback() throws ImagingServiceActionException{
+        if(this.createdPolicyName!=null){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to delete role policy for S3 operations", ex);
           }
         }
       }

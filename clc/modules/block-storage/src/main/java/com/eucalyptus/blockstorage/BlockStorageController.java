@@ -72,8 +72,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 
@@ -81,18 +79,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.euare.CreateAccountResponseType;
-import com.eucalyptus.auth.euare.CreateAccountType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.GetRoleResponseType;
-import com.eucalyptus.auth.euare.GetRoleType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
@@ -140,11 +134,7 @@ import com.eucalyptus.blockstorage.msgs.UpdateStorageConfigurationType;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -152,11 +142,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.tokens.AssumeRoleResponseType;
-import com.eucalyptus.tokens.AssumeRoleType;
-import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -182,7 +168,6 @@ public class BlockStorageController {
     static VolumeService volumeService;
     static SnapshotService snapshotService;
     static StorageCheckerService checkerService;
-    private static SnapshotObjectOps snapshotOps;
 
     //TODO: zhill, this can be added later for snapshot abort capabilities
     //static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
@@ -190,6 +175,7 @@ public class BlockStorageController {
     public static Random randomGenerator = new Random();
 
     public static void configure() throws EucalyptusCloudException {
+    	BlockStorageGlobalConfiguration.getInstance();
         StorageProperties.updateWalrusUrl();
         StorageProperties.updateName();
         StorageProperties.updateStorageHost();
@@ -209,77 +195,13 @@ public class BlockStorageController {
         volumeService = new VolumeService();
         snapshotService = new SnapshotService();
         checkerService = new StorageCheckerService();
-    }
-
-    private static CredentialsType getS3Role() throws Exception {
-        //TODO: This needs to be refactored into a utility lib that can be used system wide
-        ServiceConfiguration euare = Topology.lookup(Euare.class);
-        if (euare == null) {
-            throw new EucalyptusCloudException("Unable to get active Euare service.");
-        }
+        
         try {
-            ListAccountPoliciesType listAccountPoliciesType = new ListAccountPoliciesType();
-            listAccountPoliciesType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            ListAccountPoliciesResponseType listAccountPoliciesResponseType = AsyncRequests.sendSync(euare, listAccountPoliciesType);
-        } catch (Exception ex) {
-            LOG.debug("Block Storage admin does not exist. Adding it now.");
-            // Order matters.
-            try {
-                CreateAccountType createAccountType = new CreateAccountType();
-                createAccountType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-                CreateAccountResponseType createAccountResponseType = AsyncRequests.sendSync(euare, createAccountType);
-            } catch (Exception e) {
-                LOG.error("Unable to create blockstorage account. Aborting.");
-                throw new EucalyptusCloudException(e);
-            }
-
+        	BlockStorageUtil.checkAndConfigureBlockStorageAccount();
+        } catch (Exception e) {
+        	LOG.warn("Error checking and or configuring blockstorage account during bootstrap. Moving on with the SC bootstrap process");
         }
-        String roleArn = null;
-        try {
-            GetRoleType getRoleType = new GetRoleType();
-            getRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            getRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            GetRoleResponseType getRoleResponseType = AsyncRequests.sendSync(euare, getRoleType);
-            roleArn = getRoleResponseType.getGetRoleResult().getRole().getArn();
-        } catch (Exception ex) {
-            try {
-                CreateRoleType createRoleType = new CreateRoleType();
-                createRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-                createRoleType.setAssumeRolePolicyDocument(StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
-                createRoleType.setPath("/blockstorage");
-                createRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-                CreateRoleResponseType createRoleResponseType = AsyncRequests.sendSync(euare, createRoleType);
-                roleArn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
-            } catch (Exception e) {
-                throw new EucalyptusCloudException("Unable to create role for block storage s3 access.");
-            }
-            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
-            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_BUCKET_ACCESS_POLICY);
-            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            putRolePolicyType.setPolicyName(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME);
-            PutRolePolicyResponseType putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
-
-            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_OBJECT_ACCESS_POLICY);
-            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            putRolePolicyType.setPolicyName(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME);
-            putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
-        }
-        //assume Role
-        ServiceConfiguration tokens = Topology.lookup(Tokens.class);
-        if (tokens == null) {
-            throw new EucalyptusCloudException("Unable to get active Tokens service.");
-        }
-        AssumeRoleType assumeRoleType = new AssumeRoleType();
-        assumeRoleType.setDurationSeconds((int) TimeUnit.HOURS.toSeconds(1));
-        assumeRoleType.setRoleSessionName("S3Session");
-        assumeRoleType.setRoleArn(roleArn);
-        AssumeRoleResponseType assumeRoleResponseType = AsyncRequests.sendSync(tokens, assumeRoleType);
-        CredentialsType credentials = assumeRoleResponseType.getAssumeRoleResult().getCredentials();
-        return credentials;
     }
-
 
     public BlockStorageController() {}
 
@@ -336,30 +258,9 @@ public class BlockStorageController {
         checkerService.add(new VolumeDeleterTask());
         checkerService.add(new SnapshotDeleterTask());
         checkerService.add(new SnapshotUploadCheckerTask());
+        // TODO ask neil what this means
         StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-        //Order is important
-        //Initialize account and role for object storage operations
-        try {
-        	// Commenting this code for the temporary workaround EUCA-8700. Uncomment it after the role stuff is fixed
-             CredentialsType credentials = getS3Role();
-        	 snapshotOps = new SnapshotObjectOps(credentials);
-        	
-        	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-        	/*User systemAdmin = Accounts.lookupSystemAdmin();
-			List<AccessKey> keys = systemAdmin.getKeys();
-			if (!keys.isEmpty()) {
-				AccessKey key = keys.get(0);
-				snapshotOps = new SnapshotObjectOps(key.getAccessKey(), key.getSecretKey());
-			} else {
-				LOG.error("System admin account does not have any associated keys.");
-				throw new EucalyptusCloudException("Unable to find system admin credentials");
-			}*/
-        } catch (Exception e) {
-        	// TODO Should this cause bootstrap to fail?
-            LOG.error("Failed to initialize snapshot trasfer mechanism from blockstorage to objectstorage", e);
-            throw new EucalyptusCloudException(e);
-        }
-        checker = new BlockStorageChecker(blockManager, snapshotOps);
+        checker = new BlockStorageChecker(blockManager);
         try {
             startupChecks();
         } catch(EucalyptusCloudException ex) {
@@ -376,7 +277,7 @@ public class BlockStorageController {
             checkerService.add(checkerTask);
         }
     }
-
+    
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
         if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
@@ -551,16 +452,28 @@ public class BlockStorageController {
         final Function<VolumeInfo, String> exportAndAttach = new Function<VolumeInfo, String>() {
             @Override
             public String apply(VolumeInfo volume) {
+                int tokenRetry = 3;
                 VolumeToken tokenInfo = null;
                 VolumeInfo volEntity = Entities.merge(volume);
-                try {
-                    tokenInfo = volEntity.getAttachmentTokenIfValid(token);
-                    if(tokenInfo == null) {
-                        throw new Exception("Cannot export, due to invalid token");
+                for(int i = 0; i < tokenRetry ; i++ ) {
+                    try {
+                        tokenInfo = volEntity.getAttachmentTokenIfValid(token);
+                        if(tokenInfo != null) {
+                            break;
+                        }
+                    } catch(Exception e) {
+                        LOG.warn("Could not check for valid token. Will retry. ", e);
+                        tokenInfo = null;
                     }
-                } catch(Exception e) {
-                    LOG.error("Could not check for valid token", e);
-                    return null;
+                    try {
+                        Thread.sleep(100); //sleep 100ms to make retry useful.
+                    } catch(InterruptedException e) {
+                        throw new RuntimeException("Token check backoff sleep interrupted", e);
+                    }
+                }
+
+                if(tokenInfo == null) {
+                    throw new RuntimeException("Cannot export, due to invalid token");
                 }
 
                 VolumeExportRecord export = null;
@@ -722,9 +635,10 @@ public class BlockStorageController {
     /**
      * Checks to see if a new snapshot of size volSize will exceed the quota
      * @param volSize
+     * @param maxSize 
      * @return
      */
-    private boolean totalSnapshotSizeLimitExceeded(String snapshotId, int volSize) throws EucalyptusCloudException {
+    private boolean totalSnapshotSizeLimitExceeded(String snapshotId, int volSize, int sizeLimitGB) throws EucalyptusCloudException {
 
         int totalSnapshotSize = 0;
         EntityTransaction dbTrans = Entities.get(SnapshotInfo.class);
@@ -744,7 +658,6 @@ public class BlockStorageController {
             for (SnapshotInfo snap : snapshots) {
                 totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);
             }
-            int sizeLimitGB = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
             LOG.debug("Snapshot " + snapshotId + " checking snapshot total size of  " + totalSnapshotSize + " against limit of " + sizeLimitGB);
             return (totalSnapshotSize + volSize) > sizeLimitGB;
         } catch(final Throwable e) {
@@ -798,16 +711,22 @@ public class BlockStorageController {
                 throw new VolumeNotReadyException(volumeId);
             } else {
                 //create snapshot
-                if(StorageProperties.shouldEnforceUsageLimits && totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize())) {
+                if(StorageProperties.shouldEnforceUsageLimits) {
                     int maxSize = -1;
                     try {
-                        maxSize = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
+                        maxSize = BlockStorageGlobalConfiguration.getInstance().getGlobal_total_snapshot_size_limit_gb();
                     } catch(Exception e) {
                         LOG.error("Could not determine max global snapshot limit. Aborting snapshot creation", e);
                         throw new EucalyptusCloudException("Total size limit not found.", e);
+                    } 
+                    if(maxSize <= 0) {
+                    	LOG.warn("Total snapshot size limit is less than or equal to 0");
+                    	throw new EucalyptusCloudException("Total snapshot size limit is less than or equal to 0");
                     }
-                    LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB");
-                    throw new SnapshotTooLargeException(snapshotId, maxSize);
+                    if(totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize(), maxSize)) {	
+                    	LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB");
+                    	throw new SnapshotTooLargeException(snapshotId, maxSize);
+                    }
                 }
 
                 Snapshotter snapshotter = null;
@@ -1009,16 +928,6 @@ public class BlockStorageController {
 		return reply;
 	}*/
 
-    public void DeleteWalrusSnapshot(String snapshotId) {
-        //FIXME: obsolete. Need to modify test to use new methods.
-        HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-        try {
-            httpWriter.run();
-        } catch(Exception ex) {
-            LOG.error(ex);
-        }
-    }
-
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
@@ -1101,90 +1010,6 @@ public class BlockStorageController {
         return reply;
     }
 
-    /* Make sure snapDestination is NOT a bare block device */
-    private String getSnapshot(String bucket, String key) throws EucalyptusCloudException {
-		/*if(snapDestination.startsWith("/dev/")) {
-			throw new EucalyptusCloudException("Cannot get snapshot directly to block device: " + snapDestination);
-		}*/
-
-        String tmpUncompressedFileName = null;
-        File tmpUncompressedFile = null;
-//        String tmpCompressedFileName = null;
-//        File tmpCompressedFile = null;
-        int retry = 0;
-        int maxRetry = 5;
-
-        do{
-            tmpUncompressedFileName = StorageProperties.storageRootDirectory + File.separator + key + "-" + String.valueOf(randomGenerator.nextInt());
-            tmpUncompressedFile = new File(tmpUncompressedFileName);
-//            tmpCompressedFileName = tmpUncompressedFileName + ".gz";
-//            tmpCompressedFile = new File(tmpCompressedFileName);
-//        } while (tmpCompressedFile.exists() && retry++ < maxRetry);
-        } while (tmpUncompressedFile.exists() && retry++ < maxRetry);
-
-        // This should be *very* rare
-        if (retry >= maxRetry) {
-            // Nothing to clean up at this point
-            throw new EucalyptusCloudException("Could not get a temporary file for snapshot download after " + maxRetry + " attempts");
-        }
-
-        // Download the snapshot from walrus
-        try {
-            //HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, tmpCompressedFile, "GetWalrusSnapshot", "");
-            //snapshotGetter.run();
-            snapshotOps.downloadSnapshot(bucket, key, tmpUncompressedFile);
-        } catch (Exception ex) {
-            // Cleanup the compressed snapshot
-            // cleanupFile(tmpCompressedFile);
-        	cleanupFile(tmpUncompressedFile);
-            throw new EucalyptusCloudException("Failed to download snapshot object with key " + key + " from ObjectStorage bucket " + bucket, ex);
-        }
-
-        // Uncompress the snapshot and move it to the right location
-        //FIXME: Disable this for now. We need to change snapshot creation so that snapshots stored on disk are compressed on creation
-		/*try{
-			CommandOutput output = SystemUtil.runWithRawOutput(new String[] { "/bin/gunzip", tmpCompressedFile.getAbsolutePath() });
-			if (output.returnValue != 0) {
-				throw new EucalyptusCloudException("Failed to uncompress snapshot " + snapshotId + " due to: " + output.error);
-			}
-		} catch (Exception ex) {
-			if (ex instanceof EucalyptusCloudException) {
-				throw (EucalyptusCloudException) ex;
-			} else {
-				throw new EucalyptusCloudException("Failed to uncompress and/or move snapshot " + snapshotId, ex);
-			}
-		} finally {
-			// Cleanup the compressed snapshot
-			cleanupFile(tmpCompressedFile);
-		}*/
-
-        return tmpUncompressedFileName;
-
-        // LOG.info("Downloading snapshot " + snapshotId + " from ObjectStorage to " + snapDestination);
-        // String snapshotLocation = StorageProperties.SNAPSHOT_BUCKET + "/" + snapshotId;
-        // String absoluteSnapshotPath = snapDestination;
-        // File file = new File(absoluteSnapshotPath);
-        // HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
-        // snapshotGetter.run();
-    }
-
-    private void cleanupFile(String fileName) {
-        try {
-            cleanupFile(new File(fileName));
-        } catch (Exception e) {
-            LOG.error("Failed to delete file", e);
-        }
-    }
-
-    private void cleanupFile(File file) {
-        if (file != null && file.exists()) {
-            try {
-                file.delete();
-            } catch (Exception e) {
-                LOG.error("Failed to delete file", e);
-            }
-        }
-    }
 
     /*
      * Does a check of the snapshot's status as reflected in the DB.
@@ -1203,10 +1028,6 @@ public class BlockStorageController {
             db.rollback();
         }
         return false;
-    }
-
-    private int getSnapshotSize(String bucket, String key) throws EucalyptusCloudException {
-        return (int) (snapshotOps.getSnapshotSize(bucket, key)/StorageProperties.GB);
     }
 
     public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
@@ -1427,24 +1248,40 @@ public class BlockStorageController {
         public void run() {
             EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
             try {
-                try {
-                    semaphore.acquire();
-                } catch(InterruptedException ex) {
-                    throw new EucalyptusCloudException("semaphore could not be acquired");
-                }
                 Boolean shouldTransferSnapshots = true;
                 List<String> returnValues = null;
-                String snapshotLocation = null;
+                SnapshotTransfer snapshotTransfer = null;
+                String bucket = null;
+                
+                // Check whether the snapshot needs to be uploaded
+                shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
+                
+				if (shouldTransferSnapshots) {
+					// Prepare for the snapshot upload (fetch credentials for snapshot upload to osg, create the bucket). Error out if this fails without
+					// creating the snapshot on the blockstorage backend
+					snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+					bucket = snapshotTransfer.prepareForUpload();
 
-                try {
-                    //Check to ensure that a failed/cancellation has not be set
-                    if(!isSnapshotMarkedFailed(snapshotId)) {
-                        shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
-                        returnValues = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
-                    } else {
-                        throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
-                    }
-                } finally {
+					if (snapshotTransfer == null || StringUtils.isBlank(bucket)) {
+						throw new EucalyptusCloudException("Failed to initialize snapshot transfer mechanism for uploading " + snapshotId);
+					}
+				}
+				
+				// Acquire the semaphore here and release it here as well
+				try {
+					try {
+						semaphore.acquire();
+					} catch (InterruptedException ex) {
+						throw new EucalyptusCloudException("Failed to create snapshot " + snapshotId + " as the semaphore could not be acquired");
+					}
+					 
+	                //Check to ensure that a failed/cancellation has not be set
+	                if(!isSnapshotMarkedFailed(snapshotId)) {
+	                    returnValues = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
+	                } else {
+	                    throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
+	                }
+				} finally {
                     semaphore.release();
                 }
 
@@ -1456,14 +1293,11 @@ public class BlockStorageController {
                     snapshotFileName = returnValues.get(0);
                     String snapshotSize = returnValues.get(1);
                     
-                    // Fetch the bucket name and create the bucket
-                    String bucket = createAndReturnBucketName();
-                    
-                    // Verify snapshot file is readable before trying to upload it. Refactoring this logic from transferSnapshot() as it seems unnecessary to retry it
+                    // Verify snapshot file is readable before trying to upload it
                     verifySnapshotFileIsReadable();
                     
-                    snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
-                    
+                    // Update snapshot location in database
+                    String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
 					SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 					SnapshotInfo snapshotInfo = null;
 					EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
@@ -1478,7 +1312,7 @@ public class BlockStorageController {
                     
                     if(!isSnapshotMarkedFailed(snapshotId)) {
                         try {
-                            transferSnapshot(bucket, snapshotId);
+                        	snapshotTransfer.upload(snapshotFileName);
                         } catch(Exception e) {
                         	throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to objectstorage", e);
                         }
@@ -1492,6 +1326,27 @@ public class BlockStorageController {
                     } catch(EucalyptusCloudException ex) {
                         LOG.error("Failed to finalize snapshot " + snapshotId, ex);
                     }
+                } else {
+                	// Snapshot does not have to be transferred. Mark it as available. 
+					Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+						@Override
+						public SnapshotInfo apply(String arg0) {
+							SnapshotInfo snap;
+							try {
+								snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+								snap.setStatus(StorageProperties.Status.available.toString());
+								snap.setProgress("100");
+								snap.setSnapPointId(null);
+								return snap;
+							} catch (TransactionException | NoSuchElementException e) {
+								LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+							}
+							return null;
+						}
+					};
+
+					Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
                 }
             } catch(Exception ex) {
                 LOG.error("Failed to create snapshot " + snapshotId, ex);
@@ -1524,58 +1379,9 @@ public class BlockStorageController {
             }
         }
         
-        private String createAndReturnBucketName() throws EucalyptusCloudException {
-        	String bucket = null;
-            int bucketCreationRetries = SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES;
-            do {
-            	bucketCreationRetries--;
-            	
-            	// Get the snapshot bucket name
-            	if(StringUtils.isBlank(bucket)) {
-            		try {
-            			// Get the snapshot configuration
-                    	bucket = SnapshotTransferConfiguration.getInstance().getSnapshotBucket();
-					} catch (Exception ex1) {
-						try {
-							// It might not exist, create one
-							bucket = SnapshotTransferConfiguration
-									.updateBucketName(StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", ""))
-									.getSnapshotBucket();
-						} catch (Exception ex2) {
-							// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-							bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-						}
-					}
-            	}
-            	
-            	// Try creating the bucket
-            	try {
-            		snapshotOps.createBucket(bucket);
-            		break;
-            	} catch (Exception ex) {
-            		// If bucket creation fails, try using a different bucket name
-            		if(bucketCreationRetries > 0) {
-            			LOG.info("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
-            			try {
-            				bucket = SnapshotTransferConfiguration
-								.updateBucketName(StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", ""))
-								.getSnapshotBucket();
-            			} catch (Exception ex2) {
-            				// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-							bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-						}
-            		} else {
-						throw new EucalyptusCloudException("Unable to create bucket for snapshot uploads after "
-								+ SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES + " retries");
-            		}
-            	}
-        	} while(bucketCreationRetries > 0); 
-            
-            return bucket;
-        }
         
         private void verifySnapshotFileIsReadable() throws EucalyptusCloudException {
-        	LOG.info("Verifying snapshot " + snapshotId + " before uploading it to objectstorage");
+        	LOG.debug("Verifying snapshot " + snapshotId + " is readable before uploading to objectstorage");
 
             File snapshotFile = new File(snapshotFileName);
             assert(snapshotFile.exists());
@@ -1601,22 +1407,6 @@ public class BlockStorageController {
                 }
             }
         }
-
-        private void transferSnapshot(String bucket, String key) throws EucalyptusCloudException {
-            try {
-            	LOG.info("Attempting to upload snapshot " + snapshotId + " to objectstorage");
-                snapshotOps.uploadSnapshot(snapshotId, bucket, key, snapshotFileName);
-            } catch (Exception ex) {
-            	//Cleanup the snapshot in objectstorage and throw the original exception back. 
-            	try{
-            		LOG.debug("Deleting snapshot from objectstorage after failed upload of " + snapshotId);
-            		snapshotOps.deleteSnapshot(bucket, key);
-            	} catch (Exception iex) {
-            		LOG.debug("Failed to delete snapshot " + snapshotId + " from objectstorage", iex);
-            	}
-            	throw ex;
-            }
-        }
     }
 
 
@@ -1631,23 +1421,6 @@ public class BlockStorageController {
             this.snapshotId = snapshotId;
             this.parentVolumeId = parentVolumeId;
             this.size = size;
-        }
-
-        // DO NOT throw any exceptions from cleaning routines. Log the errors and move on
-        private void cleanFailedSnapshot(String snapshotId) {
-            if(snapshotId == null) return;
-            LOG.debug("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
-            try {
-                blockManager.finishVolume(snapshotId);
-            } catch(Exception e) {
-                LOG.error("Error finishing failed snapshot " + snapshotId, e);
-            } finally {
-                try {
-                    blockManager.cleanSnapshot(snapshotId);
-                } catch (Exception e) {
-                    LOG.error("Error deleting failed snapshot " + snapshotId, e);
-                }
-            }
         }
 
         @Override
@@ -1673,64 +1446,43 @@ public class BlockStorageController {
                             foundSnapshotInfos = db.query(snapshotInfo);
 
                             if (foundSnapshotInfos.size() == 0) {
-                                int snapSizeGb = 0;
-                                String snapshotLocation = null;
-                                String bucket = null;
-                                String key = null;
+                                SnapshotInfo firstSnap = null;
 
-                                // Look for snapshots on other clusters for snapshot size
+                                // Search for the snapshots on other clusters in the ascending order of creation time stamp and get the first one
                                 snapshotInfo.setScName(null);
-                                List<SnapshotInfo> otherSnapshotInfos = db.query(snapshotInfo);
-                                if (otherSnapshotInfos != null && otherSnapshotInfos.size() > 0) {
-                                    for (SnapshotInfo otherSnap : otherSnapshotInfos) {
-                                    	// Get the snapshot location
-                                    	if (StringUtils.isBlank(snapshotLocation)) {
-                                    		snapshotLocation = otherSnap.getSnapshotLocation();
-                                    	}
-                                    	// Get the snapshot size
-                                        if (otherSnap.getSizeGb() != null && otherSnap.getSizeGb() > 0) {
-                                        	snapSizeGb = otherSnap.getSizeGb();
-                                        }
-                                        // If you got both, exit the loop
-                                        if(StringUtils.isNotBlank(snapshotLocation) && snapSizeGb > 0) {
-                                    		break;
-                                    	} else {
-                                    		continue;
-                                    	}
-                                    }
-                                }
+                                Criteria snapCriteria = db.createCriteria(SnapshotInfo.class);
+                                snapCriteria.add(Example.create(snapshotInfo));
+                                snapCriteria.addOrder(Order.asc("creationTimestamp"));
+                                foundSnapshotInfos = (List<SnapshotInfo>) snapCriteria.list();
                                 db.commit();
-
-                                // If snapshot size was not found in other db records (possible because this column was only added in 3.4), ask objectstorage
-                                if (snapSizeGb <= 0) {
-                                	if(StringUtils.isBlank(snapshotLocation)) {
-                                		throw new EucalyptusCloudException("Cannot fetch the size of snapshot from objectstorage as the location (bucket and key) is unknown for " + snapshotId);
-                                	}
-                                	String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapshotLocation);
-                                	bucket =  names[0];
-                                	key = names[1];
-                                    snapSizeGb = getSnapshotSize(bucket, key);
-                                    if (snapSizeGb <= 0) {
-                                    	throw new EucalyptusCloudException("Size of snapshot " + snapshotId + " fetched from objectstorage: " + snapSizeGb + ". Cannot prep snapshot holder on the storage backend");
-                                    }
+                                if (foundSnapshotInfos != null && foundSnapshotInfos.size() > 0) {
+                                	firstSnap = foundSnapshotInfos.get(0);
+                                } else {
+                                	throw new EucalyptusCloudException("No record of snapshot " + snapshotId + " on any SC");
                                 }
+                                
+                                // If size was not found in database, bail out. Can't create a snapshot without the size
+                                if (firstSnap.getSizeGb() == null || firstSnap.getSizeGb() <= 0) {
+                                	throw new EucalyptusCloudException("Snapshot size for " + snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
+                                }
+                                
 
                                 // This SC definitely does not have a record of the snapshot in its DB. Check for the snpahsot on the storage backend.
                                 // Clusters/zones/partitions may be connected to the same storage backend in which case snapshot does not have to be downloaded
                                 // from ObjectStorage.
-
-                                if (!blockManager.getFromBackend(snapshotId, snapSizeGb)) {
-
-                                    // Snapshot does not exist on the backend. Needs to be downloaded from ObjectStorage.
-
-									/* START: Snapshot preparation on storage back end */
+                                if (!blockManager.getFromBackend(snapshotId, firstSnap.getSizeGb())) {
+                                	// Snapshot does not exist on the backend. Needs to be downloaded from ObjectStorage.
+                                	String bucket = null;
+                                    String key = null;
+                                     
+                                	if(StringUtils.isBlank(firstSnap.getSnapshotLocation())) {
+                                		throw new EucalyptusCloudException("Snapshot location (bucket, key) for " + snapshotId + " is unknown. Cannot download snapshot from objectstorage.");
+                                	}
+                                	String[] names = SnapshotInfo.getSnapshotBucketKeyNames(firstSnap.getSnapshotLocation());
+                                	bucket =  names[0];
+                                	key = names[1];
                                 	if(StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
-                                		String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapshotLocation);
-                                    	bucket =  names[0];
-                                    	key = names[1];
-                                    	if(StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
-                                    		throw new EucalyptusCloudException("Snapshot location (bucket and or key) is unknown for " + snapshotId + ". Cannot download snapshot");
-                                    	}
+                                		throw new EucalyptusCloudException("Failed to parse bucket and key information for downloading " + snapshotId + ". Cannot download snapshot from objectstorage.");
                                 	}
 
                                     String tmpSnapshotFileName = null;
@@ -1744,11 +1496,12 @@ public class BlockStorageController {
                                             throw new EucalyptusCloudException("Unable to find snapshot " + snapshotId + "on SC");
                                         }
 
+                                        /* START: Snapshot preparation on storage back end */
                                         long actualSnapSizeInMB = (long) Math.ceil((double) snapFile.length() / StorageProperties.MB);
 
                                         try {
                                             // Allocates the necessary resources on the backend
-                                            String snapDestination = blockManager.prepareSnapshot(snapshotId, snapSizeGb, actualSnapSizeInMB);
+                                            String snapDestination = blockManager.prepareSnapshot(snapshotId, firstSnap.getSizeGb(), actualSnapSizeInMB);
 
                                             if (snapDestination != null) {
                                                 // Check if the destination is a block device
@@ -1770,44 +1523,6 @@ public class BlockStorageController {
 
                                                 // Finish the snapshot
                                                 blockManager.finishVolume(snapshotId);
-
-												/*
-												 * if(snapDestination.startsWith("/dev/")) { //Destination is a block device, so use a temp file first String
-												 * tmpFileName = StorageProperties.storageRootDirectory + File.pathSeparator + snapshotId + "-" +
-												 * Hashes.getRandom(8); File tmpFile = null; try { tmpFile = new File(tmpFileName); int retry = 0; int maxRetry
-												 * = 5; while(tmpFile.exists() && retry++ < maxRetry) { LOG.debug("Temporary file " + tmpFileName +
-												 * " for snapshot download already exists, trying another. Retry " + retry + " of " + maxRetry); tmpFileName =
-												 * StorageProperties.storageRootDirectory + File.pathSeparator + snapshotId + "-" + Hashes.getRandom(8); tmpFile
-												 * = new File(tmpFileName); }
-												 * 
-												 * //This should be *very* rare if(retry >= maxRetry) { throw new
-												 * EucalyptusCloudException("Could not get a temporary file for snapshot download after " + maxRetry +
-												 * " attempts"); }
-												 * 
-												 * getSnapshot(snapshotId, tmpFileName);
-												 * 
-												 * 
-												 * //Copy file to block device if(SystemUtil.runAndGetCode(new
-												 * String[]{"dd","if=",tmpFileName,"of=",snapDestination,"bs=",StorageProperties.blockSize}) < 0) { throw new
-												 * EucalyptusCloudException("Failed to copy the downloaded snapshot in " + tmpFileName + " to block device " +
-												 * snapDestination); } } catch(Exception e) { LOG.error("Failure downloading snapshot " + snapshotId);
-												 * cleanFailedSnapshotDownload(snapshotId); throw new EucalyptusCloudException("Snapshot " + snapshotId +
-												 * " download and transfer to block device " + snapDestination + " failed.", e); } finally { //Delete the temp
-												 * file no matter what try { if(tmpFile != null && tmpFile.exists()) { tmpFile.delete(); } } catch(Exception e)
-												 * { LOG.error("Could not delete temporary file " + tmpFileName +
-												 * " during cleanup of failed volume creation from snapshot"); } } } else {
-												 */
-
-                                                // Download the snapshot from walrus and set it up on the storage device
-                                                // try {
-                                                // getSnapshot(snapshotId, snapDestination, sizeExpected);
-                                                // } catch (EucalyptusCloudException e) {
-                                                // LOG.error("Failed to get snapshot " + snapshotId + " from ObjectStorage. Now cleaning up.");
-                                                // cleanFailedSnapshotDownload(snapshotId);
-                                                // throw e;
-                                                // }
-                                                // }
-
                                             } else {
                                                 LOG.warn("Block Manager replied that " + snapshotId
                                                         + " not on backend, but snapshot preparation indicated that the snapshot is already present");
@@ -1830,11 +1545,9 @@ public class BlockStorageController {
                                     // going!
                                 }
                                 db = StorageProperties.getEntityWrapper();
-                                snapshotInfo = new SnapshotInfo(snapshotId);
+                                snapshotInfo = copySnapshotInfo(firstSnap);
                                 snapshotInfo.setProgress("100");
                                 snapshotInfo.setStartTime(new Date());
-                                snapshotInfo.setSizeGb(snapSizeGb);
-                                snapshotInfo.setSnapshotLocation(snapshotLocation);
                                 snapshotInfo.setStatus(StorageProperties.Status.available.toString());
                                 db.add(snapshotInfo);
                                 db.commit();
@@ -1936,6 +1649,99 @@ public class BlockStorageController {
             } catch(EucalyptusCloudException ex) {
                 db.rollback();
                 LOG.error(ex);
+            }
+        }
+        
+        // DO NOT throw any exceptions from cleaning routines. Log the errors and move on
+        private void cleanFailedSnapshot(String snapshotId) {
+            if(snapshotId == null) return;
+            LOG.debug("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
+            try {
+                blockManager.finishVolume(snapshotId);
+            } catch(Exception e) {
+                LOG.error("Error finishing failed snapshot " + snapshotId, e);
+            } finally {
+                try {
+                    blockManager.cleanSnapshot(snapshotId);
+                } catch (Exception e) {
+                    LOG.error("Error deleting failed snapshot " + snapshotId, e);
+                }
+            }
+        }
+        
+        private SnapshotInfo copySnapshotInfo (SnapshotInfo source) {
+        	SnapshotInfo copy = new SnapshotInfo(source.getSnapshotId());
+        	copy.setSizeGb(source.getSizeGb());
+        	copy.setSnapshotLocation(source.getSnapshotLocation());
+        	copy.setUserName(source.getUserName());
+        	copy.setVolumeId(source.getVolumeId());
+        	return copy;
+        }
+        
+        private String getSnapshot(String bucket, String key) throws EucalyptusCloudException {
+
+            String tmpUncompressedFileName = null;
+            File tmpUncompressedFile = null;
+            String tmpCompressedFileName = null;
+            File tmpCompressedFile = null;
+            int retry = 0;
+            int maxRetry = 5;
+            
+            do{
+                tmpUncompressedFileName = StorageProperties.storageRootDirectory + File.separator + key + "-" + String.valueOf(randomGenerator.nextInt());
+                tmpUncompressedFile = new File(tmpUncompressedFileName);
+                tmpCompressedFileName = tmpUncompressedFileName + ".gz";
+                tmpCompressedFile = new File(tmpCompressedFileName);
+            } while (tmpCompressedFile.exists() && retry++ < maxRetry);
+
+            // This should be *very* rare
+            if (retry >= maxRetry) {
+                // Nothing to clean up at this point
+                throw new EucalyptusCloudException("Could not get a temporary file for snapshot " + snapshotId + " download after " + maxRetry + " attempts");
+            }
+
+            // Download the snapshot from walrus
+            try {
+            	S3SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snapshotId, bucket, key);
+            	snapshotTransfer.download(tmpCompressedFileName);
+            } catch (Exception ex) {
+                // Cleanup
+                cleanupFile(tmpCompressedFile);
+                throw new EucalyptusCloudException("Failed to download snapshot " + snapshotId + " from objectstorage. bucket=" + bucket + ", key=" + key, ex);
+            }
+
+            // Uncompress the snapshot
+            try{
+    			CommandOutput output = SystemUtil.runWithRawOutput(new String[] { "/bin/gunzip", "-f", tmpCompressedFile.getAbsolutePath() });
+    			if (output.returnValue != 0) {
+    				throw new EucalyptusCloudException("Failed to uncompress snapshot " + snapshotId + " due to: " + output.error);
+    			}
+    		} catch (Exception ex) {
+    	        cleanupFile(tmpUncompressedFile);
+    			throw new EucalyptusCloudException("Failed to uncompress snapshot " + snapshotId, ex);
+    		} finally {
+    			// Cleanup
+    			cleanupFile(tmpCompressedFile);
+    		}
+
+            return tmpUncompressedFileName;
+        }
+
+        private void cleanupFile(String fileName) {
+            try {
+                cleanupFile(new File(fileName));
+            } catch (Exception e) {
+                LOG.error("Failed to delete file", e);
+            }
+        }
+
+        private void cleanupFile(File file) {
+            if (file != null && file.exists()) {
+                try {
+                    file.delete();
+                } catch (Exception e) {
+                    LOG.error("Failed to delete file", e);
+                }
             }
         }
     }
@@ -2115,6 +1921,7 @@ public class BlockStorageController {
             searchSnap.setStatus(StorageProperties.Status.deleting.toString());
             List<SnapshotInfo> snapshots = db.query(searchSnap);
             db.commit();
+            S3SnapshotTransfer snapshotTransfer = null;
             for (SnapshotInfo snap : snapshots) {
                 String snapshotId = snap.getSnapshotId();
                 LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
@@ -2138,9 +1945,15 @@ public class BlockStorageController {
                 }
                 try {
                 	String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
-                    snapshotOps.deleteSnapshot(names[0], names[1]);
+                	if(snapshotTransfer == null) {
+                		snapshotTransfer = new S3SnapshotTransfer();
+                	}
+                	snapshotTransfer.setSnapshotId(snapshotId);
+                	snapshotTransfer.setBucketName(names[0]);
+                	snapshotTransfer.setKeyName(names[1]);
+                    snapshotTransfer.delete();
                 } catch (Exception e) {
-                    LOG.error("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+                    LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
                 } 
             }
         }

@@ -62,6 +62,8 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -70,10 +72,18 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
@@ -85,6 +95,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.keys.NoSuchKeyMetadataException;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -92,7 +103,11 @@ import com.google.common.base.Joiner;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.DecoderException;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
@@ -115,7 +130,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -161,7 +175,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
@@ -193,6 +206,7 @@ import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 
+
 public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
@@ -220,9 +234,13 @@ public class VmControl {
       Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run() ).apply( allocInfo );
       allocInfo.commit( );
 
-      ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
-                                                                 allocInfo.getOwnerFullName( ).getAccountNumber( ),
-                                                                 allocInfo.getNetworkGroupsMap() );
+      ReservationInfoType reservation = new ReservationInfoType(
+          allocInfo.getReservationId( ),
+          allocInfo.getOwnerFullName( ).getAccountNumber( ),
+          Collections2.transform(
+              allocInfo.getNetworkGroups( ),
+              TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) ) );
+
       reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
@@ -230,8 +248,18 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
       allocInfo.abort( );
+      final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
+      if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
+      final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
+      if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
+      final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
+      if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
+      final InvalidMetadataException e4 = Exceptions.findCause( ex, InvalidMetadataException.class );
+      if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
+      final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
+      if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
+      LOG.error( ex, ex );
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();
@@ -244,59 +272,31 @@ public class VmControl {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
     boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
-    final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
+    final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create();
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
-    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet( ) );
+    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class )
         .withOptionalInternalFilter( "instance-id", identifiers )
         .generate();
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
         .byId( identifiers ) // filters without wildcard support
         .byPredicate( filter.asPredicate() )
-        .byPredicate( filter.isFilteringOnTags() ? Predicates.not( VmState.TERMINATED ) : Predicates.<VmInstance>alwaysTrue() ) // terminated instances have no tags
         .byPrivileges()
         .buildPredicate();
-    OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
+    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstances.criterion( VmState.BURIED ) ) );
+    final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
-    try {
+    try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), Predicates.and( requestedAndAccessible, VmInstances.initialize( ) ) );
+          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
 
       for ( final VmInstance vm : instances ) {
-        if ( !identifiers.isEmpty( ) && !identifiers.contains( vm.getInstanceId( ) ) ) {
-          continue;
-        }
-        final EntityTransaction db = Entities.get( VmInstance.class );
-        try {
-          VmInstance v = VmState.TERMINATED.apply( vm ) ? vm : Entities.merge( vm );
-          if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
-            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkMap( ) ) );
-          }
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          db.rollback( );
-          try {
-            if ( vm != null ) {
-              try {
-                RunningInstancesItemType ret = VmInstances.transform( vm );
-                if ( ret != null && vm.getReservationId( ) != null ) {
-                  if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
-                    reservations.put( vm.getReservationId( ), TypeMappers.transform( vm, ReservationInfoType.class ) );
-                  }
-                }
-              } catch ( Exception ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-            }
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
-          }
-        } finally {
-          if (db.isActive()) db.rollback( );
+        if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
+          reservations.put( vm.getReservationId( ), TypeMappers.transform( vm, ReservationInfoType.class ) );
         }
       }
       List<ReservationInfoType> replyReservations = reply.getReservationSet( );
@@ -333,12 +333,13 @@ public class VmControl {
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
-    OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
+    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstances.criterion( VmState.BURIED ) ) );
+    final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
         ? null
         : ctx.getUserFullName( ).asAccountFullName( );
     try {
       final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible );
+          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
 
       Iterables.addAll(
           reply.getInstanceStatusSet().getItem(),
@@ -371,7 +372,6 @@ public class VmControl {
       if ( !failedVmList.isEmpty( ) ) {
         throw new NoSuchElementException( "InvalidInstanceID.NotFound" );
       }
-      final Context ctx = Contexts.lookup( );
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
       Function<VmInstance,TerminateInstancesItemType> terminateFunction = new Function<VmInstance,TerminateInstancesItemType>( ) {
         @Override
@@ -399,7 +399,7 @@ public class VmControl {
             } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
               newCode = VmState.SHUTTING_DOWN.getCode( );
               newState = VmState.SHUTTING_DOWN.getName( );
-            } else if ( VmState.TERMINATED.apply( vm ) ) {
+            } else if ( VmStateSet.DONE.apply( vm ) ) {
               oldCode = newCode = VmState.TERMINATED.getCode( );
               oldState = newState = VmState.TERMINATED.getName( );
               VmInstances.delete( vm );
@@ -725,7 +725,7 @@ public class VmControl {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
         if ( request.getAttribute( ).equals( "kernel" ) ) {
-          String kernelId = vm.getBootRecord( ).getMachine( ).getKernelId( );
+          String kernelId = vm.getKernelId( );
           if ( kernelId == null ) {
             vm.getBootRecord( ).setKernel( );
           } else {
@@ -738,7 +738,7 @@ public class VmControl {
           Entities.merge( vm );
           tx.commit( );
         } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-          String ramdiskId = vm.getBootRecord( ).getMachine( ).getRamdiskId( );
+          String ramdiskId = vm.getRamdiskId( );
           if ( ramdiskId == null ) {
             vm.getBootRecord( ).setRamdisk( );
           } else {
@@ -841,7 +841,12 @@ public class VmControl {
     Context ctx = Contexts.lookup( );
 
     try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+      final VmInstance vm;
+      try {
+        vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+      } catch ( AuthException | NoSuchElementException e ) {
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
+      }
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
         boolean isValidBlockDevice = false;
@@ -868,7 +873,7 @@ public class VmControl {
         Entities.merge( vm );
         tx.commit( );
       } else {
-        if ( !VmState.STOPPED.equals( vm.getDisplayState( ) ) ) {
+        if ( !VmState.STOPPED.equals( vm.getState( ) ) ) {
           throw new EucalyptusCloudException( "IncorrectInstanceState: " + "The instance '" + instanceId + "' is not in the 'stopped' state." );
         }
         if ( request.getInstanceTypeValue( ) != null ) {
@@ -912,7 +917,12 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          final byte[] userData;
+          try {
+            userData = B64.standard.dec( request.getUserDataValue( ) );
+          } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
+            throw new ClientComputeException( "InvalidParameterValue", "User data decoding error." );
+          }
           if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
@@ -924,8 +934,9 @@ public class VmControl {
         }
       }
       reply.set_return( true );
+    } catch ( final ComputeException e ) {
+      throw  e;
     } catch ( Exception ex ) {
-      LOG.error( ex );
       if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
         throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + instanceId + "' is not in the 'stopped' state." );
       } else if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
@@ -944,7 +955,8 @@ public class VmControl {
       } else if ( Exceptions.isCausedBy( ex, InvalidMetadataException.class ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
-      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
+      LOG.error( ex, ex );
+      throw new ComputeException( "InternalError", "Error processing request: " + ex.getMessage( ) );
     }
     return reply;
   }
@@ -979,7 +991,7 @@ public class VmControl {
           reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
         }
       } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
+        if ( vm.getBootRecord( ).getMachine( ) != null && vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
           reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
         }
       } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
@@ -1005,10 +1017,10 @@ public class VmControl {
           }
         }
       } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
-          for( NetworkGroup networkGroup : networkGroups ) {
+          Set<NetworkGroupId> networkGroups = vm.getNetworkGroupIds( );
+          for( NetworkGroupId networkGroup : networkGroups ) {
               reply.getGroupSet( ).add(
-                      new GroupItemType( networkGroup.getGroupId( ), networkGroup.getDisplayName( ) ) );
+                      new GroupItemType( networkGroup.getGroupId( ), networkGroup.getGroupName( ) ) );
           }
       } else {
           // disableApiTermination | ebsOptimized | instanceInitiatedShutdownBehavior | productCodes | sourceDestCheck
@@ -1072,6 +1084,8 @@ public class VmControl {
     } else if (!validBucketName(request.getPrefix( ) ) ) {
        throw new ClientComputeException(" InvalidParameterValue", "Value (" + request.getPrefix( ) + ") for parameter Prefix is invalid." );
     }
+    
+    Bundles.checkAndCreateBucket(ctx.getUser(), request.getBucket());
     Function<String, VmInstance> bundleFunc = new Function<String,VmInstance> () {
 
       @Override
@@ -1114,6 +1128,35 @@ public class VmControl {
         }
       }
     };
+    
+    final Function<String, AccessKey> LookupAccessKey = new Function<String, AccessKey>(){
+      @Override
+      public AccessKey apply(final String policySignature) {
+        try{
+          final List<AccessKey> keys = ctx.getUser().getKeys();
+          AccessKey keyForSign = null;
+          final Mac hmac = Mac.getInstance("HmacSHA1");
+          for(final AccessKey key : keys){
+            hmac.init(new SecretKeySpec(key.getSecretKey().getBytes("UTF-8"), "HmacSHA1"));
+            final String sig = B64.standard.encString(hmac.doFinal(request.getUploadPolicy().getBytes("UTF-8")));
+            if(sig.equals(policySignature)){
+              keyForSign = key;
+              break;
+            }
+          }
+          return keyForSign;
+        }catch(final Exception ex){
+          LOG.warn("Failed to generate upload policy signature", ex);
+          return null;
+        }
+      }
+    };
+    
+    final AccessKey accessKeyForPolicySignature = LookupAccessKey.apply(request.getUploadPolicySignature());
+    if(accessKeyForPolicySignature==null){
+      throw new ComputeException( "InternalError", "Error processing request: unable to find the access key signed the upload policy" );
+    }
+    
     VmInstance bundledVm = Entities.asTransaction( VmInstance.class, bundleFunc ).apply( instanceId );
     try {
       ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
@@ -1122,7 +1165,7 @@ public class VmControl {
   			setInstanceId(request.getInstanceId());
   			setBucket(request.getBucket());
   			setPrefix(request.getPrefix());
-  			setAwsAccessKeyId(request.getAwsAccessKeyId());
+  			setAwsAccessKeyId(accessKeyForPolicySignature.getAccessKey());
   			setUploadPolicy(request.getUploadPolicy());
   			setUploadPolicySignature(request.getUploadPolicySignature());
   			setUrl(request.getUrl());
@@ -1136,7 +1179,6 @@ public class VmControl {
       throw Exceptions.toUndeclared( ex );
     }
     return reply;
-    
   }
   
   public GetPasswordDataResponseType getPasswordData( final GetPasswordDataType request ) throws Exception {

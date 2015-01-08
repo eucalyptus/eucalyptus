@@ -44,7 +44,7 @@ public class EuareServiceBuilder extends AbstractServiceBuilder<EuareConfigurati
 
   @Override
   public EuareConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new EuareConfiguration( name, host, port );
+    return new EuareConfiguration( partition, name, host, port );
   }
 
   @Override
@@ -68,4 +68,3 @@ public class EuareServiceBuilder extends AbstractServiceBuilder<EuareConfigurati
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
 
 }
-

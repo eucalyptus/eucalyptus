@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm.dns;
 
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
@@ -79,6 +80,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
+import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
@@ -143,7 +145,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   
   /**
    * Do the split-horizon DNS lookup. The request here is necessarily from an internal instance
-   * because {@link SplitHorizonResolver#checkAccepts(Record, InetAddress)} only allows for
+   * because {@link SplitHorizonResolver#checkAccepts(DnsRequest)} only allows for
    * source addresses which are system internal.
    * 
    * The procedure is to:
@@ -152,10 +154,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * 3. Verify the existence of an instance for the indicate ip; otherwise fail w/ NXDOMAIN
    * 4. Construct the response record accordingly; otherwise fail w/ NXDOMAIN
    * 
-   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(org.xbill.DNS.Message, Record, InetAddress)
+   * @see DnsResolvers#findRecords(org.xbill.DNS.Message, DnsResolvers.DnsRequest)
    */
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     if ( RequestType.PTR.apply( query ) ) {
       final InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
       if ( InstanceDomainNames.isInstance( ip ) ) {
@@ -177,7 +180,8 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   public static class InternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
     
     @Override
-    public DnsResponse lookupRecords( Record query ) {
+    public DnsResponse lookupRecords( DnsRequest request ) {
+      final Record query = request.getQuery( );
       if ( RequestType.A.apply( query ) ) {
         try {
           final Name name = query.getName( );
@@ -190,14 +194,15 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           LOG.debug( ex );
         }
       }
-      return super.lookupRecords( query );
+      return super.lookupRecords( request );
     }
     
     @Override
-    public boolean checkAccepts( Record query, InetAddress source ) {
-      return RequestType.PTR.apply( query )
-        ? super.checkAccepts( query, source ) :
-        super.checkAccepts( query, source )
+    public boolean checkAccepts( DnsRequest request ) {
+      final Record query = request.getQuery( );
+      return RequestType.PTR.apply( query ) ?
+        super.checkAccepts( request ) :
+        super.checkAccepts( request )
             && ( InstanceDomainNames.isInstanceSubdomain( query.getName( ) )
             && !query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) ) );
     }
@@ -207,16 +212,19 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   public static class HorizonARecordResolver extends SplitHorizonResolver implements DnsResolver {
     
     @Override
-    public boolean checkAccepts( Record query, InetAddress source ) {
-      return RequestType.PTR.apply( query )
-        ? super.checkAccepts( query, source ) :
-        super.checkAccepts( query, source )
+    public boolean checkAccepts( DnsRequest request ) {
+      final Record query = request.getQuery( );
+      final InetAddress source = request.getRemoteAddress( );
+      return RequestType.PTR.apply( query ) ?
+        super.checkAccepts( request ) :
+        super.checkAccepts( request )
             && Subnets.isSystemManagedAddress( source )
             && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
     
     @Override
-    public DnsResponse lookupRecords( Record query ) {
+    public DnsResponse lookupRecords( DnsRequest request ) {
+      final Record query = request.getQuery( );
       if ( RequestType.A.apply( query ) ) {
         try {
           final Name name = query.getName( );
@@ -230,23 +238,26 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           LOG.debug( ex );
         }
       }
-      return super.lookupRecords( query );
+      return super.lookupRecords( request );
     }
     
   }
   
   public static class ExternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
     @Override
-    public boolean checkAccepts( Record query, InetAddress source ) {
-      return RequestType.PTR.apply( query )
-        ? super.checkAccepts( query, source ) :
-        super.checkAccepts( query, source )
+    public boolean checkAccepts( DnsRequest request ) {
+      final Record query = request.getQuery( );
+      final InetAddress source = request.getRemoteAddress( );
+      return RequestType.PTR.apply( query ) ?
+        super.checkAccepts( request ) :
+        super.checkAccepts( request )
             && !Subnets.isSystemManagedAddress( source )
             && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
     
     @Override
-    public DnsResponse lookupRecords( Record query ) {
+    public DnsResponse lookupRecords( DnsRequest request ) {
+      final Record query = request.getQuery( );
       if ( RequestType.A.apply( query ) ) {
         try {
           final Name name = query.getName( );
@@ -258,7 +269,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           LOG.debug( ex );
         }
       }
-      return super.lookupRecords( query );
+      return super.lookupRecords( request );
     }
   }
   
@@ -269,10 +280,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * 3. The source ip address is system controlled; either a public address or in a vnet subnet
    * 4. The request name is a subdomain request for the subdomains the system should respond
    *
-   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(org.xbill.DNS.Message, Record, InetAddress)
+   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(org.xbill.DNS.Message, DnsRequest)
    */
   @Override
-  public boolean checkAccepts( final Record query, final InetAddress source ) {
+  public boolean checkAccepts( final DnsRequest request ) {
+    final Record query = request.getQuery( );
     if ( !Bootstrap.isOperational( ) || !enabled ) {
       return false;
     } else if ( RequestType.A.apply( query ) && InstanceDomainNames.isInstanceDomainName( query.getName( ) ) ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ package com.eucalyptus.dns;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -80,17 +81,22 @@ import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.TextParseException;
 import org.xbill.DNS.Type;
 
+import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.TopologyDnsResolver;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.walrus.util.WalrusProperties;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -142,65 +148,61 @@ public class ServiceZone extends Zone {
 	 * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
 	 */
 	@Override
-	public SetResponse findRecords(Name name, int type) {
+	public SetResponse findRecords(Name name, int type, InetAddress listenerAddress ) {
 		if (type == Type.AAAA)
 			return (SetResponse.ofType(SetResponse.SUCCESSFUL));
 
-		if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))
-				|| (name.toString().startsWith("tokens.")) || (name.toString().startsWith("autoscaling."))
-				|| (name.toString().startsWith("cloudwatch.")) || (name.toString().startsWith("loadbalancing."))) {
-			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-			try {
-				InetAddress cloudIp = Topology.lookup(Eucalyptus.class).getInetAddress();
-				if (cloudIp != null) {
-					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, cloudIp)));
-				}
-				return resp;
-			} catch (Exception e) {
-				return super.findRecords(name, type);
-			}
-		} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*")) {
+		final String nameString = name.toString( );
+		if ( nameString.startsWith("autoscaling.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, AutoScaling.class );
+		} else if ( nameString.startsWith("cloudwatch.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, CloudWatch.class );
+		} else if ( nameString.startsWith("compute.") || nameString.startsWith("eucalyptus.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, Compute.class );
+		} else if ( nameString.startsWith("euare.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, Euare.class );
+		} else if ( nameString.startsWith("loadbalancing.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, LoadBalancing.class );
+		} else if ( nameString.startsWith("objectstorage.") || nameString.matches(".*\\.objectstorage\\..*") || nameString.startsWith("walrus.") || nameString.matches(".*\\.walrus\\..*")) {
+			//map walrus to objectstorage for legacy support
 			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
 			try {
 				List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
 				for (InetAddress osgIp : osgIps) {
-					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, osgIp)));
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, TopologyDnsResolver.maphost( listenerAddress, osgIp ))));
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
-				return super.findRecords(name, type);
+				return super.findRecords(name, type, listenerAddress);
 			}
 			return resp;
-		} else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
-			// Walrus. Handles both bucket subdomains and service itself.
-			// Fix for EUCA-8367 - don't check if bucket is valid, otherwise it
-			// will break bucket-creation when
-			// using virtual-hosted bucket names.
-			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-			InetAddress walrusIp = null;
-			try {
-				walrusIp = getWalrusAddress();
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-				return super.findRecords(name, type);
-			}
-			resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, walrusIp)));
-			return resp;
+		} else if ( nameString.startsWith("tokens.") ) {
+			return buildResponseForComponent( name, type, listenerAddress, Tokens.class );
 		} else {
-			return super.findRecords(name, type);
+			return super.findRecords( name, type, listenerAddress );
 		}
 	}
 
-    private static InetAddress getWalrusAddress()
-    		throws EucalyptusCloudException {
-	if (Topology.isEnabled(ObjectStorage.class)) {
-	    return Topology.lookup(ObjectStorage.class).getInetAddress();
-	} else {
-	    throw new EucalyptusCloudException("Walrus not ENABLED");
+	private SetResponse buildResponseForComponent(
+			final Name name,
+			final int type,
+			final InetAddress listenerAddress,
+			final Class<? extends ComponentId> componentClass
+	) {
+		try {
+			final SetResponse resp = new SetResponse( SetResponse.SUCCESSFUL );
+			final List<ServiceConfiguration> configurations = Lists.newArrayList( Topology.lookupMany( componentClass ) );
+			Collections.shuffle( configurations );
+			for ( final ServiceConfiguration configuration : configurations ) {
+				resp.addRRset( new RRset( new ARecord( name, 1, 20/* ttl */, TopologyDnsResolver.maphost( listenerAddress, configuration.getInetAddress( ) ) ) ) );
+			}
+			return resp;
+		} catch ( Exception e ) {
+			return super.findRecords(name, type, listenerAddress);
+		}
 	}
-    }
 
-    private static class ObjectStorageAddresses {
+	private static class ObjectStorageAddresses {
 	private static Iterator<ServiceConfiguration> rrStores;
 	private static Iterable<ServiceConfiguration> currentStores;
 	

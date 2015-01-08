@@ -67,6 +67,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.cloud.util.NoSuchImageIdException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -181,7 +182,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( MachineImageInfo.class );
       try {
         final MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -203,7 +204,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( KernelImageInfo.class );
       try {
         final KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -225,7 +226,7 @@ public class Emis {
       final EntityTransaction db = Entities.get( RamdiskImageInfo.class );
       try {
         final RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.name().equals( ret.getState( ).getExternalStateName() ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
@@ -302,44 +303,47 @@ public class Emis {
     }
     
     public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
-    		final String instanceId) throws MetadataException {
+    		final String reservationId) throws MetadataException {
       final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ));
-	    vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
-	    // TODO: for new image management
-            // vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
+                partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ) + "-" + reservationId);
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
-                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
-	    vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
-	    // TODO: for new image management
-            // vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+                partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ) + "-" + reservationId);
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
       
-	if ( this.getMachine( ) instanceof StaticDiskImage ) {
-	    // generate download manifest and replace machine URL
-	    VirtualBootRecord root = vmTypeInfo.lookupRoot();
-	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodeCertificate().getPublicKey(), instanceId);
-	    // TODO: for new image management
-	    // vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
-	}
+        if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(this.getMachine().getDisplayName());
+          String manifestLocation = null;
+          // generate download manifest and replace machine URL
+          if(ImageMetadata.State.pending_available.equals(emi.getState())){
+            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
+            Images.setImageState(emi.getDisplayName(), ImageMetadata.State.pending_conversion);
+          }else if(ImageMetadata.State.pending_conversion.equals(emi.getState())){
+            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
+          }else{
+            manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                new ImageManifestFile( ((StaticDiskImage) this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
+                partition.getNodeCertificate().getPublicKey(), reservationId);
+          }
+          vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
+        }
       } catch (DownloadManifestException ex) {
-	  throw new MetadataException(ex);
+        throw new MetadataException(ex);
+      } catch (Exception ex){
+        throw new MetadataException(ex);
       }
-
       return vmTypeInfo;
     }
-    
   }
   
   static class NoRamdiskBootableSet extends BootableSet {
@@ -521,7 +525,7 @@ public class Emis {
         } catch ( final IllegalMetadataAccessException ex ) {
           throw Exceptions.toUndeclared( ex );
         } catch ( final NoSuchElementException ex ) {
-          throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup image named: " + input, ex ) );
+          throw Exceptions.toUndeclared( new NoSuchImageIdException( "Failed to lookup image named: " + input, ex ) );
         } catch ( final PersistenceException ex ) {
           throw Exceptions.toUndeclared( new InvalidMetadataException( "Error occurred while trying to lookup image named: " + input, ex ) );
         }
@@ -611,9 +615,7 @@ public class Emis {
     if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = disk.getKernelId( );
     }
-    if ( ( kernelId == null ) || "".equals( kernelId ) ) {
-      kernelId = Images.lookupDefaultKernelId( );
-    }
+   
     Preconditions.checkNotNull( kernelId, "Attempt to resolve a kerneId for "
                                           + bootSet.toString( )
                                           + " during request "

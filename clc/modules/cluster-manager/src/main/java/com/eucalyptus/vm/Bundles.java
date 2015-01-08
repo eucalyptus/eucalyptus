@@ -62,36 +62,37 @@
 
 package com.eucalyptus.vm;
 
+import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.context.Context;
+import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.CreateBucketType;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
 
 public class Bundles {
@@ -111,7 +112,6 @@ public class Bundles {
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
     final String objectStorageUrl = ServiceUris.remote( Topology.lookup( ObjectStorage.class ) ).toASCIIString( );
     request.setUrl( objectStorageUrl );
-    request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( Contexts.lookup( ).getUser( ) ) );
     return new BundleCallback( request );
   }
   
@@ -232,42 +232,54 @@ public class Bundles {
     
   }
   
-  private static void verifyPrefix( String prefix ) {
-    // check if the prefix name starts with "windows"
-    if ( !prefix.startsWith( "windows" ) )
-      /**
-       * GRZE:NOTE: bundling is /not/ restricted to windows
-       * only in general.
-       * what is it doing here? should be set in the manifest by the NC.
-       **/
-      throw new RuntimeException( "Prefix name should start with 'windows'" );
+  static void checkAndCreateBucket(final User user, String bucketName) throws ComputeException {
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+    try{
+      final List<Bucket> buckets = s3c.listBuckets();
+      for(final Bucket bucket : buckets){
+        if(bucketName.equals(bucket.getName())){
+          throw new ClientComputeException("InvalidParameter","Existing bucket found with the same name");
+        }
+      }
+      final Bucket created = s3c.createBucket(bucketName);
+    }catch(final EucalyptusCloudException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.debug("Uanble to create the bucket", ex);
+      throw new ComputeException("InternalError","Unable to create the bucket");
+    }
   }
-  
-  /**
-   * @param bucket
-   * @throws AuthException 
-   */
-  private static void verifyBucket( final String bucketName ) throws AuthException {
-    final Context ctx = Contexts.lookup( );
-    final String accessKey = Accounts.getFirstActiveAccessKeyId( ctx.getUser( ) );
-    CreateBucketType createBucket = new CreateBucketType( ) {
-      {
-        setAccessKeyID( accessKey );
-        setBucket( bucketName );
+
+  static void deleteBucket(final User user, String bucketName, boolean deleteObject) throws ComputeException {
+    final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(user);
+    try{
+      final List<Bucket> buckets = s3c.listBuckets();
+      boolean bucketFound = false;
+      for(final Bucket bucket : buckets){
+        if(bucketName.equals(bucket.getName())){
+          bucketFound=true;
+          break;
+        }
       }
-    }.regardingUserRequest( ctx.getRequest( ) );
-    DeleteBucketType deleteBucket = new DeleteBucketType( ) {
-      {
-        setAccessKeyID( accessKey );
-        setBucket( bucketName );
+      if(!bucketFound){
+        return;
       }
-    }.regardingUserRequest( ctx.getRequest( ) );
-    ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
-    try {
-      AsyncRequests.sendSync( walrusConfig, createBucket );
-      AsyncRequests.sendSync( walrusConfig, deleteBucket );
-    } catch ( Exception ex ) {
-      throw new RuntimeException("Can't create the requested bucket", ex);
-    }    
+      final ObjectListing objects = s3c.listObjects(bucketName);
+      final List<S3ObjectSummary> objectSummaries = objects.getObjectSummaries();
+      if(!deleteObject && objectSummaries.size()>0){
+        throw new ClientComputeException("InvalidParameter","Bucket is not empty");
+      }
+      if(deleteObject){
+        for(final S3ObjectSummary object : objectSummaries){
+          s3c.deleteObject(bucketName, object.getKey());
+        }
+      }
+      s3c.deleteBucket(bucketName);
+    }catch(final EucalyptusCloudException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.debug("Unable to delete the bucket", ex);
+      throw new ComputeException("InternalError", "Unable to delete the bucket");
+    }
   }
 }

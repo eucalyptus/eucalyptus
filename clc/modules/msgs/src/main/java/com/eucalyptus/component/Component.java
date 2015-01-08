@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
+import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.Automata;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Function;
@@ -417,6 +419,7 @@ public class Component implements HasName<Component> {
      * @throws ServiceRegistrationException
      */
     BasicService register( ServiceConfiguration config ) {
+      LOG.debug( Threads.currentStackRange( 1, 5 ) );
       BasicService service = this.services.containsKey( config ) ? this.services.get( config ) : new BasicService( config );
       if ( config.isVmLocal( ) || config.isHostLocal( ) ) {
         this.localService.set( service );
@@ -613,7 +616,8 @@ public class Component implements HasName<Component> {
             if ( checkedFunction.apply( b ) ) {
               rollbackBootstrappers.add( b );
             } else {
-              ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+              //TODO: This needs reconciliation w/ Faults.advisory() especially to propagate exception information to describe services
+              ex = new OrderlyTransitionException( b.getClass( ).getSimpleName( ) + "."
                 + name
                 + "( ): returned false, terminating bootstrap for component: "
                 + this.component.getName( ) );

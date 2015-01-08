@@ -20,7 +20,7 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
@@ -49,6 +49,7 @@ import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.walrus.exceptions.WalrusException;
+import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 
@@ -59,6 +60,8 @@ import java.util.HashMap;
  */
 public enum MessageMapper {
 	INSTANCE;
+
+    private static final Logger LOG = Logger.getLogger(MessageMapper.class);
 
     public <O extends WalrusDataRequestType, I extends ObjectStorageDataRequestType>  O proxyWalrusDataRequest(Class<O> outputClass, I request) {
         O outputRequest = (O) Classes.newInstance(outputClass);
@@ -100,7 +103,12 @@ public enum MessageMapper {
 
 	public <O extends S3Exception, T extends WalrusException>  O proxyWalrusException(T initialException) throws EucalyptusCloudException {
 		try {
-			Class c = exceptionMap.get(initialException);
+			Class c = exceptionMap.get(initialException.getClass());
+            if (c == null) {
+                LOG.warn("an attempt to proxy a walrus exception failed because there is no mapping for " + initialException.getClass().getName());
+                WalrusException proxied = new WalrusException("no mapping for " + initialException.getClass().getName(), initialException);
+                return proxyWalrusException(proxied);
+            }
 			O outputException = (O) c.newInstance();
 			outputException = (O)(WalrusExceptionProxy.mapExcludeNulls(initialException, outputException));
 			return outputException;
@@ -116,6 +124,7 @@ public enum MessageMapper {
         exceptionMap.put(com.eucalyptus.walrus.exceptions.AccessDeniedException.class, AccessDeniedException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyExistsException.class, BucketAlreadyExistsException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyOwnedByYouException.class, BucketAlreadyOwnedByYouException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketNotEmptyException.class, BucketNotEmptyException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.ContentMismatchException.class, BadDigestException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.DecryptionFailedException.class, InternalErrorException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.EntityTooLargeException.class, EntityTooLargeException.class);
@@ -125,6 +134,7 @@ public enum MessageMapper {
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InlineDataTooLargeException.class, InlineDataTooLargeException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidArgumentException.class, InvalidArgumentException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidBucketNameException.class, InvalidBucketNameException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InternalErrorException.class, InternalErrorException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidTargetBucketForLoggingException.class, InvalidTargetBucketForLoggingException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchBucketException.class, NoSuchBucketException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchEntityException.class, NoSuchKeyException.class);

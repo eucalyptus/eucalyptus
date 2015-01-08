@@ -223,7 +223,9 @@ int atomic_file_get(atomic_file * file, int *file_updated)
         LOGERROR("cannot open tmpfile '%s': check permissions\n", file->tmpfile);
         return (1);
     }
-    chmod(file->tmpfile, 0600);
+    if (chmod(file->tmpfile, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", file->tmpfile);
+    }
     close(fd);
 
     snprintf(tmpsource, EUCA_MAX_PATH, "%s", file->source);
@@ -234,7 +236,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     snprintf(path, EUCA_MAX_PATH, "/%s", tmppath);
 
     if (!strcmp(type, "http")) {
-        rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15);
+        rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15, NULL);
         if (rc) {
             LOGERROR("http client failed to fetch file URL=%s: check http server status\n", file->source);
             ret = 1;
@@ -318,7 +320,9 @@ int atomic_file_sort_tmpfile(atomic_file * file)
         LOGERROR("cannot open tmpfile '%s': check permissions\n", tmpfile);
         return (1);
     }
-    chmod(tmpfile, 0600);
+    if (chmod(tmpfile, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", tmpfile);
+    }
     close(fd);
 
     buf[0] = '\0';
@@ -341,7 +345,10 @@ int atomic_file_sort_tmpfile(atomic_file * file)
                     EUCA_FREE(contents[i]);
                 }
                 fclose(OFH);
-                rename(tmpfile, file->tmpfile);
+                if (rename(tmpfile, file->tmpfile)) {
+                    LOGERROR("could not rename (move) source file '%s' to dest file '%s': check permissions\n", tmpfile, file->tmpfile);
+                    ret = 1;
+                }
             }
             EUCA_FREE(contents);
         }

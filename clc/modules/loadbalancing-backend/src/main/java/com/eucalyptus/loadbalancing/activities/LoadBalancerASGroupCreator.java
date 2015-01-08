@@ -19,12 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults.CheckException;
+import com.eucalyptus.component.ServiceConfigurations;
 
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
@@ -41,6 +47,8 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -61,10 +69,14 @@ import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProf
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Collections2;
 import com.google.common.net.HostSpecifier;
+import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -324,6 +336,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	public static class LoadBalancingPropertyBootstrapper extends Bootstrapper.Simple {
 
 	  private static LoadBalancingPropertyBootstrapper singleton;
+	  private static final Callable<String> imageNotConfiguredFaultRunnable =
+	      Faults.forComponent( LoadBalancingBackend.class ).havingId( 1014 ).logOnFirstRun();
 
 	  public static Bootstrapper getInstance( ) {
 	    synchronized ( LoadBalancingPropertyBootstrapper.class ) {
@@ -336,17 +350,38 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	    }
 	    return singleton;
 	  }
-
+	  
+	  private static int CheckCounter =0 ;
+	  private static boolean EmiCheckResult = true;
 	  @Override
     public boolean check( ) throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
-        return true;
-      } else {
-        LOG.debug("Load balancer EMI property is unset.  \"\n" +
-            "              + \"Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> \"\n" +
-            "              + \"where the emi should point to the image provided in the eucalyptus-load-balancer-image package.\" ");
+        if(CheckCounter == 3){
+          try{
+            final List<ImageDetails> emis =
+                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.LOADBALANCER_EMI));
+            if( LoadBalancerASGroupCreator.LOADBALANCER_EMI.equals(emis.get(0).getImageId()))
+              EmiCheckResult = true;
+            else 
+              EmiCheckResult =  false;
+          }catch(final Exception ex){
+            EmiCheckResult=false;
+          }
+          CheckCounter = 0;
+        }else
+          CheckCounter++;
+        return EmiCheckResult;
+        } else {
+        try {
+          //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
+          final ServiceConfiguration localService = Components.lookup( LoadBalancingBackend.class ).getLocalServiceConfiguration( );
+          final CheckException ex = Faults.failure( localService, imageNotConfiguredFaultRunnable.call( ).split("\n")[1] );
+          Faults.submit( localService, localService.lookupStateMachine().getTransitionRecord(), ex );
+        } catch ( Exception e ) {
+          LOG.debug( e );
+        }
         return false;
-      }
+       }
     }
 	  
 	  @Override
@@ -573,10 +608,42 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				this.add("eucalyptus_host", host);
 				this.add("eucalyptus_port", port);
 				this.add("eucalyptus_path", path);
+				this.add("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
+				this.add("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
 				
-				this.add("elb_host", host);
-				this.add("elb_port", port);	/// elb service path
-				if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
+				//final ServiceConfiguration dns = Topology.lookup(Dns.class);
+				final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
+				    new Function<ServiceConfiguration, String>() {
+              @Override
+              public String apply(ServiceConfiguration arg0) {
+                return arg0.getInetAddress().getHostAddress();
+              }
+				}));
+				final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
+				    new Function<ServiceConfiguration, String>(){
+              @Override
+              public String apply(ServiceConfiguration arg0) {
+                return arg0.getInetAddress().getHostAddress();
+              }
+				}));
+				
+				final StringBuilder sbDns= new StringBuilder();
+				for(final String address : enabledDns){
+				  if(sbDns.length()<=0)
+				    sbDns.append(address);
+				  else
+				    sbDns.append(","+address);
+				}
+				for(final String address : dnsHosts){
+				  if(! enabledDns.contains(address)){
+	          if(sbDns.length()<=0)
+	            sbDns.append(address);
+	          else
+	            sbDns.append(","+address);
+				  } 
+				}
+	      this.add("dns_server", sbDns.toString());
+	      if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
 					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
 				}
 				if(LOADBALANCER_APP_COOKIE_DURATION != null){

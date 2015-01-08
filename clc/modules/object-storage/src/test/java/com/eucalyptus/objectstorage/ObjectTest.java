@@ -62,14 +62,6 @@
 
 package com.eucalyptus.objectstorage;
 
-import java.util.ArrayList;
-
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
@@ -86,36 +78,43 @@ import com.eucalyptus.objectstorage.msgs.ListBucketType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import java.util.ArrayList;
 
 @Ignore("Manual development test")
 public class ObjectTest {
 
-	static ObjectStorageService bukkit;
+    static ObjectStorageService bukkit;
 
-	@Test
-	public void testObject() throws Exception {
+    @Test
+    public void testObject() throws Exception {
 
-		String bucketName = "halo" + Hashes.getRandom(6);
-		String objectName = "key" + Hashes.getRandom(6);
-		String userId = "admin";
+        String bucketName = "halo" + Hashes.getRandom(6);
+        String objectName = "key" + Hashes.getRandom(6);
+        String userId = "admin";
 
-		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
-		createBucketRequest.setBucket(bucketName);
-		createBucketRequest.setUserId(userId);
+        CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
+        createBucketRequest.setBucket(bucketName);
+        createBucketRequest.setUserId(userId);
         createBucketRequest.setEffectiveUserId("eucalyptus");
-		AccessControlList acl = new AccessControlList();
-		createBucketRequest.setAccessControlList(acl);
-		CreateBucketResponseType reply = bukkit.createBucket(createBucketRequest);
-		System.out.println(reply);
+        AccessControlList acl = new AccessControlList();
+        createBucketRequest.setAccessControlList(acl);
+        CreateBucketResponseType reply = bukkit.createBucket(createBucketRequest);
+        System.out.println(reply);
 
-		PutObjectType putObjectRequest = new PutObjectType();
-		putObjectRequest.setBucket(bucketName);
-		putObjectRequest.setKey(objectName);
+        PutObjectType putObjectRequest = new PutObjectType();
+        putObjectRequest.setBucket(bucketName);
+        putObjectRequest.setKey(objectName);
         String data = "hi here is some data";
-		putObjectRequest.setContentLength(String.valueOf(data.length()));
+        putObjectRequest.setContentLength(String.valueOf(data.length()));
         ChannelBufferStreamingInputStream cbsis = new ChannelBufferStreamingInputStream(ChannelBuffers.copiedBuffer(data.getBytes()));
-		putObjectRequest.setData(cbsis);
-		putObjectRequest.setUserId(userId);
+        putObjectRequest.setData(cbsis);
+        putObjectRequest.setUserId(userId);
         ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
         MetaDataEntry metaDataEntry = new MetaDataEntry();
         metaDataEntry.setName("mammalType");
@@ -123,20 +122,20 @@ public class ObjectTest {
         metaData.add(metaDataEntry);
         putObjectRequest.setMetaData(metaData);
         //PutObjectResponseType putObjectReply = bukkit.putObject(putObjectRequest);
-		//System.out.println(putObjectReply);
+        //System.out.println(putObjectReply);
 
         ListBucketType listBucketRequest = new ListBucketType();
         listBucketRequest.setBucket(bucketName);
         listBucketRequest.setUserId(userId);
         ListBucketResponseType listBucketReply = bukkit.listBucket(listBucketRequest);
-        System.out.println(listBucketReply);        
+        System.out.println(listBucketReply);
 
         GetObjectAccessControlPolicyType acpRequest = new GetObjectAccessControlPolicyType();
-		acpRequest.setBucket(bucketName);
+        acpRequest.setBucket(bucketName);
         acpRequest.setKey(objectName);
         acpRequest.setUserId(userId);
-		GetObjectAccessControlPolicyResponseType acpResponse = bukkit.getObjectAccessControlPolicy(acpRequest);
-		System.out.println(acpResponse);
+        GetObjectAccessControlPolicyResponseType acpResponse = bukkit.getObjectAccessControlPolicy(acpRequest);
+        System.out.println(acpResponse);
 
         GetObjectType getObjectRequest = new GetObjectType();
         getObjectRequest.setUserId(userId);
@@ -149,21 +148,21 @@ public class ObjectTest {
         System.out.println(getObjectReply);
 
         DeleteObjectType deleteObjectRequest = new DeleteObjectType();
-		deleteObjectRequest.setBucket(bucketName);
-		deleteObjectRequest.setKey(objectName);
-		deleteObjectRequest.setUserId(userId);
-		DeleteObjectResponseType deleteObjectReply = bukkit.deleteObject(deleteObjectRequest);
-		System.out.println(deleteObjectReply);
+        deleteObjectRequest.setBucket(bucketName);
+        deleteObjectRequest.setKey(objectName);
+        deleteObjectRequest.setUserId(userId);
+        DeleteObjectResponseType deleteObjectReply = bukkit.deleteObject(deleteObjectRequest);
+        System.out.println(deleteObjectReply);
 
-		DeleteBucketType deleteBucketRequest = new DeleteBucketType();
-		deleteBucketRequest.setUserId(userId);
-		deleteBucketRequest.setBucket(bucketName);
-		DeleteBucketResponseType deleteResponse = bukkit.deleteBucket(deleteBucketRequest);
-		System.out.println(deleteResponse);
-	}
+        DeleteBucketType deleteBucketRequest = new DeleteBucketType();
+        deleteBucketRequest.setUserId(userId);
+        deleteBucketRequest.setBucket(bucketName);
+        DeleteBucketResponseType deleteResponse = bukkit.deleteBucket(deleteBucketRequest);
+        System.out.println(deleteResponse);
+    }
 
     @BeforeClass
     public static void setUp() {
         bukkit = new ObjectStorageGateway();
-   }        
+    }
 }

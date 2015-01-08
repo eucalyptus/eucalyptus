@@ -86,6 +86,7 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
@@ -297,8 +298,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade40.class );
 
-    @Override
-    public boolean apply( Class arg0 ) {
+    private void configureIdentifierCanonicalizer( ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
         try {
           final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "cloud.identifier_canonicalizer", null ) );
@@ -307,16 +307,37 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         } catch ( NoSuchElementException e ) {
           LOG.info( "Creating resource identifier canonicalizer property with value 'upper' for upgraded system." );
           Entities.persist( new StaticDatabasePropertyEntry(
-              "com.eucalyptus.compute.identifier.ResourceIdentifers.identifier_canonicalizer",
+              "com.eucalyptus.compute.identifier.ResourceIdentifiers.identifier_canonicalizer",
               "cloud.identifier_canonicalizer",
               "upper"
           ) );
         }
         db.commit( );
-        return true;
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
+    }
+
+    private void deleteRemovedProperties( final Iterable<String> propertyNames ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final String propertyName : propertyNames ) try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null,propertyName, null ) );
+          LOG.info( "Deleting cloud property: " + propertyName );
+          Entities.delete( property );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Property not found, skipped delete for: " + propertyName );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      configureIdentifierCanonicalizer( );
+      deleteRemovedProperties( Lists.newArrayList( "authentication.websession_life_in_minutes" ) );
+      return true;
     }
   }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,25 +63,13 @@
 package com.eucalyptus.network;
 
 import java.io.Serializable;
-import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.EntityTransaction;
 import javax.persistence.Transient;
 
 import org.hibernate.annotations.Parent;
-
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 
 @Embeddable
 public class NetworkPeer implements Serializable {

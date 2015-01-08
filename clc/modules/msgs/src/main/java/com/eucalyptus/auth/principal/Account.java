@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,11 +65,14 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  * The interface for the user account.
@@ -84,7 +87,9 @@ import com.eucalyptus.auth.ServerCertificate;
  * @see {@link com.eucalyptus.auth.Accounts}
  * @see {@link com.eucalyptus.auth.entities.AccountEntity#generateOnCommit()}
  */
-public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
+@PolicyVendor( PolicySpec.VENDOR_IAM )
+@PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
+public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Serializable {
   public static final String NOBODY_ACCOUNT = "nobody";
   public static final Long NOBODY_ACCOUNT_ID = 1l;
   /**
@@ -95,7 +100,10 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
    * is the account which all system services use to bootstrap, including initial configuration.
    */
   public static final String SYSTEM_ACCOUNT = "eucalyptus";
+  public static final String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
   public static final Long SYSTEM_ACCOUNT_ID = 0l;
+  //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635 
+  public static final String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";
 
   public void setName( String name ) throws AuthException;
   
@@ -107,7 +115,7 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
 
   public List<InstanceProfile> getInstanceProfiles() throws AuthException;
 
-  public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException;
+  public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
   public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;

@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.autoscaling.common.config
 
 import com.eucalyptus.config.DeregisterComponentResponseType;
@@ -26,7 +27,8 @@ import com.eucalyptus.config.DescribeComponentsType;
 import com.eucalyptus.config.ModifyComponentAttributeResponseType;
 import com.eucalyptus.config.ModifyComponentAttributeType;
 import com.eucalyptus.config.RegisterComponentResponseType;
-import com.eucalyptus.config.RegisterComponentType;
+import com.eucalyptus.config.RegisterComponentType
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class RegisterAutoScalingType extends RegisterComponentType {}
 public class RegisterAutoScalingResponseType extends RegisterComponentResponseType {}

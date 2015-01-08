@@ -62,130 +62,141 @@
 
 package com.eucalyptus.objectstorage.util;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.util.Date;
-
-import org.apache.tools.ant.util.DateUtils;
-
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import org.apache.tools.ant.util.DateUtils;
+import org.bouncycastle.util.encoders.Base64;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+
+import javax.crypto.Cipher;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Date;
 
 
 public class OSGUtil {
 
-	public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
-		Throwable ex = errorMessage.getException();
-		String correlationId = errorMessage.getCorrelationId( );
-		BaseMessage errMsg = null;
-		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
-			errMsg = errorMessage;
-		}
-		return errMsg;
-	}
-	public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		Throwable ex = errorMessage.getException();
-		String correlationId = errorMessage.getCorrelationId( );
-		BaseMessage errMsg = null;
-		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
-			errMsg = errorMessage;
-		}
-		return errMsg;
-	}
-	
-	private static BaseMessage convertException( String correlationId, Throwable ex ) {
-		BaseMessage errMsg;
-		if(ex instanceof ObjectStorageException) {
-			ObjectStorageException e = (ObjectStorageException) ex;
-			errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress( ), e.getLogData());
-			errMsg.setCorrelationId( correlationId );
-			return errMsg;
-		} else {
-			return null;
-		}
-	}
-	
-	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-		return URLDecoder.decode(objectKey, "UTF-8");
-	}
-	
-	public static String[] getTarget(String operationPath) {
-		operationPath = operationPath.replaceAll("/{2,}", "/");
-		if(operationPath.startsWith("/"))
-			operationPath = operationPath.substring(1);
-		return operationPath.split("/");
-	}
-	
-	/**
-	 * Helper to do the ISO8601 formatting as found in object/bucket lists
-	 * @param d
-	 * @return
-	 */
-	public static String dateToListingFormattedString(Date d) {
-		if(d == null) { 
-			return null;
-		} else {
-			try {
-				return DateUtils.format(d.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN);
-			} catch(Exception e) {
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Helper to parse the ISO8601 date, as found in listings
-	 * @param header
-	 * @return
-	 */
-	public static Date dateFromListingFormattedString(String header) {
-		if(header == null) { 
-			return null;
-		} else {		
-			try {
-				return DateUtils.parseIso8601DateTimeOrDate(header);
-			} catch (Exception e) {				
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Parses an RFC-822 formated date, as found in headers
-	 * @param dateStr
-	 * @return
-	 */
-	public static Date dateFromHeaderFormattedString(String dateStr) {
-		if(dateStr == null) { 
-			return null;
-		} else {
-			try {
-				return DateUtils.parseRfc822DateTime(dateStr);
-			} catch (Exception e) {				
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Helper to do the RFC822 formatting for placement in HTTP headers
-	 * @param d
-	 * @return
-	 */
-	public static String dateToHeaderFormattedString(Date d) {
-		if(d == null) {
-			return null;
-		} else {
-			try {
-				return DateUtils.format(d.getTime(), DateUtils.RFC822_DATETIME_PATTERN);
-			} catch(Exception e) {
-				return null;
-			}
-		}
-	}
+    public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
+        Throwable ex = errorMessage.getException();
+        String correlationId = errorMessage.getCorrelationId();
+        BaseMessage errMsg = null;
+        if ((errMsg = convertException(correlationId, ex)) == null) {
+            errMsg = errorMessage;
+        }
+        return errMsg;
+    }
+
+    public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
+        Throwable ex = errorMessage.getException();
+        String correlationId = errorMessage.getCorrelationId();
+        BaseMessage errMsg = null;
+        if ((errMsg = convertException(correlationId, ex)) == null) {
+            errMsg = errorMessage;
+        }
+        return errMsg;
+    }
+
+    private static BaseMessage convertException(String correlationId, Throwable ex) {
+        BaseMessage errMsg;
+        if (ex instanceof ObjectStorageException) {
+            ObjectStorageException e = (ObjectStorageException) ex;
+            errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress(), e.getLogData());
+            errMsg.setCorrelationId(correlationId);
+            return errMsg;
+        } else {
+            return null;
+        }
+    }
+
+    public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
+        return URLDecoder.decode(objectKey, "UTF-8");
+    }
+
+    public static String[] getTarget(String operationPath) {
+        operationPath = operationPath.replaceAll("/{2,}", "/");
+        if (operationPath.startsWith("/"))
+            operationPath = operationPath.substring(1);
+        return operationPath.split("/");
+    }
+
+    /**
+     * Returns index where bytesToFind begins in the buffer
+     */
+    public static class ByteMatcherBeginningIndexFinder implements ChannelBufferIndexFinder {
+        private byte[] toMatch;
+
+        public ByteMatcherBeginningIndexFinder(byte[] bytesToFind) {
+            this.toMatch = bytesToFind;
+        }
+
+        @Override
+        public boolean find(ChannelBuffer channelBuffer, int i) {
+            channelBuffer.markReaderIndex();
+            try {
+                int matchedCount = 0;
+                //Check basic params, like length
+                if(i  + this.toMatch.length > channelBuffer.readableBytes()) {
+                    return false;
+                }
+
+                //Match byte for byte
+                for(int j = i ; j - i < this.toMatch.length; j++) {
+                    if(channelBuffer.getByte(j) != this.toMatch[j - i]) {
+                        return false;
+                    }
+                    matchedCount++;
+                }
+                return matchedCount == toMatch.length;
+            } catch(IndexOutOfBoundsException e) {
+                return false;
+            } finally {
+                channelBuffer.resetReaderIndex();
+            }
+        }
+    }
+
+    public static int findFirstMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+        return buffer.indexOf(start, buffer.readableBytes(), new ByteMatcherBeginningIndexFinder(bytesToFind));
+    }
+
+    public static int findLastMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+        return buffer.indexOf(buffer.readableBytes(), start, new ByteMatcherBeginningIndexFinder(bytesToFind));
+    }
+
+    //Encrypt data using the cloud public key
+    public static String encryptWithComponentPublicKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+        try {
+            PublicKey clcPublicKey = SystemCredentials.lookup(componentClass).getCertificate().getPublicKey();
+            Cipher cipher = Ciphers.RSA_PKCS1.get();
+            cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey);
+            return new String(Base64.encode(cipher.doFinal(data.getBytes("UTF-8"))));
+        } catch ( Exception e ) {
+            throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
+        }
+    }
+
+    //Decrypt data encrypted with the Cloud public key
+    public static String decryptWithComponentPrivateKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+        PrivateKey clcPrivateKey = SystemCredentials.lookup(componentClass).getPrivateKey();
+        try {
+            Cipher cipher = Ciphers.RSA_PKCS1.get();
+            cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey);
+            return new String(cipher.doFinal(Base64.decode(data)));
+        } catch(Exception ex) {
+            throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
+        }
+    }
 }

@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import org.apache.log4j.Logger;
@@ -265,12 +266,19 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 			throw new MetadataOperationFailureException(e);
 		}
 	}
-	
-	@Override
-	public Bucket setAcp(@Nonnull Bucket bucketEntity, @Nonnull String acl)  throws MetadataOperationFailureException, NoSuchEntityException {
+
+    /**
+     * For internal use only (copying, etc)
+     * @param bucketEntity
+     * @param jsonMarshalledAcl
+     * @return
+     * @throws MetadataOperationFailureException
+     * @throws NoSuchEntityException
+     */
+	protected Bucket setAcp(@Nonnull Bucket bucketEntity, @Nonnull String jsonMarshalledAcl)  throws MetadataOperationFailureException, NoSuchEntityException {
 		try (TransactionResource trans = Entities.transactionFor(Bucket.class)) {
             Bucket bucket = Entities.merge(bucketEntity);
-			bucket.setAcl(acl);
+			bucket.setAcl(jsonMarshalledAcl);
 			trans.commit();
 			return bucket;
 		} catch(NoSuchElementException e) {
@@ -345,7 +353,7 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 	
 	@Override
 	public long totalSizeOfAllBuckets() throws MetadataOperationFailureException {
-		long size = -1;		
+		long size = -1;
 	    try (TransactionResource db = Entities.transactionFor(Bucket.class)){
 	    	size = Objects.firstNonNull( (Number) Entities.createCriteria( Bucket.class )
                     .setProjection(Projections.sum("bucketSize"))
@@ -357,20 +365,5 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
             throw new MetadataOperationFailureException(e);
 	    }
 	    return size;
-	}
-
-	@Override
-	public Bucket updateBucketSize(final Bucket bucket, final long sizeToChange) throws TransactionException {
-		Function<Bucket, Bucket> incrementSize = new Function<Bucket, Bucket>() {
-			@Override
-			public Bucket apply(Bucket updateBucket) {
-                Bucket b = Entities.merge(bucket);
-                b.setBucketSize(b.getBucketSize() + sizeToChange);
-                return b;
-			}
-			
-		};
-
-		return Entities.asTransaction(incrementSize).apply(bucket);
 	}
 }

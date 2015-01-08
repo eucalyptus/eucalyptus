@@ -111,6 +111,13 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+struct partition_table_entry {
+    long long start_sector;
+    long long end_sector;
+    char type[32];
+    char filesystem[32];
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -123,7 +130,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int imaging_init(const char *euca_home);
+int imaging_init(const char *new_euca_home_path, const char *new_cloud_cert_path, const char *new_service_key_path);
 int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes);
 
 int diskutil_init(boolean require_grub);
@@ -133,6 +140,7 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
 int diskutil_dd2(const char *in, const char *out, const int bs, const long long count, const long long seek, const long long skip);
 int diskutil_mbr(const char *path, const char *type);
 int diskutil_part(const char *path, char *part_type, const char *fs_type, const long long first_sector, const long long last_sector);
+int diskutil_get_parts(const char *path, struct partition_table_entry entries[], int num_entries);
 sem *diskutil_get_loop_sem(void);
 int diskutil_loop_check(const char *path, const char *lodev);
 int diskutil_loop(const char *path, const long long offset, char *lodev, int lodev_size);

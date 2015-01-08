@@ -25,16 +25,36 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.id.Eucalyptus;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @PublicService
+@Partition(Eucalyptus.class)
 @FaultLogPrefix( "cloud" )
-@PolicyVendor("euimager")
+@PolicyVendor("eucaimaging")
 public class Imaging extends ComponentId {
+  private static final long serialVersionUID = 1L;
+  
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
+
+  @Override
+  public boolean isDistributedService() {
+    return true;
+  }
+
+  @Override
+  public boolean isRegisterable() {
+    return false;
+  }
+
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
    */

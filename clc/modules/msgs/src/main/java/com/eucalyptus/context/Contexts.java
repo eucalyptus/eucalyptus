@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -251,7 +251,7 @@ public class Contexts {
       Channels.write( channel, message );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) );
+      LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) + " for " + responseMessage.getClass( ).getSimpleName( ) );
       Logs.extreme( ).debug( responseMessage, e );
     } catch ( Exception e ) {
       LOG.warn( "Error occurred while handling reply: " + responseMessage );
@@ -275,7 +275,7 @@ public class Contexts {
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
       if (cause.getCause() != null) {
           Channel channel = ctx.getChannel( );
-          Channels.write( channel, cause.getCause() );
+          Channels.write( channel, new ExceptionResponseType( ctx.getRequest( ), cause.getCause( ).getMessage( ), cause.getCause( ) ) );
       }
       if ( !( cause instanceof BaseException ) ) {
         clear( ctx );

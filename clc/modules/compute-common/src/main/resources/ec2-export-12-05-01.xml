@@ -26,24 +26,21 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <binding force-classes="true" add-constructors="true">
-  <mapping class="com.eucalyptus.compute.common.VmExportMessage" abstract="true">
-  </mapping>
   <mapping name="CreateInstanceExportTask" class="com.eucalyptus.compute.common.CreateInstanceExportTaskType"
-    extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="description" field="description" usage="optional" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="targetEnvironment" field="targetEnvironment" usage="required" />
     <structure name="exportToS3" field="exportToS3" usage="optional" type="com.eucalyptus.compute.common.ExportToS3Task" />
   </mapping>
   <mapping name="CreateInstanceExportTaskResponse" class="com.eucalyptus.compute.common.CreateInstanceExportTaskResponseType"
-    extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="exportTask" field="exportTask" usage="required" type="com.eucalyptus.compute.common.ExportTaskResponse" />
   </mapping>
-  <mapping name="DescribeExportTasks" class="com.eucalyptus.compute.common.DescribeExportTasksType" extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+  <mapping name="DescribeExportTasks" class="com.eucalyptus.compute.common.DescribeExportTasksType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="exportTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="exportTaskIdSet"
       item-type="java.lang.String">
       <structure name="item">
@@ -52,21 +49,19 @@
     </collection>
   </mapping>
   <mapping name="DescribeExportTasksResponse" class="com.eucalyptus.compute.common.DescribeExportTasksResponseType"
-    extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="exportTaskSet" field="exportTaskSet" usage="required">
       <structure name="item" type="com.eucalyptus.compute.common.ExportTaskResponse" />
     </collection>
   </mapping>
-  <mapping name="CancelExportTask" class="com.eucalyptus.compute.common.CancelExportTaskType" extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+  <mapping name="CancelExportTask" class="com.eucalyptus.compute.common.CancelExportTaskType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="exportTaskId" field="exportTaskId" usage="required" />
   </mapping>
   <mapping name="CancelExportTaskResponse" class="com.eucalyptus.compute.common.CancelExportTaskResponseType"
-    extends="com.eucalyptus.compute.common.VmExportMessage">
-    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
-    <value name="requestId" field="requestId" usage="required" />
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" field="_return" usage="required" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.ExportToS3Task" abstract="true">

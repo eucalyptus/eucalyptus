@@ -20,79 +20,93 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import java.util.Date;
-import java.util.UUID;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.persistence.*;
-import javax.persistence.CascadeType;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
-import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
-import com.google.common.base.Strings;
+import com.eucalyptus.storage.msgs.s3.ListEntry;
+import com.eucalyptus.storage.msgs.s3.VersionEntry;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.ForeignKey;
+import org.hibernate.annotations.Index;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
+import org.hibernate.annotations.OptimisticLockType;
+import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.objectstorage.ObjectState;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.eucalyptus.storage.msgs.s3.ListEntry;
-import com.eucalyptus.storage.msgs.s3.VersionEntry;
+import javax.annotation.Nonnull;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import java.util.Date;
+import java.util.UUID;
 
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
-@PersistenceContext(name="eucalyptus_osg")
-@Table( name = "objects" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "objects")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
-	@Column( name = "object_key" )
+    @Transient
+    private static Logger LOG = Logger.getLogger(ObjectEntity.class);
+
+    @Index(name = "IDX_object_key")
+    @Column(name = "object_key")
     private String objectKey;
 
     @NotFound(action = NotFoundAction.EXCEPTION)
     @ManyToOne(optional = false, targetEntity = Bucket.class, fetch = FetchType.EAGER)
-    @ForeignKey(name="FK_bucket")
+    @ForeignKey(name = "FK_bucket")
     @JoinColumn(name = "bucket_fk")
     private Bucket bucket;
 
     @Index(name = "IDX_object_uuid")
-    @Column(name="object_uuid", unique=true, nullable=false)
+    @Column(name = "object_uuid", unique = true, nullable = false)
     private String objectUuid; //The a uuid for this specific object content & request
 
-    @Column(name="version_id", nullable=false)
+    @Index(name = "IDX_version_id")
+    @Column(name = "version_id", nullable = false)
     private String versionId; //VersionId is required to uniquely identify ACLs and auth
 
-    @Column(name="size", nullable=false)
+    @Column(name = "size", nullable = false)
     private Long size;
 
-    @Column(name="storage_class", nullable=false)
+    @Column(name = "storage_class", nullable = false)
     private String storageClass;
 
-    @Column(name="is_delete_marker")
+    @Column(name = "is_delete_marker")
     private Boolean isDeleteMarker; //Indicates this is a delete marker 
-            
-    @Column(name="object_last_modified") //Distinct from the record modification date, tracks the backend response
+
+    @Column(name = "object_last_modified") //Distinct from the record modification date, tracks the backend response
     private Date objectModifiedTimestamp;
-    
-    @Column(name="etag")
+
+    @Column(name = "etag")
     private String eTag;
-    
-    @Column(name="is_latest")
+
+    @Column(name = "is_latest")
     private Boolean isLatest;
 
-    @Column(name="creation_expiration")
+    @Column(name = "creation_expiration")
     private Long creationExpiration; //Expiration time in system/epoch time to guarantee monotonically increasing values
+
+    @Column(name = "upload_id")
+    private String uploadId;
 
     public Long getCreationExpiration() {
         return creationExpiration;
@@ -102,22 +116,14 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         this.creationExpiration = creationExpiration;
     }
 
-	public Boolean getIsDeleteMarker() {
-		return isDeleteMarker;
-	}
+    public Boolean getIsDeleteMarker() {
+        return isDeleteMarker;
+    }
 
-	public void setIsDeleteMarker(Boolean isDeleteMarker) {
-		this.isDeleteMarker = isDeleteMarker;
-	}
-    
-    @Column(name="upload_id")
-    private String uploadId;
+    public void setIsDeleteMarker(Boolean isDeleteMarker) {
+        this.isDeleteMarker = isDeleteMarker;
+    }
 
-    @Column(name="part_number")
-    private Integer partNumber;
-
-    private static Logger LOG = Logger.getLogger( ObjectEntity.class );
-    
     public ObjectEntity() {
         super();
     }
@@ -154,14 +160,10 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         return this;
     }
 
-    public ObjectEntity withPartNumber(int partNumber) {
-        this.setPartNumber(partNumber);
-        return this;
-    }
-
     /**
      * Sets state only, explicitly nulls 'lastState'. Use ONLY for
      * query examples
+     *
      * @param s
      * @return
      */
@@ -181,23 +183,24 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     @PrePersist
     public void ensureFieldsNotNull() {
-    	if(this.versionId == null) {
-    		this.versionId = ObjectStorageProperties.NULL_VERSION_ID;
-    	}
+        if (this.versionId == null) {
+            this.versionId = ObjectStorageProperties.NULL_VERSION_ID;
+        }
 
-        if(this.isDeleteMarker == null) {
+        if (this.isDeleteMarker == null) {
             this.isDeleteMarker = false;
         }
 
-        if(this.objectUuid == null) {
+        if (this.objectUuid == null) {
             //generate a new one
             this.generateInternalKey(this.objectKey);
         }
 
-    }    
-    
+    }
+
     /**
      * Initialize this as a new object entity representing an object to PUT
+     *
      * @param bucket
      * @param objectKey
      * @param usr
@@ -209,16 +212,16 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         try {
             entity.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
             entity.setOwnerDisplayName(usr.getAccount().getName());
-        } catch(AuthException e) {
+        } catch (AuthException e) {
             throw new AccountProblemException();
         }
 
-    	entity.setOwnerIamUserId(usr.getUserId());
+        entity.setOwnerIamUserId(usr.getUserId());
         entity.setOwnerIamUserDisplayName(usr.getName());
-    	entity.setObjectModifiedTimestamp(null);
-    	entity.setSize(contentLength);
-    	entity.setIsLatest(false);
-    	entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
+        entity.setObjectModifiedTimestamp(null);
+        entity.setSize(contentLength);
+        entity.setIsLatest(false);
+        entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
         entity.updateCreationExpiration();
         entity.setState(ObjectState.creating);
         return entity;
@@ -230,48 +233,49 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
     /**
      * Creates a new 'DeleteMarker' object entity from this object
+     *
      * @return
      * @throws Exception
      */
     public ObjectEntity generateNewDeleteMarkerFrom() {
-    	if(versionId == null) {
-    		throw new IllegalArgumentException("versionId cannot be null for delete marker generation");
-    	}
-    	
-    	ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId()).withState(ObjectState.extant);
-    	deleteMarker.setObjectUuid(generateInternalKey(objectKey));
+        if (versionId == null) {
+            throw new IllegalArgumentException("versionId cannot be null for delete marker generation");
+        }
+
+        ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId()).withState(ObjectState.creating);
+        deleteMarker.setObjectUuid(generateInternalKey(objectKey));
         deleteMarker.setStorageClass("STANDARD");
         deleteMarker.setObjectModifiedTimestamp(new Date());
         deleteMarker.setIsDeleteMarker(true);
-        deleteMarker.setSize(-1L);
+        deleteMarker.setSize(0L);
         deleteMarker.setIsLatest(true);
-    	return deleteMarker;
+        return deleteMarker;
     }
-    
-	private static String generateInternalKey(@Nonnull String key) {
-        return UUID.randomUUID().toString() + "-" + key;
-	}
-    
-	public String geteTag() {
-		return eTag;
-	}
 
-	public void seteTag(String eTag) {
-		this.eTag = eTag;
-	}
+    private static String generateInternalKey(@Nonnull String key) {
+        return UUID.randomUUID().toString(); //Use only uuid to ensure key length max met
+    }
 
-	public Date getObjectModifiedTimestamp() {
-		return objectModifiedTimestamp;
-	}
+    public String geteTag() {
+        return eTag;
+    }
 
-	public void setObjectModifiedTimestamp(Date objectModifiedTimestamp) {
-		this.objectModifiedTimestamp = objectModifiedTimestamp;
-	}
-    
-	@Override
-	public String getResourceFullName() {
-		return getBucket().getBucketName() + "/" + getObjectKey();
-	}
+    public void seteTag(String eTag) {
+        this.eTag = eTag;
+    }
+
+    public Date getObjectModifiedTimestamp() {
+        return objectModifiedTimestamp;
+    }
+
+    public void setObjectModifiedTimestamp(Date objectModifiedTimestamp) {
+        this.objectModifiedTimestamp = objectModifiedTimestamp;
+    }
+
+    @Override
+    public String getResourceFullName() {
+        return getBucket().getBucketName() + "/" + getObjectKey();
+    }
 
     public String getObjectKey() {
         return objectKey;
@@ -297,41 +301,41 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         this.storageClass = storageClass;
     }
 
-	public String getVersionId() {
-		return versionId;
-	}
-
-	public void setVersionId(String versionId) {
-		this.versionId = versionId;
-	}
-
-	public int compareTo(Object o) {
-        return this.objectKey.compareTo(((ObjectEntity)o).getObjectKey());
+    public String getVersionId() {
+        return versionId;
     }
 
-	public boolean isPending() {
-		return (getObjectModifiedTimestamp() == null);
-	}
-	
-	public String getObjectUuid() {
-		return objectUuid;
-	}
+    public void setVersionId(String versionId) {
+        this.versionId = versionId;
+    }
 
-	public void setObjectUuid(String objectUuid) {
-		this.objectUuid = objectUuid;
-	}
+    public int compareTo(Object o) {
+        return this.objectKey.compareTo(((ObjectEntity) o).getObjectKey());
+    }
 
-	public Boolean getIsLatest() {
-		return isLatest;
-	}
+    public boolean isPending() {
+        return (getObjectModifiedTimestamp() == null);
+    }
 
-	public void setIsLatest(Boolean isLatest) {
-		this.isLatest = isLatest;
-	}
-	
-	public boolean isNullVersioned() {
-		return ObjectStorageProperties.NULL_VERSION_ID.equals(this.versionId);
-	}
+    public String getObjectUuid() {
+        return objectUuid;
+    }
+
+    public void setObjectUuid(String objectUuid) {
+        this.objectUuid = objectUuid;
+    }
+
+    public Boolean getIsLatest() {
+        return isLatest;
+    }
+
+    public void setIsLatest(Boolean isLatest) {
+        this.isLatest = isLatest;
+    }
+
+    public boolean isNullVersioned() {
+        return ObjectStorageProperties.NULL_VERSION_ID.equals(this.versionId);
+    }
 
     public String getUploadId() {
         return uploadId;
@@ -341,65 +345,57 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         this.uploadId = uploadId;
     }
 
-    public Integer getPartNumber() {
-        return partNumber;
-    }
-
-    public void setPartNumber(Integer partNumber) {
-        this.partNumber = partNumber;
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((objectUuid == null) ? 0 : objectUuid.hashCode());
+        result = prime * result
+                + ((objectKey == null) ? 0 : objectKey.hashCode());
+        result = prime * result
+                + ((versionId == null) ? 0 : versionId.hashCode());
+        return result;
     }
 
     @Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((objectUuid == null) ? 0 : objectUuid.hashCode());
-		result = prime * result
-				+ ((objectKey == null) ? 0 : objectKey.hashCode());
-		result = prime * result
-				+ ((versionId == null) ? 0 : versionId.hashCode());
-		return result;
-	}
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ObjectEntity other = (ObjectEntity) obj;
+        if (bucket == null) {
+            if (other.bucket == null)
+                return false;
+        } else if (!bucket.equals(other.bucket))
+            return false;
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ObjectEntity other = (ObjectEntity) obj;
-		if (bucket == null) {
-			if (other.bucket == null)
-				return false;
-		} else if (!bucket.equals(other.bucket))
-			return false;
-		
-		if (objectKey == null) {
-			if (other.objectKey != null)
-				return false;
-		} else if (!objectKey.equals(other.objectKey))
-			return false;
-		
-		if (versionId == null) {
-			if (other.versionId != null)
-				return false;
-		} else if (!versionId.equals(other.versionId))
-			return false;
-		
-		if (objectUuid == null) {
-			if (other.objectUuid != null)
-				return false;
-		} else if (!objectUuid.equals(other.objectUuid))
-			return false;
-		
-		return true;
-	}
-	
-  public static class QueryHelpers {
-		
+        if (objectKey == null) {
+            if (other.objectKey != null)
+                return false;
+        } else if (!objectKey.equals(other.objectKey))
+            return false;
+
+        if (versionId == null) {
+            if (other.versionId != null)
+                return false;
+        } else if (!versionId.equals(other.versionId))
+            return false;
+
+        if (objectUuid == null) {
+            if (other.objectUuid != null)
+                return false;
+        } else if (!objectUuid.equals(other.objectUuid))
+            return false;
+
+        return true;
+    }
+
+    public static class QueryHelpers {
+
         public static Criterion getIsPartRestriction() {
             return Restrictions.isNotNull("partNumber");
         }
@@ -416,33 +412,35 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
             return Restrictions.isNotNull("uploadId");
         }
     }
-		
-	/**
-	 * Return a ListEntry for this entity
-	 * @return
-	 */
-	public ListEntry toListEntry() {
-		ListEntry e = new ListEntry();
-		e.setEtag("\"" + this.geteTag() + "\"");
-		e.setKey(this.getObjectKey());
-		e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
-		e.setSize(this.getSize());
-		e.setStorageClass(this.getStorageClass());
-		e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));		
-		return e;
-	}
-	
-	/**
-	 * Return a VersionEntry for this entity
-	 * @return
-	 */
-	public KeyEntry toVersionEntry() {
-        if(!this.isDeleteMarker) {
+
+    /**
+     * Return a ListEntry for this entity
+     *
+     * @return
+     */
+    public ListEntry toListEntry() {
+        ListEntry e = new ListEntry();
+        e.setEtag("\"" + this.geteTag() + "\"");
+        e.setKey(this.getObjectKey());
+        e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+        e.setSize(this.getSize());
+        e.setStorageClass(this.getStorageClass());
+        e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+        return e;
+    }
+
+    /**
+     * Return a VersionEntry for this entity
+     *
+     * @return
+     */
+    public KeyEntry toVersionEntry() {
+        if (!this.isDeleteMarker) {
             VersionEntry e = new VersionEntry();
             e.setEtag("\"" + this.geteTag() + "\"");
             e.setKey(this.getObjectKey());
             e.setVersionId(this.getVersionId());
-            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
             e.setSize(this.getSize());
             e.setIsLatest(this.isLatest);
             e.setStorageClass(this.getStorageClass());
@@ -452,13 +450,13 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
             DeleteMarkerEntry e = new DeleteMarkerEntry();
             e.setKey(this.getObjectKey());
             e.setVersionId(this.getVersionId());
-            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
             e.setIsLatest(this.isLatest);
             e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
             return e;
         }
 
-	}
-	//TODO: add delete marker support. Fix is to use super-type for versioning entry and sub-types for version vs deleteMarker
+    }
+    //TODO: add delete marker support. Fix is to use super-type for versioning entry and sub-types for version vs deleteMarker
 
 }

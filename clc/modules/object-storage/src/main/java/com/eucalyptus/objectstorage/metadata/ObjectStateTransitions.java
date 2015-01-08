@@ -22,18 +22,25 @@ package com.eucalyptus.objectstorage.metadata;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
@@ -83,7 +90,7 @@ public class ObjectStateTransitions {
         }
     };
     /**
-     * Function that does the actual update of state. Will only transition creating->extant
+     * Function that does the actual update of state. Will only transition creating->extant or mpu_pending->extant
      */
     static final Function<ObjectEntity, ObjectEntity> TRANSITION_TO_EXTANT = new Function<ObjectEntity, ObjectEntity> () {
 
@@ -96,12 +103,31 @@ public class ObjectStateTransitions {
                 try {
                     ObjectEntity updatingEntity = Entities.uniqueResult(new ObjectEntity().withUuid(entity.getObjectUuid()));
                     if(!ObjectState.deleting.equals(entity.getState())) {
+                        //Remove old versions and update bucket size within this transaction.
+                        //If quota enforcement wasn't needed this would be unnecessary.
+                        //NOTE: this must be done before the new object is updated or it will clean it as well due to Hibernate context
+                        // and session. First remove nulls, then set state to extant.
+                        /*ObjectMetadataManagers.getInstance().cleanupAllNullVersionedObjectRecords(entity.getBucket(), entity.getObjectKey());
+
+                        if(ObjectState.mpu_pending.equals(entity.getState())) {
+                            MpuPartMetadataManagers.getInstance().removeParts(entity.getBucket(), entity.getUploadId());
+                        }*/
+
+                        //Set the new object state
                         updatingEntity.setState(ObjectState.extant);
                         updatingEntity.setCreationExpiration(null);
                         updatingEntity.setObjectModifiedTimestamp(entity.getObjectModifiedTimestamp());
                         updatingEntity.setIsLatest(true);
                         updatingEntity.seteTag(entity.geteTag());
                         updatingEntity.setSize(entity.getSize());
+
+                        if(ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
+                            //Remove the parts, this will remove the sizes for the parts.
+                            MpuPartMetadataManagers.getInstance().removeParts(updatingEntity.getBucket(), updatingEntity.getUploadId());
+                        }
+
+                        ObjectMetadataManagers.getInstance().cleanupInvalidObjects(updatingEntity.getBucket(), updatingEntity.getObjectKey());
+
                     } else {
                         throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }
@@ -117,8 +143,9 @@ public class ObjectStateTransitions {
             }
         }
     };
+
     /**
-     * Function that does the actual update of state. Will only transition creating->extant
+     * Function that does the actual update of state. Will only transition creating->mpu_pending
      */
     static final Function<ObjectEntity, ObjectEntity> TRANSITION_TO_MPU_PENDING = new Function<ObjectEntity, ObjectEntity> () {
 
@@ -130,13 +157,13 @@ public class ObjectStateTransitions {
             } else {
                 try {
                     ObjectEntity updatingEntity = Entities.uniqueResult(new ObjectEntity().withUuid(entity.getObjectUuid()));
-                    if(!ObjectState.deleting.equals(updatingEntity.getState())) {
+                    if(ObjectState.creating.equals(updatingEntity.getState())) {
                         updatingEntity.setState(ObjectState.mpu_pending);
                         updatingEntity.setCreationExpiration(null);
                         updatingEntity.setObjectModifiedTimestamp(entity.getObjectModifiedTimestamp());
                         updatingEntity.setUploadId(entity.getUploadId());
                     } else {
-                        throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
+                        throw new IllegalResourceStateException("Cannot transition to mpu-pending from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }
                     return updatingEntity;
                 } catch(ObjectStorageInternalException e) {
@@ -168,8 +195,9 @@ public class ObjectStateTransitions {
                     } else {
                         entity = objectToUpdate;
                     }
-
                     entity.setState(ObjectState.deleting);
+                    entity.setIsLatest(Boolean.FALSE);
+
                     return entity;
                 } catch(NoSuchElementException e) {
                     throw new NoSuchEntityException(objectToUpdate.getObjectUuid());

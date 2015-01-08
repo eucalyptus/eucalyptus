@@ -195,22 +195,13 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     @Column(name="is_snapshot")
     private Boolean isSnapshot;
 
-    @Column(name="lifecycle_status")
-    @Enumerated(EnumType.STRING)
-    private LifecycleStatus lifecycleStatus = LifecycleStatus.ALIVE; // pedantic
-
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
-    public ObjectInfo() {
-        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
-                                                      // grabbing objects that are being reaped
-    }
+    public ObjectInfo() { }
 
     public ObjectInfo(String bucketName, String objectKey) {
         this.bucketName = bucketName;
         this.objectKey = objectKey;
-        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
-                                                      // grabbing objects that are being reaped
     }
 
     public String getObjectKey() {
@@ -660,14 +651,6 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 	public void setLast(Boolean last) {
 		this.last = last;
 	}
-
-    public LifecycleStatus getLifecycleStatus() {
-        return lifecycleStatus;
-    }
-
-    public void setLifecycleStatus(LifecycleStatus lifecycleStatus) {
-        this.lifecycleStatus = lifecycleStatus;
-    }
 
 	public String getUploadId() {
 		return uploadId;

@@ -18,7 +18,10 @@
 * additional information or have any questions.
 ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.storage.msgs.s3
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.util.ArrayList;
 import java.util.Date;

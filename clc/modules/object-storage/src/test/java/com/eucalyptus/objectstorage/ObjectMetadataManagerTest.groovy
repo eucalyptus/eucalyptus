@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
@@ -8,6 +28,7 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.junit.After
@@ -16,7 +37,9 @@ import org.junit.Before
 import org.junit.BeforeClass;
 
 import com.eucalyptus.objectstorage.entities.Bucket;
-import org.apache.log4j.Logger;
+import org.apache.log4j.Logger
+
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 
@@ -27,8 +50,6 @@ import javax.persistence.EntityTransaction;
 
 /**
  * Tests the ObjectMetadataManager implementations.
- * @author zhill
- *
  */
 public class ObjectMetadataManagerTest {
     private static final Logger LOG = Logger.getLogger(ObjectMetadataManagerTest.class);
@@ -107,6 +128,51 @@ public class ObjectMetadataManagerTest {
 			}
 		}
 	}
+
+    @Test
+    public void testVersioningBucketObjectListing() {
+        LOG.info("Testing object listing");
+
+        int entityCount = 10;
+        String key = "objectkey";
+
+        Bucket bucket = TestUtils.createTestBucket(mgr, "testbucket")
+        assert(bucket != null)
+        assert(mgr.lookupBucket(bucket.getName()) != null)
+        bucket = mgr.setVersioning(bucket, ObjectStorageProperties.VersioningStatus.Enabled);
+
+        User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+
+        def objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
+        assert(objs != null && objs.size() == entityCount)
+        objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
+        assertTrue("expected version 2 of objects to be created",
+                objs != null && objs.size() == entityCount)
+
+        try {
+            PaginatedResult<ObjectEntity> r = objMgr.listVersionsPaginated(bucket, 100, null, null, null, null, false);
+            println 'Entity list:'
+            for(ObjectEntity e : r.getEntityList()) {
+                println e.toString()
+            }
+            println 'End of entity list'
+            assert(r.getEntityList().size() == 2 * entityCount)
+            assert( ((int) objMgr.countValid(bucket)) == ( 2 * entityCount ) ) // should be 2 versions of each object
+        } catch(Exception e) {
+            LOG.error("Transaction error", e)
+            fail("Failed getting listing")
+
+        } finally {
+            for(ObjectEntity obj : objs) {
+                try {
+                    obj = objMgr.transitionObjectToState(obj, ObjectState.deleting)
+                    objMgr.delete(obj)
+                } catch(Exception e) {
+                    LOG.error("Error deleting entity: " + obj.toString(), e)
+                }
+            }
+        }
+    }
 	
 	/*
 	 * Tests create, lookup, delete lifecycle a single object
@@ -244,26 +310,6 @@ public class ObjectMetadataManagerTest {
             last = e;
         }
         return true;
-    }
-
-    public void testListPaginatedMultiPage() {
-
-    }
-
-    public void testListPaginatedPrefix() {
-
-    }
-
-    public void testListPaginatedDelim() {
-
-    }
-
-    public void testListPaginatedPagedPrefixDelim() {
-
-    }
-
-    public void testListVersionsPaginated() {
-
     }
 
     @Test
@@ -437,13 +483,13 @@ public class ObjectMetadataManagerTest {
             objMgr.finalizeCreation(objMgr.initiateCreation(entity), new Date(), UUID.randomUUID().toString())
         }
 
-        assert(objMgr.countValid(bucket) == 10 + parallelCount)
+        assert(objMgr.countValid(bucket) == 11)
         assert(objMgr.countValid(bucket2) == 10)
 
         List<ObjectEntity> objectEntities
 
         objectEntities = objMgr.lookupObjectsInState(bucket, key, 'null', ObjectState.extant)
-        assert(objectEntities.size() == parallelCount)
+        assert(objectEntities.size() == 1)
 
         Collections.sort(objectEntities, new Comparator<ObjectEntity>() {
             @Override
@@ -455,7 +501,7 @@ public class ObjectMetadataManagerTest {
 
         objectEntities.each { println it.getObjectUuid() + ' - ' + it.getObjectModifiedTimestamp()}
 
-        assert(objectEntities.count { it.getIsLatest()  } == parallelCount)
+        assert(objectEntities.count { it.getIsLatest()  } == 1 )
 
         def mostRecentObj = objMgr.lookupObject(bucket, key, null)
         //Ensure the get call got the most recent
@@ -504,7 +550,7 @@ public class ObjectMetadataManagerTest {
         }
 
         assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.creating).size() == 0)
-        assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).size() == parallelCount)
+        assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).size() == 1) //All reduces to a single last-write-wins object
 
         objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).each { println it.getObjectUuid() + ' - ' + it.getObjectModifiedTimestamp() }
     }

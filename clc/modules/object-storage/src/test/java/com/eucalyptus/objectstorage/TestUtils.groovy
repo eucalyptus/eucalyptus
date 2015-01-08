@@ -1,3 +1,23 @@
+/*
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ */
+
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
@@ -48,7 +68,7 @@ public class TestUtils {
     }
 
     public static Bucket createTestBucket(BucketMetadataManager mgr, String name, String accountName) {
-        if(accountName == null) {
+        if (accountName == null) {
             accountName = UnitTestSupport.getTestAccounts().first()
         }
         Bucket b = initializeBucket(mgr, name, accountName)
@@ -67,14 +87,16 @@ public class TestUtils {
 
     }
 
-    public static List<ObjectEntity> createNObjects(final ObjectMetadataManager objMgr, int count, final Bucket bucket, String keyPrefix, long contentLength, final User usr) {
+    public static List<ObjectEntity> createNObjects(
+            final ObjectMetadataManager objMgr, int count,
+            final Bucket bucket, String keyPrefix, long contentLength, final User usr) {
         def objectEntities = []
-        for (int i = 0; i < count ; i++) {
+        for (int i = 0; i < count; i++) {
             ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, keyPrefix + i, contentLength, usr)
             entity = objMgr.initiateCreation(entity);
-            assert(objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.creating).first().equals(entity))
+            assert (objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.creating).first().equals(entity))
             entity = objMgr.finalizeCreation(entity, new Date(), UUID.randomUUID().toString())
-            assert(objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.extant).first().equals(entity))
+            assert (objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.extant).first().equals(entity))
             objectEntities += entity
         }
         return objectEntities

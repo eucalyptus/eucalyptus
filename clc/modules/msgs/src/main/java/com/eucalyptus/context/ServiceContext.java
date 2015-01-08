@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,7 +112,9 @@ public class ServiceContext {
   public static Integer                        HUP                      = 0;
   @ConfigurableField( initial = "64", description = "Internal connector core pool size." )
   public static Integer                        MIN_SCHEDULER_CORE_SIZE  = 64;
-  
+  @ConfigurableField( initial = "60", description = "Message context timeout (seconds)" )
+  public static Integer                        CONTEXT_TIMEOUT  = 60;
+
   public static class HupListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
@@ -168,7 +170,7 @@ public class ServiceContext {
     } finally {
       if ( dispatcher != null ) dispatcher.dispose( );
     }
-    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( 60 );
+    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
     Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
@@ -201,8 +203,8 @@ public class ServiceContext {
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, msg, null );
       
       if ( reply.getExceptionPayload( ) != null ) {
-        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getRootException( ).getMessage( ),
-                                                                    reply.getExceptionPayload( ).getRootException( ) ) );
+        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getException( ).getMessage( ),
+                                                                    reply.getExceptionPayload( ).getException( ) ) );
       } else {
         return ( T ) reply.getPayload( );
       }

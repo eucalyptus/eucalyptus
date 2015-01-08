@@ -181,7 +181,9 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipth->ipt_file);
         return (1);
     }
-    chmod(ipth->ipt_file, 0600);
+    if (chmod(ipth->ipt_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipth->ipt_file);
+    }
     close(fd);
 
     if (cmdprefix) {
@@ -254,8 +256,10 @@ int ipt_system_restore(ipt_handler * ipth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("iptables-restore failed '%s'\n", cmd);
+        copy_file(ipth->ipt_file, "/tmp/euca_ipt_file_failed");
+        LOGERROR("iptables-restore failed '%s': copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ipth->ipt_file);
     return (rc);
 }
 
@@ -1067,7 +1071,9 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
         return (1);
     }
-    chmod(ipsh->ips_file, 0600);
+    if (chmod(ipsh->ips_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipsh->ips_file);
+    }
     close(fd);
 
     if (cmdprefix) {
@@ -1141,8 +1147,10 @@ int ips_system_restore(ips_handler * ipsh)
     rc = rc >> 8;
     LOGDEBUG("RESTORE CMD: %s\n", cmd);
     if (rc) {
-        LOGERROR("ipset restore failed '%s'\n", cmd);
+        copy_file(ipsh->ips_file, "/tmp/euca_ips_file_failed");
+        LOGERROR("ipset restore failed '%s': copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ipsh->ips_file);
     return (rc);
 }
 
@@ -1694,7 +1702,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
         return (1);
     }
-    chmod(ebth->ebt_filter_file, 0600);
+    if (chmod(ebth->ebt_filter_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_filter_file);
+    }
     close(fd);
 
     snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
@@ -1703,7 +1713,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
         return (1);
     }
-    chmod(ebth->ebt_nat_file, 0600);
+    if (chmod(ebth->ebt_nat_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_nat_file);
+    }
     close(fd);
 
     snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
@@ -1714,7 +1726,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
         unlink(ebth->ebt_nat_file);
         return (1);
     }
-    chmod(ebth->ebt_asc_file, 0600);
+    if (chmod(ebth->ebt_asc_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_asc_file);
+    }
     close(fd);
 
     if (cmdprefix) {
@@ -1819,15 +1833,22 @@ int ebt_system_restore(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("ebtables-restore failed '%s'\n", cmd);
+        copy_file(ebth->ebt_filter_file, "/tmp/euca_ebt_filter_file_failed");
+        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ebth->ebt_filter_file);
 
     snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("ebtables-restore failed '%s'\n", cmd);
+        copy_file(ebth->ebt_nat_file, "/tmp/euca_ebt_nat_file_failed");
+        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ebth->ebt_nat_file);
+
+    unlink(ebth->ebt_asc_file);
+
     return (rc);
 }
 

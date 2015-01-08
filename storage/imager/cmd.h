@@ -74,6 +74,7 @@ extern imager_command known_cmds[EUCA_NB_IMAGER_CMD];
 //! @{
 //! @name FSCK commands handlers
 const char **fsck_parameters(void);
+artifact *fsck_requirements(imager_request * req, artifact * prev_art) _attribute_wur_;
 int fsck_validate(imager_request * req);
 //! @}
 

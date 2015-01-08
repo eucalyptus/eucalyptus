@@ -99,49 +99,41 @@ public class SnapshotProgressCallback implements CallBack {
 	private int lastProgress;
 	private ServiceConfiguration scConfig;
 
-	public SnapshotProgressCallback(String snapshotId, long size) {
+	public SnapshotProgressCallback(String snapshotId) {
 		this.snapshotId = snapshotId;
-		this.uploadSize = size;
+		this.uploadSize = 0L;
 		this.bytesTransferred = 0L;
 		this.scConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
 		this.lastProgress = 1; // to indicate that some amount of snapshot in in progress
 		Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
 	}
+	
+	// Set the size before calling update()
+	public void setUploadSize(long uploadSize) {
+		this.uploadSize = uploadSize;
+	}
 
-	public SnapshotProgressCallback(String snapshotId, String snapshotFileName) throws UnknownFileSizeException {
-		if ((this.uploadSize = new File(snapshotFileName).length()) <= 0) {
-			try {
-				CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64",
-						snapshotFileName });
-				this.uploadSize = Long.parseLong(StringUtils.trimToEmpty(result.output));
-			} catch (Exception ex) {
-				throw new UnknownFileSizeException(snapshotFileName, ex);
+	@Override
+	public void update(final long bytesTransferred) {
+		if (this.uploadSize > 0) {
+			this.bytesTransferred += bytesTransferred;
+			int progress = (int) ((this.bytesTransferred * 100) / uploadSize);
+			if (progress >= 100 || (progress - this.lastProgress < PROGRESS_TICK)) {
+				// Don't update. Either not enough change or snapshot is 100% complete
+				return;
+			} else {
+				this.lastProgress = progress;
+				Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
 			}
 		}
-		this.snapshotId = snapshotId;
-		this.bytesTransferred = 0L;
-		this.scConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-		this.lastProgress = 1; // to indicate that some amount of snapshot in in progress
-		Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
-
 	}
 
-	public void update(final long bytesTransferred) {
-		this.bytesTransferred += bytesTransferred;
-		int progress = (int) ((this.bytesTransferred * 100) / uploadSize);
-		if (progress >= 100 || (progress - this.lastProgress < PROGRESS_TICK)) {
-			// Don't update. Either not enough change or snapshot is 100% complete
-			return;
-		} else {
-			this.lastProgress = progress;
-			Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
-		}
-	}
-
+	@Override
 	public void finish() {
 		// Nothing to do here
 	}
 
+	@Override
 	public void failed() {
 		// Nothing to do here
 	}

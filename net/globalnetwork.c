@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -258,6 +278,8 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     rc = gni_cloud_get_clusters(gni, cluster_names, 1, NULL, NULL, &out_clusters, &out_max_clusters);
     if (rc || out_max_clusters <= 0) {
         LOGWARN("nothing to do, no matching cluster named '%s' found\n", cluster->name);
+        EUCA_FREE(cluster_names);
+        EUCA_FREE(out_clusters);
         return (0);
     }
 
@@ -305,8 +327,9 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     if (do_outstructs)
         *out_max_nodes = retcount;
 
+    EUCA_FREE(cluster_names);
+    EUCA_FREE(out_clusters);
     return (ret);
-
 }
 
 int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
@@ -586,7 +609,7 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
 
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results)
 {
-    int i;
+    int i, max_nodes = 0, result_count = 0;
     xmlXPathObjectPtr objptr;
     char **retresults;
 
@@ -598,12 +621,18 @@ int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char **
         return (1);
     } else {
         if (objptr->nodesetval) {
-            *max_results = (int)objptr->nodesetval->nodeNr;
-            *results = EUCA_ZALLOC(*max_results, sizeof(char *));
+            max_nodes = (int)objptr->nodesetval->nodeNr;
+            *results = EUCA_ZALLOC(max_nodes, sizeof(char *));
             retresults = *results;
-            for (i = 0; i < *max_results; i++) {
-                retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->children->content);
+            for (i = 0; i < max_nodes; i++) {
+                if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->children && objptr->nodesetval->nodeTab[i]->children->content) {
+
+                    retresults[result_count] = strdup((char *)objptr->nodesetval->nodeTab[i]->children->content);
+                    result_count++;
+                }
             }
+            *max_results = result_count;
+
             LOGTRACE("%d results after evaluated expression %s\n", *max_results, expression);
             for (i = 0; i < *max_results; i++) {
                 LOGTRACE("\tRESULT %d: %s\n", i, retresults[i]);
@@ -616,7 +645,7 @@ int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char **
 
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results)
 {
-    int i;
+    int i, max_nodes = 0, result_count = 0;
     xmlXPathObjectPtr objptr;
     char **retresults;
 
@@ -628,12 +657,18 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
         return (1);
     } else {
         if (objptr->nodesetval) {
-            *max_results = (int)objptr->nodesetval->nodeNr;
-            *results = EUCA_ZALLOC(*max_results, sizeof(char *));
+            max_nodes = (int)objptr->nodesetval->nodeNr;
+            *results = EUCA_ZALLOC(max_nodes, sizeof(char *));
             retresults = *results;
-            for (i = 0; i < *max_results; i++) {
-                retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->properties->children->content);
+            for (i = 0; i < max_nodes; i++) {
+                if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->properties && objptr->nodesetval->nodeTab[i]->properties->children
+                    && objptr->nodesetval->nodeTab[i]->properties->children->content) {
+                    retresults[result_count] = strdup((char *)objptr->nodesetval->nodeTab[i]->properties->children->content);
+                    result_count++;
+                }
             }
+            *max_results = result_count;
+
             LOGTRACE("%d results after evaluated expression %s\n", *max_results, expression);
             for (i = 0; i < *max_results; i++) {
                 LOGTRACE("\tRESULT %d: %s\n", i, retresults[i]);
@@ -836,16 +871,18 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='publicIps']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    rc = gni_serialize_iprange_list(results, max_results, &(gni->public_ips), &(gni->max_public_ips));
 
-    //    gni->public_ips = EUCA_ZALLOC(max_results, sizeof(u32));
-    for (i = 0; i < max_results; i++) {
-        LOGTRACE("after function: %d: %s\n", i, results[i]);
-        //        gni->public_ips[i] = dot2hex(results[i]);
-        EUCA_FREE(results[i]);
+    if (results && max_results) {
+        rc = gni_serialize_iprange_list(results, max_results, &(gni->public_ips), &(gni->max_public_ips));
+        //    gni->public_ips = EUCA_ZALLOC(max_results, sizeof(u32));
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            //        gni->public_ips[i] = dot2hex(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        //    gni->max_public_ips = max_results;
+        EUCA_FREE(results);
     }
-    //    gni->max_public_ips = max_results;
-    EUCA_FREE(results);
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='subnets']/subnet");
     rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
@@ -915,16 +952,17 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
         snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='privateIps']/value", gni->clusters[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-        rc = gni_serialize_iprange_list(results, max_results, &(gni->clusters[j].private_ips), &(gni->clusters[j].max_private_ips));
-
-        //        gni->clusters[j].private_ips = EUCA_ZALLOC(max_results, sizeof(u32));
-        for (i = 0; i < max_results; i++) {
-            LOGTRACE("after function: %d: %s\n", i, results[i]);
-            //            gni->clusters[j].private_ips[i] = dot2hex(results[i]);
-            EUCA_FREE(results[i]);
+        if (results && max_results) {
+            rc = gni_serialize_iprange_list(results, max_results, &(gni->clusters[j].private_ips), &(gni->clusters[j].max_private_ips));
+            //        gni->clusters[j].private_ips = EUCA_ZALLOC(max_results, sizeof(u32));
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                //            gni->clusters[j].private_ips[i] = dot2hex(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            //        gni->clusters[j].max_private_ips = max_results;
+            EUCA_FREE(results);
         }
-        //        gni->clusters[j].max_private_ips = max_results;
-        EUCA_FREE(results);
 
         snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/subnet", gni->clusters[j].name);
         rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
@@ -1096,13 +1134,13 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
                 LOGERROR("end range '%s' is smaller than start range '%s' from input '%s': check network config\n", end, start, inlist[i]);
                 ret = 1;
             }
-
-            EUCA_FREE(start);
-            EUCA_FREE(end);
         } else {
             LOGERROR("couldn't parse range from input '%s': check network config\n", inlist[i]);
             ret = 1;
         }
+
+        EUCA_FREE(start);
+        EUCA_FREE(end);
     }
 
     if (max_outlistbuf > 0) {
@@ -1670,7 +1708,7 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!instance->publicIp) {
-        LOGWARN("instance %s: no publicIp set\n", instance->name);
+        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
     }
 
     if (!instance->privateIp) {

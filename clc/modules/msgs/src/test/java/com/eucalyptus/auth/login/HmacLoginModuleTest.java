@@ -820,6 +820,27 @@ public class HmacLoginModuleTest {
     assertTrue("Authentication successful", hmacV4LoginModule("ea9nMgw6353ANsJeylVkNIIzuCU0hz0xtErRbcj0").authenticate(creds));
   }
 
+  @Test
+  public void testBoto_2_27_0_SigV4() throws Exception {
+    final HmacCredentials creds = new HmacCredentials(
+        "1234567890",
+        HmacUtils.SignatureVariant.SignatureV4Standard,
+        ImmutableMap.<String,List<String>>builder()
+            .put( "Action", Lists.newArrayList( "ListMetrics" ) )
+            .put( "Version", Lists.newArrayList( "2010-08-01" ) )
+            .build(),
+        ImmutableMap.<String,List<String>>builder()
+            .put( "host", Lists.newArrayList( "cloudwatch.g-12-03.autoqa.qa1.eucalyptus-systems.com:8773" ) )
+            .put( "x-amz-date", Lists.newArrayList( "20140507T202657Z" ) )
+            .put( "authorization", Lists.newArrayList( "AWS4-HMAC-SHA256 Credential=AKI67CCVBS1XAL7UG9KE/20140507/g-12-03/cloudwatch/aws4_request, SignedHeaders=host;x-amz-date, Signature=1a74acf1bf2b22bddad7314cc44eef6fe562a50373ca239113d2c1942a677739" ) )
+            .build(),
+        "GET",
+        "/",
+        ""
+    );
+    assertTrue("Authentication successful", hmacV4LoginModule("vNhDy9ERZQP5WXCdmPR7ZbbzZwdlQXETeZ6wM64i").authenticate(creds));
+  }
+
   /**
    * EUCA-4748 sig v2
    */

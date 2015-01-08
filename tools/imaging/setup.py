@@ -40,6 +40,28 @@ cfg.read('setup.cfg')
 prefix  = cfg.get('install', 'prefix')
 version = cfg.get('meta',    'version')
 
+class build_scripts_with_path_headers(build_scripts):
+    def run(self):
+        build_scripts.run(self)
+        self.path_header = get_python_lib(prefix=prefix).replace('dist-packages', 'site-packages')
+        self.outfiles = [os.path.join(self.build_dir, os.path.basename(script))
+                         for script in self.distribution.scripts]
+        self.add_paths_to_scripts()
+
+    def add_paths_to_scripts(self):
+        print 'adding path %s to scripts' % self.path_header
+        for line in fileinput.input(self.outfiles, inplace=1, backup=None):
+            if fileinput.isfirstline():
+                print line.rstrip()
+                print 'import sys'
+                print 'sys.path.append("%s")' % self.path_header
+            elif line.strip() == 'import sys':
+                pass
+            elif line.strip().startswith('sys.path.append'):
+                pass
+            else:
+                print line.rstrip()
+
 setup(name="eucatoolkit",
       version=version,
       description="Eucalyptus Imaging Toolkit",
@@ -57,9 +79,9 @@ setup(name="eucatoolkit",
                       'Topic :: Internet',
                       ],
       install_requires=[
-          "argparse",
+          "argparse", "lxml", "requests",
       ],
       data_files=[],
-      cmdclass={},
+      cmdclass={'build_scripts': build_scripts_with_path_headers},
       scripts=["bin/euca-run-workflow"]
       )

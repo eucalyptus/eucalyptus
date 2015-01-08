@@ -223,6 +223,7 @@ struct handlers kvm_libvirt_handlers = {
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
 {
     int rc = EUCA_OK;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
     char generate_keys[EUCA_MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
@@ -265,15 +266,16 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
     // TO-DO: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
-    snprintf(generate_keys, EUCA_MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""), ((euca_base != NULL) ? euca_base : ""));
+    snprintf(generate_keys, EUCA_MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, ((euca_base != NULL) ? euca_base : ""));
 
-    LOGDEBUG("[%s] executing migration key-generator: '%s %s %s %s'\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""));
-    rc = euca_execlp(NULL, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
+    LOGDEBUG("[%s] executing migration key-generator: '%s %s %s %s %s'\n", instanceId, euca_rootwrap, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""));
+    rc = euca_execlp(NULL, euca_rootwrap, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
 
     sem_v(hyp_sem);
 
     if (rc) {
-        LOGERROR("[%s] cmd '%s %s %s %s' failed %d\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), rc);
+        LOGERROR("[%s] cmd '%s %s %s %s %s' failed %d\n", instanceId, euca_rootwrap, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), rc);
         return (EUCA_SYSTEM_ERROR);
     }
 

@@ -24,17 +24,18 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
@@ -46,10 +47,10 @@ import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
-  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTI_EMI };
+  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTITION, KERNEL, RAMDISK };
   private static Object lock = new Object();
   
-  public static VolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {
+  public static ImportVolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {
     /// sanity check
     /// availability zone
     final String availabilityZone = request.getAvailabilityZone();
@@ -57,17 +58,9 @@ public class ImagingTasks {
       throw new ImagingServiceException("Availability zone is required");
     else{
       try{
-        final List<ClusterInfoType> clusters = 
-            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-        boolean zoneFound = false;
-        for(final ClusterInfoType cluster : clusters ){
-          if(availabilityZone.equals(cluster.getZoneName())){
-            zoneFound = true;
-            break;
-          }
-        }
-        if(!zoneFound)
-          throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
+        final List<String> clusters = ImagingServiceProperties.listConfiguredZones();
+        if(!clusters.contains(availabilityZone))
+          throw new ImagingServiceException(String.format("The availability zone %s is not configured for import", availabilityZone));
       }catch(final ImagingServiceException ex){
         throw ex;
       }catch(final Exception ex){
@@ -108,9 +101,9 @@ public class ImagingTasks {
           "Failed to verify the requested volume size");
     }
     
-    final VolumeImagingTask transform = TypeMappers.transform( request, VolumeImagingTask.class );
+    final ImportVolumeImagingTask transform = TypeMappers.transform( request, ImportVolumeImagingTask.class );
     try ( final TransactionResource db =
-        Entities.transactionFor( VolumeImagingTask.class ) ) {
+        Entities.transactionFor( ImportVolumeImagingTask.class ) ) {
       try{
         Entities.persist(transform);
         db.commit( );
@@ -122,7 +115,7 @@ public class ImagingTasks {
     return transform;
   }
   
-  public static InstanceImagingTask createImportInstanceTask(final ImportInstanceType request) 
+  public static ImportInstanceImagingTask createImportInstanceTask(final ImportInstanceType request) 
       throws ImagingServiceException {
     // verify the input
     final ImportInstanceLaunchSpecification launchSpec = request.getLaunchSpecification();
@@ -134,31 +127,34 @@ public class ImagingTasks {
     if(launchSpec.getInstanceType()==null)
       throw new ImagingServiceException("Instance type is required");
     
+    if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length() > 0){
+      try{
+        final List<DescribeKeyPairsResponseItemType> keys =
+            EucalyptusActivityTasks.getInstance().describeKeyPairsAsUser(Contexts.lookup().getUser().getUserId(), 
+            Lists.newArrayList(launchSpec.getKeyName()));
+        if(! launchSpec.getKeyName().equals(keys.get(0).getKeyName()))
+          throw new Exception();
+      }catch(final Exception ex){
+        throw new ImagingServiceException("Key "+launchSpec.getKeyName()+" is not found");
+      }
+    }
 
-    List<ClusterInfoType> clusters = null;
+    List<String> clusters = null;
     try{
-        clusters=EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+      clusters =ImagingServiceProperties.listConfiguredZones();
     }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-          "Failed to verify availability zone");    
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to verify availability zones");
     }
     String availabilityZone = null;
     if(launchSpec.getPlacement()!=null)
       availabilityZone = launchSpec.getPlacement().getAvailabilityZone();
     if(availabilityZone != null){
-      boolean zoneFound = false;
-      for(final ClusterInfoType cluster : clusters ){
-        if(availabilityZone.equals(cluster.getZoneName())){
-          zoneFound = true;
-          break;
-        }
-      }
-      if(!zoneFound)
-        throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
+      if(!clusters.contains(availabilityZone))
+        throw new ImagingServiceException(String.format("The availability zone %s is not configured for import", availabilityZone));
     }else{
       if (clusters.size()>0){
         //Default: Amazon EC2 chooses a zone for you.
-        availabilityZone = clusters.get(0).getZoneName();
+        availabilityZone = clusters.get(0);
         if(request.getLaunchSpecification().getPlacement()==null)
           request.getLaunchSpecification().setPlacement(new InstancePlacement());
         request.getLaunchSpecification().getPlacement().setAvailabilityZone(availabilityZone);
@@ -202,9 +198,9 @@ public class ImagingTasks {
             "Failed to verify the requested volume size");
       }
     }
-    final InstanceImagingTask transform = TypeMappers.transform( request, InstanceImagingTask.class );
+    final ImportInstanceImagingTask transform = TypeMappers.transform( request, ImportInstanceImagingTask.class );
     try ( final TransactionResource db =
-        Entities.transactionFor( InstanceImagingTask.class ) ) {
+        Entities.transactionFor( ImportInstanceImagingTask.class ) ) {
       try{
         Entities.persist(transform);
         db.commit( );
@@ -215,111 +211,67 @@ public class ImagingTasks {
     }
     return transform;
   }
-  
-  public static EmiConversionImagingTask createEmiConversionTask(final ImportVolumeType request) 
+    public static DiskImagingTask createDiskImagingTask(final ImportImageType request) 
       throws ImagingServiceException{
     /// sanity check
-    /// availability zone
-    final String availabilityZone = request.getAvailabilityZone();
-    if(availabilityZone == null || availabilityZone.length()<=0)
-      throw new ImagingServiceException("Availability zone is required");
-    else{
-      try{
-        final List<ClusterInfoType> clusters = 
-            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-        boolean zoneFound = false;
-        for(final ClusterInfoType cluster : clusters ){
-          if(availabilityZone.equals(cluster.getZoneName())){
-            zoneFound = true;
-            break;
-          }
-        }
-        if(!zoneFound)
-          throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
-      }catch(final ImagingServiceException ex){
-        throw ex;
-      }catch(final Exception ex){
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-            "Failed to verify availability zone");
-      }
-    }
+    if(request.getImage().getDiskImageSet()==null || request.getImage().getDiskImageSet().size()<=0)
+      throw new ImagingServiceException("Image detail for imported image is required");
+    if(request.getImage().getConvertedImage()==null)
+      throw new ImagingServiceException("Image detail for converted image is required");
     
-    // Image format
-    final String format = request.getImage().getFormat();
-    if(format==null || format.length()<=0)
-      throw new ImagingServiceException("Image format is required");
-    try{
-      final IMAGE_FORMAT imgFormat = IMAGE_FORMAT.valueOf(format.toUpperCase());
-      if(! imgFormat.equals(IMAGE_FORMAT.PARTI_EMI))
-        throw new Exception("Only Partitioned EMI can be converted");
-    }catch(final Exception ex){
-      throw new ImagingServiceException("Unsupported image format");
-    }
-    
-    // Image bytes
-    
-    // Image.ImportManifestUrl
-    final String manifestUrl = request.getImage().getImportManifestUrl();
-    if(manifestUrl == null || manifestUrl.length()<=0)
-      throw new ImagingServiceException("Import manifest url is required");
-    /// TODO should check if the manifest url is present and accessible in S3
+    for(final ImportDiskImageDetail image : request.getImage().getDiskImageSet()){
+      final String format = image.getFormat();
+      final String manifestUrl = image.getDownloadManifestUrl();
+      final String imageId = image.getId();
 
-    try{
-      /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
-      final int volumeSize = request.getVolume().getSize();
-      final long imageBytes = request.getImage().getBytes();
-      final long volumeSizeInBytes = (volumeSize * (long) Math.pow(1024, 3));
-      if(imageBytes > volumeSizeInBytes)
-        throw new ImagingServiceException("Requested volume size is not enough to hold the image");
-    }catch(final ImagingServiceException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-          "Failed to verify the requested volume size");
+      if(format==null || format.length()<=0)
+        throw new ImagingServiceException("Image format is required");
+      try{
+        final IMAGE_FORMAT imgFormat = IMAGE_FORMAT.valueOf(format.toUpperCase());
+      }catch(final Exception ex){
+        throw new ImagingServiceException("Unsupported image format");
+      }
+      if(manifestUrl == null || manifestUrl.length()<=0)
+        throw new ImagingServiceException("Import manifest url is required");
+      if(imageId == null || imageId.length()<=0)
+        throw new ImagingServiceException("Import image's id is required");
     }
     
-    EmiConversionImagingTask transform = null;
+    final ConvertedImageDetail converted = request.getImage().getConvertedImage();
+    final String bucket = converted.getBucket();
+    final String prefix = converted.getPrefix();
+    final String arch = converted.getArchitecture();
+    
+    if(bucket==null || bucket.length()<=0)
+      throw new ImagingServiceException("bucket name must be specified");
+    if(prefix==null || prefix.length()<=0)
+      throw new ImagingServiceException("prefix must be specified");
+    if(arch==null || arch.length()<=0)
+      throw new ImagingServiceException("architecture must be specified");
+    
+    DiskImagingTask transform = null;
     try{
-      transform =TypeMappers.transform( request, EmiConversionImagingTask.class );
+      transform =TypeMappers.transform( request, DiskImagingTask.class );
     }catch(final Exception ex){
       if(ex.getCause() instanceof ImagingServiceException)
         throw (ImagingServiceException) ex.getCause();
       else
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to create EmiConversionImagingTask", ex);
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to create DiskImagingTask", ex);
     }
     try ( final TransactionResource db =
-        Entities.transactionFor( EmiConversionImagingTask.class ) ) {
+        Entities.transactionFor( DiskImagingTask.class ) ) {
       try{
         Entities.persist(transform);
         db.commit( );
       }catch(final Exception ex){
         throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-            "Failed to persist EMIConversionImagingTask", ex);
+            "Failed to persist DiskImagingTask", ex);
       }
     }
     return transform;
   }
   
-  public static List<ImagingTask> getImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
-    synchronized(lock){
-      final List<ImagingTask> result = Lists.newArrayList();
-      try ( final TransactionResource db =
-          Entities.transactionFor( ImagingTask.class ) ) {
-        final ImagingTask sample = ImagingTask.named(owner);
-        final List<ImagingTask> tasks = Entities.query(sample, true);
-        if(taskIdList!=null && taskIdList.size()>0){
-          for(final ImagingTask candidate : tasks){
-            if(taskIdList.contains(candidate.getDisplayName()))
-              result.add(candidate);
-          }
-        }else
-          result.addAll(tasks);
-      }
-      return result;
-    }
-  }
-  
-  // return all imaging tasks in DB
+  /************************* Methods for generic imaging tasks ************************/
   public static List<ImagingTask> getImagingTasks(){
     synchronized(lock){
       List<ImagingTask> result = Lists.newArrayList();
@@ -328,154 +280,6 @@ public class ImagingTasks {
         result = Entities.query(ImagingTask.named(), true);
       }
       return result;
-    }
-  }
-  
-  public static void setState(final ImagingTask task, final ImportTaskState state, final String stateReason)
-      throws NoSuchElementException
-  {
-    setState(task.getOwner(), task.getDisplayName(), state, stateReason);
-  }
-  
-  public static void setState(final OwnerFullName owner, final String taskId, 
-      final ImportTaskState state, final String stateReason) throws NoSuchElementException{
-    synchronized(lock){
-      //TODO NEED TO VALIDATE THE STATE TRANSITION (IN MEMORY STATE MAY BE DIFFERENT FROM PERSISTENT STATE
-      
-      try ( final TransactionResource db =
-          Entities.transactionFor( ImagingTask.class ) ) {
-        try{
-          final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owner, taskId));
-          task.setState(state);
-          if(stateReason!=null)
-            task.setStateReason(stateReason);
-          final String externalState = state.getExternalTaskStateName();
-          task.getTask().setState(externalState);
-          if(stateReason!=null)
-            task.getTask().setStatusMessage(stateReason);
-          task.serializeTaskToJSON();
-          task.updateTimeStamps();
-          Entities.persist(task);
-          db.commit();
-        }catch(final TransactionException ex){
-          throw Exceptions.toUndeclared(ex);
-        }
-      }
-    }
-  }
-  
-  // transit a task's state in a lock 
-  public static void transitState(final ImagingTask task, final ImportTaskState before, 
-      final ImportTaskState after, final String stateMessage) throws Exception{
-    synchronized(lock){
-      try ( final TransactionResource db =
-          Entities.transactionFor( ImagingTask.class ) ) {
-        try{
-          final ImagingTask entity = Entities.uniqueResult(task);
-          if(!before.equals(entity.getState()))
-            throw new Exception("Current state is not "+before);
-          entity.setState(after);
-          if(stateMessage!=null)
-            entity.setStateReason(stateMessage);
-          final String externalState = after.getExternalTaskStateName();
-          entity.getTask().setState(externalState);
-          if(stateMessage!=null)
-            entity.getTask().setStatusMessage(stateMessage);
-          entity.serializeTaskToJSON();
-          entity.updateTimeStamps();
-          db.commit();
-        }catch(final TransactionException ex){
-          throw Exceptions.toUndeclared(ex);
-        }
-      }  
-    }
-  }
-  
-  public static void setVolumeId(final VolumeImagingTask task, final String volumeId) 
-      throws NoSuchElementException{
-    synchronized(lock){
-      try ( final TransactionResource db =
-          Entities.transactionFor( VolumeImagingTask.class ) ) {
-        try{
-          final VolumeImagingTask update = Entities.uniqueResult(task);
-          update.setVolumeId(volumeId);
-          Entities.persist(update);
-          db.commit();
-        }catch(final TransactionException ex){
-          throw Exceptions.toUndeclared(ex);
-        }
-      }
-    }
-  }
-  
-  public static void updateBytesConverted(final String taskId, final String volumeId, long bytesConverted ){
-    try ( final TransactionResource db =
-        Entities.transactionFor(ImagingTask.class ) ) {
-      try{
-        final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
-        final ConversionTask task = entity.getTask();
-        if(task.getImportVolume()!=null){
-          task.getImportVolume().setBytesConverted(bytesConverted);
-        }else if(task.getImportInstance()!=null && task.getImportInstance().getVolumes()!=null){
-          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
-          for(final ImportInstanceVolumeDetail volume : volumes){
-            if(volume.getVolume()!=null && volumeId.equals(volume.getVolume().getId())){
-              volume.setBytesConverted(bytesConverted);
-            }
-          }
-        }
-        entity.serializeTaskToJSON();
-        Entities.persist(entity);
-        db.commit();
-      }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
-  
-  public static void updateTaskInJson(final ImagingTask task){
-    synchronized(lock){
-      try ( final TransactionResource db =
-          Entities.transactionFor(ImagingTask.class ) ) {
-        try{
-          task.serializeTaskToJSON();
-          final ImagingTask update = Entities.uniqueResult(task);
-          update.setTaskInJsons(task.getTaskInJsons());
-          Entities.persist(update);
-          db.commit();
-        }catch(final TransactionException ex){
-          throw Exceptions.toUndeclared(ex);
-        }
-      }
-    }
-  }
-  
-  public static void addDownloadManifestUrl(final ImagingTask task, 
-      final String importManifestUrl, final String downloadManifestUrl){
-    synchronized(lock){
-      try ( final TransactionResource db =
-          Entities.transactionFor(ImagingTask.class ) ) {
-        try{
-          final ImagingTask entity = Entities.uniqueResult(task);
-          entity.addDownloadManifestUrl(importManifestUrl, downloadManifestUrl);
-          db.commit();
-        }catch(final TransactionException ex){
-          throw Exceptions.toUndeclared(ex);
-        }
-      }
-    }
-  }
-  
-  public static void save(final ImagingTask task){
-    try ( final TransactionResource db =
-        Entities.transactionFor(ImagingTask.class ) ) {
-      try{
-        final ImagingTask update = Entities.uniqueResult(task);
-        Entities.persist(update);
-        db.commit();
-      }catch(final TransactionException ex){
-        throw Exceptions.toUndeclared(ex);
-      }
     }
   }
 
@@ -510,12 +314,220 @@ public class ImagingTasks {
     }
   }
   
-  public static void updateVolumeStatus(final ImagingTask imagingTask, 
-      final String volumeId, ImportTaskState state, final String statusMessage){
+  public static void setState(final ImagingTask task, final ImportTaskState state, final String stateReason)
+      throws NoSuchElementException
+  {
+    setState(AccountFullName.getInstance(task.getOwnerAccountNumber()), task.getDisplayName(), state, stateReason);
+  }
+  
+  public static void setState(final AccountFullName owningAccount, final String taskId, 
+      final ImportTaskState state, final String stateReason) throws NoSuchElementException{
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        try{
+          final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owningAccount, taskId));
+          task.setState(state);
+          if(stateReason!=null)
+            task.setStateReason(stateReason);
+          final String externalState = state.getExternalTaskStateName();
+          task.setTaskState(externalState);
+          if(stateReason!=null)
+            task.setTaskStatusMessage(stateReason);
+          task.serializeTaskToJSON();
+          task.updateTimeStamps();
+          Entities.persist(task);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  // transit a task's state in a lock 
+  public static void transitState(final ImagingTask task, final ImportTaskState before, 
+      final ImportTaskState after, final String stateMessage) throws Exception{
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(task);
+          if(!before.equals(entity.getState()))
+            throw new Exception("Current state is not "+before);
+          entity.setState(after);
+          if(stateMessage!=null)
+            entity.setStateReason(stateMessage);
+          final String externalState = after.getExternalTaskStateName();
+          entity.setTaskState(externalState);
+          if(stateMessage!=null)
+            entity.setTaskStatusMessage(stateMessage);
+          entity.serializeTaskToJSON();
+          entity.updateTimeStamps();
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }  
+    }
+  }
+  
+  public static void updateTaskInJson(final ImagingTask task){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          task.serializeTaskToJSON();
+          final ImagingTask update = Entities.uniqueResult(task);
+          update.setTaskInJsons(task.getTaskInJsons());
+          Entities.persist(update);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void setWorkerId(final String taskId, final String workerId){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+          entity.setWorkerId(workerId);
+          Entities.persist(entity);
+          db.commit();
+        }catch(final Exception ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void killAndRerunTask(final String taskId){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+          if(! ImportTaskState.CONVERTING.equals(entity.getState())){
+            return;
+          }
+          entity.setState(ImportTaskState.PENDING);
+          entity.setWorkerId(null);
+          if(entity instanceof VolumeImagingTask){
+            ((VolumeImagingTask)entity).clearDownloadManifesturl();
+          }
+          Entities.persist(entity);
+          db.commit();
+        }catch(final Exception ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static ImagingTask getConvertingTaskByWorkerId(final String workerId){
+    final List<ImagingTask> tasks = getImagingTasks();
+    for(final ImagingTask task : tasks){
+      if(ImportTaskState.CONVERTING.equals(task.getState()) && workerId.equals(task.getWorkerId())){
+        return task;
+      }
+    }
+    return null;
+  }
+  
+  public static void timeoutTask(final String taskId){
     try ( final TransactionResource db =
         Entities.transactionFor(ImagingTask.class ) ) {
       try{
-        final ImagingTask entity = Entities.uniqueResult(imagingTask);
+        final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+        entity.incrementTimeout();
+        entity.resetTimeout();
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  /************************* Methods for volume imaging tasks ************************/
+  public static List<VolumeImagingTask> getVolumeImagingTasks() {
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( VolumeImagingTask.class ) ) {
+        final VolumeImagingTask sample = VolumeImagingTask.named();
+        final List<VolumeImagingTask> tasks = Entities.query(sample, true);
+        return tasks;
+      }
+    }
+  }
+  
+  public static void setVolumeId(final ImportVolumeImagingTask task, final String volumeId) 
+      throws NoSuchElementException{
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImportVolumeImagingTask.class ) ) {
+        try{
+          final ImportVolumeImagingTask update = Entities.uniqueResult(task);
+          update.setVolumeId(volumeId);
+          Entities.persist(update);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void updateBytesConverted(final String taskId, final String volumeId, long bytesConverted ){
+    try ( final TransactionResource db =
+        Entities.transactionFor(VolumeImagingTask.class ) ) {
+      try{
+        final VolumeImagingTask entity = Entities.uniqueResult(VolumeImagingTask.named(taskId));
+        final ConversionTask task = entity.getTask();
+        if(task.getImportVolume()!=null){
+          task.getImportVolume().setBytesConverted(bytesConverted);
+        }else if(task.getImportInstance()!=null && task.getImportInstance().getVolumes()!=null){
+          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
+          for(final ImportInstanceVolumeDetail volume : volumes){
+            if(volume.getVolume()!=null && volumeId.equals(volume.getVolume().getId())){
+              volume.setBytesConverted(bytesConverted);
+            }
+          }
+        }
+        entity.serializeTaskToJSON();
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static void addDownloadManifestUrl(final VolumeImagingTask task, 
+      final String importManifestUrl, final String downloadManifestUrl){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(VolumeImagingTask.class ) ) {
+        try{
+          final VolumeImagingTask entity = Entities.uniqueResult(task);
+          entity.addDownloadManifestUrl(importManifestUrl, downloadManifestUrl);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void updateVolumeStatus(final VolumeImagingTask imagingTask, 
+      final String volumeId, ImportTaskState state, final String statusMessage){
+    try ( final TransactionResource db =
+        Entities.transactionFor(VolumeImagingTask.class ) ) {
+      try{
+        final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
         final ConversionTask task = entity.getTask();
         if(task.getImportInstance()!=null){
           final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
@@ -539,17 +551,13 @@ public class ImagingTasks {
     }
   }
   
-  public static boolean isConversionDone(final ImagingTask imagingTask){
+  public static boolean isConversionDone(final VolumeImagingTask imagingTask){
     try ( final TransactionResource db =
-        Entities.transactionFor(ImagingTask.class ) ) {
+        Entities.transactionFor(VolumeImagingTask.class ) ) {
       try{
-        final ImagingTask entity = Entities.uniqueResult(imagingTask);
+        final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
         final ConversionTask task = entity.getTask();
-        if(task.getImportVolume()!=null){
-          return  (ImportTaskState.COMPLETED.equals(entity.getState()) 
-              || ImportTaskState.CANCELLED.equals(entity.getState())
-              || ImportTaskState.FAILED.equals(entity.getState()));
-        }else if (task.getImportInstance()!=null){
+        if (task.getImportInstance()!=null){
           final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
           for(final ImportInstanceVolumeDetail volumeDetail : volumes){
             if("active".equals(volumeDetail.getStatus()))
@@ -564,11 +572,12 @@ public class ImagingTasks {
     }
   }
   
-  public static void addSnapshotId(final InstanceImagingTask imagingTask, final String snapshotId){
+  /************************* Methods for import-instance imaging tasks ************************/
+  public static void addSnapshotId(final ImportInstanceImagingTask imagingTask, final String snapshotId){
     try ( final TransactionResource db =
-        Entities.transactionFor(InstanceImagingTask.class ) ) {
+        Entities.transactionFor(ImportInstanceImagingTask.class ) ) {
       try{
-        final InstanceImagingTask entity = Entities.uniqueResult(imagingTask);
+        final ImportInstanceImagingTask entity = Entities.uniqueResult(imagingTask);
         entity.addSnapshotId(snapshotId);
         Entities.persist(entity);
         db.commit();
@@ -578,17 +587,37 @@ public class ImagingTasks {
     }
   }
   
-  public static void setImageId(final InstanceImagingTask imagingTask, final String imageId){
+  public static void setImageId(final ImportInstanceImagingTask imagingTask, final String imageId){
     try ( final TransactionResource db =
-        Entities.transactionFor(InstanceImagingTask.class ) ) {
+        Entities.transactionFor(ImportInstanceImagingTask.class ) ) {
       try{
-        final InstanceImagingTask entity = Entities.uniqueResult(imagingTask);
+        final ImportInstanceImagingTask entity = Entities.uniqueResult(imagingTask);
         entity.setImageId(imageId);
         Entities.persist(entity);
         db.commit();
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
       }
+    }
+  }
+  
+  /************************* Methods for disk imaging tasks ************************/
+  public static List<DiskImagingTask> getDiskImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
+    synchronized(lock){
+      final List<DiskImagingTask> result = Lists.newArrayList();
+      try ( final TransactionResource db =
+          Entities.transactionFor( DiskImagingTask.class ) ) {
+        final DiskImagingTask sample = DiskImagingTask.named(owningAccount);
+        final List<DiskImagingTask> tasks = Entities.query(sample, true);
+        if(taskIdList!=null && taskIdList.size()>0){
+          for(final DiskImagingTask candidate : tasks){
+            if(taskIdList.contains(candidate.getDisplayName()))
+              result.add(candidate);
+          }
+        }else
+          result.addAll(tasks);
+      }
+      return result;
     }
   }
 }

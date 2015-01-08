@@ -132,11 +132,6 @@ public class ConfigurationManager {
     String partition = request.getPartition( );
     if ( !componentId.isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
       partition = componentId.getPartition( );
-      LOG.error( "Unpartitioned component (" + componentId.getName( )
-                 + ") is being registered w/o a partition.  Using fixed partition="
-                 + partition
-                 + " for request: "
-                 + request );
     } else if ( componentId.isPartitioned( ) && ( partition == null ) ) {
       partition = name;
       LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition
@@ -144,7 +139,7 @@ public class ConfigurationManager {
                  + request );
     }
     try {
-      reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
+      reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) != null );
     } catch ( final Throwable ex ) {
       //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
       reply.set_return( false );
@@ -159,7 +154,7 @@ public class ConfigurationManager {
     final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) != null );
     } catch ( final Throwable ex ) {
       //throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
       reply.set_return( false );

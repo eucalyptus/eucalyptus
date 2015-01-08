@@ -203,7 +203,7 @@ extern struct nc_state_t nc_state;
 
 // macros for making XML construction a bit more readable
 #define _NODE(P,N) xmlNewChild((P), NULL, BAD_CAST (N), NULL)
-#define _ELEMENT(P,N,V) xmlNewChild((P), NULL, BAD_CAST (N), BAD_CAST (V))
+#define _ELEMENT(P,N,V) xmlNewTextChild((P), NULL, BAD_CAST (N), BAD_CAST (V))
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
 
@@ -243,22 +243,22 @@ extern struct nc_state_t nc_state;
 	}                                                                                  \
 }
 
-#define XGET_INT(_XPATH, _dest) \
+#define XGET_INT(_XPATH, _dest)                                                        \
 {                                                                                      \
 	char __sBuf[32];                                                                   \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
-		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return (EUCA_ERROR);                                                           \
-	}                                                                                  \
-	errno = 0;                                                                         \
-	char *__psEnd = NULL;                                                              \
-	long long __v = strtoll(__sBuf, &__psEnd, 10);                                     \
-	if ((errno == 0) && ((*__psEnd) == '\0')) {                                        \
-		(_dest) = __v;                                                                 \
+		LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                    \
 	} else {                                                                           \
-		LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);      \
-		return (EUCA_ERROR);                                                           \
-	}                                                                                  \
+        errno = 0;                                                                     \
+        char *__psEnd = NULL;                                                          \
+        long long __v = strtoll(__sBuf, &__psEnd, 10);                                 \
+        if ((errno == 0) && ((*__psEnd) == '\0')) {                                    \
+            (_dest) = __v;                                                             \
+        } else {                                                                       \
+            LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);  \
+            return (EUCA_ERROR);                                                       \
+        }                                                                              \
+    }                                                                                  \
 }
 
 /*----------------------------------------------------------------------------*\
@@ -724,6 +724,8 @@ int gen_instance_xml(const ncInstance * instance)
             _ELEMENT(ts, "bundlingTime", str);
             snprintf(str, sizeof(str), "%d", instance->createImageTime);
             _ELEMENT(ts, "createImageTime", str);
+            snprintf(str, sizeof(str), "%d", instance->terminationRequestedTime);
+            _ELEMENT(ts, "terminationRequestedTime", str);
             snprintf(str, sizeof(str), "%d", instance->terminationTime);
             _ELEMENT(ts, "terminationTime", str);
             snprintf(str, sizeof(str), "%d", instance->migrationTime);
@@ -830,6 +832,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/timestamps/bootTime", instance->bootTime);
     XGET_INT("/instance/timestamps/bundlingTime", instance->bundlingTime);
     XGET_INT("/instance/timestamps/createImageTime", instance->createImageTime);
+    XGET_INT("/instance/timestamps/terminationRequestedTime", instance->terminationRequestedTime);
     XGET_INT("/instance/timestamps/terminationTime", instance->terminationTime);
     XGET_INT("/instance/timestamps/migrationTime", instance->migrationTime);
 
@@ -1434,6 +1437,9 @@ static void create_dummy_instance(const char *file)
                   "kernel", "objectstorage", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/kernel", "https://objectstorage1/buk2/kernel1");
     add_dummy_vbr(vbrs, "objectstorage://buk3/image1", "sda", "3333333333", "ext3", "emi-33333", "machine",
                   "image", "objectstorage", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://objectstorage1/buk3/image1");
+    add_dummy_vbr(vbrs, "http://imaging@10.111.1.105:8773/services/objectstorage/5ec758-download-manifests/DM-i-02a50273?Expires=1395734335&AWSAccessKeyId=AKIJRY2A9JYUBAOPBVYC",
+                  "sdd", "3333333333", "ext3", "emi-33333", "machine", "image", "objectstorage", "ext3", "0", "0", "disk", "scsi", "block",
+                  "/var/run/instances/i-123ABC/link-to-sda1", "https://objectstorage1/buk3/image1");
 
     _ELEMENT(disks, "floppyPath", "/var/run/instances/i-213456/instance.floppy");
 

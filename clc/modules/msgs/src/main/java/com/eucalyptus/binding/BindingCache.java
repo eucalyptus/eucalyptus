@@ -400,7 +400,7 @@ public class BindingCache {
           LOG.info( "Binding cache: compiling bindings." );
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
             try {
-              LOG.debug( "Binding cache: " + def.getKey( ) );
+              LOG.info( "Binding cache: " + def.getKey( ) );
               def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG_EXTREME );
             } catch ( RuntimeException e ) {
               throw new JiBXException( "\n*** Error during code generation for file '" +
@@ -656,7 +656,7 @@ public class BindingCache {
               if ( Ats.inClassHierarchy( this.type ).has( ComponentMessage.class ) ) {
                 ComponentMessage compMsg = Ats.inClassHierarchy( this.type ).get( ComponentMessage.class );
                 elementName = compMsg.value( ).getSimpleName( ) + "." + elementName;
-                LOG.info( "Binding generation encountered an element naming conflict.  Using " + elementName + " for " + this.type.getCanonicalName( ) );
+                LOG.debug( "Binding generation encountered an element naming conflict.  Using " + elementName + " for " + this.type.getCanonicalName( ) );
               } else {
                 /**
                  * GRZE:WTF: this is a degenerate case which is ugly:

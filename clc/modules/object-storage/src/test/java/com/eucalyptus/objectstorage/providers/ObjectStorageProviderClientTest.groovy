@@ -1,5 +1,26 @@
+/*************************************************************************
+ * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.objectstorage.providers
 
+import com.eucalyptus.objectstorage.UnitTestSupport
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType
@@ -33,49 +54,55 @@ import com.eucalyptus.objectstorage.msgs.PutObjectType
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType
 import com.eucalyptus.objectstorage.msgs.UploadPartType
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration
 import com.eucalyptus.objectstorage.providers.walrus.WalrusProviderClient
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
+import com.eucalyptus.storage.msgs.s3.BucketListEntry
+import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.util.EucalyptusCloudException
 import com.google.common.base.Strings
+import groovy.transform.CompileStatic
 import org.apache.commons.codec.digest.DigestUtils
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import org.junit.After
-import org.junit.AfterClass;
+import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
-import org.junit.Ignore;
+import org.junit.Ignore
 import org.junit.Test
-
-import static com.ibm.icu.impl.Assert.fail;
+import static org.junit.Assert.*
 
 /**
  * Intended for testing the InMemoryProvider. Will need
  * additional work to support real-backends that use persistent storage
  */
+@CompileStatic
 class ObjectStorageProviderClientTest {
     static ObjectStorageProviderClient provider
     static String configValue
-    static final def TEST_BUCKET_NAMES = [ 'bucket1', 'bucket2', 'bucket3', 'bucket4' ]
-    static final def TEST_ACCESS_KEY = 'testaccesskey123'
+    static final List<String> TEST_BUCKET_NAMES = ['bucket1', 'bucket2', 'bucket3', 'bucket4']
+    static final String TEST_ACCESS_KEY = 'testaccesskey123'
 
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        UnitTestSupport.setupOsgPersistenceContext()
+        UnitTestSupport.setupAuthPersistenceContext()
+        UnitTestSupport.initializeAuth(2, 2)
         configValue = System.getProperty("provider", "mem")
         println 'Using provider ' + configValue
 
-        S3ProviderConfiguration.S3AccessKey = System.getProperty("accessKey")
-        S3ProviderConfiguration.S3SecretKey = System.getProperty("secretKey")
-        S3ProviderConfiguration.S3Endpoint = System.getProperty("endpoint")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey = System.getProperty("accessKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey = System.getProperty("secretKey")
+        S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint = System.getProperty("endpoint")
 
-        switch(configValue) {
+        switch (configValue) {
             case 's3':
-                assert(!Strings.isNullOrEmpty(S3ProviderConfiguration.S3Endpoint))
-                assert(!Strings.isNullOrEmpty(S3ProviderConfiguration.S3AccessKey))
-                assert(!Strings.isNullOrEmpty(S3ProviderConfiguration.S3SecretKey))
-                println 'Using endpoint ' + S3ProviderConfiguration.S3Endpoint
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3AccessKey))
+                assert (!Strings.isNullOrEmpty(S3ProviderConfiguration.getS3ProviderConfiguration().S3SecretKey))
+                println 'Using endpoint ' + S3ProviderConfiguration.getS3ProviderConfiguration().S3Endpoint
 
                 provider = new S3ProviderClient()
                 break
@@ -92,12 +119,12 @@ class ObjectStorageProviderClientTest {
 
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
-        if(provider != null) provider.stop()
+        if (provider != null) provider.stop()
     }
 
     @Before
     public void setUp() throws Exception {
-        if("mem".equals(configValue)) {
+        if ("mem".equals(configValue)) {
             provider = new InMemoryProvider()
         } else {
             provider = ObjectStorageProviders.getInstance(configValue)
@@ -109,26 +136,28 @@ class ObjectStorageProviderClientTest {
         //TODO: this is basically a test-case for listBuckets, listObjects, actuallyDeleteObject, deleteBucket
 
         ListAllMyBucketsType listRequest = new ListAllMyBucketsType()
-        listRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        listRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         ListAllMyBucketsResponseType bucketListing = provider.listAllMyBuckets(listRequest)
 
         ListBucketType listReq = new ListBucketType()
-        listReq.setAccessKeyID(TEST_ACCESS_KEY)
+        listReq.setEffectiveUserId(TEST_ACCESS_KEY)
         ListBucketResponseType objListing = null
         DeleteObjectType delObjReq = new DeleteObjectType();
-        delObjReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delObjReq.setEffectiveUserId(TEST_ACCESS_KEY)
 
         DeleteObjectResponseType delObjResp = null
         DeleteBucketType delBucketReq = null
         delBucketReq = new DeleteBucketType()
-        delBucketReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delBucketReq.setEffectiveUserId(TEST_ACCESS_KEY)
 
-        bucketListing.getBucketList().getBuckets().each { bucket ->
+        bucketListing.getBucketList().getBuckets().each { b ->
+            BucketListEntry bucket = (BucketListEntry) b
             listReq.setBucket(bucket.getName())
             println 'Flushing bucket ' + bucket.getName()
             objListing = provider.listBucket(listReq)
 
-            objListing.getContents().each { content ->
+            objListing.getContents().each { key ->
+                ListEntry content = (ListEntry) key
                 println 'Flushing key ' + content.getKey()
                 delObjReq.setBucket(bucket.getName())
                 delObjReq.setKey(content.getKey())
@@ -148,9 +177,9 @@ class ObjectStorageProviderClientTest {
     }
 
     static void populateBuckets(List<String> bucketNames, String accessKey) {
-        bucketNames.each { i ->
-            def req = new CreateBucketType(i)
-            req.setAccessKeyID(accessKey)
+        bucketNames.each { String i ->
+            def req = new CreateBucketType((String)i)
+            req.setEffectiveUserId(accessKey)
             provider.createBucket(req)
             println 'Created bucket for testing: ' + i
         }
@@ -161,7 +190,7 @@ class ObjectStorageProviderClientTest {
         PutObjectType putObj = new PutObjectType()
         putObj.setKey(key)
         putObj.setBucket(bucket)
-        putObj.setAccessKeyID(TEST_ACCESS_KEY)
+        putObj.setEffectiveUserId(TEST_ACCESS_KEY)
         putObj.setContentLength(content.getBytes().length.toString())
 
         //For now, skip the acl stuff. Our providers set it to 'private' anyway
@@ -172,31 +201,31 @@ class ObjectStorageProviderClientTest {
         HeadObjectType headObjRequest = new HeadObjectType()
         headObjRequest.setBucket(bucket)
         headObjRequest.setKey(key)
-        headObjRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headObjRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.headObject(headObjRequest)
     }
 
     static HeadBucketResponseType headBucket(String bucket) {
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(bucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.headBucket(headRequest)
     }
 
-    static DeleteBucketResponseType deleteBucket(String bucket){
+    static DeleteBucketResponseType deleteBucket(String bucket) {
         DeleteBucketType delBucketReq = null
         delBucketReq = new DeleteBucketType()
         delBucketReq.setBucket(bucket)
-        delBucketReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delBucketReq.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.deleteBucket(delBucketReq)
     }
 
-    static DeleteObjectResponseType deleteObject(String bucket, String key){
+    static DeleteObjectResponseType deleteObject(String bucket, String key) {
         DeleteObjectType delReq = new DeleteObjectType()
         delReq = new DeleteObjectType()
         delReq.setBucket(bucket)
         delReq.setKey(key)
-        delReq.setAccessKeyID(TEST_ACCESS_KEY)
+        delReq.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.deleteObject(delReq)
     }
 
@@ -204,7 +233,7 @@ class ObjectStorageProviderClientTest {
         ListPartsType initRequest = new ListPartsType()
         initRequest.setBucket(bucket)
         initRequest.setKey(key)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         initRequest.setUploadId(uploadId)
         return provider.listParts(initRequest)
     }
@@ -212,7 +241,7 @@ class ObjectStorageProviderClientTest {
     static ListMultipartUploadsResponseType listUploads(String bucket) {
         ListMultipartUploadsType initRequest = new ListMultipartUploadsType()
         initRequest.setBucket(bucket)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.listMultipartUploads(initRequest)
     }
 
@@ -220,7 +249,7 @@ class ObjectStorageProviderClientTest {
         InitiateMultipartUploadType initRequest = new InitiateMultipartUploadType()
         initRequest.setBucket(bucket)
         initRequest.setKey(key)
-        initRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        initRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.initiateMultipartUpload(initRequest)
     }
 
@@ -229,17 +258,17 @@ class ObjectStorageProviderClientTest {
         abortRequest.setBucket(bucket)
         abortRequest.setKey(key)
         abortRequest.setUploadId(uploadId)
-        abortRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        abortRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.abortMultipartUpload(abortRequest)
     }
 
-    static CompleteMultipartUploadResponseType completeMPU(String bucket, String key, String uploadId, List<Part> parts) {
+    static CompleteMultipartUploadResponseType completeMPU(String bucket, String key, String uploadId, ArrayList<Part> parts) {
         CompleteMultipartUploadType completeRequest = new CompleteMultipartUploadType()
         completeRequest.setBucket(bucket)
         completeRequest.setKey(key)
         completeRequest.setUploadId(uploadId)
         completeRequest.setParts(parts)
-        completeRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        completeRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         return provider.completeMultipartUpload(completeRequest);
     }
 
@@ -250,7 +279,7 @@ class ObjectStorageProviderClientTest {
         upload.setBucket(bucket)
         upload.setUploadId(uploadId)
         upload.setPartNumber(partNumber.toString())
-        upload.setAccessKeyID(TEST_ACCESS_KEY)
+        upload.setEffectiveUserId(TEST_ACCESS_KEY)
         upload.setContentLength(content.getBytes().length.toString())
 
         //For now, skip the acl stuff. Our providers set it to 'private' anyway
@@ -260,8 +289,8 @@ class ObjectStorageProviderClientTest {
 
     static boolean objectExists(String bucket, String key) {
         try {
-            return headObject(bucket,key).getEtag() != null
-        } catch(EucalyptusCloudException e) {
+            return headObject(bucket, key).getEtag() != null
+        } catch (EucalyptusCloudException e) {
             return false
         }
     }
@@ -269,7 +298,7 @@ class ObjectStorageProviderClientTest {
     static boolean bucketExists(String bucket) {
         try {
             return headBucket(bucket).getBucket().equals(bucket)
-        } catch(EucalyptusCloudException e){
+        } catch (EucalyptusCloudException e) {
             return false
         }
     }
@@ -279,19 +308,19 @@ class ObjectStorageProviderClientTest {
         populateBuckets(TEST_BUCKET_NAMES, TEST_ACCESS_KEY)
 
         ListAllMyBucketsType listRequest = new ListAllMyBucketsType()
-        listRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        listRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         ListAllMyBucketsResponseType bucketListing = provider.listAllMyBuckets(listRequest)
 
-        assert(bucketListing != null)
-        assert(bucketListing.getOwner().getID() == TEST_ACCESS_KEY)
-        assert(bucketListing.getBucketList() != null && bucketListing.getBucketList().getBuckets() != null &&
+        assert (bucketListing != null)
+        assert (bucketListing.getOwner().getID() == TEST_ACCESS_KEY)
+        assert (bucketListing.getBucketList() != null && bucketListing.getBucketList().getBuckets() != null &&
                 bucketListing.getBucketList().getBuckets().size() == TEST_BUCKET_NAMES.size())
 
         //construct in order
         def returnedNames = bucketListing.getBucketList().getBuckets().collect { b ->
-            b.getName()
+            ((BucketListEntry)b).getName()
         }
-        assert(returnedNames.equals(TEST_BUCKET_NAMES))
+        assert (returnedNames.equals(TEST_BUCKET_NAMES))
     }
 
     @Test
@@ -301,17 +330,17 @@ class ObjectStorageProviderClientTest {
 
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(headBucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadBucketResponseType response = provider.headBucket(headRequest)
-        assert(response != null)
-        assert(response.getBucket() == headBucket)
+        assert (response != null)
+        assert (response.getBucket() == headBucket)
 
         headRequest.setBucket('non-existent-bucket')
         try {
             response = provider.headBucket(headRequest)
             fail('HEAD request on non-existent bucket should throw exception')
-        } catch(EucalyptusCloudException e) {
+        } catch (EucalyptusCloudException e) {
             println 'Caught exception as expected: ' + e.getMessage()
         }
     }
@@ -321,7 +350,7 @@ class ObjectStorageProviderClientTest {
         def createBucket = 'create-testbucket'
         populateBuckets([createBucket], TEST_ACCESS_KEY)
 
-       assert(bucketExists(createBucket))
+        assert (bucketExists(createBucket))
     }
 
     @Test
@@ -329,19 +358,19 @@ class ObjectStorageProviderClientTest {
         def deleteBucket = 'delete-testbucket'
         populateBuckets([deleteBucket], TEST_ACCESS_KEY)
 
-        assert(bucketExists(deleteBucket))
+        assert (bucketExists(deleteBucket))
 
         DeleteBucketType deleteRequest = new DeleteBucketType()
         deleteRequest.setBucket(deleteBucket)
-        deleteRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        deleteRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         DeleteBucketResponseType deleteResponse = provider.deleteBucket(deleteRequest)
-        assert(deleteResponse != null)
-        assert(deleteResponse.getStatus() == HttpResponseStatus.NO_CONTENT)
+        assert (deleteResponse != null)
+        assert (deleteResponse.getStatus() == HttpResponseStatus.NO_CONTENT)
 
         //test on delete for already gone bucket
         deleteResponse = provider.deleteBucket(deleteRequest)
-        assert(deleteResponse != null)
-        assert(deleteResponse.getStatus() == HttpResponseStatus.NO_CONTENT)
+        assert (deleteResponse != null)
+        assert (deleteResponse.getStatus() == HttpResponseStatus.NO_CONTENT)
     }
 
     @Test
@@ -351,14 +380,14 @@ class ObjectStorageProviderClientTest {
 
         GetBucketAccessControlPolicyType getAclRequest = new GetBucketAccessControlPolicyType()
         getAclRequest.setBucket(bucket)
-        getAclRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getAclRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         GetBucketAccessControlPolicyResponseType response = provider.getBucketAccessControlPolicy(getAclRequest)
-        assert(response != null)
-        assert(response.getAccessControlPolicy().getOwner().getID() != null)
-        assert(response.getAccessControlPolicy().getAccessControlList().getGrants().size() == 1)
-        assert(response.getAccessControlPolicy().getAccessControlList().getGrants().get(0).getGrantee().getCanonicalUser().getID().equals(response.getAccessControlPolicy().getOwner().getID()))
-        assert(response.getAccessControlPolicy().getAccessControlList().getGrants().get(0).getPermission().equals(ObjectStorageProperties.Permission.FULL_CONTROL.toString()))
+        assert (response != null)
+        assert (response.getAccessControlPolicy().getOwner().getID() != null)
+        assert (response.getAccessControlPolicy().getAccessControlList().getGrants().size() == 1)
+        assert (response.getAccessControlPolicy().getAccessControlList().getGrants().get(0).getGrantee().getCanonicalUser().getID().equals(response.getAccessControlPolicy().getOwner().getID()))
+        assert (response.getAccessControlPolicy().getAccessControlList().getGrants().get(0).getPermission().equals(ObjectStorageProperties.Permission.FULL_CONTROL.toString()))
     }
 
     @Test
@@ -368,14 +397,14 @@ class ObjectStorageProviderClientTest {
 
 
         ListBucketType listReq = new ListBucketType()
-        listReq.setAccessKeyID(TEST_ACCESS_KEY)
+        listReq.setEffectiveUserId(TEST_ACCESS_KEY)
         listReq.setBucket(bucket)
         ListBucketResponseType objListing = null
 
         objListing = provider.listBucket(listReq)
-        assert(objListing != null)
-        assert(objListing.getName().equals(bucket))
-        assert(objListing.getContents().size() == 0)
+        assert (objListing != null)
+        assert (objListing.getName().equals(bucket))
+        assert (objListing.getContents().size() == 0)
 
         //Put some objs
         def testContent = 'testingcontent123...blahblahblah'
@@ -389,29 +418,29 @@ class ObjectStorageProviderClientTest {
 
         //Get listing again
         objListing = provider.listBucket(listReq)
-        assert(objListing != null)
-        assert(objListing.getName().equals(bucket))
-        assert(objListing.getContents().size() == 5)
+        assert (objListing != null)
+        assert (objListing.getName().equals(bucket))
+        assert (objListing.getContents().size() == 5)
 
-        assert(objListing.getContents().get(0).getKey().equals('obj0'))
-        assert(objListing.getContents().get(0).getSize() == contentLength)
+        assert (objListing.getContents().get(0).getKey().equals('obj0'))
+        assert (objListing.getContents().get(0).getSize() == contentLength)
 
-        assert(objListing.getContents().get(1).getKey().equals('obj1'))
-        assert(objListing.getContents().get(1).getEtag() != null)
-        assert(objListing.getContents().get(1).getSize() == contentLength)
+        assert (objListing.getContents().get(1).getKey().equals('obj1'))
+        assert (objListing.getContents().get(1).getEtag() != null)
+        assert (objListing.getContents().get(1).getSize() == contentLength)
 
-        assert(objListing.getContents().get(2).getKey().equals('obj2'))
-        assert(objListing.getContents().get(2).getEtag() != null)
-        assert(objListing.getContents().get(2).getSize() == contentLength)
+        assert (objListing.getContents().get(2).getKey().equals('obj2'))
+        assert (objListing.getContents().get(2).getEtag() != null)
+        assert (objListing.getContents().get(2).getSize() == contentLength)
 
 
-        assert(objListing.getContents().get(3).getKey().equals('obj3'))
-        assert(objListing.getContents().get(3).getEtag() != null)
-        assert(objListing.getContents().get(3).getSize() == contentLength)
+        assert (objListing.getContents().get(3).getKey().equals('obj3'))
+        assert (objListing.getContents().get(3).getEtag() != null)
+        assert (objListing.getContents().get(3).getSize() == contentLength)
 
-        assert(objListing.getContents().get(4).getKey().equals('obj4'))
-        assert(objListing.getContents().get(4).getEtag() != null)
-        assert(objListing.getContents().get(4).getSize() == contentLength)
+        assert (objListing.getContents().get(4).getKey().equals('obj4'))
+        assert (objListing.getContents().get(4).getEtag() != null)
+        assert (objListing.getContents().get(4).getSize() == contentLength)
     }
 
     @Test
@@ -419,23 +448,23 @@ class ObjectStorageProviderClientTest {
         def bucket = 'putobj-testbucket'
         populateBuckets([bucket], TEST_ACCESS_KEY)
 
-        assert(bucketExists(bucket))
+        assert (bucketExists(bucket))
 
         def testContent = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea'
         putObject(bucket, 'obj0', testContent)
 
         def md5 = DigestUtils.md5Hex(testContent)
-        assert(objectExists(bucket,'obj0'))
+        assert (objectExists(bucket, 'obj0'))
         GetObjectType getRequest = new GetObjectType()
         getRequest.setBucket(bucket)
         getRequest.setKey('obj0')
-        getRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         GetObjectResponseType getResponse = provider.getObject(getRequest)
 
         byte[] buffer = new byte[testContent.getBytes().length]
         getResponse.getDataInputStream().read(buffer)
-        assert(buffer == testContent.getBytes())
-        assert(getResponse.getEtag().equals(md5))
+        assert (buffer == testContent.getBytes())
+        assert (getResponse.getEtag().equals(md5))
 
     }
 
@@ -444,14 +473,14 @@ class ObjectStorageProviderClientTest {
         def bucket = 'deleteobj-testbucket'
         populateBuckets([bucket], TEST_ACCESS_KEY)
 
-        assert(bucketExists(bucket))
+        assert (bucketExists(bucket))
 
         def testContent = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea'
         putObject(bucket, 'obj0', testContent)
 
-        assert(objectExists(bucket,'obj0'))
+        assert (objectExists(bucket, 'obj0'))
         deleteObject(bucket, 'obj0')
-        assert(!objectExists(bucket,'obj0'))
+        assert (!objectExists(bucket, 'obj0'))
     }
 
     @Ignore
@@ -467,11 +496,11 @@ class ObjectStorageProviderClientTest {
 
         HeadBucketType headRequest = new HeadBucketType()
         headRequest.setBucket(headObjBucket)
-        headRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadBucketResponseType response = provider.headBucket(headRequest)
-        assert(response != null)
-        assert(response.getBucket() == headObjBucket)
+        assert (response != null)
+        assert (response.getBucket() == headObjBucket)
 
         def testContent = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea'
         putObject(headObjBucket, 'obj0', testContent)
@@ -479,18 +508,18 @@ class ObjectStorageProviderClientTest {
         HeadObjectType headObjRequest = new HeadObjectType()
         headObjRequest.setBucket(headObjBucket)
         headObjRequest.setKey('obj0')
-        headObjRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        headObjRequest.setEffectiveUserId(TEST_ACCESS_KEY)
 
         HeadObjectResponseType objResponse = provider.headObject(headObjRequest)
-        assert(objResponse != null)
-        assert(objResponse.getSize() == testContent.getBytes().length)
-        assert(objResponse.getEtag() != null)
+        assert (objResponse != null)
+        assert (objResponse.getSize() == testContent.getBytes().length)
+        assert (objResponse.getEtag() != null)
 
         try {
             headObjRequest.setKey('nonexistentkey')
             objResponse = provider.headObject(headObjRequest)
             fail('Should have thrown exception on HEAD of fake object: ' + objResponse.getStatusMessage())
-        } catch(EucalyptusCloudException e) {
+        } catch (EucalyptusCloudException e) {
             println 'Correctly caught exception on HEAD of non-existent object ' + e
 
         }
@@ -502,38 +531,38 @@ class ObjectStorageProviderClientTest {
         def mpuKey = 'mputestkey'
         populateBuckets([bucket], TEST_ACCESS_KEY)
 
-        assert(bucketExists(bucket))
+        assert (bucketExists(bucket))
 
         //Initiate
         InitiateMultipartUploadResponseType response = initMPU(bucket, mpuKey)
-        assert(response != null && response.getUploadId() != null)
+        assert (response != null && response.getUploadId() != null)
         def uploadId = response.getUploadId()
 
         //List uploads
         ListMultipartUploadsResponseType listUploadsResponse = listUploads(bucket)
-        assert(listUploadsResponse.getBucket() == bucket)
-        assert(listUploadsResponse.getUploads().size() == 1)
-        assert(listUploadsResponse.getUploads().get(0).getKey() == mpuKey)
-        assert(listUploadsResponse.getUploads().get(0).getUploadId() == uploadId)
+        assert (listUploadsResponse.getBucket() == bucket)
+        assert (listUploadsResponse.getUploads().size() == 1)
+        assert (listUploadsResponse.getUploads().get(0).getKey() == mpuKey)
+        assert (listUploadsResponse.getUploads().get(0).getUploadId() == uploadId)
 
         //Upload parts
         def testContent1 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea11111111111111'
         def testContent2 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea22222222222222'
         def testContent3 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea33333333333333'
         def part1Response = uploadPart(bucket, mpuKey, uploadId, 1, testContent1)
-        assert(part1Response != null && part1Response.getEtag() != null)
+        assert (part1Response != null && part1Response.getEtag() != null)
 
         def part2Response = uploadPart(bucket, mpuKey, uploadId, 2, testContent2)
-        assert(part2Response != null && part2Response.getEtag() != null)
+        assert (part2Response != null && part2Response.getEtag() != null)
 
         def part3Response = uploadPart(bucket, mpuKey, uploadId, 3, testContent3)
-        assert(part3Response != null && part3Response.getEtag() != null)
+        assert (part3Response != null && part3Response.getEtag() != null)
 
         def part4Response = uploadPart(bucket, mpuKey, uploadId, 4, testContent1)
-        assert(part4Response != null && part4Response.getEtag() != null)
+        assert (part4Response != null && part4Response.getEtag() != null)
 
         def part5Response = uploadPart(bucket, mpuKey, uploadId, 5, testContent2)
-        assert(part5Response != null && part5Response.getEtag() != null)
+        assert (part5Response != null && part5Response.getEtag() != null)
 
 
         List<Part> parts = new ArrayList<Part>(5);
@@ -545,59 +574,59 @@ class ObjectStorageProviderClientTest {
 
         //List parts
         ListPartsResponseType listResponse = listParts(bucket, mpuKey, uploadId)
-        assert(listResponse != null)
-        assert(listResponse.getBucket() == bucket)
-        assert(listResponse.getKey() == mpuKey)
-        assert(listResponse.getUploadId() == uploadId)
-        assert(listResponse.getParts().size() == 5)
-        assert(listResponse.getParts().get(0).getPartNumber() == 1)
-        assert(listResponse.getParts().get(0).getEtag() == part1Response.getEtag())
+        assert (listResponse != null)
+        assert (listResponse.getBucket() == bucket)
+        assert (listResponse.getKey() == mpuKey)
+        assert (listResponse.getUploadId() == uploadId)
+        assert (listResponse.getParts().size() == 5)
+        assert (listResponse.getParts().get(0).getPartNumber() == 1)
+        assert (listResponse.getParts().get(0).getEtag() == part1Response.getEtag())
 
-        assert(listResponse.getParts().get(1).getPartNumber() == 2)
-        assert(listResponse.getParts().get(1).getEtag() == part2Response.getEtag())
+        assert (listResponse.getParts().get(1).getPartNumber() == 2)
+        assert (listResponse.getParts().get(1).getEtag() == part2Response.getEtag())
 
-        assert(listResponse.getParts().get(2).getPartNumber() == 3)
-        assert(listResponse.getParts().get(2).getEtag() == part3Response.getEtag())
+        assert (listResponse.getParts().get(2).getPartNumber() == 3)
+        assert (listResponse.getParts().get(2).getEtag() == part3Response.getEtag())
 
-        assert(listResponse.getParts().get(3).getPartNumber() == 4)
-        assert(listResponse.getParts().get(3).getEtag() == part4Response.getEtag())
+        assert (listResponse.getParts().get(3).getPartNumber() == 4)
+        assert (listResponse.getParts().get(3).getEtag() == part4Response.getEtag())
 
-        assert(listResponse.getParts().get(4).getPartNumber() == 5)
-        assert(listResponse.getParts().get(4).getEtag() == part5Response.getEtag())
+        assert (listResponse.getParts().get(4).getPartNumber() == 5)
+        assert (listResponse.getParts().get(4).getEtag() == part5Response.getEtag())
 
         def fullContent = testContent1 + testContent2 + testContent3 + testContent1 + testContent2
         def md5 = DigestUtils.md5Hex(fullContent)
-        assert(!objectExists(bucket,mpuKey))
+        assert (!objectExists(bucket, mpuKey))
 
         //complete
         def completionResponse = completeMPU(bucket, mpuKey, uploadId, parts)
-        assert(completionResponse != null)
-        assert(completionResponse.getEtag() == md5)
-        assert(completionResponse.getKey() == mpuKey)
+        assert (completionResponse != null)
+        assert (completionResponse.getEtag() == md5)
+        assert (completionResponse.getKey() == mpuKey)
 
-        assert(objectExists(bucket, mpuKey))
+        assert (objectExists(bucket, mpuKey))
 
         GetObjectType getRequest = new GetObjectType()
         getRequest.setBucket(bucket)
         getRequest.setKey(mpuKey)
-        getRequest.setAccessKeyID(TEST_ACCESS_KEY)
+        getRequest.setEffectiveUserId(TEST_ACCESS_KEY)
         GetObjectResponseType getResponse = provider.getObject(getRequest)
 
         byte[] buffer = new byte[fullContent.length()]
         getResponse.getDataInputStream().read(buffer)
-        assert(buffer == fullContent.getBytes())
-        assert(getResponse.getEtag().equals(md5))
+        assert (buffer == fullContent.getBytes())
+        assert (getResponse.getEtag().equals(md5))
 
         //Comfirm upload is gone
         listUploadsResponse = listUploads(bucket)
-        assert(listUploadsResponse.getBucket() == bucket)
-        assert(listUploadsResponse.getUploads().size() == 0)
+        assert (listUploadsResponse.getBucket() == bucket)
+        assert (listUploadsResponse.getUploads().size() == 0)
 
         //Confirm parts are gone
         try {
             listResponse = listParts(bucket, mpuKey, uploadId)
             fail('Should have gotten no-upload exception for upload id ' + uploadId)
-        } catch(NoSuchUploadException e) {
+        } catch (NoSuchUploadException e) {
             //correct.
         }
     }
@@ -608,38 +637,38 @@ class ObjectStorageProviderClientTest {
         def mpuKey = 'mputestkey'
         populateBuckets([bucket], TEST_ACCESS_KEY)
 
-        assert(bucketExists(bucket))
+        assert (bucketExists(bucket))
 
         //Initiate
         InitiateMultipartUploadResponseType response = initMPU(bucket, mpuKey)
-        assert(response != null && response.getUploadId() != null)
+        assert (response != null && response.getUploadId() != null)
         def uploadId = response.getUploadId()
 
         //List uploads
         ListMultipartUploadsResponseType listUploadsResponse = listUploads(bucket)
-        assert(listUploadsResponse.getBucket() == bucket)
-        assert(listUploadsResponse.getUploads().size() == 1)
-        assert(listUploadsResponse.getUploads().get(0).getKey() == mpuKey)
-        assert(listUploadsResponse.getUploads().get(0).getUploadId() == uploadId)
+        assert (listUploadsResponse.getBucket() == bucket)
+        assert (listUploadsResponse.getUploads().size() == 1)
+        assert (listUploadsResponse.getUploads().get(0).getKey() == mpuKey)
+        assert (listUploadsResponse.getUploads().get(0).getUploadId() == uploadId)
 
         //Upload parts
         def testContent1 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea11111111111111'
         def testContent2 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea22222222222222'
         def testContent3 = 'FakeObjectContenthere...adfasdgoaiganoge awogia goias gojafasdfjawea33333333333333'
         def part1Response = uploadPart(bucket, mpuKey, uploadId, 1, testContent1)
-        assert(part1Response != null && part1Response.getEtag() != null)
+        assert (part1Response != null && part1Response.getEtag() != null)
 
         def part2Response = uploadPart(bucket, mpuKey, uploadId, 2, testContent2)
-        assert(part2Response != null && part2Response.getEtag() != null)
+        assert (part2Response != null && part2Response.getEtag() != null)
 
         def part3Response = uploadPart(bucket, mpuKey, uploadId, 3, testContent3)
-        assert(part3Response != null && part3Response.getEtag() != null)
+        assert (part3Response != null && part3Response.getEtag() != null)
 
         def part4Response = uploadPart(bucket, mpuKey, uploadId, 4, testContent1)
-        assert(part4Response != null && part4Response.getEtag() != null)
+        assert (part4Response != null && part4Response.getEtag() != null)
 
         def part5Response = uploadPart(bucket, mpuKey, uploadId, 5, testContent2)
-        assert(part5Response != null && part5Response.getEtag() != null)
+        assert (part5Response != null && part5Response.getEtag() != null)
 
 
         List<Part> parts = new ArrayList<Part>(5);
@@ -651,44 +680,44 @@ class ObjectStorageProviderClientTest {
 
         //List parts
         ListPartsResponseType listResponse = listParts(bucket, mpuKey, uploadId)
-        assert(listResponse != null)
-        assert(listResponse.getBucket() == bucket)
-        assert(listResponse.getKey() == mpuKey)
-        assert(listResponse.getUploadId() == uploadId)
-        assert(listResponse.getParts().size() == 5)
-        assert(listResponse.getParts().get(0).getPartNumber() == 1)
-        assert(listResponse.getParts().get(0).getEtag() == part1Response.getEtag())
+        assert (listResponse != null)
+        assert (listResponse.getBucket() == bucket)
+        assert (listResponse.getKey() == mpuKey)
+        assert (listResponse.getUploadId() == uploadId)
+        assert (listResponse.getParts().size() == 5)
+        assert (listResponse.getParts().get(0).getPartNumber() == 1)
+        assert (listResponse.getParts().get(0).getEtag() == part1Response.getEtag())
 
-        assert(listResponse.getParts().get(1).getPartNumber() == 2)
-        assert(listResponse.getParts().get(1).getEtag() == part2Response.getEtag())
+        assert (listResponse.getParts().get(1).getPartNumber() == 2)
+        assert (listResponse.getParts().get(1).getEtag() == part2Response.getEtag())
 
-        assert(listResponse.getParts().get(2).getPartNumber() == 3)
-        assert(listResponse.getParts().get(2).getEtag() == part3Response.getEtag())
+        assert (listResponse.getParts().get(2).getPartNumber() == 3)
+        assert (listResponse.getParts().get(2).getEtag() == part3Response.getEtag())
 
-        assert(listResponse.getParts().get(3).getPartNumber() == 4)
-        assert(listResponse.getParts().get(3).getEtag() == part4Response.getEtag())
+        assert (listResponse.getParts().get(3).getPartNumber() == 4)
+        assert (listResponse.getParts().get(3).getEtag() == part4Response.getEtag())
 
-        assert(listResponse.getParts().get(4).getPartNumber() == 5)
-        assert(listResponse.getParts().get(4).getEtag() == part5Response.getEtag())
+        assert (listResponse.getParts().get(4).getPartNumber() == 5)
+        assert (listResponse.getParts().get(4).getEtag() == part5Response.getEtag())
 
-        assert(!objectExists(bucket,mpuKey))
+        assert (!objectExists(bucket, mpuKey))
 
         //complete
         def abortResponse = abortMPU(bucket, mpuKey, uploadId)
-        assert(abortResponse != null)
+        assert (abortResponse != null)
 
-        assert(!objectExists(bucket, mpuKey))
+        assert (!objectExists(bucket, mpuKey))
 
         //Confirm upload is gone
         listUploadsResponse = listUploads(bucket)
-        assert(listUploadsResponse.getBucket() == bucket)
-        assert(listUploadsResponse.getUploads().size() == 0)
+        assert (listUploadsResponse.getBucket() == bucket)
+        assert (listUploadsResponse.getUploads().size() == 0)
 
         //Confirm parts are gone
         try {
             listResponse = listParts(bucket, mpuKey, uploadId)
             fail('Should have gotten no-upload exception for upload id ' + uploadId)
-        } catch(NoSuchUploadException e) {
+        } catch (NoSuchUploadException e) {
             //correct.
         }
     }

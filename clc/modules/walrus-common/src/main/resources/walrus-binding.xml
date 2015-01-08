@@ -87,6 +87,55 @@
 		<value name="RequestId" field="requestId" />
 	</mapping>
 
+
+    <mapping name="ListAllMyBuckets"
+             class="com.eucalyptus.walrus.msgs.ListAllMyBucketsType"
+             extends="com.eucalyptus.walrus.msgs.WalrusRequestType">
+        <structure
+                map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="ListAllMyBucketsResult"
+             class="com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType">
+        <structure name="Owner" field="owner"
+                   type="com.eucalyptus.storage.msgs.s3.CanonicalUser"/>
+        <structure name="Buckets" field="bucketList"
+                   type="com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList"/>
+    </mapping>
+
+    <mapping name="ListBucket"
+             class="com.eucalyptus.walrus.msgs.ListBucketType"
+             extends="com.eucalyptus.walrus.msgs.WalrusRequestType">
+        <value name="Prefix" field="prefix" usage="optional"/>
+        <value name="Marker" field="marker" usage="optional"/>
+        <value name="MaxKeys" field="maxKeys" usage="optional"/>
+        <value name="Delimiter" field="delimiter" usage="optional"/>
+        <structure
+                map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="ListBucketResult"
+             class="com.eucalyptus.walrus.msgs.ListBucketResponseType">
+        <value name="Name" field="name"/>
+        <value name="Prefix" field="prefix"/>
+        <value name="Marker" field="marker"/>
+        <value name="NextMarker" field="nextMarker" usage="optional"/>
+        <value name="MaxKeys" field="maxKeys"/>
+        <value name="Delimiter" field="delimiter" usage="optional"/>
+        <value name="IsTruncated" field="isTruncated"/>
+        <collection field="contents"
+                    factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+            <structure name="Contents" map-as="com.eucalyptus.storage.msgs.s3.ListEntry"/>
+        </collection>
+        <collection field="commonPrefixesList"
+                    factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+            <structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry"/>
+        </collection>
+    </mapping>
+    
+
 	<mapping name="PutObjectResponse"
 		class="com.eucalyptus.walrus.msgs.PutObjectResponseType">
 		<structure name="PutObjectResponse">
@@ -228,56 +277,4 @@
              class="com.eucalyptus.walrus.msgs.UploadPartResponseType">
     </mapping>
 
-
-    <!--
-    <mapping name="PutLifecycleResponse" class="com.eucalyptus.walrus.msgs.PutLifecycleResponseType">
-    </mapping>
-
-    <mapping name="PutLifecycle" class="com.eucalyptus.walrus.msgs.PutLifecycleType"
-             extends="com.eucalyptus.walrus.msgs.WalrusRequestType">
-        <structure field="lifecycle"
-                   map-as="com.eucalyptus.walrus.msgs.LifecycleConfigurationType" />
-        <structure map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
-                   usage="optional" />
-    </mapping>
-
-    <mapping name="GetLifecycle"
-             class="com.eucalyptus.walrus.msgs.GetLifecycleType"
-             extends="com.eucalyptus.walrus.msgs.WalrusRequestType">
-        <structure map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
-                   usage="optional" />
-    </mapping>
-
-    <mapping class="com.eucalyptus.walrus.msgs.GetLifecycleResponseType" abstract="true">
-        <structure field="lifecycle" usage="optional"
-                   map-as="com.eucalyptus.walrus.msgs.LifecycleConfigurationType" />
-    </mapping>
-
-    <mapping name="LifecycleConfiguration" class="com.eucalyptus.walrus.msgs.LifecycleConfigurationType">
-        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="rules">
-            <structure name="Rule" map-as="com.eucalyptus.walrus.msgs.LifecycleRule" />
-        </collection>
-    </mapping>
-
-    <mapping class="com.eucalyptus.walrus.msgs.LifecycleRule" abstract="true">
-        <value name="ID" field="ID" />
-        <value name="Prefix" field="prefix" />
-        <value name="Status" field="status" />
-        <structure name="Transition" map-as="com.eucalyptus.walrus.msgs.LifecycleTransition"
-                   field="transition" usage="optional" />
-        <structure name="Expiration" map-as="com.eucalyptus.walrus.msgs.LifecycleExpiration"
-                   field="expiration" usage="optional" />
-    </mapping>
-
-    <mapping class="com.eucalyptus.walrus.msgs.LifecycleTransition" abstract="true">
-        <value name="Days" field="days" usage="optional" />
-        <value name="Date" field="date" usage="optional" />
-        <value name="StorageClass" field="storageClass" />
-    </mapping>
-
-    <mapping class="com.eucalyptus.walrus.msgs.LifecycleExpiration" abstract="true">
-        <value name="Days" field="days" usage="optional" />
-        <value name="Date" field="date" usage="optional" />
-    </mapping>
-    -->
 </binding>

@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -62,31 +62,25 @@
 
 <project name="eucalyptus-www" basedir=".">
 	<import file="../module-inc.xml" />
+	<property name="webapp.dir" value="${basedir}/src/main/webapp" />
 	<property environment="localenv"/>
 	<property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
 	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
 		<contains string="${DESTDIR.0}" substring="localenv"/>
 	</condition>
+	<property name="builder.suffix" value="war" />
 
-	<!--================================== BUILD TARGET ==================================-->
 	<target name="indent-module">
 	</target>
-	<property name="builder.suffix" value="gwt" />
-	<target name="do-build-gwt">
-		<antcall target="build-gwt"/>
-	</target>
-	<target name="build-gwt">
-		<echo message="gwtDebug=${gwtDebug}"/>
+
+	<target name="build-war">
 		<antcall target="compile-src" />
 		<antcall target="jar" />
-		<condition property="gwtBuildType" value="debug" else="normal" >
-			<isset property="gwtDebug"/>
-		</condition>
-		<antcall target="compile-gwt-${gwtBuildType}" />
+		<antcall target="compile-war" />
 	</target>
-	<!--================================== GWT-ONLY TARGET ==================================-->
+
 	<property environment="env" />
-	<path id="gwtclasspath">
+	<path id="warclasspath">
 		<fileset dir="${lib.dir}">
 			<include name="**/*.jar" />
 		</fileset>
@@ -95,26 +89,12 @@
 			<include name="**/build"/>
 		</dirset>
 	</path>
-	<path id="gwtcompilerclasspath">
-		<fileset dir="${lib.dir}">
-			<include name="**/gwt-dev.jar" />
-		</fileset>
-		<path refid="gwtclasspath" />
-		<dirset dir="${modules.dir}">
-			<include name="**/build"/>
-		</dirset>
-		<pathelement path="${src.dir}" />
-	</path>
-	<property name="gwt.build.dir" value="build" />
-	<property name="gwt.war.build.dir" value="build-war" />
-	<property name="gwt.module" value="com.eucalyptus.webui.EucalyptusWebInterface" />
-	<property name="gwt.module.rename" value="webui" />
-	<property name="gwt.module.dir" value="com/eucalyptus/webui" />
-	<property name="gwt.war.dir" value="webapps" />
-	<property name="gwt.war" value="${gwt.war.dir}/root.war" />
+	<property name="war.build.dir" value="build-war" />
+	<property name="war.dir" value="webapps" />
+	<property name="war.path" value="${war.dir}/root.war" />
 
-	<target name="check-src">
-		<uptodate property="gwtc.notRequired" targetfile="${gwt.war}">
+	<target name="check-war">
+		<uptodate property="war.notRequired" targetfile="${war.path}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 			<srcfiles dir="${conf.dir}" includes="**/*" />
 		</uptodate>
@@ -123,44 +103,21 @@
 	<target name="compile-src">
 		<mkdir dir="${build.dir}"/>
 		<mkdir dir="${test.dir}"/>
-		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" source="1.7" target="1.7" includeantruntime="false"/>
+		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="warclasspath" failonerror="true" debug="true" source="1.7" target="1.7" includeantruntime="false"/>
 	</target>
 
 	<target name="clean">
 		<delete dir="${build.dir}" />
-		<delete dir="${gwt.war.dir}" />
-		<delete dir="${gwt.war.build.dir}" />
+		<delete dir="${war.dir}" />
+		<delete dir="${war.build.dir}" />
 		<delete file="${jar.file}" />
 	</target>
 
-
-	<target name="compile-gwt-normal" depends="check-src" unless="gwtc.notRequired">
-		<delete dir="${gwt.war.build.dir}" />
-		<mkdir dir="${gwt.war.build.dir}" />
-		<mkdir dir="${gwt.war.dir}" />
-		<java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
-			<jvmarg value="-Xmx1024m" />
-			<jvmarg value="-Xss1024k" />
-			<arg line="-war ${gwt.war.build.dir}" />
-			<arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
-		</java>
-		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
-	</target>
-
-	<target name="compile-gwt-debug" depends="check-src" unless="gwtc.notRequired">
-		<delete dir="${gwt.war.build.dir}" />
-		<mkdir dir="${gwt.war.build.dir}" />
-		<mkdir dir="${gwt.war.dir}" />
-		<java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
-			<jvmarg value="-Xmx1024m" />
-			<jvmarg value="-Xss1024k" />
-			<arg line="-war ${gwt.war.build.dir}" />
-			<arg line="-draftCompile"/>
-			<arg line="-style DETAILED"/>
-			<!-- PRETTY for non-obfuscated Javascript -->
-			<arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
-		</java>
-		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
+	<target name="compile-war" depends="check-war" unless="war.notRequired">
+		<delete dir="${war.build.dir}" />
+		<mkdir dir="${war.build.dir}" />
+		<mkdir dir="${war.dir}" />
+		<war destfile="${war.path}" webxml="${webapp.dir}/WEB-INF/web.xml" basedir="${war.build.dir}" />
 	</target>
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
@@ -173,6 +130,6 @@
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
 			<fileset file="${jar.file}" />
 		</copy>
-		<copy overwrite="true" file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
+		<copy overwrite="true" file="${war.path}" todir="${DESTDIR}${servlet.dir}" />
 	</target>
 </project>

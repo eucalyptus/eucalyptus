@@ -39,6 +39,13 @@ public class ResourceTag extends EucalyptusData {
 public class DeleteResourceTag extends EucalyptusData {
   String key;   // optional
   String value; // optional
+
+  DeleteResourceTag() {
+  }
+
+  DeleteResourceTag( String key ) {
+    this.key = key;
+  }
 }
 
 public class ResourceTagMessage extends EucalyptusMessage {
@@ -60,12 +67,10 @@ public class DescribeTagsType extends ResourceTagMessage  {
 }
 
 public class DescribeTagsResponseType extends ResourceTagMessage  {
-  String requestId;
   ArrayList<TagInfo> tagSet = new ArrayList<TagInfo>( );
 }
 
 public class DeleteTagsResponseType extends ResourceTagMessage {
-  String requestId;
 }
 
 public class DeleteTagsType extends ResourceTagMessage {
@@ -84,7 +89,6 @@ public class TagInfo extends EucalyptusData {
 }
 
 public class CreateTagsResponseType extends ResourceTagMessage  {
-  String requestId;
 }
 
 public class CreateTagsType extends ResourceTagMessage  {

@@ -22,7 +22,9 @@ package com.eucalyptus.objectstorage.metadata;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.PartEntity;
@@ -96,12 +98,16 @@ public class MpuPartStateTransitions {
                 try {
                     PartEntity updatingEntity = Entities.uniqueResult(new PartEntity().withUuid(entity.getPartUuid()));
                     if(!ObjectState.deleting.equals(entity.getState())) {
+                        //Set the new part state
                         updatingEntity.setState(ObjectState.extant);
                         updatingEntity.setCreationExpiration(null);
                         updatingEntity.setObjectModifiedTimestamp(entity.getObjectModifiedTimestamp());
                         updatingEntity.setIsLatest(true);
                         updatingEntity.seteTag(entity.geteTag());
                         updatingEntity.setSize(entity.getSize());
+
+                        //Remove old versions and update bucket size within this transaction.
+                        MpuPartMetadataManagers.getInstance().cleanupInvalidParts(entity.getBucket(), entity.getObjectKey(), entity.getUploadId(), entity.getPartNumber());
                     } else {
                         throw new IllegalResourceStateException("Cannot transition to extant from non-creating state", null, ObjectState.creating.toString(), entity.getState().toString());
                     }

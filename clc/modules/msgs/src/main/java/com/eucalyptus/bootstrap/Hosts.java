@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -573,7 +574,12 @@ public class Hosts {
          */
         private final String coordinatorAddress = preMergeCoordinator != null ? preMergeCoordinator.getDisplayName() : "NONE";
 
-        private String logPrefix( View v ) { return "Hosts.viewChange(): merge   [" + v.getViewId( ).getId( ) + ":" + v.getViewId( ).getCreator() + "]=> "; }
+        private String logPrefix( final View v ) {
+          final ViewId viewId = v == null ? null : v.getViewId( );
+          final String id = viewId == null ? "?" : Objects.toString( viewId.getId() );
+          final String creator = viewId == null ? "?" : Objects.toString( viewId.getCreator( ), "?" );
+          return "Hosts.viewChange(): merge   [" +id + ":" + creator + "]=> ";
+        }
 
         @Override
         public void run( ) {
@@ -1196,6 +1202,19 @@ public class Hosts {
       } );
     }
     return null;
+  }
+
+  public static Host lookup( final InetAddress address ) {
+    if ( hostMap.containsKey( address.getHostAddress( ) ) ) {
+      return hostMap.get( address.getHostAddress( ) );
+    } else {
+      return Iterables.tryFind( Hosts.list( ), new Predicate<Host>( ) {
+        @Override
+        public boolean apply( Host input ) {
+          return input.getHostAddresses( ).contains( address );
+        }
+      } ).orNull( );
+    }
   }
 
   public static boolean contains( final String hostDisplayName ) {

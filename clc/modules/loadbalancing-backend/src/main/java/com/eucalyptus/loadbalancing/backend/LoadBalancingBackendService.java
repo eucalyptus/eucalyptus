@@ -77,6 +77,7 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.loadbalancing.activities.RegisterInstancesEvent;
+import com.eucalyptus.loadbalancing.backend.InternalFailureException;
 import com.eucalyptus.loadbalancing.common.LoadBalancingMetadatas;
 import com.eucalyptus.loadbalancing.common.backend.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.backend.msgs.AppCookieStickinessPolicy;
@@ -196,20 +197,18 @@ public class LoadBalancingBackendService {
   public DescribeLoadBalancersByServoResponseType describeLoadBalancersByServo(DescribeLoadBalancersByServoType request) throws EucalyptusCloudException {
   	  final DescribeLoadBalancersByServoResponseType reply = request.getReply();
   	  final String instanceId = request.getInstanceId();
-	  // lookup servo instance Id to see which LB zone it is assigned to
-	  LoadBalancerZoneCoreView zoneView = null;
-	  LoadBalancerZone zone = null;
-	  try{
-	  	  isValidServoRequest(instanceId, request.getSourceIp());
-  		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
-  		  zoneView = instance.getAvailabilityZone();
-  		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-	  }catch(NoSuchElementException ex){
-  		;
-  	  }catch(Exception ex){
-  		LOG.warn("failed to find loadbalancer for servo instance: "+instanceId, ex);
+  	  // lookup servo instance Id to see which LB zone it is assigned to
+  	  LoadBalancerZoneCoreView zoneView = null;
+  	  LoadBalancerZone zone = null;
+  	  try{
+  	    isValidServoRequest(instanceId, request.getSourceIp());
+  	    final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+  	    zoneView = instance.getAvailabilityZone();
+  	    zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
+  	  }catch(final Exception ex){
+  	    throw new InternalFailureException("Failed to verify request sender");
   	  }
-	  
+
 	  
   	  final Function<LoadBalancerZone, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<LoadBalancerZone, Set<LoadBalancerDescription>> () {
 		  @Override
@@ -355,15 +354,14 @@ public class LoadBalancingBackendService {
   }
   
   /// EUCA-specific, internal operations for storing instance health check and cloudwatch metrics
-  public PutServoStatesResponseType putServoStates(PutServoStatesType request){
+  public PutServoStatesResponseType putServoStates(PutServoStatesType request) throws EucalyptusCloudException {
 	  PutServoStatesResponseType reply = request.getReply();
 	  final String servoId = request.getInstanceId();
 
 	  try{
 		  isValidServoRequest(servoId, request.getSourceIp());
 	  }catch(final Exception ex){
-		  LOG.warn("invalid servo request", ex);
-		  return reply;
+      throw new InternalFailureException("Failed to verify request sender");
 	  }
 	  
 	  final Instances instances = request.getInstances();
@@ -637,7 +635,7 @@ public class LoadBalancingBackendService {
   public DescribeLoadBalancersResponseType describeLoadBalancers(DescribeLoadBalancersType request) throws EucalyptusCloudException {
     DescribeLoadBalancersResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final String accountName = ctx.getAccount().getName();
+    final String accountNumber = ctx.getAccount().getAccountNumber();
     final Set<String> requestedNames = Sets.newHashSet( );
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
@@ -655,7 +653,7 @@ public class LoadBalancingBackendService {
 
             final LoadBalancer example = showAll ?
                 LoadBalancer.named( null, null ) :
-                LoadBalancer.namedByAccount( accountName , null );
+                LoadBalancer.namedByAccountId( accountNumber , null );
             final List<LoadBalancer> lbs = Entities.query( example, true);
             return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
           }

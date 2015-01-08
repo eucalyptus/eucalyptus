@@ -302,6 +302,7 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     int rc = 0;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
     char command[EUCA_MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
@@ -311,20 +312,21 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base), NP(euca_base));
-    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s'\n", SP(instanceId), command, NP(options), NP(host), NP(credentials));
+    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
+    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials));
     if (lock_hyp_sem == TRUE) {
         sem_p(hyp_sem);
     }
 
-    rc = euca_execlp(NULL, command, NP(options), NP(host), NP(credentials), NULL);
+    rc = euca_execlp(NULL, euca_rootwrap, command, NP(options), NP(host), NP(credentials), NULL);
 
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
     }
 
     if (rc != EUCA_OK) {
-        LOGERROR("[%s] '%s %s %s %s' failed. rc=%d\n", SP(instanceId), command, NP(options), NP(host), NP(credentials), rc);
+        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials), rc);
         return (EUCA_SYSTEM_ERROR);
     } else {
         LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
@@ -529,17 +531,31 @@ int get_value(char *s, const char *name, long long *valp)
 //!
 void libvirt_err_handler(void *userData, virErrorPtr error)
 {
-    int log_level = EUCA_LOG_ERROR;
+    boolean ignore_error = FALSE;
 
     if (error == NULL) {
         LOGERROR("libvirt error handler was given a NULL pointer\n");
-    } else {
-        if (error->code == VIR_ERR_NO_DOMAIN) {
-            // report "domain not found" errors as warnings, since they are expected when instance is being terminated
-            log_level = EUCA_LOG_WARN;
-        }
+        return;
+    }
 
-        EUCALOG(log_level, "libvirt: %s (code=%d)\n", error->message, error->code);
+    if (error->code == VIR_ERR_NO_DOMAIN) {
+        char * instanceId = euca_strestr(error->message, "'", "'"); // try to find instance ID in the message
+        if (instanceId) {
+            // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
+            ncInstance *instance = find_instance(&global_instances, instanceId);
+            if (instance
+                && (instance->terminationRequestedTime // termination of this instance was requested
+                    || (instance->state == BOOTING) // it is booting or rebooting
+                    || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
+                    || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
+                ignore_error = TRUE;
+            }
+            free(instanceId);
+        }
+    }
+
+    if (! ignore_error) {
+        EUCALOG(EUCA_LOG_ERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
     }
 }
 
@@ -1004,6 +1020,8 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 // most likely the user has shut it down from the inside
                 if (instance->stop_requested) {
                     LOGDEBUG("[%s] ignoring domain in stopped state\n", instance->instanceId);
+                } else if (instance->terminationRequestedTime) {
+                    LOGDEBUG("[%s] hypervisor not finding the terminating domain\n", instance->instanceId);
                 } else if (instance->retries) {
                     LOGWARN("[%s] hypervisor failed to find domain, will retry %d more time(s)\n", instance->instanceId, instance->retries);
                     instance->retries--;
@@ -1142,22 +1160,22 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     if (instance->state == RUNNING || instance->state == BLOCKED || instance->state == PAUSED) {
         ip = NULL;
 
-        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
+        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", IP_BUFFER_SIZE)) {
             if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
                 rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
                 if (!rc && ip) {
                     LOGINFO("[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                    euca_strncpy(instance->ncnet.publicIp, ip, 24);
+                    euca_strncpy(instance->ncnet.publicIp, ip, IP_BUFFER_SIZE);
                     EUCA_FREE(ip);
                 }
             }
         }
 
-        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
+        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", IP_BUFFER_SIZE)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc && ip) {
                 LOGINFO("[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                euca_strncpy(instance->ncnet.privateIp, ip, 24);
+                euca_strncpy(instance->ncnet.privateIp, ip, IP_BUFFER_SIZE);
                 EUCA_FREE(ip);
             }
         }
@@ -2020,6 +2038,7 @@ static int init(void)
     configInitValues(configKeysRestartNC, configKeysNoRestartNC);   // initialize config subsystem
     readConfigFile(nc_state.configFiles, 2);
     update_log_params();
+    LOGINFO("running as user '%s'\n", get_username());
 
     // set default in the paths. the driver will override
     nc_state.config_network_path[0] = '\0';
@@ -2174,9 +2193,6 @@ static int init(void)
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
     GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
 
-    int disable_injection;
-    GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0);
-    nc_state.do_inject_key = !disable_injection;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
     GET_VAR_INT(nc_state.staging_cleanup_threshold, CONFIG_NC_STAGING_CLEANUP_THRESHOLD, default_staging_cleanup_threshold);
     GET_VAR_INT(nc_state.booting_cleanup_threshold, CONFIG_NC_BOOTING_CLEANUP_THRESHOLD, default_booting_cleanup_threshold);
@@ -2203,7 +2219,11 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
     // check on the Imaging Toolkit readyness
-    if (imaging_init(nc_state.home)) {
+    char node_pk_path[EUCA_MAX_PATH];
+    snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", nc_state.home);
+    char cloud_cert_path[EUCA_MAX_PATH];
+    snprintf(cloud_cert_path, sizeof(cloud_cert_path), EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", nc_state.home);
+    if (imaging_init(nc_state.home, cloud_cert_path, node_pk_path)) {
         LOGFATAL("failed to find required dependencies for image work\n");
         return (EUCA_FATAL_ERROR);
     }
@@ -2745,7 +2765,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     for (i = 0; i < (*outInstsLen); i++) {
         char vols_str[128] = "";
         char vol_str[16] = "";
-        char mig_str[128] = "not migrating";
+        char status_str[128] = "running";
         ncInstance *instance = (*outInsts)[i];
 
         // construct a string summarizing the volumes attached to the instance
@@ -2786,10 +2806,20 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
                 peer = instance->migration_src;
                 dir = '<';
             }
-            snprintf(mig_str, sizeof(mig_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
-        }
+            snprintf(status_str, sizeof(status_str), "%s %c%s", migration_state_names[instance->migration_state], dir, peer);
+        } else if (instance->terminationTime) {
+            strncpy(status_str, "terminated", sizeof(status_str));
+        } else if (instance->terminationRequestedTime) {
+            strncpy(status_str, "terminating", sizeof(status_str));
+        } else if (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF) {
+            strncpy(status_str, "bundling", sizeof(status_str));
+        } else if (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF) {
+            strncpy(status_str, "creating image", sizeof(status_str));
+        } else if (instance->bootTime == 0) {
+            strncpy(status_str, "staging", sizeof(status_str));
+        } // else it is "running"
 
-        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, mig_str, instance->ncnet.publicIp, vols_str);
+        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
     }
 
     // allocate enough memory

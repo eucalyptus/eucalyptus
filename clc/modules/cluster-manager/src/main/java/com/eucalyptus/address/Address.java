@@ -600,7 +600,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public AddressInfoType getDescription( ) {
     String name = this.getName( );
     String desc = UNASSIGNED_INSTANCEID.equals( this.getInstanceId( ) )
-        ? null
+        ? ""
         : this.getInstanceId( );
     return new AddressInfoType( name, desc );
   }

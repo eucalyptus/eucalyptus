@@ -68,7 +68,7 @@ import org.jboss.netty.channel.Channel;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
-import com.eucalyptus.walrus.Walrus;
+import com.eucalyptus.walrus.WalrusBackend;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage;
@@ -81,21 +81,18 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.Status;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import com.eucalyptus.storage.msgs.s3.Grant;
-import com.eucalyptus.storage.msgs.s3.Grantee;
+import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
-import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
-import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
-import com.eucalyptus.storage.msgs.s3.Part;
-import com.eucalyptus.storage.msgs.s3.Initiator;
-import com.eucalyptus.storage.msgs.s3.Upload;
+import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.Principals
+import org.jboss.netty.handler.stream.ChunkedInput;
 
+@ComponentMessage(WalrusBackend.class)
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	HttpResponseStatus status;
@@ -113,6 +110,7 @@ public class WalrusResponseType extends BaseMessage {
 	}
 }
 
+@ComponentMessage(WalrusBackend.class)
 public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
 	def WalrusStreamingResponseType() {
@@ -122,7 +120,7 @@ public class WalrusStreamingResponseType extends StreamedBaseMessage {
     }
 }
 
-@ComponentMessage(Walrus.class)
+@ComponentMessage(WalrusBackend.class)
 public class WalrusRequestType extends BaseMessage {
 	protected String accessKeyID;
 	protected Date timeStamp;
@@ -200,41 +198,7 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
 
-public class LifecycleTransition extends EucalyptusData {
-    String storageClass;
-    Integer days;
-    Date date;
-}
-
-public class LifecycleExpiration extends EucalyptusData {
-    Integer days;
-    Date date;
-}
-
-public class LifecycleRule extends EucalyptusData {
-    String ID;
-    String prefix;
-    String status;
-    LifecycleTransition transition;
-    LifecycleExpiration expiration;
-}
-
-public class LifecycleConfigurationType extends EucalyptusData {
-    List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-}
-
-public class GetLifecycleType extends WalrusRequestType { }
-
-public class GetLifecycleResponseType extends WalrusResponseType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleType extends WalrusRequestType {
-    LifecycleConfigurationType lifecycle;
-}
-
-public class PutLifecycleResponseType extends WalrusResponseType { }
-
+@ComponentMessage(WalrusBackend.class)
 public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
 	String code;
@@ -367,7 +331,7 @@ public class WalrusDataRequestType extends WalrusRequestType {
 
 public class WalrusDataResponseType extends WalrusStreamingResponseType {
 	String etag;
-	String lastModified;
+	Date lastModified;
 	Long size;
 	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
@@ -399,6 +363,9 @@ public class WalrusDataGetRequestType extends WalrusDataRequestType {
 }
 
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
+    List<ChunkedInput> dataInputStream;
+    Long byteRangeStart;
+    Long byteRangeEnd;
 
 	def WalrusDataGetResponseType() {}
 }
@@ -613,7 +580,7 @@ public class GetObjectExtendedType extends WalrusDataGetRequestType {
 	Boolean returnCompleteObjectOnConditionFailure;
 }
 
-public class GetObjectExtendedResponseType extends WalrusDataResponseType {
+public class GetObjectExtendedResponseType extends WalrusDataGetResponseType {
 	Status status;
 }
 
@@ -774,7 +741,7 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 	Long bytesOut,
 	Integer numberOfBuckets,
 	Long totalSpaceUsed) {
-		super("Walrus", System.getProperty("euca.version"));
+		super("WalrusBackend", System.getProperty("euca.version"));
 		this.bytesIn = bytesIn;
 		this.bytesOut = bytesOut;
 		this.numberOfBuckets = numberOfBuckets;

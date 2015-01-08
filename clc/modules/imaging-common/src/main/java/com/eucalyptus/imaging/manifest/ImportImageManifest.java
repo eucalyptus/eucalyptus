@@ -62,7 +62,6 @@ public enum ImportImageManifest implements ImageManifest {
 
 	@Override
 	public String getManifest(String location) throws EucalyptusCloudException {
-		LOG.debug("Downloading " + location);
 		HttpClient client = new HttpClient();
 		client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
 		GetMethod method = new GetMethod(location);

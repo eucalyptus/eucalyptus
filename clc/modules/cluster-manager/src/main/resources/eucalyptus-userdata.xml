@@ -81,11 +81,6 @@
                 <inbound-endpoint ref="KeyPairWS"/>
             </inbound>
             <component class="com.eucalyptus.keys.KeyPairManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
 
         <service name="Groups">
@@ -93,11 +88,6 @@
                 <inbound-endpoint ref="GroupsWS"/>
             </inbound>
             <component class="com.eucalyptus.network.NetworkGroupManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
 
         <service name="Tags">
@@ -105,11 +95,6 @@
                 <inbound-endpoint ref="TagsWS"/>
             </inbound>
             <component class="com.eucalyptus.tags.TagManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
 
         <service name="PrivateNetworks">
@@ -117,13 +102,7 @@
                 <inbound-endpoint ref="PrivateNetworksWS"/>
             </inbound>
             <component class="com.eucalyptus.vpc.PrivateNetworksManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
-
     </model>
 
 </mule>

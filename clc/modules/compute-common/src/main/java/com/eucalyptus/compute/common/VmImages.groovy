@@ -23,8 +23,10 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded
+
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+
 import com.google.common.collect.Lists;
 
 public class VmImageMessage extends ComputeMessage {
@@ -205,7 +207,8 @@ public class RegisterImageType extends VmImageMessage {
   String kernelId;
   String ramdiskId;
   String rootDeviceName;
-  String virtualizationType
+  String virtualizationType;
+  String platform;
   @HttpParameterMapping (parameter = "BlockDeviceMapping")
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();

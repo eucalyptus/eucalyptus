@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,6 +105,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -423,8 +424,20 @@ public class Topology {
       Logs.extreme( ).debug( ex, ex );
     }
     try {
-      Component comp = Components.lookup( config.getComponentId( ) );
-      comp.destroy( config );
+      Queue.INTERNAL.enqueue( new Callable<Boolean>(){
+        @Override
+        public Boolean call() throws Exception {
+          try {
+            Component comp = Components.lookup( config.getComponentId( ) );
+            comp.destroy( config );
+          } catch ( Exception ex ) {
+            Exceptions.maybeInterrupted( ex );
+            LOG.error( ex );
+            Logs.extreme( ).debug( ex, ex );
+          }
+          return true;
+        }
+      } ).get();
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
       LOG.error( ex );
@@ -959,7 +972,7 @@ public class Topology {
       }
     } else {
       res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
+      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) && !compId.isAlwaysLocal( ) ) {
         try {
           ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
           Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
@@ -1256,6 +1269,9 @@ public class Topology {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           enabledEndState = true;
+          throw Exceptions.toUndeclared( ex );
+        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ){
+          Logs.extreme( ).error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         } else {
           Exceptions.maybeInterrupted( ex );

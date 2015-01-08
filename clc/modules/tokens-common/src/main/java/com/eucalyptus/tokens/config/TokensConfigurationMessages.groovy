@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.tokens.config
 
 import com.eucalyptus.config.DeregisterComponentResponseType
@@ -27,6 +28,7 @@ import com.eucalyptus.config.ModifyComponentAttributeResponseType
 import com.eucalyptus.config.ModifyComponentAttributeType
 import com.eucalyptus.config.RegisterComponentResponseType
 import com.eucalyptus.config.RegisterComponentType
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class RegisterTokensType extends RegisterComponentType {}
 public class RegisterTokensResponseType extends RegisterComponentResponseType {}

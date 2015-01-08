@@ -70,7 +70,7 @@ public interface MpuPartMetadataManager {
      * @param objectKey
      * @throws Exception
      */
-    public void cleanupInvalidParts(Bucket bucket, String objectKey) throws Exception;
+    public void cleanupInvalidParts(Bucket bucket, String objectKey, String uploadId, int partNumber) throws Exception;
 
     /**
      * Returns parts that have expired in creating state.
@@ -83,8 +83,19 @@ public interface MpuPartMetadataManager {
 
     public List<PartEntity> lookupPartsInState(Bucket searchBucket, String searchKey, String uploadId, ObjectState state) throws Exception;
 
-    public void removeParts(String uploadId) throws Exception;
+    /**
+     * Removes all parts for the given uploadId by deleteing the metadata records. Will update the bucket size to reflect removed 'extant' parts
+     * @return
+     * @throws Exception
+     */
+    public void removeParts(Bucket bucket, String uploadId) throws Exception;
 
+    /**
+     * Flushes all part records for the given bucket. Does not update bucket size. This is expected for use prior to a bucket deletion or where
+     * size or state changes aren't important.
+     * @param bucket
+     * @throws Exception
+     */
     public void flushAllParts(Bucket bucket) throws Exception;
 
     public PartEntity transitionPartToState(@Nonnull PartEntity entity, @Nonnull ObjectState destState) throws IllegalResourceStateException, MetadataOperationFailureException;
@@ -100,6 +111,15 @@ public interface MpuPartMetadataManager {
                                                    String uploadId,
                                                    Integer partNumberMarker,
                                                    Integer maxParts) throws Exception;
+
+    /**
+     * Returns the conservative sum size of all parts in the given bucket. Includes
+     * any in-progress uploads (objects in 'creating' or 'extant' state)
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public long getTotalSize(Bucket bucket) throws Exception;
 
 
 }

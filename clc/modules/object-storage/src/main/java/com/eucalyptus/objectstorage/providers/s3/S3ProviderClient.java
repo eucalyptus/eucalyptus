@@ -21,7 +21,6 @@
 package com.eucalyptus.objectstorage.providers.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -65,6 +64,8 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.storage.config.ConfigurationCache;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
@@ -133,8 +134,8 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.util.AclUtils;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.S3Client;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
+import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -157,9 +158,12 @@ import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -180,42 +184,107 @@ import java.util.NoSuchElementException;
  */
 @ObjectStorageProviderClientProperty("s3")
 public class S3ProviderClient implements ObjectStorageProviderClient {
-	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class); 
-	protected S3Client s3Client = null;
+	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class);
+    private volatile URI upstreamEndpoint;
+    private volatile OsgInternalS3Client backendClient;
 
 	/**
 	 * Returns a usable S3 Client configured to send requests to the currently configured
 	 * endpoint with the currently configured credentials.
 	 * @return
 	 */
-	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws InternalErrorException {
-		//TODO: this should be enhanced to share clients/use a pool for efficiency.
-		if (s3Client == null) {
-			synchronized(this) {		
-				Protocol protocol = null;
-				boolean useHttps = false;
-				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
-					useHttps = true;
-				}
-                AWSCredentials credentials;
-                try {
-                    credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
-                } catch(Exception e) {
-                    LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
-                    InternalErrorException ex = new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
-                    ex.initCause(e);
-                    throw ex;
+	protected OsgInternalS3Client getS3Client(User requestUser) throws InternalErrorException {
+        S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
+        AWSCredentials credentials;
+        try {
+            credentials = mapCredentials(requestUser);
+        } catch(Exception e) {
+            LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
+            throw new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"), e);
+        }
+
+        if(this.backendClient == null ) {
+            synchronized(this) {
+                if(this.backendClient == null) {
+                    try {
+                        //Create new one
+                        this.backendClient = new OsgInternalS3Client(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(), providerConfig.getS3UseBackendDns());
+                        return this.backendClient;
+                    } catch (Exception e) {
+                        LOG.error("exception thrown retrieving internal s3 client", e);
+                        throw new InternalErrorException("Cannot get s3client from pool", e);
+                    }
                 }
+            }
+        }
 
-				s3Client = new S3Client(credentials, useHttps);
-				s3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
-				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
-			}
-		}
-		return s3Client.getS3Client();
-	}
+        try {
+            this.backendClient.update(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(), providerConfig.getS3UseBackendDns());
+            return this.backendClient;
+        } catch(Exception e){
+            throw new InternalErrorException(e);
+        }
+    }
 
-	/**
+    protected URI getUpstreamEndpoint() throws URISyntaxException {
+        String raw = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3Endpoint();
+        if(upstreamEndpoint == null || !(upstreamEndpoint.getHost().equals(getUpstreamEndpointHost(raw)) && upstreamEndpoint.getPort() == getUpstreamEndpointPort(raw))) {
+            synchronized(this) {
+                upstreamEndpoint =  convertToFullURI(raw);
+            }
+        }
+        return upstreamEndpoint;
+   }
+
+    /**
+     * Returns valid URI with port, will assign 80 if not specified explicitly
+     * and will add a 'http' scheme if none found.
+     * @param raw
+     * @return
+     */
+    protected URI convertToFullURI(@Nonnull String raw) {
+        URI tmp;
+        if(!raw.startsWith("http://") && !raw.startsWith("https://")) {
+            //Add the scheme
+            raw = "http://" + raw;
+        }
+        tmp = URI.create(raw);
+
+        if(tmp.getPort() != -1) {
+            return tmp; //It's valid
+        } else {
+            return URI.create(raw + ":80"); //just add default http port
+        }
+    }
+
+    protected String getUpstreamEndpointHost(@Nonnull String raw) {
+        String[] s3EndpointParts = raw.split(":");
+        if (s3EndpointParts.length > 0) {
+            return s3EndpointParts[0];
+        } else {
+            return null;
+        }
+    }
+
+    protected int getUpstreamEndpointPort(@Nonnull String raw) {
+        String[] s3EndpointParts = raw.split(":");
+        if (s3EndpointParts.length > 1) {
+            try {
+                return Integer.parseInt(s3EndpointParts[1]);
+            } catch (NumberFormatException e) {
+                return 80;
+            }
+        } else {
+            return 80; //default http port
+        }
+    }
+
+
+    protected boolean doUsePathStyle() {
+        return !ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3UseBackendDns();
+    }
+
+    /**
 	 * Returns the S3 ACL in euca object form. Does not modify the results,
 	 * so owner information will be preserved.
 	 * @param s3Acl
@@ -252,13 +321,14 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	 * all Eucalyptus credentials to a single s3/backend credential.
 	 * 
 	 * @param requestUser The Eucalyptus user that generated the request
-	 * @param requestAWSAccessKeyId The access key id used for this request
 	 * @return a BasicAWSCredentials object initialized with the credentials to use
 	 * @throws NoSuchElementException
 	 * @throws IllegalArgumentException
 	 */
-	protected BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {
-		return new BasicAWSCredentials(S3ProviderConfiguration.getS3AccessKey(), S3ProviderConfiguration.getS3SecretKey());
+	protected BasicAWSCredentials mapCredentials(User requestUser) throws Exception {
+		return new BasicAWSCredentials(
+                ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3AccessKey(),
+                ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
 	}
 
 	protected ObjectMetadata getS3ObjectMetadata(PutObjectType request) {
@@ -287,6 +357,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	@Override
 	public void initialize() throws EucalyptusCloudException {
 		LOG.debug("Initializing");
+        //Prime the cache, initializes defaults etc. This is a bit ugly but needs to be provider-specific
+        ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
 		check();
 		LOG.debug("Initialization completed successfully");		
 	}
@@ -296,14 +368,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 		LOG.debug("Checking");
         Socket s = null;
 		try {
-            s = new Socket(S3ProviderConfiguration.getS3EndpointHost(), S3ProviderConfiguration.getS3EndpointPort());
-		} catch (UnknownHostException e) {
+            URI endpoint = this.getUpstreamEndpoint();
+            s = new Socket(endpoint.getHost(), endpoint.getPort());
+		} catch (URISyntaxException | UnknownHostException e) {
 			//it is safe to do this because we won't try to execute an operation until enable returns successfully.
-			s3Client = null;
-			throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3Endpoint() + ". Please check configuration and network connection");
+			throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint Please check configuration and network connection");
 		} catch (IOException e) {
-			s3Client = null;
-			throw new EucalyptusCloudException("Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3Endpoint() + ". Please check configuration and network connection");
+			throw new EucalyptusCloudException("Unable to connect to S3 Endpoint. Please check configuration and network connection");
 		} finally {
             try {
                 if( s != null && !s.isClosed()) {
@@ -325,14 +396,14 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	@Override
 	public void start() throws EucalyptusCloudException {
 		LOG.debug("Starting");
-		LOG.debug("Start completed successfully");		
+		LOG.debug("Start completed successfully");
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		LOG.debug("Stopping");
 		//Force a new load of this on startup.
-		this.s3Client = null;
+        //flushClientPools();
 		LOG.debug("Stop completed successfully");		
 	}
 
@@ -366,21 +437,24 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	@Override
 	public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception {
 		ListAllMyBucketsResponseType reply = request.getReply();
-		try {
-            User requestUser = getRequestUser(request);
+		OsgInternalS3Client internalS3Client = null ;
+        User requestUser = null;
+        try {
+            requestUser = getRequestUser(request);
 			//The euca-types
 			ListAllMyBucketsList myBucketList = new ListAllMyBucketsList();
 			myBucketList.setBuckets(new ArrayList<BucketListEntry>());
 
 
 			//The s3 client types
-			AmazonS3Client s3Client = this.getS3Client(requestUser, request.getAccessKeyID());
+            internalS3Client = getS3Client(requestUser);
+			AmazonS3Client s3Client = internalS3Client.getS3Client();
 			ListBucketsRequest listRequest = new ListBucketsRequest();
 
 			//Map s3 client result to euca response message
 			List<Bucket> result = s3Client.listBuckets(listRequest);
 			for(Bucket b : result) {
-				myBucketList.getBuckets().add(new BucketListEntry(b.getName(), OSGUtil.dateToHeaderFormattedString(b.getCreationDate())));
+				myBucketList.getBuckets().add(new BucketListEntry(b.getName(), DateFormatter.dateToHeaderFormattedString(b.getCreationDate())));
 			}
 
 			reply.setBucketList(myBucketList);
@@ -388,7 +462,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-		return reply;		
+        return reply;
 	}
 
 	/**
@@ -400,30 +474,31 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	 */
 	@Override
 	public HeadBucketResponseType headBucket(HeadBucketType request) throws S3Exception {
-		HeadBucketResponseType reply = (HeadBucketResponseType) request.getReply();
+		HeadBucketResponseType reply = request.getReply();
 		User requestUser = getRequestUser(request);
-
+        OsgInternalS3Client internalS3Client = null ;
 		// call the storage manager to save the bucket to disk
 		try {
-			AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 			com.amazonaws.services.s3.model.AccessControlList responseList = s3Client.getBucketAcl(request.getBucket());
 			reply.setBucket(request.getBucket());
 		} catch(AmazonServiceException ex) {
 			LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-
-		return reply;		
+		return reply;
 
 	}
 
 	@Override
 	public CreateBucketResponseType createBucket(CreateBucketType request) throws S3Exception {
-		CreateBucketResponseType reply = (CreateBucketResponseType) request.getReply();
+		CreateBucketResponseType reply = request.getReply();
 		User requestUser = getRequestUser(request);
-		
+        OsgInternalS3Client internalS3Client = null ;
 		try {
-			AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 			Bucket responseBucket = s3Client.createBucket(request.getBucket());
 			//Save the owner info in response?
 			reply.setBucket(request.getBucket());
@@ -433,7 +508,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
 		}
-
 		return reply;		
 	}
 
@@ -441,18 +515,18 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
     @Override
 	public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws S3Exception {
-		DeleteBucketResponseType reply = (DeleteBucketResponseType) request.getReply();
+		DeleteBucketResponseType reply = request.getReply();
 		User requestUser = getRequestUser(request);
-		
+        OsgInternalS3Client internalS3Client = null ;
 		// call the storage manager to save the bucket to disk
 		try {
-			AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 			s3Client.deleteBucket(request.getBucket());
 		} catch(AmazonServiceException ex) {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-
 		return reply;		
 	}
 
@@ -469,11 +543,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
 			GetBucketAccessControlPolicyType request)
 					throws S3Exception {
-		GetBucketAccessControlPolicyResponseType reply = (GetBucketAccessControlPolicyResponseType) request.getReply();
+		GetBucketAccessControlPolicyResponseType reply = request.getReply();
 		User requestUser = getRequestUser(request);
-		
+        OsgInternalS3Client internalS3Client = null ;
 		try {
-			AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 			com.amazonaws.services.s3.model.AccessControlList acl = s3Client.getBucketAcl(request.getBucket());
 			reply.setAccessControlPolicy(sdkAclToEucaAcl(acl));			
 		} catch(AmazonServiceException ex) {
@@ -486,10 +561,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
 	@Override
 	public PutObjectResponseType putObject(PutObjectType request, InputStream inputData) throws S3Exception {
-		try {
-			User requestUser = getRequestUser(request);
-			AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
-			PutObjectResult result = null;
+        User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null ;
+        try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+			PutObjectResult result;
             ObjectMetadata metadata = getS3ObjectMetadata(request);
             //Set the acl to private.
             PutObjectRequest putRequest = new PutObjectRequest(request.getBucket(),
@@ -521,14 +598,15 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
 	@Override
 	public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception {
-		try {
-			User requestUser = getRequestUser(request);
-
-            DeleteObjectResponseType reply = (DeleteObjectResponseType) request.getReply();
+        User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null ;
+        try {
+            DeleteObjectResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("NO CONTENT");
 
-            AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             s3Client.deleteObject(request.getBucket(), request.getKey());
             return reply;
         } catch(AmazonServiceException ex) {
@@ -539,11 +617,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
 	@Override
 	public ListBucketResponseType listBucket(ListBucketType request) throws S3Exception {
-		ListBucketResponseType reply = (ListBucketResponseType) request.getReply();
+		ListBucketResponseType reply = request.getReply();
+        User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null ;
 		try {
-			User requestUser = getRequestUser(request);
-			
-			AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 			ListObjectsRequest listRequest = new ListObjectsRequest();
 			listRequest.setBucketName(request.getBucket());
 			listRequest.setDelimiter(Strings.isNullOrEmpty(request.getDelimiter()) ? null : request.getDelimiter());
@@ -574,7 +653,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 //Add entry, note that the canonical user is set based on requesting user, not returned user
                 reply.getContents().add(new ListEntry(
                         obj.getKey(),
-                        OSGUtil.dateToHeaderFormattedString(obj.getLastModified()),
+                        DateFormatter.dateToHeaderFormattedString(obj.getLastModified()),
                         obj.getETag(),
                         obj.getSize(),
                         getCanonicalUser(requestUser),
@@ -598,18 +677,18 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
     @Override
     public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception {
-        GetObjectAccessControlPolicyResponseType reply = (GetObjectAccessControlPolicyResponseType) request.getReply();
+        GetObjectAccessControlPolicyResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-
+        OsgInternalS3Client internalS3Client = null ;
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             com.amazonaws.services.s3.model.AccessControlList acl = s3Client.getObjectAcl(request.getBucket(),request.getKey(), request.getVersionId());
             reply.setAccessControlPolicy(sdkAclToEucaAcl(acl));
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-
         return reply;
     }
 
@@ -643,17 +722,19 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         }
 
     }
+
     @Override
     public GetObjectResponseType getObject(final GetObjectType request) throws S3Exception {
         User requestUser = getRequestUser(request);
-
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
         GetObjectRequest getRequest = new GetObjectRequest(request.getBucket(), request.getKey());
         try {
-            GetObjectResponseType reply = (GetObjectResponseType)request.getReply();
-            S3Object response = null;
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+            GetObjectResponseType reply = request.getReply();
+            S3Object response;
             response = s3Client.getObject(getRequest);
-            populateResponseMetadata((ObjectStorageDataResponseType)reply, response.getObjectMetadata());
+            populateResponseMetadata(reply, response.getObjectMetadata());
             reply.setDataInputStream(response.getObjectContent());
             return reply;
         } catch(AmazonServiceException e) {
@@ -662,13 +743,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         }
     }
 
-
     @Override
     public GetObjectExtendedResponseType getObjectExtended(final GetObjectExtendedType request) throws S3Exception {
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         Boolean getMetaData = request.getGetMetaData();
-        Boolean inlineData = request.getInlineData();
         Long byteRangeStart = request.getByteRangeStart();
         Long byteRangeEnd = request.getByteRangeEnd();
         Date ifModifiedSince = request.getIfModifiedSince();
@@ -703,7 +783,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             getRequest.setNonmatchingETagConstraints(nonMatchList);
         }
         try {
-            AmazonS3Client s3Client = this.getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             S3Object response = s3Client.getObject(getRequest);
 
             GetObjectExtendedResponseType reply = request.getReply();
@@ -721,11 +802,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     @Override
     public GetBucketLocationResponseType getBucketLocation(
             GetBucketLocationType request) throws S3Exception {
-        GetBucketLocationResponseType reply = (GetBucketLocationResponseType) request.getReply();
+        GetBucketLocationResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-
+        OsgInternalS3Client internalS3Client = null;
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             String bucketLocation = s3Client.getBucketLocation(request.getBucket());
             reply.setLocationConstraint(bucketLocation);
         } catch(AmazonServiceException e) {
@@ -739,8 +821,9 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     @Override
     public CopyObjectResponseType copyObject(CopyObjectType request)
             throws S3Exception {
-        CopyObjectResponseType reply = (CopyObjectResponseType) request.getReply();
+        CopyObjectResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         String sourceBucket = request.getSourceBucket();
         String sourceKey = request.getSourceObject();
@@ -766,10 +849,11 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 copyRequest.setNonmatchingETagConstraints(copyIfNoneMatchConstraint);
             }
             //TODO: Need to set canned ACL if specified
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             CopyObjectResult result = s3Client.copyObject(copyRequest);
             reply.setEtag(result.getETag());
-            reply.setLastModified(OSGUtil.dateToHeaderFormattedString(result.getLastModifiedDate()));
+            reply.setLastModified(DateFormatter.dateToListingFormattedString(result.getLastModifiedDate()));
             String destinationVersionId = result.getVersionId();
             if (destinationVersionId != null) {
                 reply.setCopySourceVersionId(sourceVersionId);
@@ -792,11 +876,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     @Override
     public SetBucketLoggingStatusResponseType setBucketLoggingStatus(
             SetBucketLoggingStatusType request) throws S3Exception {
-        SetBucketLoggingStatusResponseType reply = (SetBucketLoggingStatusResponseType) request.getReply();
+        SetBucketLoggingStatusResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             BucketLoggingConfiguration config = new BucketLoggingConfiguration();
             LoggingEnabled requestConfig = request.getLoggingEnabled();
             config.setDestinationBucketName(requestConfig == null ? null : requestConfig.getTargetBucket());
@@ -810,18 +896,19 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-
         return reply;
     }
 
     @Override
     public GetBucketLoggingStatusResponseType getBucketLoggingStatus(
             GetBucketLoggingStatusType request) throws S3Exception {
-        GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
+        GetBucketLoggingStatusResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             BucketLoggingConfiguration loggingConfig = s3Client.getBucketLoggingConfiguration(request.getBucket());
             LoggingEnabled loggingEnabled = new LoggingEnabled();
             if(loggingConfig == null || !loggingConfig.isLoggingEnabled()) {
@@ -836,18 +923,19 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-
         return reply;
     }
 
     @Override
     public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request)
             throws S3Exception {
-        GetBucketVersioningStatusResponseType reply = (GetBucketVersioningStatusResponseType) request.getReply();
+        GetBucketVersioningStatusResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             BucketVersioningConfiguration versioning = s3Client.getBucketVersioningConfiguration(request.getBucket());
             reply.setVersioningStatus(versioning.getStatus());
         } catch(AmazonServiceException e) {
@@ -862,11 +950,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     public SetBucketVersioningStatusResponseType setBucketVersioningStatus(
             SetBucketVersioningStatusType request)
             throws S3Exception {
-        SetBucketVersioningStatusResponseType reply = (SetBucketVersioningStatusResponseType) request.getReply();
+        SetBucketVersioningStatusResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             BucketVersioningConfiguration config = new BucketVersioningConfiguration().withStatus(request.getVersioningStatus());
             SetBucketVersioningConfigurationRequest configRequest = new SetBucketVersioningConfigurationRequest(request.getBucket(), config);
             s3Client.setBucketVersioningConfiguration(configRequest);
@@ -881,11 +971,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
     @Override
     public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception {
-        ListVersionsResponseType reply = (ListVersionsResponseType) request.getReply();
+        ListVersionsResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
         try {
-            AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             ListVersionsRequest listVersionsRequest = new ListVersionsRequest(request.getBucket(),
                     request.getPrefix(),
                     request.getKeyMarker(),
@@ -893,7 +985,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                     request.getDelimiter(), Integer.parseInt(request.getMaxKeys()));
             VersionListing result = s3Client.listVersions(listVersionsRequest);
 
-            CanonicalUser owner = null;
+            CanonicalUser owner;
             try {
                 owner = AclUtils.buildCanonicalUser(requestUser.getAccount());
             } catch(AuthException e) {
@@ -920,15 +1012,15 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 }
             }
 
-            ArrayList<KeyEntry> versions = new ArrayList<KeyEntry>();
-            VersionEntry v = null;
-            DeleteMarkerEntry d = null;
+            ArrayList<KeyEntry> versions = new ArrayList<>();
+            VersionEntry v;
+            DeleteMarkerEntry d;
             for(S3VersionSummary summary: result.getVersionSummaries()) {
                 if(!summary.isDeleteMarker()) {
                     v = new VersionEntry();
                     v.setKey(summary.getKey());
                     v.setVersionId(summary.getVersionId());
-                    v.setLastModified(OSGUtil.dateToHeaderFormattedString(summary.getLastModified()));
+                    v.setLastModified(DateFormatter.dateToHeaderFormattedString(summary.getLastModified()));
                     v.setEtag(summary.getETag());
                     v.setIsLatest(summary.isLatest());
                     v.setOwner(owner);
@@ -938,7 +1030,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                     d = new DeleteMarkerEntry();
                     d.setIsLatest(summary.isLatest());
                     d.setKey(summary.getKey());
-                    d.setLastModified(OSGUtil.dateToHeaderFormattedString(summary.getLastModified()));
+                    d.setLastModified(DateFormatter.dateToHeaderFormattedString(summary.getLastModified()));
                     d.setOwner(owner);
                     d.setVersionId(summary.getVersionId());
                     versions.add(d);
@@ -956,12 +1048,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
     @Override
     public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception {
+        User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
         try {
-            User requestUser = getRequestUser(request);
-
-            AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             s3Client.deleteVersion(request.getBucket(), request.getKey(), request.getVersionId());
-            DeleteVersionResponseType reply = (DeleteVersionResponseType) request.getReply();
+            DeleteVersionResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("NO CONTENT");
             return reply;
@@ -975,30 +1068,34 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     public HeadObjectResponseType headObject(final HeadObjectType request)
             throws S3Exception {
         User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
 
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
         GetObjectMetadataRequest getMetadataRequest = new GetObjectMetadataRequest(request.getBucket(), request.getKey());
         getMetadataRequest.setVersionId(request.getVersionId());
         try {
-            ObjectMetadata metadata = null;
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+            ObjectMetadata metadata;
             metadata = s3Client.getObjectMetadata(getMetadataRequest);
 
-            HeadObjectResponseType reply = (HeadObjectResponseType)request.getReply();
-            populateResponseMetadata((ObjectStorageDataResponseType)reply, metadata);
+            HeadObjectResponseType reply = request.getReply();
+            populateResponseMetadata(reply, metadata);
             return reply;
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
+
     }
 
     @Override
     public InitiateMultipartUploadResponseType initiateMultipartUpload(
             InitiateMultipartUploadType request)
             throws S3Exception {
-        InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
+        InitiateMultipartUploadResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
+
         String bucketName = request.getBucket();
         String key = request.getKey();
         InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key);
@@ -1009,6 +1106,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
         initiateMultipartUploadRequest.setObjectMetadata(metadata);
         try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
             InitiateMultipartUploadResult result = s3Client.initiateMultipartUpload(initiateMultipartUploadRequest);
             reply.setUploadId(result.getUploadId());
             reply.setBucket(bucketName);
@@ -1026,11 +1125,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         String bucketName = request.getBucket();
         String key = request.getKey();
 
+        User requestUser = getRequestUser(request);
+        OsgInternalS3Client internalS3Client = null;
         try {
-            User requestUser = getRequestUser(request);
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
 
-            AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
-            UploadPartResult result = null;
+            UploadPartResult result;
             UploadPartRequest uploadPartRequest = new UploadPartRequest();
             uploadPartRequest.setBucketName(bucketName);
             uploadPartRequest.setKey(key);
@@ -1045,7 +1146,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 LOG.debug("Error from backend", e);
                 throw S3ExceptionMapper.fromAWSJavaSDK(e);
             }
-            UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
+            UploadPartResponseType reply = request.getReply();
             reply.setEtag(result.getETag());
             reply.setLastModified(new Date());
             return reply;
@@ -1053,32 +1154,36 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
-
     }
 
     @Override
     public CompleteMultipartUploadResponseType completeMultipartUpload(
             CompleteMultipartUploadType request)
             throws S3Exception {
-        CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();
+        CompleteMultipartUploadResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
+
         String bucketName = request.getBucket();
         String key = request.getKey();
         String uploadId = request.getUploadId();
         List<Part> parts = request.getParts();
-        List<PartETag> partETags = new ArrayList<PartETag>();
+        List<PartETag> partETags = new ArrayList<>();
         for (Part part : parts) {
             PartETag partETag = new PartETag(part.getPartNumber(), part.getEtag());
             partETags.add(partETag);
         }
         CompleteMultipartUploadRequest multipartRequest = new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
         try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+
             CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(multipartRequest);
             reply.setEtag(result.getETag());
             reply.setBucket(bucketName);
             reply.setKey(key);
             reply.setLocation(result.getLocation());
+            reply.setLastModified(new Date());
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
@@ -1089,14 +1194,18 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     @Override
     public AbortMultipartUploadResponseType abortMultipartUpload(
             AbortMultipartUploadType request) throws S3Exception {
-        AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
+        AbortMultipartUploadResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
+
         String bucketName = request.getBucket();
         String key = request.getKey();
         String uploadId = request.getUploadId();
         AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucketName, key, uploadId);
         try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+
             s3Client.abortMultipartUpload(abortMultipartUploadRequest);
         } catch(AmazonServiceException e) {
             LOG.debug("Error from backend", e);
@@ -1108,9 +1217,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     @Override
     public ListPartsResponseType listParts(ListPartsType request)
             throws S3Exception {
-        ListPartsResponseType reply = (ListPartsResponseType) request.getReply();
+        ListPartsResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
+
         String bucketName = request.getBucket();
         String key = request.getKey();
         String uploadId = request.getUploadId();
@@ -1122,6 +1232,9 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
         }
         try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+
             PartListing listing = s3Client.listParts(listPartsRequest);
             reply.setBucket(bucketName);
             reply.setKey(key);
@@ -1153,16 +1266,16 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
-
         return reply;
     }
 
     @Override
     public ListMultipartUploadsResponseType listMultipartUploads(
             ListMultipartUploadsType request) throws S3Exception {
-        ListMultipartUploadsResponseType reply = (ListMultipartUploadsResponseType) request.getReply();
+        ListMultipartUploadsResponseType reply = request.getReply();
         User requestUser = getRequestUser(request);
-        AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+        OsgInternalS3Client internalS3Client = null;
+
         String bucketName = request.getBucket();
         ListMultipartUploadsRequest listMultipartUploadsRequest = new ListMultipartUploadsRequest(bucketName);
         listMultipartUploadsRequest.setMaxUploads(request.getMaxUploads());
@@ -1171,6 +1284,9 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         listMultipartUploadsRequest.setPrefix(request.getPrefix());
         listMultipartUploadsRequest.setUploadIdMarker(request.getUploadIdMarker());
         try {
+            internalS3Client = getS3Client(requestUser);
+            AmazonS3Client s3Client = internalS3Client.getS3Client();
+
             MultipartUploadListing listing = s3Client.listMultipartUploads(listMultipartUploadsRequest);
             reply.setBucket(listing.getBucketName());
             reply.setKeyMarker(listing.getKeyMarker());

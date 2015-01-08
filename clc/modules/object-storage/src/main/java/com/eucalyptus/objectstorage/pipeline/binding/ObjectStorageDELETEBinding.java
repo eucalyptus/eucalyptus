@@ -62,8 +62,50 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
 	private static Logger LOG = Logger.getLogger( ObjectStorageDELETEBinding.class );
+
+    @Override
+    protected Map<String, String> populateOperationMap() {
+        Map<String, String> newMap = new HashMap<>();
+
+        //Bucket operations
+        newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
+        newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
+
+        //Object operations
+        newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
+        newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+
+        // Multipart Uploads
+        newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload");
+
+        return newMap;
+    }
+
+    protected Map<String, String> populateUnsupportedOperationMap() {
+        Map<String, String> opsMap = new HashMap<>();
+
+        // Bucket operations
+        // Cross-Origin Resource Sharing (cors)
+        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
+        // Policy
+        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
+
+        // Tagging
+        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DELETE Bucket tagging");
+
+        // Website
+        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
+
+        // Object operations
+        return opsMap;
+    }
 }

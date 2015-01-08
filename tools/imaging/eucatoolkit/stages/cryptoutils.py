@@ -156,3 +156,20 @@ def _decrypt_hex_key(hex_encrypted_key, key_filename):
                    + '", and keyfile:"' + str(key_filename) + '".'
                    + VE.message]
         raise VE
+
+def _calc_digest_for_fileobj(file_obj, algorithm, chunk_size=None):
+    '''
+    Calculated and return the digest for the fileobj provided using the
+    hashlib 'alogrithm' provided.
+    :param file_obj: file like obj to read compute digest for
+    :param algorithm: string representing hashlib type(sha1, md5, etc)
+    :param chunksize: # of bytes to read/write per read()/write()
+    '''
+    chunk_size = chunk_size or 8192
+    digest = _get_digest_algorithm_from_string(algorithm)
+    while True:
+        chunk = file_obj.read(chunk_size)
+        if not chunk:
+            break
+        digest.update(chunk)
+    return digest.hexdigest()

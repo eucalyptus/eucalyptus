@@ -64,22 +64,24 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-public class UDPListener extends Thread {
+public class UDPListener extends Thread implements Closeable {
 	private static Logger LOG = Logger.getLogger( UDPListener.class );
 	InetAddress address;
 	int port;
 	DatagramSocket socket;
 
-	public UDPListener(InetAddress address, int port) throws Exception {
+	public UDPListener(InetAddress address, int port) throws IOException {
 		this.address = address;
 		this.port = port;
 		try {
 			socket = new DatagramSocket(port, address);
-		} catch(Exception ex) {
+			socket.setSoTimeout( 10000 );
+		} catch(IOException ex) {
 			LOG.error(ex);
 			throw ex;
 		}

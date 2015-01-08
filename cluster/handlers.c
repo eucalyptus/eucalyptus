@@ -233,7 +233,9 @@ static int populateOutboundMeta(ncMetadata * pMeta);
 //!
 void doInitCC(void)
 {
-    initialize(NULL, FALSE);
+    if (initialize(NULL, FALSE)) {
+        LOGWARN("could not initialize\n");
+    }
 }
 
 //!
@@ -521,59 +523,69 @@ void filter_services(ncMetadata * meta, char *filter_partition)
 //!
 int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...)
 {
-    va_list al;
-    int pid, rc = 0, ret = 0, status = 0, opFail = 0, len, rbytes, i;
-    int filedes[2];
+#define WRITE_REPLY_STRING                                                                \
+{                                                                                         \
+    if (timeout) {                                                                        \
+        int __len = 0;                                                                    \
+        if (localmeta->replyString) {                                                     \
+            __len = strlen(localmeta->replyString);                                       \
+        }                                                                                 \
+        int __bytes = write(filedes[1], &__len, sizeof(int));                             \
+        if (__len > 0) {                                                                  \
+            __bytes += write(filedes[1], localmeta->replyString, (sizeof(char) * __len)); \
+        }                                                                                 \
+        LOGTRACE("child process wrote %d bytes (len=%d)\n", __bytes, __len);              \
+    }                                                                                     \
+}
+
+#define READ_REPLY_STRING                                                      \
+{                                                                              \
+    if (timeout) {                                                             \
+        int __len = 0;                                                         \
+        rbytes = timeread(filedes[0], &__len, sizeof(int), timeout);           \
+        LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, __len);    \
+        if (rbytes <= 0) {                                                     \
+            killwait(pid);                                                     \
+            opFail = 1;                                                        \
+        } else if (__len > 0) {                                                \
+            pMeta->replyString = EUCA_ALLOC(__len, sizeof(char));              \
+            if (pMeta->replyString == NULL) {                                  \
+                LOGFATAL("out of memory! ncOps=%s\n", ncOp);                   \
+                unlock_exit(1);                                                \
+            }                                                                  \
+            rbytes = timeread(filedes[0], pMeta->replyString, __len, timeout); \
+            if (rbytes <= 0) {                                                 \
+                killwait(pid);                                                 \
+                opFail = 1;                                                    \
+            }                                                                  \
+        }                                                                      \
+    }                                                                          \
+}
+
+    int i = 0;
+    int pid = 0;
+    int rc = 0;
+    int ret = 0;
+    int status = 0;
+    int opFail = 0;
+    int len = 0;
+    int rbytes = 0;
+    int filedes[2] = { 0 };
+    va_list al = { {0} };
 
     LOGTRACE("invoked: ncOps=%s ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);  // these are common
 
-    rc = pipe(filedes);
-    if (rc) {
+    if ((rc = pipe(filedes)) != 0) {
         LOGERROR("cannot create pipe ncOps=%s\n", ncOp);
         return (1);
     }
-#define WRITE_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                if (localmeta->replyString) { \
-                    len = strlen(localmeta->replyString); \
-                } \
-                int bytes = write(filedes[1], &len, sizeof(int)); \
-                if (len > 0) { \
-                    bytes += write(filedes[1], localmeta->replyString, sizeof(char) * len); \
-                } \
-                LOGTRACE("child process wrote %d bytes (len=%d)\n", bytes, len); \
-            }
-
-#define READ_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                rbytes = timeread(filedes[0], &len, sizeof(int), timeout); \
-                LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, len); \
-                if (rbytes <= 0) { \
-                    killwait(pid); \
-                    opFail = 1; \
-                } else if (len > 0) { \
-                    pMeta->replyString = EUCA_ALLOC(len, sizeof(char)); \
-                    if (pMeta->replyString == NULL) { \
-                        LOGFATAL("out of memory! ncOps=%s\n", ncOp); \
-                        unlock_exit(1); \
-                    } \
-                    rbytes = timeread(filedes[0], pMeta->replyString, len, timeout); \
-                    if (rbytes <= 0) { \
-                        killwait(pid); \
-                        opFail = 1; \
-                    } \
-                } \
-            }
 
     va_start(al, ncOp);
 
     // grab the lock
     sem_mywait(ncLock);
 
-    pid = fork();
-    if (!pid) {
+    if ((pid = fork()) == 0) {
         ncStub *ncs;
         ncMetadata *localmeta = NULL;
 
@@ -1250,6 +1262,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
     va_end(al);
 
     return (ret);
+
+#undef WRITE_REPLY_STRING
+#undef READ_REPLY_STRING
 }
 
 //!
@@ -1588,8 +1603,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         return (1);
     }
 
-    sem_mywait(GLOBALNETWORKINFO);
-
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
@@ -1618,15 +1631,27 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i = 0; i < gni->max_instances; i++) {
                     char *strptra = NULL, *strptrb = NULL;
+                    ccInstance *myInstance = NULL;
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
                     if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
                         LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                        // here, we should decide if we need to send the mapping, or not?
-                        rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                        // here, we should decide if we need to send the mapping, or not
+                        rc = find_instanceCacheIP(strptrb, &myInstance);
+                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
+                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                            } else {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                            }
+                        }
+                        if (myInstance) {
+                            EUCA_FREE(myInstance);
+                        }
 
-                        LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
+                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
                     } else {
                         LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                     }
@@ -1644,6 +1669,9 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
         EUCA_FREE(xmlbuf);
     }
+
+    sem_mywait(GLOBALNETWORKINFO);
+
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
     config->kick_broadcast_network_info = 1;
@@ -2732,7 +2760,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
-                                            euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
+                                            euca_strncpy(myInstance->ccnet.publicIp, ip, IP_BUFFER_SIZE);
                                         }
                                     }
                                 }
@@ -2741,7 +2769,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
                                     rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                     if (!rc) {
-                                        euca_strncpy(myInstance->ccnet.privateIp, ip, 24);
+                                        euca_strncpy(myInstance->ccnet.privateIp, ip, IP_BUFFER_SIZE);
                                     }
                                 }
 
@@ -3788,7 +3816,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
-    int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
+    int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0, pid = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
     char instId[16], uuid[48];
     ccResource *res = NULL;
@@ -3947,9 +3975,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             } else {
                 ncnet.networkIndex = -1;
             }
-            snprintf(ncnet.privateMac, 24, "%s", mac);
-            snprintf(ncnet.privateIp, 24, "%s", privip);
-            snprintf(ncnet.publicIp, 24, "%s", pubip);
+            snprintf(ncnet.privateMac, MAC_BUFFER_SIZE, "%s", mac);
+            snprintf(ncnet.privateIp, IP_BUFFER_SIZE, "%s", privip);
+            snprintf(ncnet.publicIp, IP_BUFFER_SIZE, "%s", pubip);
 
             sem_mywait(RESCACHE);
 
@@ -3966,7 +3994,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 // couldn't run this VM, remove networking information from system
                 free_instanceNetwork(mac, vlan, 1, 1);
             } else {
-                int pid, ret;
+                int ret;
 
                 // try to run the instance on the chosen resource
                 LOGINFO("scheduler decided to run instance %s on resource %s, running count %d\n", instId, res->ncURL, res->running);
@@ -3976,12 +4004,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 pid = fork();
                 if (pid == 0) {
                     time_t startRun, ncRunTimeout;
-
-                    sem_mywait(RESCACHE);
-                    if (res->running > 0) {
-                        res->running++;
-                    }
-                    sem_mypost(RESCACHE);
 
                     ret = 0;
                     LOGTRACE("sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... "
@@ -3998,23 +4020,41 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
                     while (rc && ((time(NULL) - startRun) < ncRunTimeout)) {
 
-                        // if we're running windows, and are an NC, create the pw/floppy locally
-                        if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
-                            //if (strstr(platform, "windows")) {
+                        boolean is_windows = (strstr(platform, "windows") != NULL) ? TRUE : FALSE;
+                        boolean has_creds = (credential != NULL && strlen(credential)>0) ? TRUE : FALSE;
+                        boolean is_res_node = (strstr(res->ncURL, "EucalyptusNC") != NULL) ? TRUE : FALSE;
+
+                        // if this resource is not a node (but a co-located Broker)
+                        // and the guest is either Windows or Linux needing credentials,
+                        // then we'll have to create a floppy to pass to the instance
+                        if (! is_res_node && (is_windows || has_creds)) {
+
+                            //! @TODO: remove the 'windows' subdir or change something more generic
                             char cdir[EUCA_MAX_PATH];
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
-                            if (check_directory(cdir))
-                                mkdir(cdir, 0700);
+                            if (check_directory(cdir)) {
+                                if(mkdir(cdir, 0700)) {
+                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
+                                }
+                            }
                             snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
-                            if (check_directory(cdir))
-                                mkdir(cdir, 0700);
+                            if (check_directory(cdir)) {
+                                if (mkdir(cdir, 0700)) {
+                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
+                                }
+                            }
                             if (check_directory(cdir)) {
                                 LOGERROR("could not create console/floppy cache directory '%s'\n", cdir);
                             } else {
-                                // drop encrypted windows password and floppy on filesystem
-                                rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                if (is_windows) {
+                                    // drop encrypted windows password and floppy on filesystem
+                                    rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
+                                } else if (has_creds) {
+                                    // decode the credential and place it into floppy on filesystem
+                                    rc = make_credential_floppy(config->eucahome, cdir, credential);
+                                }
                                 if (rc) {
-                                    LOGERROR("could not create console/floppy cache\n");
+                                    LOGERROR("could not create console/floppy cache/file\n");
                                 }
                             }
                         }
@@ -4038,15 +4078,30 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                         ret = 1;
                     }
 
-                    sem_mywait(RESCACHE);
-                    if (res->running > 0) {
-                        res->running--;
-                    }
-                    sem_mypost(RESCACHE);
-
                     exit(ret);
                 } else {
                     rc = 0;
+                    {
+                        int status;
+
+                        if (res->running > 0) {
+                            res->running++;
+                        }
+                        pid_t p = timewait(pid, &status, OP_TIMEOUT - 5);
+                        if (res->running > 0) {
+                            res->running--;
+                        }
+
+                        if (p > 0) {
+                            if (WIFEXITED(status)) {
+                                rc = WEXITSTATUS(status);
+                            } else {
+                                rc = 1; // child crashed
+                            }
+                        } else {
+                            rc = 1; // timeout or error
+                        }
+                    }
                     LOGDEBUG("call complete (pid/rc): %d/%d\n", pid, rc);
                 }
                 if (rc != 0) {
@@ -4358,7 +4413,10 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
                         snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        rmdir(cdir);
+                        
+                        if (rmdir(cdir)) {
+                            LOGWARN("rmdir failed: unable to remove directory '%s', check permissions\n", cdir);
+                        }
                     }
                 }
 
@@ -7074,11 +7132,6 @@ int maintainNetworkState(void)
             }
         }
 
-        //    rc = vnetApplyArpTableRules(vnetconfig);
-        //    if (rc) {
-        //      LOGWARN("failed to maintain arp tables\n");
-        //    }
-
         sem_mypost(VNET);
     }
 
@@ -7249,7 +7302,9 @@ int reconfigureNetworkFromCLC(void)
         EUCA_FREE(cloudIp);
         return (1);
     }
-    chmod(clcnetfile, 0644);
+    if (chmod(clcnetfile, 0644)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", clcnetfile);
+    }
     close(fd);
 
     fd = safe_mkstemp(chainmapfile);
@@ -7259,25 +7314,14 @@ int reconfigureNetworkFromCLC(void)
         unlink(clcnetfile);
         return (1);
     }
-    chmod(chainmapfile, 0644);
+    if (chmod(chainmapfile, 0644)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", chainmapfile);
+    }
     close(fd);
-
-    /*
-       fd = safe_mkstemp(config_ccfile);
-       if (fd < 0) {
-       LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
-       EUCA_FREE(cloudIp);
-       unlink(clcnetfile);
-       unlink(chainmapfile);
-       return (1);
-       }
-       chmod(config_ccfile, 0644);
-       close(fd);
-     */
 
     // clcnet populate
     snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
-    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
+    rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15, NULL);
     EUCA_FREE(cloudIp);
     if (rc) {
         LOGWARN("cannot get latest network topology from cloud controller\n");
@@ -7837,12 +7881,12 @@ int privIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("privIpSet(): set: %s/%s\n", inst->ccnet.privateIp, (char *)ip);
-    snprintf(inst->ccnet.privateIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 
@@ -7865,12 +7909,12 @@ int pubIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("pubIpSet(): set: %s/%s\n", inst->ccnet.publicIp, (char *)ip);
-    snprintf(inst->ccnet.publicIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 

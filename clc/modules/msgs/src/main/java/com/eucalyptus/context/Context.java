@@ -73,6 +73,7 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -110,7 +111,6 @@ public class Context {
   private final boolean                channelManaged;
   private WeakReference<MuleEvent>     muleEvent = new WeakReference<>( null );
   private User                         user      = null;
-  private String                       securityToken = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
   private Boolean isSystemAdmin;
@@ -193,15 +193,7 @@ public class Context {
     }
   }
 
-  public String getSecurityToken() {
-    return securityToken;
-  }
-
-  public void setSecurityToken(String securityToken) {
-    this.securityToken = securityToken;
-  }
-
-    public UserFullName getUserFullName( ) {
+  public UserFullName getUserFullName( ) {
     return UserFullName.getInstance( this.getUser( ) );
   }
 
@@ -283,7 +275,8 @@ public class Context {
       return this.httpRequest.getServicePath( ).replaceAll( "/services/", "" ).replaceAll( "[/?].+", "" );
     }
   }
-  
+
+  @Nullable
   public Subject getSubject( ) {
     return check( this.subject );
   }
@@ -428,11 +421,6 @@ public class Context {
       @Override
       public void setSubject( final Subject subject ) {
         this.subject = subject;
-      }
-
-      @Override
-      public String getSecurityToken( ) {
-        return null;
       }
 
       @Override

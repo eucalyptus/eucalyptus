@@ -71,6 +71,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
 import org.apache.log4j.Logger;
@@ -236,7 +237,11 @@ public class VolumeManager {
             vol = Entities.uniqueResult( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), input ) );
           } catch ( NoSuchElementException e ) {
             // Slow path: try searching globally
-            vol = Entities.uniqueResult( Volume.named( null, input ) );
+            try {
+              vol = Entities.uniqueResult( Volume.named( null, input ) );
+            } catch ( NoSuchElementException e2 ) {
+              throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVolume.NotFound", "The volume '"+input+"' does not exist" ) );
+            }
           }
           if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
@@ -278,6 +283,7 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex ) {
       return reply;
     } catch ( RuntimeException ex ) {
+      Exceptions.rethrow( ex, ComputeException.class );
       throw ex;
     }
   }
@@ -321,7 +327,7 @@ public class VolumeManager {
             Entities.delete( foundVol );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
-          } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
+          } else {
             AttachedVolume attachedVolume = null;
             try {
                 VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
@@ -344,7 +350,6 @@ public class VolumeManager {
         } catch ( TransactionException ex ) {
           throw Exceptions.toUndeclared( ex );
         }
-        throw new NoSuchElementException( "Failed to lookup volume: " + input );
       }
       
     };
@@ -378,16 +383,15 @@ public class VolumeManager {
     final String instanceId = normalizeInstanceIdentifier( request.getInstanceId() );
     final Context ctx = Contexts.lookup( );
     
-    if (  deviceName == null || deviceName.endsWith( "sda" ) ||  deviceName.endsWith( "sdb" ) || !validateDeviceName( deviceName ) ) {
+    if (  deviceName == null || deviceName.endsWith( "sda" ) || !validateDeviceName( deviceName ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
     }
     VmInstance vm = null;
     try {
       vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-    } catch ( NoSuchElementException ex ) {
-      LOG.debug( ex, ex );
-      throw new EucalyptusCloudException( "Instance does not exist: " + instanceId, ex );
-    } catch ( Exception ex ) {
+    } catch ( final NoSuchElementException e ) {
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '"+request.getInstanceId()+"' does not exist" );
+    }catch ( Exception ex ) {
       LOG.debug( ex, ex );
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
@@ -402,14 +406,12 @@ public class VolumeManager {
     Volume volume = null;
     try{
       volume = Volumes.lookup( ownerFullName, volumeId );
-    }catch(final Exception ex){
-      // use-case: imaging-worker's volume attachment
-      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
-          && "eucalyptus".equals(ctx.getAccount().getName())){
-          volume = Volumes.lookup(null, volumeId);
-      }else{
-       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
-      } 
+    }catch(final NoSuchElementException ex){
+      try {
+        volume = Volumes.lookup( null, volumeId );
+      } catch ( NoSuchElementException e ) {
+        throw new ClientComputeException( "InvalidVolume.NotFound", "The volume '"+request.getVolumeId()+"' does not exist" );
+      }
     }
     
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
@@ -417,13 +419,13 @@ public class VolumeManager {
     }
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
-      throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
+      throw new ClientComputeException( "InvalidParameterValue", "Already have a device attached to: " + request.getDevice( ) );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
     try {
       VmInstances.lookupVolumeAttachment( volumeId );
-      throw new EucalyptusCloudException( "Volume already attached: " + volumeId );
+      throw new ClientComputeException( "VolumeInUse", "Volume already attached: " + volumeId );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
@@ -470,13 +472,11 @@ public class VolumeManager {
     Volume vol;
     try {
       vol = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), volumeId );
-    } catch ( Exception ex ) { 
-      // use-case: imaging-worker's volume attachment
-      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
-          && "eucalyptus".equals(ctx.getAccount().getName())){
+    } catch ( NoSuchElementException ex ) {
+      try {
         vol = Volumes.lookup(null, volumeId);
-      }else{
-       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
+      } catch ( NoSuchElementException e ) {
+        throw new ClientComputeException( "InvalidVolume.NotFound", "The volume '"+request.getVolumeId()+"' does not exist" );
       } 
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
@@ -493,12 +493,10 @@ public class VolumeManager {
       if(ex instanceof NonTransientVolumeException){
     	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
       } else {
-    	throw new EucalyptusCloudException("Volume is not currently attached to any instance");
+        throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
       }
     }
-    if ( !validateDeviceName(volume.getDevice( ) ) ) {
-        throw new ClientComputeException( "InvalidParameterValue", "Value (" + volume.getDevice() + ") for parameter device is invalid." );
-    }
+    // Dropping the validation check for device string retrieved from database - EUCA-8330
     if ( vm != null && MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
                                      + vm.getInstanceId( )
@@ -506,13 +504,13 @@ public class VolumeManager {
                                      + vm.getMigrationTask( ) );
     }
     if ( volume == null ) {
-      throw new EucalyptusCloudException( "Volume is not attached: " + volumeId );
+      throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
       throw new EucalyptusCloudException( "Not authorized to detach volume from instance " + instanceId + " by " + ctx.getUser( ).getName( ) );
     }
-    if ( instanceId != null && !vm.getInstanceId( ).equals( instanceId ) ) {
-      throw new EucalyptusCloudException( "Volume is not attached to instance: " + instanceId );
+    if ( instanceId != null && vm != null && !vm.getInstanceId( ).equals( instanceId ) ) {
+      throw new ClientComputeException( "InvalidAttachment.NotFound", "Volume is not attached to instance: " + instanceId );
     }
     if ( request.getDevice( ) != null && !request.getDevice( ).equals( "" ) && !volume.getDevice( ).equals( request.getDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not attached to device: " + request.getDevice( ) );

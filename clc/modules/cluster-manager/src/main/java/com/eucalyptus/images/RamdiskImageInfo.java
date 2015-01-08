@@ -65,8 +65,10 @@ package com.eucalyptus.images;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 
@@ -96,4 +98,8 @@ public class RamdiskImageInfo extends PutGetImageInfo {
     return super.getManifestLocation( );
   }
   
+  @Override
+  public String getRunManifestLocation( ){
+    return this.getManifestLocation();
+  }
 }

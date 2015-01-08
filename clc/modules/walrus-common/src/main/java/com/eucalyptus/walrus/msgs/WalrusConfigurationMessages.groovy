@@ -74,11 +74,11 @@ import com.eucalyptus.config.RegisterComponentType
 
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
-public class RegisterWalrusType extends RegisterComponentType {}
-public class RegisterWalrusResponseType extends RegisterComponentResponseType {}
-public class DeregisterWalrusType extends DeregisterComponentType {}
-public class DeregisterWalrusResponseType extends DeregisterComponentResponseType {}
-public class ModifyWalrusAttributeType extends ModifyComponentAttributeType{}
-public class ModifyWalrusAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeWalrusesType extends DescribeComponentsType {}
-public class DescribeWalrusesResponseType extends DescribeComponentsResponseType {}
+public class RegisterWalrusBackendType extends RegisterComponentType {}
+public class RegisterWalrusBackendResponseType extends RegisterComponentResponseType {}
+public class DeregisterWalrusBackendType extends DeregisterComponentType {}
+public class DeregisterWalrusBackendResponseType extends DeregisterComponentResponseType {}
+public class ModifyWalrusBackendAttributeType extends ModifyComponentAttributeType{}
+public class ModifyWalrusBackendAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeWalrusBackendsType extends DescribeComponentsType {}
+public class DescribeWalrusBackendsResponseType extends DescribeComponentsResponseType {}

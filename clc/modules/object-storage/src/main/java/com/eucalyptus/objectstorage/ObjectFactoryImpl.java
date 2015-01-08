@@ -41,6 +41,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
@@ -74,6 +75,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.storage.common.DateFormatter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -92,6 +94,19 @@ public class ObjectFactoryImpl implements ObjectFactory {
     private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
     private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE));
 
+    public static long getPutTimeoutInMillis() {
+        return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getFailed_put_timeout_hrs() * 60l * 60l * 1000l;
+    }
+
+    public static boolean useGetPutOnCopy() {
+        try {
+            return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getDoGetPutOnCopyFail();
+        } catch(Throwable f) {
+            LOG.error("Error getting OSG configuration for get/put on copy fail. Falling back to fail the operation", f);
+            return false;
+        }
+    }
+
     @Override
     public ObjectEntity copyObject(@Nonnull final ObjectStorageProviderClient provider,
                                    @Nonnull ObjectEntity entity,
@@ -100,11 +115,14 @@ public class ObjectFactoryImpl implements ObjectFactory {
                                    final String metadataDirective) throws S3Exception {
         final ObjectMetadataManager objectManager = ObjectMetadataManagers.getInstance();
 
+
         //Initialize metadata for the object
         if(BucketState.extant.equals(entity.getBucket().getState())) {
             //Initialize the object metadata.
             try {
-                entity = objectManager.initiateCreation(entity);
+                if (!ObjectState.extant.equals(entity.getState())) {
+                    entity = objectManager.initiateCreation(entity);
+                }
             } catch(Exception e) {
                 LOG.warn("Error initiating an object in the db:", e);
                 throw new InternalErrorException(entity.getResourceFullName());
@@ -114,6 +132,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         }
 
         final String etag;
+        Date lastMod;
         CopyObjectResponseType response;
 
         try {
@@ -129,7 +148,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                         response = provider.copyObject(request);
                     }
                     catch (Exception ex) {
-                        if (ObjectStorageGlobalConfiguration.doGetPutOnCopyFail != null && ObjectStorageGlobalConfiguration.doGetPutOnCopyFail.booleanValue() ) {
+                        if (useGetPutOnCopy()) {
                             response = providerGetPut(provider, request, requestUser, metadataDirective);
                         }
                         else {
@@ -145,7 +164,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<CopyObjectResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<ObjectEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -161,9 +180,12 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 }
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
-            // lastModified = response.getLastModified(); // TODO should CopyObjectResponseType.getLastModified return a Date?
             etag = response.getEtag();
-
+            // right now the time between walrus's response and object creation is not long enough that ObjectMetadataManager.cleanupInvalidObjects
+            // can tell which object is the latest if (for instance) a delete and copyObject are called subsequently
+            // TODO - try to honor upstream last modified date in the future by refactoring OMM.cleanupInvalidObjects not to depend on timestamps
+            //lastMod = DateFormatter.dateFromListingFormattedString(response.getLastModified());
+            lastMod = new Date();
         } catch(Exception e) {
             LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getObjectUuid(),e);
 
@@ -181,7 +203,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         try {
             //fireRepairTask(bucket, savedEntity.getObjectKey());
             //Update metadata to "extant". Retry as necessary
-            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, new Date(), etag);
+            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, lastMod, etag);
         } catch(Exception e) {
             LOG.warn("Failed to update object metadata for finalization. Failing PUT operation", e);
             throw new InternalErrorException(entity.getResourceFullName());
@@ -235,6 +257,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
         response.setStatusMessage(port.getStatusMessage());
         response.setEtag(port.getEtag());
         response.setMetaData(port.getMetaData());
+        // Last modified date in copy response is in ISO8601 format as per S3 API
+        response.setLastModified(DateFormatter.dateToListingFormattedString(port.getLastModified())); 
         return response;
     }
 
@@ -279,7 +303,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 public PutObjectResponseType call() throws Exception {
                     LOG.debug("Putting data");
                     PutObjectResponseType response = provider.putObject(putRequest, content);
-                    LOG.debug("Done with put. " + response.getStatusMessage());
+                    LOG.debug("Done with put. Response status: " + response.getStatusMessage());
                     return response;
                 }
             };
@@ -287,7 +311,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<PutObjectResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<ObjectEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -303,7 +327,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 }
             };
             response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
-            lastModified = response.getLastModified();
+            entity = entityRef.get(); //Get the latest if it was updated
+            // lastModified = response.getLastModified();
+            lastModified = new Date();
             etag = response.getEtag();
 
         } catch(Exception e) {
@@ -350,11 +376,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 //fall thru and retry
                 timeoutUpdate.call();
 
-                /*try {
-                    entity = ObjectMetadataManagers.getInstance().updateCreationTimeout(entity);
-                } catch(Exception ex) {
-                    LOG.warn("Could not update the creation expiration time for ObjectUUID " + entity.getObjectUuid() + " Will retry next interval", e);
-                }*/
             } catch(CancellationException e) {
                 LOG.debug("PUT operation cancelled for object/part UUID " + objectUuid);
                 throw e;
@@ -392,13 +413,37 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-    public void logicallyDeleteVersion(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    public void logicallyDeleteVersion(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
-
+        try {
+            List<ObjectEntity> entities =
+                    ObjectMetadataManagers.getInstance().lookupObjectVersions(entity.getBucket(), entity.getObjectKey(), Integer.MAX_VALUE);
+            if (entities != null && entities.size() > 0) {
+                for (ObjectEntity latest : entities) {
+                    if (latest.getObjectUuid().equals( entity.getObjectUuid() )) {
+                        continue;
+                    }
+                    if (!latest.getIsLatest().booleanValue()) {
+                        ObjectMetadataManagers.getInstance().makeLatest(latest);
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
+        }
         if(!entity.getIsDeleteMarker()) {
-            ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+            ObjectEntity deletingObject = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+
+            //Optimistically try to actually delete the object, failure here is okay
+            try {
+                actuallyDeleteObject(provider, deletingObject, requestUser);
+            } catch(Exception e) {
+                LOG.trace("Could not delete the object in the sync path, will retry later asynchronosly. Object now in state 'deleting'.", e);
+            }
+
         } else {
             //Delete the delete marker.
             ObjectMetadataManagers.getInstance().delete(entity);
@@ -406,7 +451,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-    public void logicallyDeleteObject(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    public void logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
@@ -426,23 +471,29 @@ public class ObjectFactoryImpl implements ObjectFactory {
                     }
                 } else {
                     //Do nothing, already a delete marker found.
+                    //TODO: zhill - should this replace the delete marker with a new one?
                 }
                 break;
             case Disabled:
-                //Mark the object itself for deletion.
-                ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+                //Cannot be a delete marker, so this is proper.
+                logicallyDeleteVersion(provider, entity, requestUser);
                 break;
+            default:
+                LOG.error("Cannot logically delete object due to unexpected bucket state found: " + entity.getBucket().getVersioning());
+                throw new InternalErrorException(entity.getBucket().getName());
         }
     }
 
     @Override
     public void actuallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nullable User requestUser) throws S3Exception {
 
-        try {
-            entity = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
-        } catch(Exception e) {
-            LOG.debug("Could not mark metadata for deletion", e);
-            throw e;
+        if(!ObjectState.deleting.equals(entity.getState())) {
+            try {
+                entity = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+            } catch(Exception e) {
+                LOG.debug("Could not mark metadata for deletion", e);
+                throw e;
+            }
         }
 
         if(entity.getIsDeleteMarker()) {
@@ -600,9 +651,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
                 @Override
                 public UploadPartResponseType call() throws Exception {
-                    LOG.debug("Putting data");
+                    LOG.trace("Putting data");
                     UploadPartResponseType response = provider.uploadPart(putRequest, content);
-                    LOG.debug("Done with put. " + response.getStatusMessage());
+                    LOG.trace("Done with put. " + response.getStatusMessage());
                     return response;
                 }
             };
@@ -610,7 +661,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<UploadPartResponseType> putTask = new FutureTask<>(putCallable);
             PUT_OBJECT_SERVICE.execute(putTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
             final AtomicReference<PartEntity> entityRef = new AtomicReference<>(uploadingObject);
             Callable updateTimeout = new Callable() {
@@ -627,7 +678,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
             };
 
             response = waitForCompletion(putTask, uploadingObject.getPartUuid(), updateTimeout, failTime, checkIntervalSec);
-            lastModified = response.getLastModified();
+            entity = entityRef.get(); //Get the latest if it was updated
+            // lastModified = response.getLastModified();
+            lastModified = new Date();
             etag = response.getEtag();
 
         } catch(Exception e) {
@@ -644,7 +697,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
             throw new InternalErrorException(entity.getObjectKey());
         }
 
-        //fireRepairTask(bucket, savedEntity.getObjectKey());
         try {
             //Update metadata to "extant". Retry as necessary
             return MpuPartMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
@@ -689,7 +741,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             //Send the data
             final FutureTask<CompleteMultipartUploadResponseType> completeTask = new FutureTask<>(completeCallable);
             PUT_OBJECT_SERVICE.execute(completeTask);
-            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long failTime = System.currentTimeMillis() + getPutTimeoutInMillis();
             final long checkIntervalSec = 60;
             CompleteMultipartUploadResponseType response = waitForMultipartCompletion(completeTask, commitRequest.getUploadId(), commitRequest.getCorrelationId(), failTime, checkIntervalSec);
             mpuEntity.seteTag(response.getEtag());
@@ -697,11 +749,12 @@ public class ObjectFactoryImpl implements ObjectFactory {
             ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, new Date(), mpuEntity.geteTag());
 
             //all okay, delete all parts
+            /* This is handled in the object state transition now. All done in one transaction.
             try {
-                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getUploadId());
+                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getBucket(), completedEntity.getUploadId());
             } catch (Exception e) {
                 throw new InternalErrorException("Could not remove parts for: " + mpuEntity.getUploadId());
-            }
+            }*/
             return completedEntity;
         } catch(S3Exception e) {
             throw e;
@@ -720,7 +773,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     @Override
     public void flushMultipartUpload(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception {
         try {
-            MpuPartMetadataManagers.getInstance().removeParts(entity.getUploadId());
+            MpuPartMetadataManagers.getInstance().removeParts(entity.getBucket(), entity.getUploadId());
         } catch(Exception e) {
             LOG.warn("Error removing non-committed parts",e);
             InternalErrorException ex = new InternalErrorException();

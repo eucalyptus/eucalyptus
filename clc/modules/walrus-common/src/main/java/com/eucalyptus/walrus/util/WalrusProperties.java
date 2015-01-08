@@ -61,50 +61,37 @@
  ************************************************************************/
 package com.eucalyptus.walrus.util;
 
+import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.Walrus;
 
 import java.net.*;
 
 public class WalrusProperties {
 	private static Logger LOG = Logger.getLogger(WalrusProperties.class);
 
-	public static final String SERVICE_NAME = "Walrus";
-	public static String NAME = "Walrus";
-	public static final String DB_NAME             = "eucalyptus_walrus";
-	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
+	public static String NAME = "Walrus"; //leave as walrus for upgrade ease
 	public static final long G = 1024*1024*1024;
 	public static final long M = 1024*1024;
 	public static final long K = 1024;
-	public static String WALRUS_SUBDOMAIN = "walrus";
 
 	public static final String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
 	public static int MAX_BUCKETS_PER_ACCOUNT = 100;
 	public static long MAX_BUCKET_SIZE = 5 * G;
 	public static long IMAGE_CACHE_SIZE = 30 * G;
-	public static String WALRUS_URL;
 	public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
     public static final boolean BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE = false;
 	public static int MAX_KEYS = 1000;
 
 	public static int IO_CHUNK_SIZE = 102400;
 	public static boolean shouldEnforceUsageLimits = true;
-	public static boolean trackUsageStatistics = false;
 	public static boolean enableTorrents = false;
 	public static boolean enableVirtualHosting = true;
-	public static long CACHE_PROGRESS_TIMEOUT = 10000L; //10 seconds for each check
-	public static long IMAGE_CACHE_RETRY_BACKOFF_TIME = 1000L; //1 second between retries
-	public static int IMAGE_CACHE_WAIT_RETRY_LIMIT = 180; //was 3, gives total time of 30minutes at 10 sec intervals
-	public static int IMAGE_CACHE_RETRY_LIMIT = 3;
 	public static long MAX_INLINE_DATA_SIZE = 10 * M;
-	public static final String walrusServicePath = "/services/Walrus";
-	public static int WALRUS_PORT = 8773;
 	public static final String NAMESPACE_VERSION = "2006-03-01";
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";
@@ -112,14 +99,11 @@ public class WalrusProperties {
 	public static final String CONTENT_MD5 = "Content-MD5";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
 
-	public static final String URL_PROPERTY = "euca.walrus.url";
-	public static final String WALRUS_HOST_PROPERTY = "euca.walrus.host";
+
 	public static final String USAGE_LIMITS_PROPERTY = "euca.walrus.usageLimits";
-	public static final String WALRUS_OPERATION = "WalrusOperation";
 	public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
-	public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
-	public static final String STREAMING_HTTP_PUT = "STREAMING_HTTP_PUT";
 	public static final String AMZ_ACL = "x-amz-acl";
+    public static final String AMZ_REQUEST_ID = "x-amz-request-id";
 
 	public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
 	public static final String AUTHENTICATED_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
@@ -128,7 +112,6 @@ public class WalrusProperties {
 	public static final String IGNORE_PREFIX = "x-ignore-";
 	public static final String COPY_SOURCE = "x-amz-copy-source";
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
-	public static final String ADMIN = "admin";
 
 	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
 	public static final String NULL_VERSION_ID = "null";
@@ -142,8 +125,6 @@ public class WalrusProperties {
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
 	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-	public static final String EUCA_MOUNT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_mountwrap";
-	public static final String EUCA_USER = System.getProperty("euca.user");
 	public static final Integer DEFAULT_INITIAL_CAPACITY = 10; //10 GB initial total capacity.
 
 	//15 minutes
@@ -193,24 +174,8 @@ public class WalrusProperties {
 		ByteRangeStart, ByteRangeEnd
 	}
 
-	public enum WalrusInternalOperations {
-		GetDecryptedImage, ValidateImage
-	}
-
 	public enum GetOptionalParameters {
 		IsCompressed
-	}
-
-	public enum StorageOperations {
-		StoreSnapshot, DeleteWalrusSnapshot, GetWalrusSnapshot, GetWalrusSnapshotSize
-	}
-
-	public enum InfoOperations {
-		GetSnapshotInfo
-	}
-
-	public enum StorageParameters {
-		SnapshotVgName, SnapshotLvName
 	}
 
 	public enum FormField {
@@ -279,7 +244,7 @@ public class WalrusProperties {
 
 	public static String getTrackerUrl() {
 		try {
-			TRACKER_URL = "http://" + Topology.lookup(Walrus.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
+			TRACKER_URL = "http://" + Topology.lookup(WalrusBackend.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
 		} catch (Exception e) {
 			LOG.error(e);
 		}
@@ -287,10 +252,10 @@ public class WalrusProperties {
 	}
 
 	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
-		if (Topology.isEnabled(Walrus.class)) {
-			return Topology.lookup(Walrus.class).getInetAddress();
+		if (Topology.isEnabled(WalrusBackend.class)) {
+			return Topology.lookup(WalrusBackend.class).getInetAddress();
 		} else {
-			throw new EucalyptusCloudException("Walrus not ENABLED");
+			throw new EucalyptusCloudException("WalrusBackend not ENABLED");
 		}	    
 	}
 }

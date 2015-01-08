@@ -83,6 +83,7 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
+#include <euca_string.h>
 #include <diskutil.h>
 
 /*----------------------------------------------------------------------------*\
@@ -140,7 +141,9 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 \*----------------------------------------------------------------------------*/
 
 static void print_libvirt_error(void);
+#ifdef UNUSED_CODE
 static char *find_conf_value(const char *eucahome, const char *param);
+#endif /* UNUSED_CODE */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -166,8 +169,9 @@ static void print_libvirt_error(void)
     }
 }
 
+#ifdef UNUSED_CODE
 //!
-//! find value of the given param in the eucalyptus.conf (e.g., /usr/bin/euca-bundle-upload for NC_BUNDLE_UPLOAD_PATH)
+//! find value of the given param in the eucalyptus.conf,
 //! return NULL if the param is commented out
 //!
 //! @param[in] eucahome the path where Eucalyptus is installed
@@ -241,6 +245,7 @@ static char *find_conf_value(const char *eucahome, const char *param)
     fclose(f_conf);
     return (value);
 }
+#endif /* UNUSED_CODE */
 
 //!
 //! Main entry point of the application
@@ -259,9 +264,7 @@ int main(int argc, char *argv[])
     char rootWrap[EUCA_MAX_PATH] = "";
     char cmd[EUCA_MAX_PATH] = "";
     char hypervisorURL[32] = "";
-    char *helpers_path[3] = { NULL };  // load paths from eucalyptus.conf or set to NULL
     virConnectPtr conn = NULL;
-    static char *helpers_name[3] = { "euca-bundle-upload", "euca-check-bucket", "euca-delete-bundle" };
 
     //  logfile (NULL, EUCAFATAL); // suppress all messages
 
@@ -293,6 +296,11 @@ int main(int argc, char *argv[])
         eucahome = strdup("");         // root by default
     } else {
         eucahome = strdup(eucahome);
+        // Sanitize this string
+        if (euca_sanitize_path(eucahome) != EUCA_OK) {
+            EUCA_FREE(eucahome);
+            eucahome = strdup("");
+        }
     }
 
     add_euca_to_path(eucahome);
@@ -300,19 +308,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "looking for system utilities...\n");
     if (diskutil_init(FALSE)) {
         // NC does not require GRUB for now
+        EUCA_FREE(eucahome);
         exit(1);
-    }
-    // check if euca2ools commands for bundle-instance are available
-    fprintf(stderr, "ok\n\nlooking for euca2ools...\n");
-    helpers_path[0] = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");
-    helpers_path[1] = find_conf_value(eucahome, "NC_CHECK_BUCKET_PATH");
-    helpers_path[2] = find_conf_value(eucahome, "NC_DELETE_BUNDLE_PATH");
-
-    if (verify_helpers(helpers_name, helpers_path, 3) > 0) {
-        if (verify_helpers(helpers_name, NULL, 3) > 0) {
-            fprintf(stderr, "error: failed to find required euca2ools\n");
-            exit(1);
-        }
     }
     // ensure hypervisor information is available
     fprintf(stderr, "ok\n\nchecking the hypervisor...\n");
@@ -325,6 +322,7 @@ int main(int argc, char *argv[])
 
     if (euca_execlp(NULL, rootWrap, cmd, NULL) != EUCA_OK) {
         fprintf(stderr, "error: could not run '%s %s'\n", rootWrap, cmd);
+        EUCA_FREE(eucahome);
         exit(1);
     }
     // check that libvirt can query the hypervisor
@@ -332,15 +330,18 @@ int main(int argc, char *argv[])
     if ((conn = virConnectOpen(hypervisorURL)) == NULL) {
         print_libvirt_error();
         fprintf(stderr, "error: failed to connect to hypervisor\n");
+        EUCA_FREE(eucahome);
         exit(1);
     }
 
     if ((num_doms = virConnectListDomains(conn, dom_ids, MAXDOMS)) < 0) {
         print_libvirt_error();
         fprintf(stderr, "error: failed to query running domains\n");
+        EUCA_FREE(eucahome);
         exit(1);
     }
 
     fprintf(stdout, "NC test was successful\n");
+    EUCA_FREE(eucahome);
     return (0);
 }

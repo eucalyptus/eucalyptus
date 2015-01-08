@@ -109,7 +109,7 @@ public class WalrusBucketLogger {
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
 
-	static { Groovyness.loadConfig("walruslogger.groovy"); }
+	//static { Groovyness.loadConfig("walruslogger.groovy"); }
 
 	public WalrusBucketLogger() {
 		logData = new LinkedBlockingQueue<BucketLogData>();

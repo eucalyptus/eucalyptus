@@ -62,6 +62,9 @@
 
 package com.eucalyptus.cluster;
 
+import static com.eucalyptus.auth.policy.PolicySpec.*;
+
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -70,10 +73,17 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
+
+import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -83,12 +93,17 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.node.Nodes;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
@@ -99,15 +114,19 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.MigrateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -139,15 +158,38 @@ public class ClusterEndpoint implements Startable {
   }
   
   public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) throws EucalyptusCloudException {
-    MigrateInstancesResponseType reply = request.getReply( );
-    if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+    final MigrateInstancesResponseType reply = request.getReply( );
+    final Context context = Contexts.lookup( );
+    if ( !context.isAdministrator( ) || !Permissions.isAuthorized(
+        VENDOR_EC2,
+        EC2_RESOURCE_INSTANCE,
+        "",
+        null,
+        EC2_MIGRATEINSTANCES,
+        context.getAuthContext() )  ) {
       throw new EucalyptusCloudException( "Authorization failed." );
     }
     if ( !Strings.isNullOrEmpty( request.getSourceHost( ) ) ) {
+      final Predicate<VmInstance> filterHost = new Predicate<VmInstance>( ) {
+        @Override
+        public boolean apply( @Nullable VmInstance input ) {
+          String vmHost = URI.create( input.getServiceTag( ) ).getHost( );
+          return Strings.nullToEmpty( vmHost ).equals( request.getSourceHost( ) );
+        }
+      };
       for ( ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
         try {
           ServiceConfiguration node = Nodes.lookup( ccConfig, request.getSourceHost( ) );//found the node!
           Cluster cluster = Clusters.lookup( ccConfig );//lookup the cluster
+          final List<VmInstance> instances = VmInstances.list(filterHost);
+          for(final VmInstance instance : instances){
+            try{
+              updatePasswordIfWindows(instance, ccConfig);
+            }catch(final Exception ex){
+              ;
+            }
+          }
+          
           try {
             cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );//submit the migration request
             return reply.markWinning( );
@@ -169,7 +211,7 @@ public class ClusterEndpoint implements Startable {
       }
       throw new EucalyptusCloudException( "No ENABLED cluster found which can service the requested node: " + request.getSourceHost( ) );
     } else if ( !Strings.isNullOrEmpty( request.getInstanceId( ) ) ) {
-      VmInstance vm;
+      final VmInstance vm;
       try {
         vm = VmInstances.lookup( request.getInstanceId( ) );
         if ( !VmInstance.VmState.RUNNING.apply( vm ) ) {
@@ -183,6 +225,12 @@ public class ClusterEndpoint implements Startable {
       try {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
         Cluster cluster = Clusters.lookup( ccConfig );
+        // update windows password
+        try{
+          updatePasswordIfWindows(vm, ccConfig);
+        }catch(final Exception ex){
+          ;
+        }
         try {
           cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
           return reply.markWinning( );
@@ -201,6 +249,30 @@ public class ClusterEndpoint implements Startable {
     }
   }
 
+  private void updatePasswordIfWindows(final VmInstance vm, final ServiceConfiguration ccConfig) throws Exception{
+    if ( Platform.windows.name().equals(vm.getPlatform()) && (vm.getPasswordData( ) == null || vm.getPasswordData().length()<=0) ) {
+      try {
+        final GetConsoleOutputResponseType consoleOutput =
+            AsyncRequests.sendSync( ccConfig, new GetConsoleOutputType( vm.getInstanceId() ) );
+        final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
+        final String passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
+        if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
+          Entities.asTransaction( VmInstance.class, new Predicate<String>() {
+            @Override
+            public boolean apply( final String passwordData ) {
+              final VmInstance vmMerge = Entities.merge( vm );
+              vmMerge.updatePasswordData( passwordData );
+              return true;
+            }
+          } ).apply( passwordData );
+          vm.updatePasswordData( passwordData );
+        }
+      } catch ( Exception e ) {
+        throw new ComputeException( "InternalError", "Error processing request: " + e.getMessage( ) );
+      }
+    }
+  }
+  
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
     final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     final List<String> args = request.getAvailabilityZoneSet( );
@@ -219,14 +291,21 @@ public class ClusterEndpoint implements Startable {
       }
     }
 
+    final Clusters clusterRegistry = Clusters.getInstance( );
     final List<Cluster> clusters;
     if ( args.isEmpty( ) ) {
-      clusters = Clusters.getInstance( ).listValues( );
+      clusters = Lists.newArrayList( clusterRegistry.listValues( ) );
+      Iterables.addAll( clusters, Iterables.filter(
+          clusterRegistry.listDisabledValues( ),
+          Predicates.not(
+              CollectionUtils.propertyPredicate(
+                  Collections2.transform( clusters, CloudMetadatas.toDisplayName() ),
+                  CloudMetadatas.toDisplayName() ) ) ) );
     } else {
       clusters = Lists.newArrayList();
       for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          clusters.add( Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+          clusters.add( Iterables.find( clusterRegistry.listValues( ), new Predicate<Cluster>( ) {
             @Override
             public boolean apply( Cluster input ) {
               return partitionName.equals( input.getConfiguration( ).getPartition( ) );
@@ -234,8 +313,12 @@ public class ClusterEndpoint implements Startable {
           } ) );
         } catch ( NoSuchElementException e ) {
           try {
-            clusters.add( Clusters.getInstance( ).lookup( partitionName ) );
-          } catch ( NoSuchElementException ex ) {}
+            clusters.add( clusterRegistry.lookup( partitionName ) );
+          } catch ( NoSuchElementException ex ) {
+            try {
+              clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
+            } catch ( NoSuchElementException ex2 ) { }
+          }
         }
       }
     }
@@ -248,10 +331,8 @@ public class ClusterEndpoint implements Startable {
   }
   
   private List<ClusterInfoType> getDescriptionEntry( Cluster c ) {
-    List<ClusterInfoType> ret = Lists.newArrayList( );
-    String clusterName = c.getName( );
-    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), c.getConfiguration( ).getHostName( ) + " "
-                                                                                                      + c.getConfiguration( ).getFullName( ) ) );
+    final List<ClusterInfoType> ret = Lists.newArrayList( );
+    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), ClusterFunctions.STATE.apply( c ) ) );
     NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
     if ( tagList.size( ) == 1 )
       tagList = c.getNodeTags( );
@@ -440,12 +521,23 @@ public class ClusterEndpoint implements Startable {
     }
   }
 
+  private enum ClusterFunctions implements Function<Cluster,String> {
+    STATE {
+      @Override
+      public String apply( final Cluster cluster ) {
+        return cluster.getStateMachine().getState().ordinal() > Cluster.State.ENABLING_ADDRS_PASS_TWO.ordinal () ?
+            "available" :
+            "unavailable";
+      }
+    },
+  }
+
   public static class AvailabilityZoneFilterSupport extends FilterSupport<Cluster> {
     public AvailabilityZoneFilterSupport() {
       super( builderFor( Cluster.class )
           .withUnsupportedProperty( "message" )
           .withUnsupportedProperty( "region-name" )
-          .withUnsupportedProperty( "state" )
+          .withStringProperty( "state", ClusterFunctions.STATE )
           .withStringProperty( "zone-name", CloudMetadatas.toDisplayName() ) );
     }
   }

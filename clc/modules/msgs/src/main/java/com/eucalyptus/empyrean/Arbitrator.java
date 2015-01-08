@@ -20,6 +20,7 @@
 package com.eucalyptus.empyrean;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 
@@ -27,6 +28,7 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
             manyToOne = true )
 @FaultLogPrefix( "cloud" )
 //  @InternalService
+@Description( "The Arbitrator service" )
 public class Arbitrator extends ComponentId {
 
   @Override

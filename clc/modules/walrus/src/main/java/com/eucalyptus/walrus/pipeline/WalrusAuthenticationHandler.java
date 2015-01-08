@@ -75,6 +75,8 @@ import java.util.TreeMap;
 import java.util.Arrays;
 import java.util.TreeSet;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -92,13 +94,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
-import com.eucalyptus.walrus.auth.WalrusWrappedComponentCredentials;
 import com.eucalyptus.walrus.auth.WalrusWrappedCredentials;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.walrus.util.WalrusUtil;
@@ -115,7 +112,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
 	private static final String EUCA_OLD_AUTH_TYPE = "Euca";
 	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
-
 	
 	public static enum SecurityParameter {
 		AWSAccessKeyId,
@@ -289,7 +285,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
 		if(acl != null)
 			fields.put(WalrusProperties.FormField.acl.toString(), acl);
-		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+		String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
 		String[] target = WalrusUtil.getTarget(operationPath);
 		if(target != null) {
 			fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
@@ -302,238 +298,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			throw new AccessDeniedException(aex.getMessage());
 		}
 	
-	}	
-	
-	/**
-	 * Class contains methods for implementing EucaRSA-V2 Authentication.
-	 * @author zhill
-	 *
-	 */
-	public static class EucaAuthentication {
-		private static final Set<String> SAFE_HEADER_SET = Sets.newHashSet("transfer-encoding"); 
-		
-		/**
-		 * Implements the Euca2 auth method
-		 * 
-		 * Add an Authorization HTTP header to the request that contains the following strings, separated by spaces:
-		 * EUCA2-RSA-SHA256
-		 * The lower-case hexadecimal encoding of the component's X.509 certificate's fingerprint
-		 * The SignedHeaders list calculated in Task 1
-		 * The Base64 encoding of the Signature calculated in Task 2
-		 * 
-		 * Signature = RSA(privkey, SHA256(CanonicalRequest))
-		 * 
-		 * CanonicalRequest =
-		 * 	HTTPRequestMethod + '\n' +
-		 * 	CanonicalURI + '\n' +
-		 * 	CanonicalQueryString + '\n' +
-		 *	CanonicalHeaders + '\n' +
-		 *	SignedHeaders
-			  	
-		 * @param httpRequest
-		 * @param authMap
-		 * @throws AccessDeniedException
-		 */
-		public static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {		
-			if(authMap ==  null || !EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-				throw new AccessDeniedException("Mismatch between expected and found authentication types");
-			}
-			
-			//Remove unsigned headers so they are not consumed accidentally later
-			cleanHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
-			
-			//Must contain a date of some sort signed
-			checkDate(httpRequest);
-			
-			//Must be certificate signed
-			String certString = null;
-			if(authMap.containsKey(AuthorizationField.CertFingerPrint)) {
-				certString = authMap.get(AuthorizationField.CertFingerPrint);
-			}
-			else {
-				throw new AccessDeniedException("Invalid Authorization Header");
-			}
-			
-			String verb = httpRequest.getMethod().getName();
-			String canonicalURI = getCanonicalURI(httpRequest);
-			String canonicalQueryString = getCanonicalQueryString(httpRequest);
-			String canonicalHeaders = getCanonicalHeaders(httpRequest, authMap.get(AuthorizationField.SignedHeaders));
-			String signedHeaders = getSignedHeaders(httpRequest, authMap);
-			
-			String data = verb + "\n" + canonicalURI + "\n" + canonicalQueryString + "\n" + canonicalHeaders + "\n" + signedHeaders;
-			String AWSAccessKeyID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
-			String signature = authMap.get(AuthorizationField.Signature);
-			
-			try {
-				SecurityContext.getLoginContext(new WalrusWrappedComponentCredentials(httpRequest.getCorrelationId(), data, AWSAccessKeyID, signature, certString)).login();
-			} catch(Exception ex) {
-				LOG.error(ex);
-				throw new AccessDeniedException(ex.getMessage());
-			}
-			
-		}
-		
-		private static void checkDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
-			String date;
-			String verifyDate;
-			if(httpRequest.containsHeader("x-amz-date")) {
-				date = "";
-				verifyDate = httpRequest.getHeader("x-amz-date");
-			} else {
-				date =  httpRequest.getHeader(SecurityParameter.Date.toString());
-				verifyDate = date;
-				if(date == null || date.length() <= 0)
-					throw new AccessDeniedException("User authentication failed. Date must be specified.");
-			}
-
-			try {				
-				ArrayList<String> formats = new ArrayList<String>();
-				formats.add(ISO_8601_FORMAT);
-				Date dateToVerify = DateUtil.parseDate(verifyDate, formats);
-				Date currentDate = new Date();
-				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
-					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
-					throw new AccessDeniedException("Message expired. Sorry.");
-				}
-			} catch(DateParseException ex) {
-				LOG.error("Walrus cannot parse date: " + verifyDate);
-				throw new AccessDeniedException("Unable to parse date.");
-			}
-		}
-		
-		/**
-		 * Gets the signed header string for Euca2 auth.
-		 * @param httpRequest
-		 * @param authMap
-		 * @return
-		 * @throws AccessDeniedException
-		 */
-		private static String getSignedHeaders(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
-			String signedHeaders = authMap.get(AuthorizationField.SignedHeaders);
-			if(signedHeaders != null) return signedHeaders.trim();
-			return "";
-		}
-		/**
-		 * Returns the canonical URI for euca2 auth, just the path from the end of the host header value to the first ?
-		 * @param httpRequest
-		 * @return
-		 * @throws AccessDeniedException
-		 */
-		private static String getCanonicalURI(MappingHttpRequest httpRequest) throws AccessDeniedException {
-			String addr = httpRequest.getUri();
-			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
-			if(targetHost != null && targetHost.contains(".walrus")) {
-				String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-				addr = "/" + bucket + addr;
-			}
-			String[] addrStrings = addr.split("\\?");
-			String addrString = addrStrings[0];
-			return addrString;
-		}
-		
-		/**
-		 * Get the canonical headers list, a string composed of sorted headers and values, taken from the list of signed headers given by the request
-		 * @param httpRequest
-		 * @return
-		 * @throws AccessDeniedException
-		 */
-		private static String getCanonicalHeaders(MappingHttpRequest httpRequest, String signedHeaders) throws AccessDeniedException {
-			String[] signedHeaderArray = signedHeaders.split(";");
-			StringBuilder canonHeader = new StringBuilder();
-			boolean foundHost = false;
-			for(String headerName : signedHeaderArray) {			
-				String headerNameString = headerName.toLowerCase().trim();
-				if("host".equals(headerNameString)) {
-					foundHost = true;
-				}
-				String value =  httpRequest.getHeader(headerName);
-				if(value != null) {
-					value = value.trim();
-					String[] parts = value.split("\n");
-					value = "";
-					for(String part: parts) {
-						part = part.trim();
-						value += part + " ";
-					}
-					value = value.trim();
-				}
-				else {
-					value = "";
-				}
-				canonHeader.append(headerNameString).append(":").append(value).append('\n');
-			}
-			
-			if(!foundHost) {
-				throw new AccessDeniedException("Host header not found when canonicalizing headers");
-			}
-			
-			return canonHeader.toString().trim();
-		}		
-
-		/**
-		 * Gets Euca2 signing canonical query string.
-		 * @param httpRequest
-		 * @return
-		 * @throws AccessDeniedException
-		 */
-		private static String getCanonicalQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
-			String addr = httpRequest.getUri();
-			String[] addrStrings = addr.split("\\?");
-			StringBuilder addrString = new StringBuilder();
-			
-			NavigableSet<String> sortedParams = new TreeSet<String>( );
-			Map<String, String> params = httpRequest.getParameters();
-			if(params == null) {
-				return "";
-			}
-			
-			sortedParams.addAll(params.keySet());
-			
-			String key = null;
-			while((key = sortedParams.pollFirst()) != null) {
-				addrString.append(key).append('=').append(params.get(key)).append('&');
-			}
-			
-			if(addrString.length() > 0) {
-				addrString.deleteCharAt(addrString.length() - 1); //delete trailing '&';
-			}
-			
-			return addrString.toString();
-		}
-		
-		/**
-		 * Removes all headers that are not in the signed-headers list. This prevents potentially modified headers from being used by later stages.
-		 * @param httpRequest
-		 * @param signedHeaders - semicolon delimited list of header names
-		 */
-		private static void cleanHeaders(MappingHttpRequest httpRequest, String signedHeaders) {
-			if(Strings.isNullOrEmpty(signedHeaders)) {
-				//Remove all headers.
-				signedHeaders = "";
-			}
-						
-			//Remove ones not found in the list
-			Set<String> signedNames = new TreeSet<String>();
-			String[] names = signedHeaders.split(";");
-			for(String n : names) {
-				signedNames.add(n.toLowerCase());
-			}
-			
-			signedNames.addAll(SAFE_HEADER_SET);
-			
-			Set<String> removeSet = new TreeSet<String>();
-			for(String headerName : httpRequest.getHeaderNames()) {
-				if(!signedNames.contains(headerName.toLowerCase())) {
-					removeSet.add(headerName);
-				}
-			}
-			
-			for(String headerName : removeSet) {				
-				httpRequest.removeHeader(headerName);
-			}
-		}
-		
-	} //End class EucaAuthentication
+	}
 	
 	private static class S3Authentication {
 		/**
@@ -565,9 +330,10 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 			} catch(Exception ex) {
 				//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
-				if(addrString.startsWith("/services/Walrus")) {
+                String servicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
+				if(addrString.startsWith(servicePath)) {
 					try {
-						String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+						String modifiedAddrString = addrString.replaceFirst(servicePath, "");
 						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
 						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 					} catch(Exception ex2) {
@@ -617,7 +383,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				Date dateToVerify = DateUtil.parseDate(verifyDate);
 				Date currentDate = new Date();
 				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
-					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
+					LOG.error("Incoming WalrusBackend message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
 					throw new AccessDeniedException("Message expired. Sorry.");
 				}
 			} catch(Exception ex) {

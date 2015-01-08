@@ -17,9 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.cloudwatch.common.msgs
 
 import com.eucalyptus.cloudwatch.common.CloudWatch
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.lang.reflect.Field;
 
@@ -315,8 +317,16 @@ public class DisableAlarmActionsType extends CloudWatchMessage {
 }
 public class CloudWatchErrorResponse extends CloudWatchMessage {
   String requestId;
-  public CloudWatchErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>();
+  ArrayList<Error> error = new ArrayList<Error>( );
+
+  CloudWatchErrorResponse( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 public class Metrics extends EucalyptusData {
   public Metrics() {  }

@@ -95,7 +95,8 @@
 		<structure field="group" map-as="com.eucalyptus.storage.msgs.s3.Group"
 			usage="optional" />
 		<value name="EmailAddress" field="emailAddress" usage="optional" />
-		<value name="type" field="type" style="attribute" />
+		<value name="xsi:type" field="type" style="attribute" />
+        <value name="xmlns:xsi" constant="http://www.w3.org/2001/XMLSchema-instance" style="attribute" />
 	</mapping>
 
 	<mapping class="com.eucalyptus.storage.msgs.s3.CanonicalUser"

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,16 +39,18 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
   public void onResource( final RestrictedType resource, final String action ) {
     ComputePolicyContext.clearContext( );
 
-    if ( accepted.contains( resource.getClass() ) ||
-        (!rejected.contains( resource.getClass() ) &&
-          CloudMetadata.class.isAssignableFrom( resource.getClass( ) ) ) ) try {
-      ComputePolicyContext.setComputePolicyContextResource(
-          TypeMappers.transform( resource, ComputePolicyContextResource.class ) );
-      accepted.add( resource.getClass() );
-    } catch ( IllegalArgumentException e ) {
-      rejected.add( resource.getClass() );
-      Logs.exhaust( ).info(
-          "Policy context not set for resource type: " + resource.getClass().getSimpleName( ) );
+    if ( resource != null ) {
+      if ( accepted.contains( resource.getClass() ) ||
+          (!rejected.contains( resource.getClass() ) &&
+            CloudMetadata.class.isAssignableFrom( resource.getClass( ) ) ) ) try {
+        ComputePolicyContext.setComputePolicyContextResource(
+            TypeMappers.transform( resource, ComputePolicyContextResource.class ) );
+        accepted.add( resource.getClass() );
+      } catch ( IllegalArgumentException e ) {
+        rejected.add( resource.getClass() );
+        Logs.exhaust( ).info(
+            "Policy context not set for resource type: " + resource.getClass().getSimpleName( ) );
+      }
     }
   }
 }

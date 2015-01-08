@@ -88,5 +88,7 @@ public interface BootableImageInfo {
   String getRootDeviceName( );
   
   String getRootDeviceType( );
-  
+
+  ImageMetadata.Architecture getArchitecture( );
+
 }

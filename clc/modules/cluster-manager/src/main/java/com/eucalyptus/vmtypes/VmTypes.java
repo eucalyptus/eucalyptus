@@ -69,9 +69,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
@@ -89,6 +92,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
@@ -98,6 +102,7 @@ import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "cloud.vmtypes",
@@ -547,8 +552,8 @@ public class VmTypes {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
       } else if(ImageMetadata.VirtualizationType.hvm.equals(img.getVirtualizationType())){
-    	vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
-        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
+        vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
+        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
       } else
       {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
@@ -566,8 +571,6 @@ public class VmTypes {
         }
         vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
       }
-      // TODO: remove with new image management
-      vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setRootDeviceName(img.getRootDeviceName());
@@ -585,7 +588,7 @@ public class VmTypes {
     
     @Override
     public VmTypeInfo apply( VmType arg0 ) {
-      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" ) {
         {
           this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES );
         }

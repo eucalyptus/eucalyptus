@@ -155,11 +155,6 @@ public class TerminateInstanceInAutoScalingGroupType extends AutoScalingBackendM
   Boolean shouldDecrementDesiredCapacity
   public TerminateInstanceInAutoScalingGroupType() {  }
 }
-public class ErrorResponse extends AutoScalingBackendMessage {
-  String requestId
-  public ErrorResponse() {  }
-  ArrayList<Error> error = new ArrayList<Error>()
-}
 public class BlockDeviceMappings extends EucalyptusData {
   public BlockDeviceMappings() {  }
   public BlockDeviceMappings( Collection<BlockDeviceMappingType> mappings ) {

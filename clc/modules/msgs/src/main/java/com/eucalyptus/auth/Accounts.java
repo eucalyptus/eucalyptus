@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,9 +63,9 @@
 package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
@@ -76,7 +76,6 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.principal.User;
@@ -146,35 +145,53 @@ public class Accounts {
   public static Account addAccount( String accountName ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( accountName );
   }
-  
+
   public static void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     Accounts.getAccountProvider( ).deleteAccount( accountName, forceDeleteSystem, recursive );
-  }
-
-  public static int countAccounts( ) throws AuthException {
-    return Accounts.getAccountProvider().countAccounts();
-  }
-
-  public static int countUsers( ) throws AuthException {
-    return Accounts.getAccountProvider().countUsers();
-  }
-
-  public static int countGroups( ) throws AuthException {
-    return Accounts.getAccountProvider().countGroups();
   }
 
   public static List<Account> listAllAccounts( ) throws AuthException {
     return Accounts.getAccountProvider( ).listAllAccounts( );
   }
 
-  public static List<Account> listAccountsByStatus( final User.RegistrationStatus status ) throws AuthException {
-    return Accounts.getAccountProvider( ).listAccountsByStatus( status );
+  public static boolean isSystemAccount( String accountName ) {
+    return
+        Account.SYSTEM_ACCOUNT.equals( accountName ) ||
+        Objects.toString( accountName, "" ).startsWith( Account.SYSTEM_ACCOUNT_PREFIX );
+  }
+
+  public static boolean isSystemAccount( Account account ) {
+    return isSystemAccount( account == null ? null : account.getName( ) );
   }
 
   public static Account addSystemAccount( ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( Account.SYSTEM_ACCOUNT );
   }
-  
+
+  /**
+   * Add a system account.
+   *
+   * @return The new account or an existing account with the specified name.
+   */
+  public static Account addSystemAccount( final String accountName ) throws AuthException {
+    return Accounts.getAccountProvider( ).addSystemAccount( accountName );
+  }
+
+  /**
+   * Add a system account with an admin user.
+   *
+   * @return The new account or an existing account with the specified name.
+   */
+  public static Account addSystemAccountWithAdmin( final String accountName ) throws AuthException {
+    final Account account = addSystemAccount( accountName );
+    try {
+      account.lookupUserByName( User.ACCOUNT_ADMIN );
+    } catch ( final AuthException e ) {
+      account.addUser( User.ACCOUNT_ADMIN, "/", true, null );
+    }
+    return account;
+  }
+
   public static Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
     return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );    
   }
@@ -202,31 +219,6 @@ public class Accounts {
   
   public static User lookupUserByCertificate( X509Certificate cert ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserByCertificate( cert );
-  }
-
-  public static List<User> listUsersForAccounts( final Collection<String> accountIds,
-                                                 final boolean eager ) throws AuthException {
-    return Accounts.getAccountProvider( ).listUsersForAccounts( accountIds, eager );
-  }
-
-  public static List<Group> listGroupsForAccounts( final Collection<String> accountIds ) throws AuthException {
-    return Accounts.getAccountProvider( ).listGroupsForAccounts( accountIds );
-  }
-
-  public static Map<String,List<Policy>> listPoliciesForUsers( final Collection<String> userIds ) throws AuthException {
-    return Accounts.getAccountProvider( ).listPoliciesForUsers( userIds );
-  }
-
-  public static Map<String,List<Policy>> listPoliciesForGroups( final Collection<String> groupIds ) throws AuthException {
-    return Accounts.getAccountProvider( ).listPoliciesForGroups( groupIds );
-  }
-
-  public static Map<String,List<Certificate>> listSigningCertificatesForUsers( final Collection<String> userIds ) throws AuthException {
-    return Accounts.getAccountProvider( ).listSigningCertificatesForUsers( userIds );
-  }
-
-  public static Map<String,List<AccessKey>> listAccessKeysForUsers( final Collection<String> userIds ) throws AuthException {
-    return Accounts.getAccountProvider( ).listAccessKeysForUsers( userIds );
   }
 
   public static Group lookupGroupById( String groupId ) throws AuthException {

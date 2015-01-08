@@ -21,6 +21,7 @@ package com.eucalyptus.cloudwatch.common;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -33,7 +34,8 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "monitoring" )
 @PolicyVendor( "cloudwatch" )
 @Partition( value = CloudWatch.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
+@Description( "CloudWatch API service" )
 public class CloudWatch extends ComponentId {
   private static final long serialVersionUID = 1L;
 

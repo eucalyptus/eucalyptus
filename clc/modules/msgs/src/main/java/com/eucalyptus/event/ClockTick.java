@@ -62,8 +62,10 @@
 
 package com.eucalyptus.event;
 
+import com.eucalyptus.event.Event.Periodic;
 import org.apache.log4j.Logger;
 
+@Periodic
 public class ClockTick extends GenericEvent<Long>{
   private static Logger LOG = Logger.getLogger( ClockTick.class );
 

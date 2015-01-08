@@ -25,27 +25,22 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import glob
-import sys
-import os
+import ConfigParser
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install_data import install_data
 from distutils.core import setup
 from distutils.sysconfig import get_python_lib
 import fileinput
-import ConfigParser
+import glob
+import os
+import sys
+
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
 prefix  = cfg.get('install', 'prefix')
 version = cfg.get('meta',    'version')
 
-class ExecutableDataFiles(install_data):
-    def run(self):
-        install_data.run(self)
-        for x in self.outfiles:
-            if x.startswith(sys.prefix+"/lib/eucadmin/validator-scripts/"):
-                os.chmod(x, 0755)
 
 class build_scripts_with_path_headers(build_scripts):
     def run(self):
@@ -72,19 +67,12 @@ class build_scripts_with_path_headers(build_scripts):
 admin_scripts = ["bin/euca_conf",
                  "bin/euca-configure-vmware",
                  "bin/euca-deregister-arbitrator",
-                 "bin/euca-deregister-autoscaling",
                  "bin/euca-deregister-cloud",
-                 "bin/euca-deregister-cloudformation",
-                 "bin/euca-deregister-cloudwatch",
                  "bin/euca-deregister-cluster",
-                 "bin/euca-deregister-compute",
-                 "bin/euca-deregister-euare",
-                 "bin/euca-deregister-loadbalancing",
-                 "bin/euca-deregister-object-storage-gateway",
                  "bin/euca-deregister-storage-controller",
-                 "bin/euca-deregister-tokens",
                  "bin/euca-deregister-vmware-broker",
-                 "bin/euca-deregister-walrus",
+                 "bin/euca-deregister-walrusbackend",
+                 "bin/euca-deregister-service",
                  "bin/euca-describe-arbitrators",
                  "bin/euca-describe-autoscaling",
                  "bin/euca-describe-clouds",
@@ -102,7 +90,8 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-describe-storage-controllers",
                  "bin/euca-describe-tokens",
                  "bin/euca-describe-vmware-brokers",
-                 "bin/euca-describe-walruses",
+                 "bin/euca-describe-walrusbackends",
+                 "bin/euca-describe-service-types",
                  "bin/euca-get-credentials",
                  "bin/euca-migrate-instances",
                  "bin/euca-modify-cluster",
@@ -111,21 +100,12 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-modify-storage-controller",
                  "bin/euca-modify-walrus",
                  "bin/euca-register-arbitrator",
-                 "bin/euca-register-autoscaling",
                  "bin/euca-register-cloud",
-                 "bin/euca-register-cloudformation",
-                 "bin/euca-register-cloudwatch",
                  "bin/euca-register-cluster",
-                 "bin/euca-register-compute",
-                 "bin/euca-register-euare",
-                 "bin/euca-register-loadbalancing",
-                 "bin/euca-register-object-storage-gateway",
                  "bin/euca-register-storage-controller",
-                 "bin/euca-register-tokens",
-                 "bin/euca-register-user-services",
                  "bin/euca-register-vmware-broker",
-                 "bin/euca-register-walrus",
-                 "bin/euca-validator",
+                 "bin/euca-register-walrusbackend",
+                 "bin/euca-register-service",
                  "bin/eureport-delete-data",
                  "bin/eureport-export-data",
                  "bin/eureport-generate-report",
@@ -154,11 +134,6 @@ setup(name="eucadmin",
           "PyGreSQL",
           "M2Crypto",
       ],
-      data_files=[
-          (prefix+"/lib/eucadmin", ['config/validator.yaml']),
-          (prefix+"/lib/eucadmin/validator-scripts", glob.glob('validator-scripts/*')),
-      ],
-      cmdclass={'build_scripts': build_scripts_with_path_headers,
-                'install_data':  ExecutableDataFiles},
+      cmdclass={'build_scripts': build_scripts_with_path_headers},
       scripts=admin_scripts,
       )

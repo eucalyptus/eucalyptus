@@ -140,7 +140,7 @@ public class KeyPairs {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyName ) );
     } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
+      throw new NoSuchKeyMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
   }
 
@@ -153,7 +153,7 @@ public class KeyPairs {
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, ex );
+      throw new NoSuchKeyMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, ex );
     }
   }
 

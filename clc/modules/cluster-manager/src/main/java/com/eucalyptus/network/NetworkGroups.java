@@ -62,8 +62,7 @@
 
 package com.eucalyptus.network;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -114,6 +113,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
@@ -122,10 +122,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.net.InetAddresses;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
-import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
@@ -504,23 +504,20 @@ public class NetworkGroups {
     return netConfig;
   }
   
-  public static NetworkGroup delete( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
-    if ( defaultNetworkName( ).equals( groupName ) ) {
-      createDefault( ownerFullName );
-    }
+  public static NetworkGroup delete( final String groupId ) throws MetadataException {
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      final NetworkGroup ret = Entities.uniqueResult( NetworkGroup.withGroupId( null, groupId ) );
       Entities.delete( ret );
       db.commit( );
       return ret;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new MetadataConstraintException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
+      throw new MetadataConstraintException( "Failed to delete security group: " + groupId + " because of: "
                                                 + Exceptions.causeString( ex ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     } finally {
       if ( db.isActive( ) ) db.rollback( );
     }
@@ -670,32 +667,37 @@ public class NetworkGroups {
    * <p>Caller must have open transaction.</p>
    *
    * @param permissions - The permissions to update
+   * @param defaultUserId - The account number to use when not specified
+   * @param revoke - True if resolving for a revoke operation
    * @throws MetadataException If an error occurs
    */
-  public static void resolvePermissions( final Iterable<IpPermissionType> permissions , boolean revoke) throws MetadataException {
+  public static void resolvePermissions( final Iterable<IpPermissionType> permissions,
+                                         final String defaultUserId,
+                                         final boolean revoke) throws MetadataException {
     for ( final IpPermissionType ipPermission : permissions ) {
       if ( ipPermission.getGroups() != null ) for ( final UserIdGroupPairType groupInfo : ipPermission.getGroups() ) {
-        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId() ) ) {
-        	try{
-	          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
-	          groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
-	          groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
-        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceUserId() ) ||
-            Strings.isNullOrEmpty( groupInfo.getSourceGroupName() )) {
-          throw new MetadataException( "Group ID or User ID/Group Name required." );
+        if ( !Strings.isNullOrEmpty( groupInfo.getSourceGroupId( ) ) ) {
+          try{
+            final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( groupInfo.getSourceGroupId() );
+            groupInfo.setSourceUserId( networkGroup.getOwnerAccountNumber() );
+            groupInfo.setSourceGroupName( networkGroup.getDisplayName() );
+          }catch(final NoSuchMetadataException ex){
+            if(!revoke)
+              throw ex;
+          }
+        } else if ( Strings.isNullOrEmpty( groupInfo.getSourceGroupName( ) ) ) {
+          throw new MetadataException( "Group ID or Group Name required." );
         } else {
-        	try{
-	          final NetworkGroup networkGroup =
-	              NetworkGroups.lookup( AccountFullName.getInstance( groupInfo.getSourceUserId() ), groupInfo.getSourceGroupName() );
-	          groupInfo.setSourceGroupId( networkGroup.getGroupId() );
-        	}catch(final NoSuchMetadataException ex){
-        		if(!revoke)
-        			throw ex;
-        	}
+          try{
+            final NetworkGroup networkGroup = NetworkGroups.lookup(
+                AccountFullName.getInstance(
+                    Objects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) ),
+                groupInfo.getSourceGroupName( ) );
+            groupInfo.setSourceGroupId( networkGroup.getGroupId( ) );
+          }catch(final NoSuchMetadataException ex){
+            if(!revoke)
+              throw ex;
+          }
         }
       }
     }
@@ -807,12 +809,14 @@ public class NetworkGroups {
         for ( String range : ipPerm.getCidrIpRanges() ) {
           String[] rangeParts = range.split( "/" );
           try {
-            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
-            if ( rangeParts.length != 2 ) continue;
-            if ( InetAddress.getByName( rangeParts[0] ) != null ) {
+            if ( rangeParts.length != 2 ) throw new IllegalArgumentException( );
+            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) throw new IllegalArgumentException( );
+            if ( InetAddresses.forString( rangeParts[0] ) instanceof Inet4Address ) {
               ipRanges.add( range );
             }
-          } catch ( NumberFormatException e ) {} catch ( UnknownHostException e ) {}
+          } catch ( IllegalArgumentException e ) {
+            throw new IllegalArgumentException( "Invalid IP range: '"+range+"'" );
+          }
         }
         NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );

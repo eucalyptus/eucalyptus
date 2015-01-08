@@ -69,14 +69,16 @@ class NetworkConfigurationsTest {
 
   @Test
   void testConfiguredPrivateIPsForCluster(){
-    // verify behavior with empty configuration
-    NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration( ), 'cluster1' ).with{
-      assertFalse( 'expected no addresses', iterator( ).hasNext( ) )
-    }
-
     // verify configuration from top level
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '10.10.10.10-10.10.10.11' ],
+        subnets: [
+            new Subnet(
+                subnet: "10.10.10.0",
+                netmask: "255.255.255.0",
+                gateway: "10.10.10.1"
+            )
+        ],
         clusters: [
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] )
         ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
@@ -86,12 +88,146 @@ class NetworkConfigurationsTest {
     // verify configuration from cluster level
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '1.1.1.1' ],
+        subnets: [
+            new Subnet(
+                subnet: "10.0.0.0",
+                netmask: "255.0.0.0",
+                gateway: "10.0.0.1"
+            )
+        ],
         clusters: [
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] ),
             new Cluster( name: 'cluster1', privateIps: [ '10.10.10.10-10.10.10.11' ] ),
             new Cluster( name: 'cluster2', privateIps: [ '10.30.10.10-10.30.10.11' ] )
         ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
-      assertEquals( 'private address list from top level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
+      assertEquals( 'private address list from cluster level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
     }
+  }
+
+  @Test
+  void testExplodeFull() {
+    NetworkConfiguration result = NetworkConfigurations.explode(
+        new NetworkConfiguration(
+            instanceDnsDomain: 'eucalyptus.internal',
+            instanceDnsServers: [ '10.1.1.254' ],
+            macPrefix: 'ab:cd',
+            publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+            privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
+            subnets: [
+                new Subnet(
+                    subnet: "10.111.0.0",
+                    netmask: "255.255.0.0",
+                    gateway: "10.111.0.1"
+                )
+            ],
+        ),
+        [ 'cluster1' ]
+    )
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        instanceDnsDomain: 'eucalyptus.internal',
+        instanceDnsServers: [ '10.1.1.254' ],
+        macPrefix: 'ab:cd',
+        publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+        privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
+        clusters: [
+            new Cluster(
+                name: 'cluster1',
+                macPrefix: 'ab:cd',
+                privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
+                subnet: new Subnet(
+                    name: "10.111.0.0",
+                    subnet: "10.111.0.0",
+                    netmask: "255.255.0.0",
+                    gateway: "10.111.0.1"
+                )
+            )
+        ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testExplodeMinimal() {
+    NetworkConfiguration result = NetworkConfigurations.explode(
+        new NetworkConfiguration(
+            publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+            subnets: [
+                new Subnet(
+                    subnet: "10.111.0.0",
+                    netmask: "255.255.0.0",
+                    gateway: "10.111.0.1"
+                )
+            ],
+        ),
+        [ 'cluster1' ]
+    )
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+        clusters: [
+            new Cluster(
+                name: 'cluster1',
+                privateIps: [ '10.111.0.2-10.111.255.254' ],
+                subnet: new Subnet(
+                    name: "10.111.0.0",
+                    subnet: "10.111.0.0",
+                    netmask: "255.255.0.0",
+                    gateway: "10.111.0.1"
+                )
+            )
+        ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateSingleSubnet() {
+    NetworkConfigurations.validate(
+        new NetworkConfiguration(
+            publicIps: [ '10.111.103.26' ]
+        )
+    )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateSingleSubnetIPRanges() {
+    NetworkConfigurations.validate(
+        new NetworkConfiguration(
+            publicIps: [ '10.111.103.26' ],
+            privateIps: [ '10.1.1.1' ],
+            subnets: [
+                new Subnet(
+                    subnet: "10.111.0.0",
+                    netmask: "255.255.0.0",
+                    gateway: "10.111.0.1"
+                )
+            ],
+        )
+    )
+  }
+
+  @Test( expected = NetworkConfigurationException )
+  void testValidateClusterSubnetIPRanges() {
+    NetworkConfigurations.validate(
+        new NetworkConfiguration(
+            publicIps: [ '10.111.103.26' ],
+            privateIps: [ '10.1.1.1' ],
+            clusters: [
+                new Cluster(
+                    name: 'cluster1',
+                    privateIps: [ '10.1.1.1' ],
+                    subnet: new Subnet(
+                        name: "10.111.0.0",
+                        subnet: "10.111.0.0",
+                        netmask: "255.255.0.0",
+                        gateway: "10.111.0.1"
+                    )
+                )
+            ]
+        )
+    )
   }
 }

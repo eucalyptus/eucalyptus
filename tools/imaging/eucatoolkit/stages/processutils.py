@@ -55,7 +55,7 @@ def close_all_fds(except_fds=None):
     next_range_min = 0
     for except_fileno in sorted(except_filenos):
         if except_fileno > next_range_min:
-            fileno_ranges.append((next_range_min, except_fileno - 1))
+            fileno_ranges.append((next_range_min, except_fileno))
         next_range_min = max(next_range_min, except_fileno + 1)
     fileno_ranges.append((next_range_min, 1024))
 
@@ -69,7 +69,7 @@ def monitor_subprocess_io(infile,
                           sub_stderr=None,
                           chunk_size=None,
                           log_method=None,
-                          inactivity_timeout=30):
+                          inactivity_timeout=120):
         '''
         Monitors the io availability of 'infile'. Reads from infile and
         writes to outfile. If there is no activity on infile for a period of
@@ -98,7 +98,8 @@ def monitor_subprocess_io(infile,
             last_read = time.time()
             done = False
             while not done:
-                reads, writes, errors = select(readfds, [], [], 30)
+                reads, writes, errors = select(readfds, [], [],
+                                               inactivity_timeout)
                 if len(reads) > 0:
                     for fd in reads:
                         #check for each fds in read ready list
@@ -117,7 +118,7 @@ def monitor_subprocess_io(infile,
                             read_elapsed = int(time.time() - last_read)
                             if read_elapsed > inactivity_timeout:
                                 raise RuntimeError(
-                                    'io monitor: "{0}" seconds elapsed since'
+                                    'io monitor: {0} seconds elapsed since'
                                     ' last read.'.format(read_elapsed))
                         if sub_stdout and fd == sub_stdout.fileno():
                             msg = ""
@@ -138,7 +139,7 @@ def monitor_subprocess_io(infile,
                                            + str(line.strip()))
                 else:
                     raise RuntimeError('Monitor IO inactivity timeout fired '
-                                       'after "{0}" seconds'
+                                       'after {0} seconds'
                                        .format(inactivity_timeout))
         finally:
             outfile.flush()
@@ -168,7 +169,7 @@ def process_wrapper(func, **kwargs):
         pass
     except Exception, e:
         traceback.print_exc()
-        msg = 'Error in wrapped process "{0}":{1}'.format(str(name), str(e))
+        msg = 'Error in wrapped process {0}:{1}'.format(str(name), str(e))
         print >> os.sys.stderr, msg
         return
     os._exit(os.EX_OK)

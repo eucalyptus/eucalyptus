@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -23,15 +23,30 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os.path
+import re
+import sys
+import urlparse
+
 from boto.roboto.awsqueryservice import AWSQueryService, NoCredentialsError
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import boto.utils
-import os.path
-import re
-import sys
+
 
 __version__ = '@EUCA_VERSION@'
+
+
+class EC2(AWSQueryService):
+    Name = 'ec2'
+    Description = 'compute service'
+    APIVersion = '2012-07-20'
+    Authentication = 'sign-v2'
+    Path = '/services/compute'
+    Port = 8773
+    Provider = 'aws'
+    EnvURL = 'EC2_URL'
+
 
 class EucAdmin(AWSQueryService):
 
@@ -39,11 +54,17 @@ class EucAdmin(AWSQueryService):
     Description = 'Eucalyptus Administration Services'
     APIVersion = 'eucalyptus'
     Authentication = 'sign-v2'
-    Path = '/services/Configuration'
+    ServicePath = '/services/Configuration'
     Port = 8773
     Provider = 'aws'
-    EnvURL = 'EC2_URL'
+    EnvURL = None
     InstallPath = '@prefix@'
+
+    def check_for_env_url(self):
+        if not self.args.get('url'):
+            self.args['url'] = urlparse.urljoin('http://127.0.0.1/',
+                                                self.ServicePath)
+        AWSQueryService.check_for_env_url(self)
 
     def handle_error(self, ex):
         s = ""
@@ -117,3 +138,18 @@ def print_version_if_necessary():
     if '--version' in sys.argv:
         print 'eucalyptus', __version__
         sys.exit()
+
+
+class EucaFormat():
+    SERVICE_TYPE = ['%-18s']
+    PARTITION = ['%-10s']
+    SERVICE_NAME = ['%-21s']
+    PREFIX = ['%s']
+    PREFIX_LINE = PREFIX + SERVICE_TYPE + PARTITION + SERVICE_NAME
+    STATE = ['%-8s']
+    URI = ['%-35s']
+    FULLNAME = ['%-35s']
+
+    def __init__(self):
+        pass
+

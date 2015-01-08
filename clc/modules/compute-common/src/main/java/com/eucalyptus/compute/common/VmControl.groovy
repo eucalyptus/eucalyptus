@@ -198,7 +198,7 @@ public class RunInstancesType extends VmControlMessage {
   String kernelId; //** added 2008-02-01  **/
   String ramdiskId; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.AvailabilityZone")
-  String availabilityZone = "default"; //** added 2008-02-01  **/
+  String availabilityZone = ""; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpParameterMapping (parameter = "Placement.Tenancy")
@@ -334,6 +334,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String kernel;
   String ramdisk;
   String platform;
+  String architecture;
   String monitoring;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"

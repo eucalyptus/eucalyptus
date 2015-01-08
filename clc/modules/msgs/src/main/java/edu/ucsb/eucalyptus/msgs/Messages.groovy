@@ -184,6 +184,7 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
   }
 }
 
+@ComponentMessage(Eucalyptus.class)
 public class ExceptionResponseType extends BaseMessage {
   String source = "not available";
   String message = "not available";
@@ -401,21 +402,15 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setRoot( String imageId, String location, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "objectstorage://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
-    // TODO: for new image management
-    // this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, guestDeviceName : this.rootDeviceName, type : "machine" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "kernel" ) );
-    // TODO: for new image management
-    //    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "kernel" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "kernel" ) );
   }
   
   public void setRamdisk( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "ramdisk" ) );
-    // TODO: for new image management
-    //    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "ramdisk" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "ramdisk" ) );
   }
   
   protected void setSwap( String deviceName, Long sizeBytes ) {
@@ -718,10 +713,18 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 
+@ComponentMessage(Eucalyptus.class) // not strictly correct as this is used for other components also
 public class ErrorResponse extends BaseMessage {
   String requestId
-  public ErrorResponse() {
+  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>( )
+
+  ErrorResponse( ) {
+    set_return( false )
   }
-  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>()
+
+  @Override
+  String toSimpleString( ) {
+    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+  }
 }
 

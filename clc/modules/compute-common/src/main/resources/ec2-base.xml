@@ -33,7 +33,7 @@
           serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="requestId" field="correlationId" usage="optional" />
+    <value name="requestId" get-method="getCorrelationId" field="correlationId" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.ComputeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
     abstract="true">
@@ -43,11 +43,11 @@
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.compute.common.ErrorResponse"
+  <mapping name="Response" class="com.eucalyptus.compute.common.ErrorResponse"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <collection name="Errors" field="error">
       <structure name="Error" type="com.eucalyptus.compute.common.ErrorDetail"/>
     </collection>
-    <value name="RequestId" field="requestId" usage="required"/>
+    <value name="RequestID" field="requestId" usage="required"/>
   </mapping>
 </binding>

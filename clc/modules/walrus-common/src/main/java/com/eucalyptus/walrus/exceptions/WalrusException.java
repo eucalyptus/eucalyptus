@@ -79,13 +79,13 @@ public class WalrusException extends EucalyptusCloudException {
     
 	public WalrusException()
 	{
-		super();
+		super("InternalServerError"); // HACK for EUCA-9397
 	}
 
 	public WalrusException(String message)
 	{
-		super(message);
-		this.message = message;
+		super("InternalServerError"); // HACK for EUCA-9397
+		this.message = "InternalServerError"; // HACK for EUCA-9397
 		this.code = "InternalServerError";
 		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
         this.resourceType = "";
@@ -94,9 +94,9 @@ public class WalrusException extends EucalyptusCloudException {
 
 	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
 	{
-		super(message);
+		super(code.replaceAll(" ", "")); // HACK for EUCA-9397. replaceAll is to remove spaces that some exceptions add to the s3 error code
 		this.code = code;
-		this.message = message;
+		this.message = code.replaceAll(" ", ""); // HACK for EUCA-9397
 		this.resourceType = resourceType;
 		this.resource = resource;
 		this.errStatus = status;

@@ -329,7 +329,8 @@ public class Allocations {
 
     public void abort() {
       for (final ResourceToken token : this.allocationTokens) {
-        LOG.error("Aborting resource token: " + token, new RuntimeException());
+        LOG.warn("Aborting resource token: " + token);
+        Logs.exhaust().error( "Aborting resource token", new RuntimeException( ) );
         final EntityTransaction db = Entities.get(VmInstance.class);
         try {
           token.abort();
@@ -344,18 +345,6 @@ public class Allocations {
 
     public List<NetworkGroup> getNetworkGroups() {
       return Lists.newArrayList(this.networkGroups.values());
-    }
-
-    public TreeMap<String, String> getNetworkGroupsMap() {
-
-      TreeMap<String, String> networkGroupMap = Maps.newTreeMap();
-
-      for (NetworkGroup network : this.getNetworkGroups()) {
-        networkGroupMap.put(network.getGroupId(), network.getDisplayName());
-      }
-
-      return networkGroupMap;
-
     }
 
     public VmType getVmType() {
@@ -453,8 +442,8 @@ public class Allocations {
       this.networkGroups = networkRuleGroups;
     }
 
-    public VmTypeInfo getVmTypeInfo(final Partition partition, final String instanceId) throws MetadataException {
-      return this.bootSet.populateVirtualBootRecord(this.vmType, partition, instanceId);
+    public VmTypeInfo getVmTypeInfo(final Partition partition, final String reservationId) throws MetadataException {
+      return this.bootSet.populateVirtualBootRecord(this.vmType, partition, reservationId);
     }
 
     @Nullable

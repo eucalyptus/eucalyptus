@@ -76,47 +76,49 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
 
 public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials> {
-	private static Logger LOG = Logger.getLogger( WalrusLoginModule.class );
-	public WalrusLoginModule() {}
+	private static Logger LOG = Logger.getLogger(WalrusLoginModule.class);
 
-	@Override
-	public boolean accepts( ) {
-		return super.getCallbackHandler( ) instanceof WalrusWrappedCredentials;
+	public WalrusLoginModule() {
 	}
 
 	@Override
-	public boolean authenticate( WalrusWrappedCredentials credentials ) throws Exception {
+	public boolean accepts() {
+		return super.getCallbackHandler() instanceof WalrusWrappedCredentials;
+	}
+
+	@Override
+	public boolean authenticate(WalrusWrappedCredentials credentials) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-    final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
+		final AccessKey key = AccessKeys.lookupAccessKey(credentials.getQueryId(), credentials.getSecurityToken());
+		if (!key.isActive()) {
+			throw new AuthenticationException("The AWS Access Key Id you provided does not exist in our records.");
+		}
 		final User user = key.getUser();
 		final String queryKey = key.getSecretKey();
-		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
+		final String authSig = checkSignature(queryKey, credentials.getLoginData());
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryIdCredential());
 			super.setPrincipal(user);
-			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
-			return true;	
+			// super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
+			return true;
 		}
 		return false;
 	}
 
 	@Override
-	public void reset( ) {}
+	public void reset() {
+	}
 
-	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
-	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
-		try
-		{
-			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
-			mac.init( signingKey );
-			byte[] rawHmac = mac.doFinal( subject.getBytes() );
-			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );
-		}
-		catch ( Exception e )
-		{
-			LOG.error( e, e );
-			throw new AuthenticationException( "Failed to compute signature" );
+	protected String checkSignature(final String queryKey, final String subject) throws AuthenticationException {
+		SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes(), Hmac.HmacSHA1.toString());
+		try {
+			Mac mac = Mac.getInstance(Hmac.HmacSHA1.toString());
+			mac.init(signingKey);
+			byte[] rawHmac = mac.doFinal(subject.getBytes());
+			return new String(Base64.encode(rawHmac)).replaceAll("=", "");
+		} catch (Exception e) {
+			LOG.error(e, e);
+			throw new AuthenticationException("Failed to compute signature");
 		}
 	}
 }

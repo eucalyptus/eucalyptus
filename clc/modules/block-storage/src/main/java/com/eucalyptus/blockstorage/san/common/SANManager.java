@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009-2014  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -87,6 +87,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -569,7 +570,24 @@ public class SANManager implements LogicalStorageManager {
 		}
 
 		LOG.info("Deleting backend snapshot " + sanSnapshotId + " mapping to " + snapshotId);
+		
+		boolean deleteEntity = false;
+		
+		// Try deleting the snapshot. It might fail as snapshots are global and another SC may have already deleted it
 		if (connectionManager.deleteVolume(sanSnapshotId)) {
+			deleteEntity = true;
+		} else {
+			// If snapshot deletion failed, check to see if the snapshot even exists
+			LOG.debug("Unable to delete backend snapshot " + sanSnapshotId + ". Checking to see if the snapshot exists");
+			if(!connectionManager.snapshotExists(sanSnapshotId)) {
+				LOG.debug("Backend snapshot " + sanSnapshotId + " not found. Safe to delete database entity");
+				deleteEntity = true;
+			} else {
+				LOG.warn("Failed to delete backend snapshot " +  sanSnapshotId + " mapping to " + snapshotId);
+			}
+		}
+		
+		if (deleteEntity) {
 			db = StorageProperties.getEntityWrapper();
 			try {
 				SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
@@ -579,7 +597,7 @@ public class SANManager implements LogicalStorageManager {
 			} finally {
 				db.commit();
 			}
-		}
+		} 
 	}
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
@@ -777,7 +795,7 @@ public class SANManager implements LogicalStorageManager {
 				ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
 				// type parser will correctly covert the value
 				entry.setValue(prop.getValue());
-			} catch (IllegalAccessException e) {
+			} catch (IllegalAccessException | ConfigurablePropertyException e) {
 				LOG.error(e, e);
 			}
 		}

@@ -69,46 +69,59 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.walrus.Walrus;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.WalrusConfiguration;
-import com.eucalyptus.walrus.msgs.DeregisterWalrusType;
-import com.eucalyptus.walrus.msgs.DescribeWalrusesType;
-import com.eucalyptus.walrus.msgs.ModifyWalrusAttributeType;
-import com.eucalyptus.walrus.msgs.RegisterWalrusType;
+import com.eucalyptus.walrus.msgs.DeregisterWalrusBackendType;
+import com.eucalyptus.walrus.msgs.DescribeWalrusBackendsType;
+import com.eucalyptus.walrus.msgs.ModifyWalrusBackendAttributeType;
+import com.eucalyptus.walrus.msgs.RegisterWalrusBackendType;
+import org.apache.log4j.Logger;
 
-@ComponentPart(Walrus.class)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, ModifyWalrusAttributeType.class } )
+@ComponentPart(WalrusBackend.class)
+@Handles({RegisterWalrusBackendType.class, DeregisterWalrusBackendType.class, DescribeWalrusBackendsType.class, ModifyWalrusBackendAttributeType.class})
 public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
-  
-  @Override
-  public WalrusConfiguration newInstance( ) {
-    return new WalrusConfiguration( );
-  }
-  
-  @Override
-  public WalrusConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new WalrusConfiguration( name, host, port );
-  }
+    private static final Logger LOG = Logger.getLogger(WalrusBuilder.class);
 
-  @Override
-  public ComponentId getComponentId( ) {
-    return ComponentIds.lookup( Walrus.class );
-  }
+    @Override
+    public WalrusConfiguration newInstance() {
+        return new WalrusConfiguration();
+    }
 
-  @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
+    @Override
+    public WalrusConfiguration newInstance(String partition, String name, String host, Integer port) {
+        return new WalrusConfiguration(name, host, port);
+    }
 
-  @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+    @Override
+    public ComponentId getComponentId() {
+        return ComponentIds.lookup(WalrusBackend.class);
+    }
 
-  @Override
-  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+    @Override
+    public void fireStart(ServiceConfiguration config) throws ServiceRegistrationException {
+    }
 
-  @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+    @Override
+    public void fireLoad(ServiceConfiguration config) throws ServiceRegistrationException {
+    }
 
-  @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+    @Override
+    public void fireStop(ServiceConfiguration config) throws ServiceRegistrationException {
 
-  
+    }
+
+    @Override
+    public void fireEnable(ServiceConfiguration config) throws ServiceRegistrationException {
+
+    }
+
+    @Override
+    public void fireDisable(ServiceConfiguration config) throws ServiceRegistrationException {
+
+    }
+
+    @Override
+    public void fireCheck(ServiceConfiguration config) throws ServiceRegistrationException {
+
+    }
 }

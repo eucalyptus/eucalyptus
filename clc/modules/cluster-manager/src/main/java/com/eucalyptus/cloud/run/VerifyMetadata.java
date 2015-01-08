@@ -64,6 +64,7 @@ package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -81,13 +82,15 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.backend.VmTypeDetails;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.VerificationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
@@ -96,7 +99,9 @@ import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.DeviceMapping;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
@@ -116,6 +121,7 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import net.sf.json.JSONException;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
@@ -196,7 +202,7 @@ public class VerifyMetadata {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException {
+    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException {
       RunInstancesType msg = allocInfo.getRequest( );
       String imageId = msg.getImageId( );
       VmType vmType = allocInfo.getVmType( );
@@ -205,19 +211,29 @@ public class VerifyMetadata {
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
-        if ( bootSet.isBlockStorage( ) ) {
-        } else if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
-          throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
-                                           " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
-                                           " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
-                                           + " GB." );
-        } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
-            throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
-                    " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
-                    " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
-                    + " GB." );
+        if ( ! bootSet.isBlockStorage( ) ) {
+          if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) &&
+            bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
+          throw new ImageInstanceTypeVerificationException(
+              "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+              " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+              " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
+              " size " + vmType.getDisk( ) + " GB." );
+          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+            throw new ImageInstanceTypeVerificationException(
+                "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+                " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+                " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
+                " size " + vmType.getDisk( ) + " GB." );
+          }
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
+          if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
+            throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
+                                        + " Please contact your cloud administrator.");
+          }
         }
-        
+      } catch ( VerificationException e ) {
+        throw e;
       } catch ( MetadataException ex ) {
         LOG.error( ex );
         throw ex;
@@ -226,6 +242,33 @@ public class VerifyMetadata {
         throw new VerificationException( "Failed to verify references for request: " + msg.toSimpleString( ) + " because of: " + ex.getMessage( ), ex );
       }
       return true;
+    }
+
+    private static long GIG = 1073741824l;
+    private static long MB = 1048576l;
+    // check if image can be converted
+    private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException{
+      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
+      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_EMI;
+      if (workerType == null )
+        return false;
+      if (emiName == null || "NULL".equals(emiName))
+        throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
+            + " Please contact your cloud administrator.");
+      
+      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      long diskSizeBytes = 0;
+      for(VmTypeDetails type:allTypes){
+        if (type.getName().equalsIgnoreCase(workerType)){
+          diskSizeBytes = type.getDisk() * GIG;
+          break;
+        }
+      }
+      MachineImageInfo emi = LookupMachine.INSTANCE.apply(emiName);
+      long spaceLeft = diskSizeBytes - emi.getImageSizeBytes() - img.getImageSizeBytes() - 100*2*MB;
+      if (spaceLeft > 0)
+        return true;
+      return false;
     }
   }
   
@@ -275,21 +318,21 @@ public class VerifyMetadata {
         if ( !Strings.isNullOrEmpty( instanceProfileArn ) ) try {
           final Ern name = Ern.parse( instanceProfileArn );
           if ( !( name instanceof EuareResourceName) ) {
-            throw new MetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
+            throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
           }
           profile = Accounts.lookupAccountById( name.getNamespace( ) )
               .lookupInstanceProfileByName( ((EuareResourceName) name).getName() );
           if ( !Strings.isNullOrEmpty( instanceProfileName ) &&
               !instanceProfileName.equals( profile.getName() ) ) {
-            throw new MetadataException( String.format(
+            throw new InvalidInstanceProfileMetadataException( String.format(
                 "Invalid IAM instance profile name '%s' for ARN: %s", name, instanceProfileArn) );
           }
-        } catch ( AuthException e ) {
-          throw new NoSuchMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
+        } catch ( AuthException|JSONException e ) {
+          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
         } else if ( !Strings.isNullOrEmpty( instanceProfileName ) ) try {
           profile = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) ).lookupInstanceProfileByName( instanceProfileName );
         } catch ( AuthException e ) {
-          throw new NoSuchMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
+          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
         } else {
           profile = null;
         }
@@ -330,7 +373,7 @@ public class VerifyMetadata {
             allocInfo.setIamInstanceProfileId( profile.getInstanceProfileId( ) );
             allocInfo.setIamRoleArn( roleArn );
           } else {
-            throw new MetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
+            throw new InvalidInstanceProfileMetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
           }
         } catch ( AuthException e ) {
           throw new MetadataException( "IAM instance profile error", e );
@@ -431,6 +474,14 @@ public class VerifyMetadata {
         throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
       }
       return true;
+    }
+  }
+
+  public static class ImageInstanceTypeVerificationException extends VerificationException {
+    private static final long serialVersionUID = -1L;
+
+    public ImageInstanceTypeVerificationException( final String message ) {
+      super( message );
     }
   }
 }

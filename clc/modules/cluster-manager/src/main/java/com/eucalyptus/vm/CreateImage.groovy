@@ -17,9 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.vm
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 /*
  * Start/StopInstance are internal operation (CC-NC) to shutdown and reboot the VM;

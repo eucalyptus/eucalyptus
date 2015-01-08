@@ -60,7 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.vm
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.util.ArrayList;
 import java.util.Date;

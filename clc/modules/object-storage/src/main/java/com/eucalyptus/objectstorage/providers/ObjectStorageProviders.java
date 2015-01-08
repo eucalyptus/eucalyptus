@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.persistence.EntityTransaction;
 
-import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import org.apache.log4j.Logger;
 
@@ -47,7 +46,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.objectstorage.config.ObjectStorageConfiguration;
+import com.eucalyptus.objectstorage.entities.ObjectStorageConfiguration;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -203,7 +202,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 					  lastClient.set( providerClient );
 				  }
 			  } else {
-				  throw new NoSuchElementException( "OSG object storage provider client not configured. Found empty or unset manager(" + lastClient + ").  Legal values are: " + Joiner.on( "," ).join( clients.keySet( ) ) );
+				  throw new NoSuchElementException( "OSG object storage provider client not configured. Found property 'objectstorage.providerclient' empty or unset manager(" + lastClient + ").  Legal values are: " + Joiner.on( "," ).join( clients.keySet( ) ) );
 			  }
 		  }
 		  return clientInstances.getUnchecked( lastClient.get( ) );

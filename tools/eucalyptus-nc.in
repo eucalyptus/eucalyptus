@@ -131,11 +131,11 @@ create_httpd_config() {
             -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
-            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+            > $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 
 	# load authz if we have it (ubuntu needs it)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 	fi
 
 	# let's configure the NC
@@ -143,7 +143,7 @@ create_httpd_config() {
             -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
             -e "s|\(Allow from\).*|\1 $IPS|" \
             -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
-            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 
@@ -310,23 +310,42 @@ do_start() {
 		fi
 	fi
 
-	# we need IP forwarding and we need to use iptable over the bridge
-	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
-		VAL=`cat /proc/sys/net/ipv4/ip_forward`
-		if [ "$VAL" = "0" ]; then
+        # logic to detect if required proc parameters will be reset by
+        # a sysctl update: succeed and continue if default values are
+        # correct, succeed but warn the user if the default settings
+        # are incorrect (and set them, and continue), fail if the
+        # values cannot be set
+	
+        # first, apply sysctl settings (set in /etc/sysctl*)
+
+        apply_sysctl
+
+        for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables
+        do
+	    if [ -e "$CHECKVAR" ]; then
+		if [ -r "$CHECKVAR" ]; then
+                    VAL=`cat $CHECKVAR`
+		    
+                    # if either the value is disabled after a sysctl reset, WARN the user, set it, and continue
+
+                    if [ "$VAL" = "0" ]; then
 			echo
-			echo "Enabling IP forwarding for eucalyptus."
-			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+			echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
+			if [ -w "$CHECKVAR" ]; then
+                            echo "Setting ${CHECKVAR}=1"
+                            echo -n 1 > ${CHECKVAR}
+			else
+                            echo "Cannot enable (write to) ${CHECKVAR}: check permissions"
+                            exit 1
+			fi
+                    fi
+		else
+                    echo
+                    echo "Cannot read required proc value ${CHECKVAR}: check permissions"
+                    exit 1
 		fi
-	fi
-	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
-		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
-		if [ "$VAL" = "0" ]; then
-			echo
-			echo "Enabling bridge netfiltering for eucalyptus."
-			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
-		fi
-	fi
+	    fi
+        done
 
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config

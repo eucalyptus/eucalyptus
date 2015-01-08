@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
@@ -71,7 +72,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 @Partition( value = { Eucalyptus.class } )
 @GenerateKeys
 @FaultLogPrefix( "sc" )
-public class Storage extends ComponentId {	
+@Description( "The Storage Controller service" )
+public class Storage extends ComponentId {
 	
   @Override
   public Boolean hasCredentials( ) {

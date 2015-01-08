@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -80,11 +81,10 @@ public class BlockStorageChecker {
 	private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
 	private LogicalStorageManager blockManager;
 	private static boolean transferredPending = false;
-	private SnapshotObjectOps snapshotOps;
+	S3SnapshotTransfer snapshotTransfer;
 
-	public BlockStorageChecker(LogicalStorageManager blockManager, SnapshotObjectOps snapshotOps) {
+	public BlockStorageChecker(LogicalStorageManager blockManager) {
 		this.blockManager = blockManager;
-		this.snapshotOps = snapshotOps;
 	}
 
 	public void startupChecks() {
@@ -208,22 +208,28 @@ public class BlockStorageChecker {
 			LOG.debug("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
 			blockManager.finishVolume(snapshotId);
 		} catch (Exception e) {
-			LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed", e);
+			LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed because: " + e.getMessage());
 		}
 
 		try {
 			LOG.debug("Cleaning snapshot " + snapshotId + " on storage backend");
 			blockManager.cleanSnapshot(snapshotId);
 		} catch (Exception e) {
-			LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed", e);
+			LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed because: " + e.getMessage());
 		}
 
 		try {
-			LOG.debug("Deleting snapshot " + snapshotId + " from OSG");
+			LOG.debug("Cleaning snapshot " + snapshotId + " from objectsotrage");
+			if(snapshotTransfer == null) {
+				snapshotTransfer = new S3SnapshotTransfer();
+			} 
 			String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapInfo.getSnapshotLocation());
-			snapshotOps.cancelSnapshotUpload(snapshotId, names[0], names[1]);
+			snapshotTransfer.setSnapshotId(snapshotId);
+			snapshotTransfer.setBucketName(names[0]);
+			snapshotTransfer.setKeyName(names[1]);
+			snapshotTransfer.cancelUpload();
 		} catch (Exception e) {
-			LOG.debug("Attempt to clean uploaded snapshot " + snapshotId + " from OSG failed", e);
+			LOG.debug("Attempt to clean uploaded snapshot " + snapshotId + " from objectstorage failed because: " + e.getMessage());
 		}
 	}
 

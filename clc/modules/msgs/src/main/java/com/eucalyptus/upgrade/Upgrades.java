@@ -38,6 +38,10 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
@@ -61,6 +65,7 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
@@ -169,6 +174,7 @@ public class Upgrades {
     v3_3_2,
     v3_4_0,
     v3_4_1,
+    v3_4_2,
     v4_0_0;
     
     public String getVersion( ) {
@@ -419,7 +425,7 @@ public class Upgrades {
     }
   }
   
-  enum DatabaseFilters implements Predicate<String> {
+  public enum DatabaseFilters implements Predicate<String> {
     EUCALYPTUS {
       
       @Override
@@ -976,5 +982,36 @@ public class Upgrades {
       throw Exceptions.toUndeclared( e );
     }
   }
-  
+
+  /**
+   * Perform upgrade work in a callback for the given context.
+   */
+  public static boolean transactionalForEntity( final Class entityClass,
+                                                final Function<EntityManager,Boolean> callback ) {
+    final String context = Ats.inClassHierarchy( entityClass ).get( PersistenceContext.class ).name();
+    final EntityManagerFactory entityManagerFactory = PersistenceContexts.getEntityManagerFactory( context );
+    final EntityManager entityManager = entityManagerFactory.createEntityManager( );
+    try {
+      final EntityTransaction transaction = entityManager.getTransaction( );
+      transaction.begin();
+      boolean success = false;
+      try {
+        success = callback.apply( entityManager );
+      } finally {
+        if ( success && !transaction.getRollbackOnly( ) ) {
+          transaction.commit();
+        } else {
+          transaction.rollback();
+        }
+      }
+      return success;
+    } finally {
+      if ( entityManager.isOpen( ) ) try {
+        entityManager.close( );
+      } catch ( final Exception e ) {
+        LOG.error( "Error closing entity manager for entity " + entityClass.getSimpleName( ), e );
+      }
+    }
+  }
+
 }

@@ -19,12 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation;
 
-import com.eucalyptus.cloudformation.entity.StackEntityManager;
-import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
-import com.eucalyptus.cloudformation.entity.StackResourceEntity;
-import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
-import com.eucalyptus.cloudformation.resources.Resource;
-import com.eucalyptus.cloudformation.resources.impl.AWSEC2Instance;
+import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.template.Template;
+import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.StackActivityImpl;
+import com.netflix.glisten.impl.local.LocalWorkflowOperations;
 import org.apache.log4j.Logger;
 
 /**
@@ -32,41 +33,26 @@ import org.apache.log4j.Logger;
  */
 public class StackDeletor extends Thread {
   private static final Logger LOG = Logger.getLogger(StackDeletor.class);
-  private Stack stack;
+  private StackEntity stackEntity;
   private String effectiveUserId;
-    private String accountId;
 
-  public StackDeletor(Stack stack, String effectiveUserId, String accountId) {
-    this.stack = stack;
+
+  public StackDeletor(StackEntity stackEntity, String effectiveUserId) {
+    this.stackEntity = stackEntity;
     this.effectiveUserId = effectiveUserId;
-      this.accountId = accountId;
   }
+  private Template template;
+
   @Override
   public void run() {
     try {
-      LOG.info("stackName=" + stack.getStackName());
-      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName(), accountId)) {
-        Resource resource = null;
-        LOG.info("resourceType="+stackResourceEntity.getResourceType());
-        LOG.info("physicalResourceId="+stackResourceEntity.getPhysicalResourceId());
-        if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
-          LOG.info("It's an instance!");
-          AWSEC2Instance awsec2Instance = new AWSEC2Instance();
-          awsec2Instance.setEffectiveUserId(effectiveUserId);
-          awsec2Instance.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
-          awsec2Instance.setType(stackResourceEntity.getResourceType());
-          awsec2Instance.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
-          resource = awsec2Instance;
-        }
-        try {
-          resource.delete();
-        } catch (Throwable ex) {
-          LOG.error(ex, ex);
-        }
+      try {
+        DeleteStackWorkflowImpl deleteStackWorkflow = new DeleteStackWorkflowImpl();
+        deleteStackWorkflow.setWorkflowOperations(LocalWorkflowOperations.<StackActivity>of(new StackActivityImpl()));
+        deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
+      } catch (Exception ex2) {
+        LOG.error(ex2, ex2);
       }
-      StackResourceEntityManager.deleteStackResources(stack.getStackName(), accountId);
-      StackEventEntityManager.deleteStackEvents(stack.getStackName(), accountId);
-      StackEntityManager.deleteStack(stack.getStackName(), accountId);
     } catch (Throwable ex) {
       LOG.error(ex, ex);
     }

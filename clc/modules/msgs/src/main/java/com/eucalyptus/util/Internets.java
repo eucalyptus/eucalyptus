@@ -87,6 +87,7 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -204,7 +205,11 @@ public class Internets {
       return localHostInetAddress( );
     }
   }
-  
+
+  public static InetAddress any( ) {
+    return InetAddresses.fromInteger( 0 );
+  }
+
   public static InetAddress localHostInetAddress( ) {
     return localHostAddr;
   }
@@ -459,7 +464,36 @@ public class Internets {
     }
     return results;
   }
-  
+
+  public static Optional<Cidr> getInterfaceCidr( final InetAddress address ) {
+    try {
+      final NetworkInterface networkInterface = NetworkInterface.getByInetAddress( address );
+      for ( final InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses( ) ) {
+        if ( address.equals( interfaceAddress.getAddress( ) ) ) {
+          final int prefix = interfaceAddress.getNetworkPrefixLength( );
+          return Optional.of( Cidr.fromAddress( address, prefix ) );
+        }
+      }
+    } catch ( SocketException e ) {
+      LOG.debug("Error finding interface CIDR for address '"+address+"'", e );
+    }
+    return Optional.absent( );
+  }
+
+  public static Function<InetAddress,Optional<Cidr>> interfaceCidr( ) {
+    return InetAddressToCidr.INSTANCE;
+  }
+
+  private enum InetAddressToCidr implements Function<InetAddress,Optional<Cidr>>  {
+    INSTANCE;
+
+    @Override
+    public Optional<Cidr> apply( final InetAddress address ) {
+      return getInterfaceCidr( address );
+    }
+  }
+
+
   public static void main( String[] args ) throws Exception {
     for ( String addr : Internets.getAllAddresses( ) ) {
       System.out.println( addr );

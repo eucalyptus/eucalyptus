@@ -204,13 +204,16 @@ class SecurityTokenManagerTest {
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
   }
 
-  @Test(expected = SecurityTokenValidationException)
+  @Test
   void testExceedMaximumTokenDurationForAdminUsers() {
     long now = System.currentTimeMillis()
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    manager.doIssueSecurityToken( Principals.systemUser(), testKey, TimeUnit.HOURS.toSeconds( 1 ) + 1 as Integer  )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, TimeUnit.HOURS.toSeconds( 1 ) + 1 as Integer  )
+
+    assertThat( "Null token issued", token, notNullValue() )
+    assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) ) // duration should be truncated to 1 hour
   }
 
   @Test(expected=AuthException.class)

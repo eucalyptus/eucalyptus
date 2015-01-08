@@ -23,10 +23,12 @@ package com.eucalyptus.objectstorage.metadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
 import com.google.common.base.Function;
 
 import javax.annotation.Nullable;
@@ -97,12 +99,16 @@ public class BucketStateTransitions {
             } else {
                 try {
                     Bucket foundBucket = Entities.uniqueResult(new Bucket().withUuid(searchBucket.getBucketUuid()));
+                    //Must check for emptiness within this transaction
+                    if(ObjectMetadataManagers.getInstance().countValid(foundBucket) > 0) {
+                        throw new Exception("Bucket not empty");
+                    }
                     foundBucket.setState(BucketState.deleting);
                     foundBucket.setBucketName(null);
                     return foundBucket;
                 } catch(NoSuchElementException e) {
                     throw new NoSuchEntityException(searchBucket.getBucketUuid());
-                } catch(TransactionException e) {
+                } catch(Exception e) {
                     throw new MetadataOperationFailureException(e);
                 }
             }

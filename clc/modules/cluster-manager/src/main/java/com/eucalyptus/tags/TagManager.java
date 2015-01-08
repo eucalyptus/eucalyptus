@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +27,12 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -47,7 +47,6 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -244,7 +243,7 @@ public class TagManager {
         final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
         try {
           if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}" )) {
-            return tagSupport.lookup( resourceId );
+            return tagSupport.lookup( ResourceIdentifiers.tryNormalize( ).apply( resourceId ) );
           } else {
             throw Exceptions.toUndeclared( new ClientComputeException(
                 "InvalidID",

@@ -64,44 +64,168 @@
 
 package com.eucalyptus.ws.server;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.SecurityParameter;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.ws.protocol.OperationParameter;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+@ChannelHandler.Sharable
 public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   INSTANCE;
-  private static Logger LOG = Logger.getLogger( ServiceAccessLoggingHandler.class );
   
-  @Override
-  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    logRequest( e );
-    ctx.sendDownstream( e );
+  public static Set<String> ignoredParameters          = new TreeSet<String>( ) {
+                                                         {
+                                                           this.addAll( Collections2.transform( Arrays.asList( OperationParameter.values( ) ),
+                                                                                                Functions.toStringFunction( ) ) );
+                                                           this.addAll( Collections2.transform( Arrays.asList( SecurityParameter.values( ) ),
+                                                                                                Functions.toStringFunction( ) ) );
+                                                           this.addAll( Collections2.transform( Arrays.asList( RequiredQueryParams.values( ) ),
+                                                                                                Functions.toStringFunction( ) ) );
+                                                         }
+                                                       };
+  
+  private static final//
+  Predicate<String>         ignoredParametersPredicate = new Predicate<String>( )
+                                                       
+                                                       {
+                                                         @Override
+                                                         public boolean apply( String input ) {
+                                                           try {
+                                                             return !ignoredParameters.contains( input.substring( 0, input.indexOf( "=" ) ) );
+                                                           } catch ( Exception e ) {
+                                                             return false;
+                                                           }
+                                                         }
+                                                       };
+  private static final// 
+  Function<MappingHttpRequest, //
+  Collection<String>>      //
+                            createParameters           = new Function<MappingHttpRequest, Collection<String>>( ) {
+                                                         @Override
+                                                         public Collection<String> apply( MappingHttpRequest input ) {
+                                                           try {
+                                                             String query = Objects.toString( input.getQuery( ),
+                                                                                              "" );
+                                                             if ( HttpMethod.POST.equals( input.getMethod( ) ) ) {
+                                                               final ChannelBuffer buffer = input.getContent( );
+                                                               buffer.markReaderIndex( );
+                                                               query = new String( buffer.array( ) );
+                                                               buffer.resetReaderIndex( );
+                                                             }
+                                                             return Collections2.filter( Arrays.asList( query.split( "&" ) ),
+                                                                                         ignoredParametersPredicate );
+                                                           } catch ( Exception e ) {
+                                                             return Collections.EMPTY_LIST;
+                                                           }
+                                                         }
+                                                       };
+  
+  private static Logger     LOG                        = Logger.getLogger( ServiceAccessLoggingHandler.class );
+  
+  private static void createLogEntry( ChannelHandlerContext ctx, Object replyObject, String... extra ) {
+    try {
+      Context context = Contexts.lookup( ctx.getChannel( ) );
+      List<String> logEntries = Lists.newArrayList( context.getCorrelationId( ),
+                                                    context.getUserFullName( ).toString( ),
+                                                    ctx.getChannel( ).getRemoteAddress( ).toString( ),
+                                                    ctx.getChannel( ).getLocalAddress( ).toString( )
+                                     );
+      String componentName = "wsstack";//GRZE: this basically means unattributable to a component... sigh.
+      if ( replyObject instanceof BaseMessage ) {
+        try {
+          final Class<? extends ComponentId> compMsg = ComponentMessages.lookup( ( BaseMessage ) replyObject );
+          final ComponentId compId = ComponentIds.lookup( compMsg );
+          componentName = compId.name( );
+        } catch ( Exception e ) {
+          //GRZE: this needs to be a separate logger to avoid hitting the configured category for this class.
+          Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e );
+        }
+      }
+      logEntries.add( componentName );
+      logEntries.add( replyObject.getClass( ).getSimpleName( ) );
+      logEntries.add( "[" + Joiner.on( "," ).join( Arrays.asList( extra ) ) + "]" );
+      LOG.info( Joiner.on( " " ).join( logEntries ) );
+    } catch ( Exception e ) {
+      //GRZE: this needs to be a separate logger to avoid hitting the configured category for this class.
+      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e );
+    }
   }
   
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    logRequest( e );
+    try {
+      if ( e instanceof MessageEvent ) {
+        final MessageEvent msge = ( MessageEvent ) e;
+        if ( msge.getMessage( ) instanceof MappingHttpRequest ) {// Handle single request-response MEP
+          MappingHttpRequest httpMessage = ( MappingHttpRequest ) ( ( MessageEvent ) e ).getMessage( );
+          final String method = Objects.toString( httpMessage.getMethod( ), "HTTP-UNKNOWN" );
+          final String parameters = Joiner.on( "," ).join( createParameters.apply( httpMessage ) );
+          createLogEntry( ctx, httpMessage.getMessage( ), method, parameters );
+        }
+      }
+    } catch ( Exception e1 ) {
+      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
+    }
     ctx.sendUpstream( e );
   }
   
-  private void logRequest( ChannelEvent e ) {
-    if ( e instanceof MessageEvent ) {
-      final MessageEvent msge = ( MessageEvent ) e;
-      if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
-        BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-        final Class<? extends ComponentId> compMsg = ComponentMessages.lookup( reply );
-        final ComponentId compId = ComponentIds.lookup( compMsg );
-        LOG.info( Joiner.on( " " ).join( reply.getClass( ).getSimpleName( ), reply.getUserId( ), reply.getCorrelationId( ), compId.name( ) ) );
+  @Override
+  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    try {
+      if ( e instanceof MessageEvent ) {
+        final MessageEvent msge = ( MessageEvent ) e;
+        if ( msge.getMessage( ) instanceof MappingHttpResponse ) {// Handle single request-response MEP
+          MappingHttpResponse httpMessage = ( MappingHttpResponse ) ( ( MessageEvent ) e ).getMessage( );
+          createLogEntry( ctx, httpMessage.getMessage( ), Objects.toString( httpMessage.getStatus(), "UNKNOWN" ) );
+        }
+      } else if ( e instanceof ExceptionEvent ) {
+        Throwable reply = ( ( ExceptionEvent ) e ).getCause( );
+        String[] extra = new String[]{};
+        try {
+          final List<Throwable> causalChain = Throwables.getCausalChain( reply );
+          extra = ( String[] ) Collections2.transform( causalChain, Functions.toStringFunction() ).toArray();
+        } catch ( Exception e1 ) {
+          Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
+        }
+        createLogEntry( ctx, reply, extra );
       }
+    } catch ( Exception e1 ) {
+      Logger.getLogger( "LoggingError." + ServiceAccessLoggingHandler.class.getCanonicalName( ) ).debug( e1 );
     }
+    ctx.sendDownstream( e );
   }
   
 }

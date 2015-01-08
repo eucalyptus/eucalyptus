@@ -21,7 +21,6 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common
 
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 import net.sf.json.JSONObject;
@@ -31,16 +30,10 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImportMessage extends ComputeMessage {
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    VmImportResponseMessage reply = (VmImportResponseMessage) super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return (TYPE) reply;
-  }
 }
 public class VmImportResponseMessage extends VmImportMessage {
-  protected String requestId;
 }
+
 /*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {
   String description;
@@ -59,8 +52,8 @@ public class ImportInstanceResponseType extends VmImportResponseMessage {
 public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String architecture;
   @HttpEmbedded(multiple = true)
-  @HttpParameterMapping (parameter = "SecurityGroup")
-  ArrayList<ImportInstanceGroup> groupSet = new ArrayList<ImportInstanceGroup>();
+  @HttpParameterMapping (parameter = "GroupName")
+  ArrayList<String> groupName = new ArrayList<String>();
   @HttpEmbedded
   UserData userData;
   String instanceType;
@@ -69,13 +62,10 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   String subnetId;
   String instanceInitiatedShutdownBehavior;
   String privateIpAddress;
+  String keyName;
   public ImportInstanceLaunchSpecification() {}
 }
-public class ImportInstanceGroup extends EucalyptusData {
-  String groupId;
-  String groupName;
-  public ImportInstanceGroupItem() {}
-}
+
 public class DiskImage extends EucalyptusData {
   DiskImageDetail image;
   String description;
@@ -160,13 +150,14 @@ public class ImportResourceTag extends EucalyptusData {
   }
 }
 
-public class ConversionTask extends EucalyptusData {
+public class ConversionTask extends EucalyptusData{
   String conversionTaskId;
   String expirationTime;
   ImportVolumeTaskDetails importVolume;
   ImportInstanceTaskDetails importInstance;
   String state;
   String statusMessage;
+  
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ResourceTag")
   ArrayList<ImportResourceTag> resourceTagSet = new ArrayList<ImportResourceTag>();
@@ -186,25 +177,25 @@ public class ConversionTask extends EucalyptusData {
     return obj;
   }
   public ConversionTask (JSONObject obj) {
-	conversionTaskId = obj.optString("conversionTaskId");
-	expirationTime = obj.optString("expirationTime");
-	JSONObject importDetails = obj.optJSONObject("importVolume");
-	if (importDetails != null)
-	  importVolume = new ImportVolumeTaskDetails(importDetails);
-	importDetails = obj.optJSONObject("importInstance");
-	if (importDetails != null)
+    conversionTaskId = obj.optString("conversionTaskId");
+    expirationTime = obj.optString("expirationTime");
+    JSONObject importDetails = obj.optJSONObject("importVolume");
+    if (importDetails != null)
+      importVolume = new ImportVolumeTaskDetails(importDetails);
+    importDetails = obj.optJSONObject("importInstance");
+    if (importDetails != null)
       importInstance = new ImportInstanceTaskDetails(importDetails);
-	state = obj.optString("state", null);
-	statusMessage = obj.optString("statusMessage", null);
-	JSONArray arr = obj.optJSONArray("resourceTagSet");
-	if (arr != null) {
+    state = obj.optString("state", null);
+    statusMessage = obj.optString("statusMessage", null);
+    JSONArray arr = obj.optJSONArray("resourceTagSet");
+    if (arr != null) {
       for(int i=0;i<arr.size(); i++)
         resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
     } else {
       JSONObject res = obj.optJSONObject("resourceTagSet");
       if (res!=null)
-	    resourceTagSet.add(new ImportResourceTag(res));
-      }
+        resourceTagSet.add(new ImportResourceTag(res));
+    }
   }
 }
 

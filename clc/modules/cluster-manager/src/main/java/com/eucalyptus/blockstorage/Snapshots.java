@@ -208,7 +208,7 @@ public class Snapshots {
     										entity.getParentVolume()),
     										entity.getNaturalId(),
     										entity.getDisplayName(),
-    										entity.getOwnerUserName() ) ); // snapshot info user name is user id
+    										entity.getOwnerUserId() ) ); // snapshot info user name is user id
     					} catch ( final Throwable e ) {
     						LOG.error( "Error inserting/creating reporting event for snapshot creation of snapshot: " + entity.getDisplayName(), e  );
     					}

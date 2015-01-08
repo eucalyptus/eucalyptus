@@ -63,18 +63,11 @@
 package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.upgrade.Upgrades;
-import com.google.common.base.Predicate;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
@@ -83,12 +76,12 @@ import javax.persistence.UniqueConstraint;
  *
  */
 @Entity
-@PersistenceContext(name="eucalyptus_osg")
-@Table( name = "scheduled_jobs",
-    uniqueConstraints = @UniqueConstraint( columnNames = {"job_class_name","job_schedule"},
-            name = "sched_jobs_composite_key")
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "scheduled_jobs",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"job_class_name", "job_schedule"},
+                name = "sched_jobs_composite_key")
 )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ScheduledJob extends AbstractPersistent {
 
     @Column(name = "job_class_name")

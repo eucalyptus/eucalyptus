@@ -24,6 +24,8 @@ package com.eucalyptus.objectstorage.metadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
+import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -38,11 +40,13 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import javax.annotation.Nonnull;
@@ -65,7 +69,6 @@ import java.util.concurrent.Executors;
  */
 public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
 	private static final Logger LOG = Logger.getLogger(DbMpuPartMetadataManagerImpl.class);
-	private static final ExecutorService HISTORY_REPAIR_EXECUTOR = Executors.newCachedThreadPool();
 
 	@Override
     public void start() throws Exception {
@@ -74,12 +77,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
 
 	@Override
     public void stop() throws Exception {
-		try {
-			List<Runnable> pendingTasks = HISTORY_REPAIR_EXECUTOR.shutdownNow();
-			LOG.info("Stopping ObjectMetadataManager... Found " + pendingTasks.size() + " pending tasks at time of shutdown");
-		} catch (final Throwable f) {
-			LOG.error("Error stopping ObjectMetadataManager", f);
-		}
 	}
 
     @Override
@@ -154,31 +151,36 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
     };
 
 	@Override
-	public void cleanupInvalidParts(final Bucket bucket, final String objectKey) throws Exception {
-		PartEntity searchExample = new PartEntity(bucket, objectKey, null);
-		
-		final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
-			public boolean apply(PartEntity example) {
+	public void cleanupInvalidParts(final Bucket bucket, final String objectKey, final String uploadId, final int partNumber) throws Exception {
+        final PartEntity searchExample = new PartEntity(bucket, objectKey, uploadId).withPartNumber(partNumber);
+
+        final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
+            public boolean apply(PartEntity example) {
                 try {
-                    //Ensure only the most recent is 'latest'
-                    SET_LATEST_PREDICATE.apply(example);
 
                     //Find not-latest null-versioned objects and mark them for deletion.
-                    PartEntity searchExample = new PartEntity().withKey(objectKey).withBucket(bucket).withState(ObjectState.extant);
-                    searchExample.setIsLatest(false);
-                    List<PartEntity> results = Entities.query(searchExample);
-                    if (results != null && results.size() > 0) {
-                        // Set all but the first element as not latest
-                        for (PartEntity obj : results) {
-                            LOG.trace("Marking MPU part " + obj.getPartUuid() + " as no longer latest version");
-                            obj = transitionPartToState(obj, ObjectState.deleting);
-                        }
+                    PartEntity searchExample = new PartEntity().withKey(example.getObjectKey()).withBucket(example.getBucket()).withState(ObjectState.extant).withUploadId(example.getUploadId()).withPartNumber(example.getPartNumber());
+                    Criteria searchCriteria = Entities.createCriteria(PartEntity.class);
+                    searchCriteria.add(Example.create(searchExample)).addOrder(Order.desc("objectModifiedTimestamp"));
+                    searchCriteria = getSearchByBucket(searchCriteria, example.getBucket());
+                    List<PartEntity> results = searchCriteria.list();
+                    if(results.size() <= 1) {
+                        //nothing to do
+                        return true;
+                    }
+
+                    results.get(0).setIsLatest(true);
+                    // Set all but the first element as not latest
+                    for (PartEntity obj : results.subList(1, results.size())) {
+                        LOG.trace("Marking mpu part " + obj.getPartUuid() + " as no longer latest version and for cleanup");
+                        obj.setIsLatest(false);
+                        obj = transitionPartToState(obj, ObjectState.deleting);
                     }
                 } catch (NoSuchElementException e) {
                     // Nothing to do.
                 } catch (Exception e) {
-                    LOG.error("Error consolidationg Object records for " + example.getBucket().getBucketName() + "/"
-                            + example.getObjectKey());
+                    LOG.error("Error consolidating PartEntity records for " + example.getBucket().getBucketName() + "/"
+                            + example.getObjectKey() + " uploadId = " + example.getUploadId() + " partNumber = " + example.getPartNumber());
                     return false;
                 }
                 return true;
@@ -226,22 +228,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
         }
 	}
 
-	protected void fireRepairTask(final Bucket bucket, final String objectKey) {
-		try {
-			HISTORY_REPAIR_EXECUTOR.submit(new Runnable() {
-				public void run() {
-					try {
-						cleanupInvalidParts(bucket, objectKey);
-					} catch (final Throwable f) {
-						LOG.error("Error during object history consolidation for " + bucket + "/" + objectKey, f);
-					}
-				}
-			});
-		} catch (final Throwable f) {
-			LOG.warn("Error setting object history for " + bucket + "/" + objectKey + ".", f);
-		}
-	}
-
     @Override
     public List<PartEntity> lookupPartsInState(Bucket searchBucket, String searchKey, String uploadId, ObjectState state) throws Exception {
         EntityTransaction db = Entities.get(PartEntity.class);
@@ -263,14 +249,34 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
     }
 
     @Override
-    public void removeParts(String uploadId) throws Exception {
-        try ( TransactionResource db =
-                      Entities.transactionFor( PartEntity.class ) ) {
-            Entities.deleteAllMatching( PartEntity.class,
-                    "where part_number IS NOT NULL and upload_id=:uploadId",
-                    Collections.singletonMap( "uploadId", uploadId ));
-            db.commit();
-        }
+    public void removeParts(final Bucket bucket, final String uploadId) throws Exception {
+        Predicate<String> removePredicate = new Predicate<String>() {
+            public boolean apply(String uploadId) {
+                try (TransactionResource db =
+                             Entities.transactionFor( PartEntity.class ) ) {
+                    //Calculate the sum size of the parts to update the bucket size.
+                    PartEntity searchExample = new PartEntity().withUploadId(uploadId).withState(ObjectState.extant);
+                    long size = Objects.firstNonNull((Number) Entities.createCriteria(PartEntity.class)
+                            .add(Example.create(searchExample))
+                            .setProjection(Projections.sum("size"))
+                            .setReadOnly(true)
+                            .uniqueResult(), 0).longValue();
+
+                    //Remove all part records with this upload id
+                    Entities.deleteAllMatching(PartEntity.class,
+                            "where part_number IS NOT NULL and upload_id=:uploadId",
+                            Collections.singletonMap("uploadId", uploadId));
+                    db.commit();
+                } catch(Exception e) {
+                    LOG.trace("Error finalizing part-removal transaction. Will retry.", e);
+                    throw new RuntimeException(e);
+                }
+
+                return true;
+            }
+        };
+
+        Entities.asTransaction(PartEntity.class, removePredicate).apply(uploadId);
     }
 
     @Override
@@ -359,22 +365,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
         }
     }
 
-    protected void firePartConsolidation(final Bucket bucket, final String uploadId, final String objectKey, final Integer partNumber) {
-        try {
-            HISTORY_REPAIR_EXECUTOR.submit(new Runnable() {
-                public void run() {
-                    try {
-                        doConsolidateParts(bucket, objectKey, uploadId, partNumber);
-                    } catch (final Throwable f) {
-                        LOG.error("Error during object history consolidation for " + bucket + " uploadId:" + uploadId + " partNumber:" + partNumber, f);
-                    }
-                }
-            });
-        } catch (final Throwable f) {
-            LOG.warn("Error setting part history for " + bucket+ " uploadId:" + uploadId + " partNumber:" + partNumber, f);
-        }
-    }
-
     private void doConsolidateParts(Bucket bucket, String objectKey, String uploadId, Integer partNumber) {
         PartEntity searchExample = new PartEntity(bucket, objectKey, uploadId).withPartNumber(partNumber);
         searchExample = searchExample.withState(ObjectState.extant);
@@ -394,7 +384,8 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
                                         + " uploadId: " + partEntity.getUploadId()
                                         + " partNumber: " + partEntity.getPartNumber()
                                         + " for deletion because it is not latest.");
-                                partEntity.setState(ObjectState.deleting);
+                                //partEntity.setState(ObjectState.deleting);
+                                MpuPartMetadataManagers.getInstance().transitionPartToState(partEntity, ObjectState.deleting);
                             }
                         } catch (IndexOutOfBoundsException e) {
                             // Either 0 or 1 result, nothing to do
@@ -439,6 +430,23 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
             lastPartNumber = partNumber;
         }
         return objectSize;
+    }
+
+    @Override
+    public long getTotalSize(Bucket bucket) throws Exception {
+        try(TransactionResource trans = Entities.transactionFor(PartEntity.class)) {
+            Criteria queryCriteria = Entities.createCriteria(PartEntity.class).add(Restrictions.or(Restrictions.eq("state", ObjectState.creating), Restrictions.eq("state", ObjectState.extant)))
+                    .setProjection(Projections.sum("size"));
+            if(bucket != null) {
+                queryCriteria = getSearchByBucket(queryCriteria, bucket);
+            }
+            queryCriteria.setReadOnly(true);
+            final Number count = (Number) queryCriteria.uniqueResult();
+            return count == null ? 0 : count.longValue();
+        } catch (Throwable e) {
+            LOG.error("Error getting part total size for bucket " + bucket.getBucketName(), e);
+            throw new Exception(e);
+        }
     }
 
     @Override

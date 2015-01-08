@@ -432,7 +432,17 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
            || this.checkComponentParts( );
   }
-  
+
+  /**
+   * Temporary work around allowing components to opt out of DNS.
+   *
+   * @deprecated
+   */
+  @Deprecated
+  public boolean isDnsSupported( ) {
+    return true;
+  }
+
   public String getAwsServiceName( ) {
     if ( this.ats.has( AwsServiceName.class ) ) {
       return this.ats.get( AwsServiceName.class ).value( );

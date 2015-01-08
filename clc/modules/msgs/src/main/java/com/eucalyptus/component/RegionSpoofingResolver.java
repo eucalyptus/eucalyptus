@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetAddress;
+import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -86,9 +86,9 @@ import com.google.common.collect.Lists;
                     description = "Options controlling DNS domain spoofing for AWS regions." )
 public class RegionSpoofingResolver implements DnsResolver {
   @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
-  public static Boolean             enabled                   = Boolean.TRUE;
+  public static Boolean             enabled                   = Boolean.FALSE;
   @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller." )
-  public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.TRUE;
+  public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.FALSE;
   @ConfigurableField( description = "Enable spoofing for the normal AWS regions, too. e.g., ec2.us-east-1.amazonaws.com would resolve to the ENABLED cloud controller." )
   public static Boolean             SPOOF_AWS_REGIONS         = Boolean.FALSE;
   @ConfigurableField( description = "Internal region name. If set, the region name to expect as the second label in the DNS name. For example, to treat your Eucalyptus install like a region named 'eucalyptus', set this value to 'eucalyptus'.  Then, e.g., autoscaling.eucalyptus.amazonaws.com will resolve to the service address when using this DNS server." )
@@ -99,7 +99,8 @@ public class RegionSpoofingResolver implements DnsResolver {
                                                                                  Functions.toStringFunction( ) );
   
   @Override
-  public boolean checkAccepts( Record query, InetAddress source ) {
+  public boolean checkAccepts( DnsRequest request ) {
+    final Record query = request.getQuery( );
     if ( !Bootstrap.isOperational( ) || !enabled || !RequestType.A.apply( query ) || !query.getName( ).subdomain( awsDomain ) ) {
       return false;
     } else if ( SPOOF_AWS_REGIONS ) {
@@ -126,7 +127,8 @@ public class RegionSpoofingResolver implements DnsResolver {
   }
   
   @Override
-  public DnsResponse lookupRecords( Record query ) {
+  public DnsResponse lookupRecords( DnsRequest request ) {
+    final Record query = request.getQuery( );
     Name name = query.getName( );
     String label0 = name.getLabelString( 0 );
     String label1 = name.getLabelString( 1 );

@@ -104,17 +104,17 @@ public class ObjectStorageSchedulerManagerTest {
             tran.commit();
         }
         for (ScheduledJob job : results) {
-            if (! foundBktReaper) {
+            if (!foundBktReaper) {
                 if (job.getJobClassName().equals(ObjectStorageSchedulerManager.BUCKET_REAPER_CLASSNAME)) {
                     foundBktReaper = true;
                 }
             }
-            if (! foundObjReaper ) {
+            if (!foundObjReaper) {
                 if (job.getJobClassName().equals(ObjectStorageSchedulerManager.OBJECT_REAPER_CLASSNAME)) {
                     foundObjReaper = true;
                 }
             }
-            if (! foundLifecycleProcessor ) {
+            if (!foundLifecycleProcessor) {
                 if (job.getJobClassName().equals(ObjectStorageSchedulerManager.LIFECYCLE_CLEANUP_CLASSNAME)) {
                     foundLifecycleProcessor = true;
                 }

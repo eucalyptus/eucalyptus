@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# Copyright 2009-2014 Eucalyptus Systems, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
+
+if [ -z "$EUCALYPTUS" ] ; then
+       export EUCALYPTUS="@prefix@"
+fi
+
+if [ -z "$VDDK_HOME" ] ; then
+	export VDDK_HOME="@VDDK_HOME@"
+fi
+
+export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca-imager has euca_rootwrap
+if [ -z `which euca_rootwrap` ] ; then
+	echo "euca_rootwrap is not found in your PATH!"
+	exit 1
+fi
+
+VMDK=euca-vmdk
+IMAGER=$EUCALYPTUS/usr/libexec/eucalyptus/$VMDK
+if [ ! -x $IMAGER ] ; then
+   echo "$VMDK not installed in $IMAGER"
+   exit 1
+fi
+
+# requote all arguments so that ones with spaces are preserved intact
+for arg in "$@" ; do
+        PARAMS="$PARAMS \"$arg\""
+done
+
+if [ `uname -m` == "x86_64" ] ; then
+        PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib64/libcurl.so.4
+else
+        PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib32/libcurl.so.4
+fi
+
+# set LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca-imager finds VDDK libs
+
+# use eval so that quotes in $PARAMS aren't passed to euca-imager verbatim
+eval LD_PRELOAD=$PRELOAD $IMAGER $PARAMS

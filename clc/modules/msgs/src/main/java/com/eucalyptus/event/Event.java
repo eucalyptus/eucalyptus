@@ -63,10 +63,18 @@
 package com.eucalyptus.event;
 
 import java.io.Serializable;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 
 /**
  * Marker interface
  */
 public interface Event extends Serializable {
+  @Target( { ElementType.TYPE,
+           ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface Periodic {}
 }

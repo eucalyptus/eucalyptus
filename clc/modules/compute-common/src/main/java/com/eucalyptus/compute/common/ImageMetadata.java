@@ -65,6 +65,7 @@ package com.eucalyptus.compute.common;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
@@ -73,6 +74,8 @@ public interface ImageMetadata extends CloudMetadata {
   
   public interface StaticDiskImage extends ImageMetadata {
     public abstract String getManifestLocation( );
+    
+    public abstract String getRunManifestLocation();
     
     public abstract String getSignature( );
   }
@@ -142,16 +145,20 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum State implements Predicate<ImageMetadata> {
-    pending, available, failed, deregistered( false ), hidden, unavailable;
+    pending("pending"), pending_available("available"), pending_conversion("available"), available("available"), 
+    failed("failed"), deregistered( false , "deregistered"), deregistered_cleanup( false, "deregistered"),
+    hidden( false , "hidden"), unavailable ( false, "unavailable");
     
     private final boolean standardState;    
+    private final String externalStateName;
     
-    private State( ) {
-      this( true );
+    private State( final String externalStateName){
+      this(true, externalStateName);
     }
     
-    private State( final boolean standardState ) {
+    private State( final boolean standardState, final String externalStateName ){
       this.standardState = standardState;
+      this.externalStateName = externalStateName;
     }
     
     public boolean standardState( ) {
@@ -162,10 +169,43 @@ public interface ImageMetadata extends CloudMetadata {
     public boolean apply( @Nullable final ImageMetadata input ) {
       return input != null && this == input.getState();
     }
+    
+    public String getExternalStateName(){
+      return this.externalStateName;
+    }
+  }
+  
+  public enum ImageFormat {
+    fulldisk, partitioned
   }
   
   public enum VirtualizationType {
-    paravirtualized, hvm
+    paravirtualized {
+      @Override
+      public String toString() {
+        return "paravirtual";
+      }
+    },
+
+    hvm
+    ;
+
+    public static Function<String,VirtualizationType> fromString( ) {
+      return FromString.INSTANCE;
+    }
+
+    private enum FromString implements Function<String,VirtualizationType> {
+      INSTANCE;
+
+      @Nullable
+      @Override
+      public VirtualizationType apply( @Nullable final String value ) {
+        for ( final VirtualizationType type : VirtualizationType.values() ) {
+          if ( type.toString( ).equals( value ) || type.name( ).equals( value ) ) return type;
+        }
+        return null;
+      }
+    }
   }
   
   public enum Hypervisor {

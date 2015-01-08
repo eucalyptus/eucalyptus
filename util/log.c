@@ -321,7 +321,10 @@ static FILE *get_file(boolean do_reopen)
 retry:
     // open unless it is already is open
     if (gLogFh == NULL) {
-        if ((gLogFh = fopen(log_file_path, "a+")) == NULL) {
+        mode_t old_umask = umask(~LOG_FILE_PERM);
+        gLogFh = fopen(log_file_path, "a+");
+        umask(old_umask);
+        if (gLogFh == NULL) {
             return NULL;
         }
 

@@ -69,6 +69,9 @@ public interface ObjectMetadataManager {
 
     public List<ObjectEntity> lookupObjectsInState(Bucket bucket, String objectKey, String versionId, ObjectState state) throws Exception;
 
+
+    public List<ObjectEntity> lookupObjectVersions(Bucket bucket, String objectKey, int numResults) throws Exception;
+
     /**
      * Given an initialized object, set the state and persist it
      * @param objectToCreate
@@ -139,11 +142,11 @@ public interface ObjectMetadataManager {
 	 * @param delimiter
 	 * @param startKey
 	 * @param startVersionId
-	 * @param includeDeleteMarkers
+	 * @param latestOnly
 	 * @return
 	 * @throws TransactionException
 	 */
-	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean includeDeleteMarkers) throws Exception;
+	public PaginatedResult<ObjectEntity> listVersionsPaginated(Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey, String startVersionId, boolean latestOnly) throws Exception;
 	
 	/**
 	 * Delete the object entity
@@ -176,6 +179,8 @@ public interface ObjectMetadataManager {
     public ObjectEntity transitionObjectToState(ObjectEntity entity, ObjectState destState) throws IllegalResourceStateException, MetadataOperationFailureException;
 
 
+    public ObjectEntity makeLatest(ObjectEntity entity) throws Exception;
+
     /**
      * Sets the access control policy on the object.
      * @param object
@@ -194,6 +199,16 @@ public interface ObjectMetadataManager {
     public void flushUploads(Bucket bucket) throws Exception;
 
     /**
+     * Similar to cleanupInvalidObjects but does not preserve the latest. Will set all 'null' versioned
+     * object records to 'deleting' state. This is intended for synchronous invocation during object creation to
+     * invalidate all extant 'null' versions of the object to make quota-enforcement feasible.
+     * @param bucket
+     * @param objectKey
+     * @throws Exception
+     */
+    public void cleanupAllNullVersionedObjectRecords(Bucket bucket, String objectKey) throws Exception;
+
+    /**
      * Returns objects stuck in 'creating' state that are determined to be failed.
      * Failure detection is based on timestamp comparision is limited by the
      * {@link com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration.failed_put_timeout_hrs}.
@@ -201,8 +216,20 @@ public interface ObjectMetadataManager {
      * @throws Exception
      */
     public List<ObjectEntity> lookupFailedObjects() throws Exception;
-	
-	/**
+
+    /**
+     * Returns the conservative sum size of all objects in the given bucket. Includes
+     * any in-progress uploads (objects in 'creating' or 'extant' state)
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public long getTotalSize(Bucket bucket) throws Exception;
+
+
+    public List<ObjectEntity> lookupObjectsForReaping(Bucket bucket, String objectKeyPrefix, Date age);
+
+    /**
 	 * Fix an object history if needed. Scans the sorted object records and marks
 	 * latest as well as marking contiguous null-versioned records for deletion to
 	 * remove contiguous nulls in the version history

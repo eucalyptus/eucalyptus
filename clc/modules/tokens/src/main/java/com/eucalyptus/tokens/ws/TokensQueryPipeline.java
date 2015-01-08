@@ -65,7 +65,7 @@ public class TokensQueryPipeline extends QueryPipeline {
     super(
         "tokens-query-pipeline",
         "/services/Tokens",
-        Collections.<TemporaryKeyType>emptySet(),
+        EnumSet.of( TemporaryKeyType.Role ),
         EnumSet.of( RequiredQueryParams.Version ) );
   }
 

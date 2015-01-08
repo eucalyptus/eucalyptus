@@ -29,6 +29,7 @@ import os
 import sys
 
 _chunk_size = 8192
+_max_part_buffer_size = 11534336
 _logger_name = 'DownloadImage'
 
 
@@ -45,6 +46,11 @@ def _str_to_log_level(loglevel):
         raise ValueError('Invalid Log level "' + loglevel)
     return loglevel
 
+def report_status(status_msg):
+    sys.stderr.write('{ "status": { %s } }\n' % status_msg)
+
+def report_error(error_msg):
+    sys.stderr.write('{ "error": "%s" }\n' % error_msg)
 
 def get_logger(loglevel=None,
                logfile=None,

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,6 +92,7 @@ import com.eucalyptus.auth.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -107,8 +108,8 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -134,7 +135,22 @@ public class DatabaseAccountProxy implements Account {
   public String getName( ) {
     return this.delegate.getName( );
   }
-  
+
+  /**
+   * Get the resource display name, this is the name with path.
+   *
+   * @return The display name.
+   */
+  @Override
+  public String getDisplayName() {
+    return Accounts.getAccountFullName( this );
+  }
+
+  @Override
+  public OwnerFullName getOwner( ) {
+    return AccountFullName.getInstance( this );
+  }
+
   @Override
   public String toString( ) {
     return this.delegate.toString( );
@@ -261,7 +277,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+  public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
       USER_GROUP_NAME_CHECKER.check( userName );
     } catch ( InvalidValueException e ) {
@@ -281,11 +297,7 @@ public class DatabaseAccountProxy implements Account {
     newUser.setPath( path );
     newUser.setEnabled( enabled );
     newUser.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
-    if ( skipRegistration ) {
-      newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
-    } else {
-      newUser.setRegistrationStatus( User.RegistrationStatus.REGISTERED );
-    }
+    newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
     }
@@ -747,7 +759,7 @@ public class DatabaseAccountProxy implements Account {
     
     return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
   }
-
+  
   @Override
   public ServerCertificate deleteServerCertificate(String certName)
       throws AuthException {
@@ -801,8 +813,6 @@ public class DatabaseAccountProxy implements Account {
       throw Exceptions.toUndeclared(ex);
     }
     
-    if(result==null)
-      return Lists.newArrayList();
     final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
     List<ServerCertificateEntity> filtered = null;
     

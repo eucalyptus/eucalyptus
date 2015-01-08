@@ -207,7 +207,7 @@ public class ImageManager {
     final String eri = normalizeOptionalImageIdentifier( request.getRamdiskId() );
 
     verifyImageNameAndDescription( request.getName( ), request.getDescription( ) );
-
+    
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
     if(request.getVirtualizationType() != null){
     	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
@@ -217,17 +217,30 @@ public class ImageManager {
     	else
     		throw new EucalyptusCloudException("Unknown virtualization-type");
     }
-    final ImageMetadata.VirtualizationType virtualizationType = virtType;
 
     if ( request.getImageLocation( ) != null ) {
-    	// Verify all the device mappings first.
+      // Verify all the device mappings first.
     	bdmInstanceStoreImageVerifier( ).apply( request );
-
+    	
     	//When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
-
-    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) , ctx.getUser());
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-
+    	
+      final ImageMetadata.Platform imagePlatform = request.getPlatform()!=null ? ImageMetadata.Platform.valueOf(request.getPlatform())
+          : manifest.getPlatform( ); 
+      if(ImageMetadata.Platform.windows.equals(imagePlatform))
+        virtType = ImageMetadata.VirtualizationType.hvm;
+      final ImageMetadata.VirtualizationType virtualizationType = virtType;
+      
+      if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
+          ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType)){
+        // make sure kernel and ramdisk are present with the request or manifest
+        if(request.getKernelId()==null && manifest.getKernelId()==null)
+          throw new ClientComputeException("MissingParameter","Kernel ID must be specified");
+        if(request.getRamdiskId()==null && manifest.getRamdiskId()==null)
+          throw new ClientComputeException("MissingParameter","Ramdisk ID must be specified");
+      }
+      
     	//Check that the manifest-specified size of the image is within bounds.
     	//If null image max size then always allow
     	Integer maxSize = ImageConfiguration.getInstance().getMaxImageSizeGb();
@@ -240,11 +253,18 @@ public class ImageManager {
     			? null
     					: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
     	Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
-
     		@Override
     		public ImageInfo get( ) {
     			try {
-    				return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
+    			  /// TODO: we use virt-type as the heuristics for determining image-format
+    			  /// In the future, we should manifest's block device mapping which is an ec2-way for expressing the image format
+    			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
+    			      ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType))
+              return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
+                  request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
+    			  else
+    			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
+    			        request.getDescription( ), arch, virtualizationType, imagePlatform, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
     			} catch ( Exception ex ) {
     				LOG.error( ex );
     				Logs.extreme( ).error( ex, ex );
@@ -258,14 +278,20 @@ public class ImageManager {
     	Supplier<ImageInfo> allocator = null;
     	// Verify all the device mappings first. Dont fuss if both snapshot id and volume size are left blank
     	bdmBfebsImageVerifier( ).apply( request );
-
+    	ImageMetadata.Platform platform = ImageMetadata.Platform.linux; 
+    	if (request.getPlatform()!=null)
+    	  platform = ImageMetadata.Platform.valueOf(request.getPlatform());
+    	else if (ImageMetadata.Platform.windows.name( ).equals( eki ))
+    	  platform = ImageMetadata.Platform.windows;
+    	final ImageMetadata.Platform imagePlatform = platform;
+    	
     	allocator = new Supplier<ImageInfo>( ) {
 
     		@Override
     		public ImageInfo get( ) {
     			try {
     				return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
-    						request.getDescription( ), eki, eri, rootDevName,
+    						request.getDescription( ), imagePlatform, eki, eri, rootDevName,
     						request.getBlockDeviceMappings( ) );
     			} catch ( EucalyptusCloudException ex ) {
     				throw new RuntimeException( ex );
@@ -721,8 +747,13 @@ public class ImageManager {
         final List<ImageInfo> images = Lists.newArrayList( Iterables.filter(
             Entities.query(
                 Images.exampleWithName( ctx.getUserFullName( ).asAccountFullName( ), name ),
-                Entities.queryOptions( ).withReadonly( true ).build( ) ),
-            Predicates.or( ImageMetadata.State.available, ImageMetadata.State.pending ) ) );
+                Entities.queryOptions( ).withReadonly( true ).build( ) ), new Predicate<ImageInfo>(){
+                  @Override
+                  public boolean apply(ImageInfo arg0) {
+                    return ImageMetadata.State.available.name().equals(arg0.getState().getExternalStateName()) ||
+                    ImageMetadata.State.pending.name().equals(arg0.getState().getExternalStateName());
+                  }
+            } ) );
         if( images.size( ) > 0 )
           throw new ClientComputeException(
               "InvalidAMIName.Duplicate",

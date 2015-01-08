@@ -24,6 +24,7 @@ import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
@@ -31,9 +32,11 @@ import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
@@ -83,6 +86,19 @@ public class AutoScalingService {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( AutoScalingBackend.class ), request );
     } catch ( NoSuchElementException e ) {
       throw new AutoScalingUnavailableException( "Service Unavailable" );
+    } catch ( ServiceDispatchException e ) {
+      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
+      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
+        throw (Exception) componentException.getCause( );
+      }
+      throw e;
+    } catch ( final FailedRequestException e ) {
+      if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
+        return e.getRequest( );
+      }
+      throw e.getRequest( ) == null ?
+          e :
+          new AutoScalingException( "InternalError", Role.Receiver, "Internal error " + e.getRequest().getClass().getSimpleName() + ":false" );
     }
   }
 

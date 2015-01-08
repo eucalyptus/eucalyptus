@@ -71,9 +71,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.eucalyptus.walrus.entities.PartInfo;
+import com.eucalyptus.walrus.exceptions.WalrusException;
+import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -158,7 +161,7 @@ public class FileSystemStorageManager implements StorageManager {
 
     public void deleteBucket(String bucket) throws IOException {
         File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
-        if(!bukkit.delete()) {
+        if(bukkit.exists() && !bukkit.delete()) {
             throw new IOException("Unable to delete bucket: " + bucket);
         }
     }
@@ -319,116 +322,6 @@ public class FileSystemStorageManager implements StorageManager {
         return -1;
     }
 
-    public void sendObject(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
-        try {
-            Channel channel = request.getChannel();
-            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
-            httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-            if(etag != null)
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
-            httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-            if(contentDisposition != null)
-                httpResponse.addHeader("Content-Disposition", contentDisposition);
-            final ChunkedInput file;
-            isCompressed = isCompressed == null ? false : isCompressed;
-            if(isCompressed) {
-                file = new CompressedChunkedFile(raf, size);
-            } else {
-                file = new ChunkedDataFile(raf, 0, size, 8192);
-                httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
-            }
-            if(logData != null) {
-                logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
-                logData.setBytesSent(size);
-            }
-            if(versionId != null) {
-                httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
-            }
-            channel.write(httpResponse);
-            channel.write(file).addListener(new ChannelFutureListener( ) {
-                @Override public void operationComplete( ChannelFuture future ) throws Exception {
-                    Contexts.clear(request.getCorrelationId());
-                    file.close();
-                    if(logData != null) {
-                        logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-                        WalrusBucketLogger.getInstance().addLogEntry(logData);
-                    }
-                }
-            });
-        } catch(Exception ex) {
-            LOG.error(ex, ex);
-        }
-    }
-
-    public void sendObject(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
-        try {
-            Channel channel = request.getChannel();
-            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
-            httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-            if(etag != null)
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
-            httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-            if(contentDisposition != null)
-                httpResponse.addHeader("Content-Disposition", contentDisposition);
-            final ChunkedInput file;
-            isCompressed = isCompressed == null ? false : isCompressed;
-            if(isCompressed) {
-                file = new CompressedChunkedFile(raf, start, end, (int)Math.min((end - start), 8192));
-            } else {
-                file = new ChunkedDataFile(raf, start, (int)(end - start), (int)Math.min((end - start), 8192));
-                httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf((end - start)));
-            }
-            httpResponse.addHeader("Content-Range", start + "-" + (end -1) + "/" + size);
-            if(logData != null) {
-                logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
-                logData.setBytesSent(size);
-            }
-            if(versionId != null) {
-                httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
-            }
-            channel.write(httpResponse);
-            channel.write(file).addListener(new ChannelFutureListener( ) {
-                @Override public void operationComplete( ChannelFuture future ) throws Exception {
-                    Contexts.clear(request.getCorrelationId());
-                    file.close();
-                    if(logData != null) {
-                        logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-                        WalrusBucketLogger.getInstance().addLogEntry(logData);
-                    }
-                }
-            });
-        } catch(Exception ex) {
-            LOG.error(ex, ex);
-        }
-    }
-
-    public void sendHeaders(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, Long size, String etag,
-                            String lastModified, String contentType, String contentDisposition, String versionId, final BucketLogData logData) {
-        Channel channel = request.getChannel();
-        httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
-        httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-        if(etag != null)
-            httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
-        httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-        if(contentDisposition != null)
-            httpResponse.addHeader("Content-Disposition", contentDisposition);
-        if(versionId != null) {
-            httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
-        }
-        if(logData != null) {
-            logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
-        }
-        channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
-            @Override public void operationComplete( ChannelFuture future ) throws Exception {
-                Contexts.clear(request.getCorrelationId());
-                if(logData != null) {
-                    logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-                    WalrusBucketLogger.getInstance().addLogEntry(logData);
-                }
-            }
-        });
-    }
-
     private String removeLoopback(String loDevName) throws EucalyptusCloudException {
         return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
     }
@@ -541,21 +434,47 @@ public class FileSystemStorageManager implements StorageManager {
     }
 
     @Override
-    public void sendObject(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, List<PartInfo> parts, Long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId) {
+    public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long size, Boolean isCompressed) throws WalrusException {
         try {
-            Channel channel = request.getChannel();
-            httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
-            if(etag != null)
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
-            httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-            if(contentDisposition != null)
-                httpResponse.addHeader("Content-Disposition", contentDisposition);
-            if(versionId != null) {
-                httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
+            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+            final ChunkedInput file;
+            isCompressed = isCompressed == null ? false : isCompressed;
+            if(isCompressed) {
+                file = new CompressedChunkedFile(raf, size);
+            } else {
+                file = new ChunkedDataFile(raf, 0, size, 8192);
             }
-            httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
-            channel.write(httpResponse);
+            List<ChunkedInput> dataStreams = new ArrayList<ChunkedInput>();
+            dataStreams.add(file);
+            response.setDataInputStream(dataStreams);
+        } catch (IOException ex) {
+            throw new WalrusException(ex.getMessage());
+        }
+    }
 
+    @Override
+    public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException {
+        try {
+            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+            final ChunkedInput file;
+            isCompressed = isCompressed == null ? false : isCompressed;
+            if(isCompressed) {
+                file = new CompressedChunkedFile(raf, byteRangeStart, byteRangeEnd, (int)Math.min((byteRangeEnd - byteRangeStart), 8192));
+            } else {
+                file = new ChunkedDataFile(raf, byteRangeStart, (int)(byteRangeEnd - byteRangeStart), (int)Math.min((byteRangeEnd - byteRangeStart), 8192));
+            }
+            List<ChunkedInput> dataStreams = new ArrayList<>();
+            dataStreams.add(file);
+            response.setDataInputStream(dataStreams);
+        } catch (IOException ex) {
+            throw new WalrusException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException {
+        try {
+            List<ChunkedInput> dataStreams = new ArrayList<>();
             for (PartInfo part : parts) {
                 isCompressed = isCompressed == null ? false : isCompressed;
                 final ChunkedInput file;
@@ -565,14 +484,11 @@ public class FileSystemStorageManager implements StorageManager {
                 } else {
                     file = new ChunkedDataFile(raf, 0, part.getSize(), 8192);
                 }
-                channel.write(file).addListener(new ChannelFutureListener( ) {
-                    @Override public void operationComplete( ChannelFuture future ) throws Exception {
-                        file.close();
-                    }
-                });
+                dataStreams.add(file);
             }
-        } catch(Exception ex) {
-            LOG.error(ex, ex);
+            reply.setDataInputStream(dataStreams);
+        } catch (IOException ex) {
+            throw new WalrusException(ex.getMessage());
         }
     }
 

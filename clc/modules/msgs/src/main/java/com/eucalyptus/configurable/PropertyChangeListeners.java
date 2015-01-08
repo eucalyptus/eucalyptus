@@ -64,9 +64,12 @@ package com.eucalyptus.configurable;
 
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.google.common.collect.Constraint;
+import org.apache.log4j.Logger;
+
 
 public class PropertyChangeListeners {
-  
+
+  public static final Logger LOG = Logger.getLogger(PropertyChangeListener.class);
   public static void applyConstraint( final Object newValue, final Constraint<Object>... constraints ) throws ConfigurablePropertyException {
     for ( final Constraint<Object> testNewValue : constraints ) {
       try {
@@ -114,15 +117,19 @@ public class PropertyChangeListeners {
     if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
       if ( changeListenerClass.isEnum( ) ) {
         changeListener = changeListenerClass.getEnumConstants( )[0];
-      }
+        } else {
       try {
-        changeListener = changeListenerClass.newInstance( );
-      } catch ( Throwable e ) {
-        changeListener = NoopEventListener.NOOP;
+          changeListener = changeListenerClass.newInstance( );
+        } catch ( Throwable e ) {
+          LOG.error("Can't set listener to " + changeListenerClass);
+          LOG.error(e, e);
+          changeListener = NoopEventListener.NOOP;
+        }
       }
     } else {
       changeListener = NoopEventListener.NOOP;
     }
+    LOG.debug("Property change listener set to: " + changeListener.getClass());
     return changeListener;
   }
   

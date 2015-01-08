@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,15 +63,11 @@
 package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
 import org.hibernate.FetchMode;
@@ -94,7 +90,6 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.TransactionResource;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
@@ -225,163 +220,6 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public List<User> listUsersForAccounts( final Collection<String> accountIds,
-                                          final boolean eager ) throws AuthException {
-    final List<User> results = Lists.newArrayList( );
-    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> userAndAccountNumbers = Entities
-          .createQuery( UserEntity.class, "select u, a.accountNumber from UserEntity u " +
-              "inner join u.groups g " +
-              "inner join g.account a " +
-              "where g.userGroup = true and" + qualifier(accountIds) + " a.accountNumber in (:accountIds)" )
-          .setParameterList( "accountIds", identifiers(accountIds) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] userAndAccountNumber : userAndAccountNumbers ) {
-        final DatabaseUserProxy proxy;
-        if ( eager ) {
-          Entities.initialize( ((UserEntity) userAndAccountNumber[0]).getInfo( ) );
-          proxy = new DatabaseUserProxy(
-              (UserEntity) userAndAccountNumber[0],
-              (String) userAndAccountNumber[1],
-              ((UserEntity) userAndAccountNumber[0]).getInfo( ) );
-        } else {
-          proxy = new DatabaseUserProxy(
-              (UserEntity) userAndAccountNumber[0],
-              (String) userAndAccountNumber[1] );
-        }
-        results.add( proxy );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get users by account identifiers" );
-      throw new AuthException( "Failed to get users by account identifiers", e );
-    }
-  }
-
-  @Override
-  public List<Group> listGroupsForAccounts( final Collection<String> accountIds ) throws AuthException {
-    List<Group> results = Lists.newArrayList( );
-    try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> groupAndAccountNumbers = Entities
-          .createQuery( GroupEntity.class, "select g, a.accountNumber from GroupEntity g " +
-              "inner join g.account a " +
-              "where g.userGroup = false and" + qualifier( accountIds ) + " a.accountNumber in (:accountIds) " )
-          .setParameterList( "accountIds", identifiers( accountIds ) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] groupAndAccountNumber : groupAndAccountNumbers ) {
-        results.add( new DatabaseGroupProxy(
-            (GroupEntity) groupAndAccountNumber[0],
-            (String) groupAndAccountNumber[1] ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get groups by account identifiers" );
-      throw new AuthException( "Failed to get groups by account identifiers", e );
-    }
-  }
-
-  @Override
-  public Map<String, List<Policy>> listPoliciesForUsers( final Collection<String> userIds ) throws AuthException {
-    final ArrayListMultimap<String, Policy> results = ArrayListMultimap.create( );
-    try ( final TransactionResource db = Entities.transactionFor( PolicyEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> policyAndUserIds = Entities
-          .createQuery( PolicyEntity.class, "select p, u.userId from PolicyEntity p " +
-              "inner join p.group g " +
-              "inner join g.users u " +
-              "where g.userGroup = true and " + qualifier(userIds) + " u.userId in (:userIds) " )
-          .setParameterList( "userIds", identifiers(userIds) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] policyAndUserId : policyAndUserIds ) {
-        results.put(
-            (String) policyAndUserId[1],
-            new DatabasePolicyProxy( (PolicyEntity) policyAndUserId[0] ) );
-      }
-      return (Map<String,List<Policy>>) (Map) results.asMap();
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get policies by user identifiers" );
-      throw new AuthException( "Failed to get policies by user identifiers", e );
-    }
-  }
-
-  @Override
-  public Map<String, List<Policy>> listPoliciesForGroups( final Collection<String> groupIds ) throws AuthException {
-    final ArrayListMultimap<String, Policy> results = ArrayListMultimap.create( );
-    try ( final TransactionResource db = Entities.transactionFor( PolicyEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> policyAndGroupIds = Entities
-          .createQuery( PolicyEntity.class, "select p, g.groupId from PolicyEntity p " +
-              "inner join p.group g " +
-              "where g.userGroup = false and " + qualifier(groupIds) + " g.groupId in (:groupIds) " )
-          .setParameterList( "groupIds", identifiers(groupIds) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] policyAndGroupId : policyAndGroupIds ) {
-        results.put(
-            (String) policyAndGroupId[1],
-            new DatabasePolicyProxy( (PolicyEntity) policyAndGroupId[0] ) );
-      }
-      return (Map<String,List<Policy>>) (Map) results.asMap();
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get policies by group identifiers" );
-      throw new AuthException( "Failed to get policies by group identifiers", e );
-    }
-  }
-
-  @Override
-  public Map<String, List<Certificate>> listSigningCertificatesForUsers( final Collection<String> userIds ) throws AuthException {
-    final ArrayListMultimap<String, Certificate> results = ArrayListMultimap.create( );
-    try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> certificatesAndUserIds = Entities
-          .createQuery( CertificateEntity.class, "select c, u.userId from CertificateEntity c " +
-              "inner join c.user u " +
-              "where " + qualifier(userIds) + " u.userId in (:userIds) " )
-          .setParameterList( "userIds", identifiers(userIds) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] certificatesAndUserId : certificatesAndUserIds ) {
-        results.put(
-            (String) certificatesAndUserId[1],
-            new DatabaseCertificateProxy( (CertificateEntity) certificatesAndUserId[0] ) );
-      }
-      return (Map<String,List<Certificate>>) (Map) results.asMap();
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get certificates by user identifiers" );
-      throw new AuthException( "Failed to get certificates by user identifiers", e );
-    }
-  }
-
-  @Override
-  public Map<String, List<AccessKey>> listAccessKeysForUsers( final Collection<String> userIds ) throws AuthException {
-    final ArrayListMultimap<String, AccessKey> results = ArrayListMultimap.create( );
-    try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<Object[]> keysAndUserIds = Entities
-          .createQuery( AccessKeyEntity.class, "select a, u.userId from AccessKeyEntity a " +
-              "inner join a.user u " +
-              "where " + qualifier( userIds ) + " u.userId in (:userIds) " )
-          .setParameterList( "userIds", identifiers( userIds ) )
-          .setReadOnly( true )
-          .list();
-      for ( final Object[] keysAndUserId : keysAndUserIds ) {
-        results.put(
-            (String) keysAndUserId[1],
-            new DatabaseAccessKeyProxy( (AccessKeyEntity) keysAndUserId[0] ) );
-      }
-      return (Map<String,List<AccessKey>>) (Map) results.asMap();
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get access keys by user identifiers" );
-      throw new AuthException( "Failed to get access keys by user identifiers", e );
-    }
-  }
-
-  @Override
   public Role lookupRoleById( final String roleId ) throws AuthException {
     if ( roleId == null ) {
       throw new AuthException( AuthException.EMPTY_ROLE_ID );
@@ -397,10 +235,6 @@ public class DatabaseAuthProvider implements AccountProvider {
 
   /**
    * Add account admin user separately.
-   * 
-   * @param accountName
-   * @return
-   * @throws AuthException
    */
   @Override
   public Account addAccount( String accountName ) throws AuthException {
@@ -413,6 +247,50 @@ public class DatabaseAuthProvider implements AccountProvider {
     if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
       throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );
     }
+    return doAddAccount( accountName );
+  }
+
+  /**
+   *
+   */
+  @Override
+  public Account addSystemAccount( String accountName ) throws AuthException {
+    if ( !accountName.startsWith( Account.SYSTEM_ACCOUNT_PREFIX ) ) {
+      throw new AuthException( AuthException.INVALID_NAME );
+    }
+    try {
+      ACCOUNT_NAME_CHECKER.check( accountName.substring( Account.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid account name " + accountName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+
+    Account account = null;
+    try {
+      account = lookupAccountByName( accountName );
+    } catch ( AuthException e ) {
+      // create it
+    }
+
+    if ( account == null ) {
+      final AccountEntity accountEntity = new AccountEntity( accountName );
+      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+        Entities.persist( accountEntity );
+        db.commit( );
+        account = new DatabaseAccountProxy( accountEntity );
+      } catch ( Exception e ) {
+        Debugging.logError( LOG, e, "Failed to add account " + accountName );
+        throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
+      }
+    }
+
+    return account;
+  }
+
+  /**
+   *
+   */
+  private Account doAddAccount( String accountName ) throws AuthException {
     AccountEntity account = new AccountEntity( accountName );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       Entities.persist( account );
@@ -423,35 +301,44 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
     }
   }
-  
+
   @Override
   @SuppressWarnings( "unchecked" )
   public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
-    if ( !forceDeleteSystem && DatabaseAuthUtils.isSystemAccount( accountName ) ) {
+    if ( !forceDeleteSystem && Accounts.isSystemAccount( accountName ) ) {
       throw new AuthException( AuthException.DELETE_SYSTEM_ACCOUNT );
     }
-    if ( !recursive && !DatabaseAuthUtils.isAccountEmpty( accountName ) ) {
+    if ( !(recursive || DatabaseAuthUtils.isAccountEmpty( accountName ) ) ) {
       throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       if ( recursive ) {
-        List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-            .createCriteria( GroupEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
         List<UserEntity> users = ( List<UserEntity> ) Entities
             .createCriteria( UserEntity.class ).setCacheable( true )
             .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
             .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
             .list( );
-        for ( GroupEntity g : groups ) {
-          Entities.delete( g );
-        }
         for ( UserEntity u : users ) {
           Entities.delete( u );
+        }
+
+        List<RoleEntity> roles = ( List<RoleEntity> ) Entities
+            .createCriteria( RoleEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .list( );
+        for ( RoleEntity r : roles ) {
+          Entities.delete( r );
+        }
+
+        List<GroupEntity> groups = ( List<GroupEntity> ) Entities
+            .createCriteria( GroupEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .list( );
+        for ( GroupEntity g : groups ) {
+          Entities.delete( g );
         }
       }
       AccountEntity account = ( AccountEntity ) Entities
@@ -499,21 +386,6 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public int countAccounts( ) throws AuthException {
-    return (int) Entities.count( new AccountEntity() );
-  }
-
-  @Override
-  public int countUsers() throws AuthException {
-    return (int) Entities.count( new UserEntity() );
-  }
-
-  @Override
-  public int countGroups() throws AuthException {
-    return (int) Entities.count( new GroupEntity() );
-  }
-
-  @Override
   public List<Account> listAllAccounts( ) throws AuthException {
     List<Account> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
@@ -524,29 +396,6 @@ public class DatabaseAuthProvider implements AccountProvider {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get accounts" );
       throw new AuthException( "Failed to accounts", e );
-    }
-  }
-
-  @Override
-  public List<Account> listAccountsByStatus( final User.RegistrationStatus status ) throws AuthException {
-    List<Account> results = Lists.newArrayList( );
-    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      @SuppressWarnings( "unchecked" ) 
-      final List<AccountEntity> accounts = (List<AccountEntity>) Entities
-          .createCriteria( AccountEntity.class ).setCacheable( true )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-          .createCriteria( "users" ).setCacheable( true )
-            .add( Restrictions.eq( "name", User.ACCOUNT_ADMIN ) )
-            .add( Restrictions.eq( "regStat", status ) )
-          .setReadOnly( true )
-          .list( );
-      for ( AccountEntity a : accounts ) {
-        results.add( new DatabaseAccountProxy( a ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to get accounts by registration status" );
-      throw new AuthException( "Failed to get accounts by registration status", e );
     }
   }
 
@@ -738,12 +587,4 @@ public class DatabaseAuthProvider implements AccountProvider {
           tx.rollback();
         }
     }
-
-  private String qualifier( final Collection<String> ids ) {
-    return ids.isEmpty() ? " not" : "";
-  }
-
-  private Collection<String> identifiers( final Collection<String> ids ) {
-    return ids.isEmpty() ? Collections.singleton( "INVALID" ) : ids;
-  }
 }

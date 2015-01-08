@@ -20,15 +20,30 @@
 
 package com.eucalyptus.objectstorage.entities
 
+import com.eucalyptus.auth.Accounts
 import com.eucalyptus.objectstorage.BucketState
+import com.eucalyptus.objectstorage.UnitTestSupport
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
+import com.eucalyptus.storage.config.ConfigurationCache
 import com.eucalyptus.storage.msgs.s3.BucketListEntry
 import groovy.transform.CompileStatic
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Test
 
 @CompileStatic
 class BucketTest  {
 
+    @BeforeClass
+    static void setUp() {
+        UnitTestSupport.setupAuthPersistenceContext();
+        Accounts.addSystemAccount().addUser("admin", "/", true, null);
+    }
+
+    @AfterClass
+    static void tearDown() {
+        UnitTestSupport.tearDownAuthPersistenceContext();
+    }
     @Test
     void testGetInitializedBucket() {
         Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')
@@ -38,33 +53,37 @@ class BucketTest  {
         assert(b.getAcl() == '{canonicalid1:8}')
     }
 
+    static long getBucketCreationWaitIntervalMillis () {
+        return 5 * 1000l; //for testing use 5 seconds
+    }
     @Test
     void testStateStillValid() {
         Bucket b = new Bucket()
         b.setState(BucketState.creating)
+        int timeoutSec = (int)(getBucketCreationWaitIntervalMillis() / 1000l);
 
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis()  - 1000*(ObjectStorageGlobalConfiguration.bucket_creation_wait_interval_seconds + 1)))
-        assert(!b.stateStillValid())
+        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis()  - (getBucketCreationWaitIntervalMillis() + 1)))
+        assert(!b.stateStillValid(timeoutSec))
 
         b.setLastUpdateTimestamp(new Date())
-        assert(b.stateStillValid())
+        assert(b.stateStillValid(timeoutSec ))
 
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - 1000*(ObjectStorageGlobalConfiguration.bucket_creation_wait_interval_seconds - 100)))
-        assert(b.stateStillValid())
+        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() - 100)))
+        assert(b.stateStillValid(timeoutSec))
 
         //Extant state is alwasy valid
         b.setState(BucketState.extant)
-        assert(b.stateStillValid())
+        assert(b.stateStillValid(timeoutSec))
 
         //Extant state is alwasy valid
         b.setState(BucketState.extant)
         b.setLastUpdateTimestamp(new Date())
-        assert(b.stateStillValid())
+        assert(b.stateStillValid(timeoutSec))
 
         //Deleting state is always valid
         b.setState(BucketState.deleting)
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - 1000*(ObjectStorageGlobalConfiguration.bucket_creation_wait_interval_seconds + 10000)))
-        assert(b.stateStillValid())
+        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() + 10000)))
+        assert(b.stateStillValid(timeoutSec))
 
     }
 

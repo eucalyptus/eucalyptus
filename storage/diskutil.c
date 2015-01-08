@@ -74,6 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _GNU_SOURCE // for %ms in sscanf
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -190,7 +191,9 @@ static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = 0;
 static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
-static char euca_home[EUCA_MAX_PATH] = "";
+static char euca_home_path[EUCA_MAX_PATH] = "";
+static char cloud_cert_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/cloud-cert.pem";
+static char service_key_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/node-pk.pem";
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -243,10 +246,16 @@ static int try_stage_dir(const char *dir)
     return (EUCA_INVALID_ERROR);
 }
 
-int imaging_init(const char *euca_home_path)
+int imaging_init(const char *new_euca_home_path,
+                 const char *new_cloud_cert_path,
+                 const char *new_service_key_path)
 {
-    assert(euca_home_path);
-    euca_strncpy(euca_home, euca_home_path, sizeof(euca_home));
+    assert(new_euca_home_path);
+    assert(new_cloud_cert_path);
+    assert(new_service_key_path);
+    euca_strncpy(euca_home_path, new_euca_home_path, sizeof(euca_home_path));
+    euca_strncpy(cloud_cert_path, new_cloud_cert_path, sizeof(cloud_cert_path));
+    euca_strncpy(service_key_path, new_service_key_path, sizeof(service_key_path));
     return EUCA_OK;
 }
 
@@ -254,20 +263,24 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
 {
     LOGDEBUG("[%s] getting download manifest from %s\n", instanceId, url);
 
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd),
-             "%s/usr/libexec/eucalyptus/euca-run-workflow down-bundle/write-raw"
-             " --manifest-url '%s'"
-             " --output-path '%s'" " --key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1", euca_home, url, dest_path, euca_home);
-    LOGDEBUG("%s\n", cmd);
-    if (system(cmd) == 0) {
+    char run_workflow_path[EUCA_MAX_PATH];
+    snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", euca_home_path);
+    int rc = euca_execlp_log(NULL,
+                             euca_run_workflow_parser,
+                             (void *)instanceId,
+                             run_workflow_path,
+                             "down-bundle/write-raw",
+                             "--image-manifest-url", url,
+                             "--output-path", dest_path,
+                             "--cloud-cert-path", cloud_cert_path,
+                             "--decryption-key-path", service_key_path,
+                             NULL);
+    if (rc == EUCA_OK) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
-        return EUCA_OK;
     } else {
-        LOGERROR("[%s] failed on download and unbundle with command %s\n", instanceId, cmd);
-        return EUCA_ERROR;
+        LOGERROR("[%s] failed on download and unbundle\n", instanceId);
     }
-    return EUCA_ERROR;
+    return rc;
 }
 
 //!
@@ -568,6 +581,85 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
 
     LOGWARN("bad params: path=%s, part_type=%s\n", SP(path), SP(part_type));
     return (EUCA_INVALID_ERROR);
+}
+
+int diskutil_get_parts(const char *path, struct partition_table_entry entries[], int num_entries)
+{
+    assert(path);
+    assert(entries);
+    assert(num_entries>0);
+    bzero(entries, sizeof(struct partition_table_entry) * num_entries);
+
+    // output of 'parted DEV unit s print' looks roughly like:
+    //
+    // Model:  (file)
+    // Disk /dev/loop8: 3072063s
+    // Sector size (logical/physical): 512B/512B
+    // Partition Table: msdos
+    //
+    //
+    // Number  Start    End       Size      Type     File system  Flags
+    //  2      63s      204862s   204800s   primary  ext3
+    //  1      204863s  3072062s  2867200s  primary  ext3
+    char *output = pruntf(TRUE, "LD_PRELOAD='' %s %s --script %s unit s print",
+                          helpers_path[ROOTWRAP], helpers_path[PARTED], path);
+    if (!output) {
+        LOGERROR("cannot obtain partition information on device %s\n", path);
+        return -1;
+    }
+
+    char * s = strstr(output, "Number");
+    if (s==NULL) {
+        LOGERROR("cannot parse 'parted print' output for device %s (no 'Number')\n", path);
+        free(output);
+        return -1;
+    }
+    s = strstr(output, "Flags\n");
+    if (s==NULL) {
+        LOGERROR("cannot parse 'parted print' output for device %s (no 'Flags')\n", path);
+        free(output);
+        return -1;
+    }
+    s += strlen("Flags\n"); // onto the next line
+
+    // parse the partitions lines thatfollow the headers returned by 'parted print'
+    char * pline = strtok(s, "\n");  // split by semicolon
+    for (int p = 0; pline != NULL; p++) {
+        int index;
+        long long start;
+        long long end;
+        long long size;
+        char * type;
+        char * filesystem;
+
+        // expect syntax like: 1      204863s  3072062s  2867200s  primary  ext3
+        if (sscanf(pline, "%d %llds %llds %llds %ms %ms", &index, &start, &end, &size, &type, &filesystem) == 6) {
+            int n = index - 1;
+            if (n >= num_entries) { // do not have room for this entry
+                break;
+            }
+            entries[n].start_sector = start;
+            entries[n].end_sector = end;
+            euca_strncpy(entries[n].type, type, sizeof(entries[n].type));
+            euca_strncpy(entries[n].filesystem, filesystem, sizeof(entries[n].filesystem));
+            free(type);
+            free(filesystem);
+        }
+        pline = strtok(NULL, "\n");
+    }
+    free(output);
+
+    // run through the entries[], ensure they are contiguous, starting with [0]
+    int count = 0;
+    for (int n=0; n<num_entries; n++) {
+        if (entries[n].end_sector > 0) {
+            count++;
+        } else {
+            break;
+        }
+    }
+
+    return count;
 }
 
 //!
@@ -1670,6 +1762,7 @@ static char *execlp_output(boolean log_error, ...)
     if (output) {
         output[0] = '\0';              // return an empty string if there is no output
     }
+
     while ((output != NULL) && (bytesread = read(filedes[0], output + nextchar, outsize - nextchar - 1)) > 0) {
         nextchar += bytesread;
         output[nextchar] = '\0';
@@ -1704,8 +1797,9 @@ static char *execlp_output(boolean log_error, ...)
         }
     }
 
-    if (rc) {                          // there were problems above
-        if (strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
+    if (rc) {
+        // there were problems above
+        if ((output != NULL) && strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
             rc = 0;
         } else {
             if (log_error) {
@@ -1768,6 +1862,8 @@ int main(int argc, char *argv[])
 
     logfile(NULL, EUCA_LOG_TRACE, 4);
     log_prefix_set("%T %L %t9 |");
+    assert(diskutil_init(FALSE) == EUCA_OK);
+
     printf("%s: starting\n", argv[0]);
     output = execlp_output(TRUE, "/bin/echo", "hi", NULL);
     assert(output);
@@ -1789,6 +1885,23 @@ int main(int argc, char *argv[])
     free(output);
     output = execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL);
     assert(output == NULL);
+
+    { // test diskutil_get_parts()
+        struct partition_table_entry parts[5];
+        int n = diskutil_get_parts("/dev/sda", parts, 5);
+        assert(n > 0);
+        for (int i=0; i<n; i++) {
+            struct partition_table_entry * p = parts + i;
+            assert(p->start_sector >= 0L);
+            assert(p->end_sector > p->start_sector);
+            assert(p->type[0] != '\0');
+            assert(p->filesystem[0] != '\0');
+            printf("%i %014lld %014lld %s %s\n", i, p->start_sector, p->end_sector, p->type, p->filesystem);
+        }
+        n = diskutil_get_parts("/dev/sda", parts, 1);
+        assert(n == 1);
+    }
+
     printf("%s: completed\n", argv[0]);
 }
 

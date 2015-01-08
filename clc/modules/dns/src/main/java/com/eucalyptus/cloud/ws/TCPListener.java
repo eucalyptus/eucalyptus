@@ -64,18 +64,19 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class TCPListener extends Thread {
+public class TCPListener extends Thread implements Closeable {
 	private static Logger LOG = Logger.getLogger( TCPListener.class );
 	InetAddress address;
 	int port;
 	ServerSocket socket;
 
-	public TCPListener(InetAddress address, int port) throws Exception {
+	public TCPListener(InetAddress address, int port) throws IOException {
 		this.address = address;
 		this.port = port;
 		try {
@@ -84,7 +85,6 @@ public class TCPListener extends Thread {
 			LOG.error(ex);
 			throw ex;
 		}
-
 	}
 
 	public void run() {
@@ -93,8 +93,8 @@ public class TCPListener extends Thread {
 			try {
 				if(socket != null) {
 					LOG.trace("Listening on port: " + port);
-          TCPHandler handler = new TCPHandler((Socket)socket.accept());
-          handler.start();
+					TCPHandler handler = new TCPHandler((Socket)socket.accept());
+					handler.start();
 				} else {
 					LOG.error("Cannot start service. Invalid socket.");
 					return;

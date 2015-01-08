@@ -193,6 +193,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }
+      response.addHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
       ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
     } else {
       ctx.sendUpstream( e );

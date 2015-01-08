@@ -93,14 +93,8 @@ public class DNSBootstrapper extends Bootstrapper.Simple {
 
 	@Override
 	public boolean start( ) throws Exception {
-		Capabilities.runWithCapabilities( new Callable<Void>( ) {
-			@Override
-			public Void call( ) throws Exception {
-				LOG.info( "Starting DNS" );
-				DNSControl.initialize();
-				return null;
-			}
-		} );
+		LOG.info( "Starting DNS" );
+		DNSControl.initialize();
 		return true;
 	}
 

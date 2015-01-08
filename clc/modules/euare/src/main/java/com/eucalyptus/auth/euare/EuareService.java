@@ -63,7 +63,9 @@
 package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.AuthContext;
+
 import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -98,16 +100,20 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 
 public class EuareService {
   
@@ -124,7 +130,6 @@ public class EuareService {
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account by " + ctx.getUser( ).getName( ) );
@@ -134,6 +139,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account name " + request.getAccountName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -149,7 +155,6 @@ public class EuareService {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
       Privileged.deleteAccount( requestUser, accountFound, recursive );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account by " + ctx.getUser( ).getName( ) );
@@ -161,6 +166,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -169,17 +175,13 @@ public class EuareService {
   public ListAccountsResponseType listAccounts(ListAccountsType request) throws EucalyptusCloudException {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
-    Context ctx = Contexts.lookup( );
-    AuthContext requestUser = getAuthContext( ctx );
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
-      for ( Account account : Accounts.listAllAccounts( ) ) {
-        if ( Privileged.allowReadAccount( requestUser, account ) ) {
-          AccountType at = new AccountType( );
-          at.setAccountName( account.getName( ) );
-          at.setAccountId( account.getAccountNumber( ) );
-          accounts.add( at );
-        }
+      for ( final Account account : Iterables.filter( Accounts.listAllAccounts( ), RestrictedTypes.filterPrivileged( ) ) ) {
+        AccountType at = new AccountType( );
+        at.setAccountName( account.getName( ) );
+        at.setAccountId( account.getAccountNumber( ) );
+        accounts.add( at );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -231,7 +233,6 @@ public class EuareService {
     try {
       Privileged.deleteAccessKey( requestUser, account, userFound, request.getAccessKeyId( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
@@ -239,6 +240,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty key id" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -269,12 +271,12 @@ public class EuareService {
         certs.add( c );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list signing certificates for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -299,7 +301,6 @@ public class EuareService {
       result.setStatus( "Active" );
       result.setUploadDate( cert.getCreateDate( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
@@ -311,6 +312,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_CERTIFICATE, "Empty certificate body" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -326,14 +328,14 @@ public class EuareService {
     try {
       Privileged.deleteUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
-      }
+      }     
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -352,7 +354,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put user policy for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -360,6 +361,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -421,10 +423,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user policies for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -432,6 +432,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -447,7 +448,6 @@ public class EuareService {
     try {
       Privileged.updateLoginProfile( requestUser, account, userFound, request.getPassword( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
@@ -455,6 +455,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -516,7 +517,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid password expiration " + request.getPasswordExpiration( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + ctx.getUser( ).getName( ) );
@@ -528,6 +528,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
         }        
       }      
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -543,12 +544,12 @@ public class EuareService {
     try {
       Privileged.deleteLoginProfile( requestUser, account, userFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -567,7 +568,6 @@ public class EuareService {
     try {
       Privileged.modifySigningCertificate( requestUser, account, userFound, request.getCertificateId( ), request.getStatus( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
@@ -579,6 +579,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty certificate id" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -594,7 +595,6 @@ public class EuareService {
     try {
       Privileged.deleteGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group policy of " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -602,6 +602,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -648,7 +649,6 @@ public class EuareService {
     try {
       Privileged.modifyGroup( requestUser, account, groupFound, request.getNewGroupName( ), request.getNewPath( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update group " + groupFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -659,7 +659,8 @@ public class EuareService {
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
         }        
-      }      
+      }   
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -714,7 +715,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put group policy for " + groupFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -722,6 +722,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -738,7 +739,6 @@ public class EuareService {
       UserType u = reply.getCreateUserResult( ).getUser( );
       fillUserResult( u, newUser, account );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + ctx.getUser( ).getName( ) );
@@ -752,6 +752,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid user path " + request.getPath( ) );
         }        
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -771,7 +772,6 @@ public class EuareService {
       Privileged.deleteSigningCertificate( requestUser, account, userFound, request.getCertificateId( ) );
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete cert for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -779,6 +779,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty certificate id" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -805,12 +806,12 @@ public class EuareService {
         policies.add( p.getName( ) );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list user policies for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -839,12 +840,12 @@ public class EuareService {
         keys.add( key );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list access keys for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -868,7 +869,6 @@ public class EuareService {
       reply.getGetLoginProfileResult( ).getLoginProfile( ).setUserName( request.getUserName( ) );
       return reply;
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -894,12 +894,12 @@ public class EuareService {
         groups.add( g );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user groups for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -916,7 +916,6 @@ public class EuareService {
       GroupType g = reply.getCreateGroupResult( ).getGroup( );
       fillGroupResult( g, newGroup, account );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + ctx.getUser( ).getName( ) );
@@ -930,6 +929,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid group path " + request.getPath( ) );
         }        
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1000,10 +1000,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group policy for " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1011,6 +1009,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1027,7 +1026,6 @@ public class EuareService {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteUser( requestUser, account, userToDelete, recursive );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete user by " + ctx.getUser( ).getName( ) );
@@ -1035,6 +1033,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete a user with resource attached by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1057,7 +1056,6 @@ public class EuareService {
     try {
       Privileged.removeUserFromGroup( requestUser, account, userFound, groupFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove user from group by " + ctx.getUser( ).getName( ) );
@@ -1065,6 +1063,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY, "User " + request.getUserName( ) + " is not in the group " + request.getGroupName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1118,12 +1117,12 @@ public class EuareService {
         policies.add( p.getName( ) );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list group polices for " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1144,7 +1143,6 @@ public class EuareService {
       reply.getCreateLoginProfileResult( ).getLoginProfile( ).setUserName( ctx.getUser( ).getName( ) );
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1152,6 +1150,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -1175,12 +1174,12 @@ public class EuareService {
       keyResult.setStatus( key.isActive( ) ? "Active" : "Inactive" );
       keyResult.setUserName( userFound.getName( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create access key for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1207,7 +1206,6 @@ public class EuareService {
       }
       return reply;
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -1240,7 +1238,6 @@ public class EuareService {
     try {
       Privileged.modifyAccessKey( requestUser, account, userFound, request.getAccessKeyId( ), request.getStatus( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
@@ -1250,6 +1247,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty status" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1267,7 +1265,6 @@ public class EuareService {
     try {
       Privileged.addUserToGroup( requestUser, account, userFound, groupFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add user to group by " + ctx.getUser( ).getName( ) );
@@ -1275,6 +1272,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " is already in the group " + request.getGroupName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1321,7 +1319,6 @@ public class EuareService {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteGroup( requestUser, account, groupFound, recursive );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group by " + ctx.getUser( ).getName( ) );
@@ -1329,6 +1326,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete group with resources attached by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1344,7 +1342,6 @@ public class EuareService {
       Privileged.modifyAccount( requestUser, account, request.getAccountAlias( ) );
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account alias by " + ctx.getUser( ).getName( ) );
@@ -1355,7 +1352,8 @@ public class EuareService {
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account alias " + request.getAccountAlias( ) );
         }
-      }        
+      }    
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -1370,7 +1368,6 @@ public class EuareService {
       Privileged.deleteAccountAlias( requestUser, account, request.getAccountAlias( ) );
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + ctx.getUser( ).getName( ) );          
@@ -1378,6 +1375,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty account alias" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -1392,12 +1390,12 @@ public class EuareService {
       reply.getListAccountAliasesResult( ).getAccountAliases( ).getMemberList( ).addAll( Privileged.listAccountAliases( requestUser, account ) );
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + ctx.getUser( ).getName( ) );          
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -1418,12 +1416,12 @@ public class EuareService {
       map.add( new SummaryMapTypeEntryType( "ServerCertificates", account.listServerCertificates("/").size()));
       return reply;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + ctx.getUser( ).getName( ) );          
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -1449,12 +1447,12 @@ public class EuareService {
       result.setStatus( "Active" );
       result.setUploadDate( cert.getCreateDate( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1492,7 +1490,6 @@ public class EuareService {
         }
       }
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -1514,12 +1511,12 @@ public class EuareService {
     try {
       Privileged.updateUserInfoItem( requestUser, account, userFound, request.getInfoKey( ), request.getInfoValue( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1537,7 +1534,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ) + " due to " + e, e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1545,6 +1541,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1565,12 +1562,12 @@ public class EuareService {
         policies.add( p.getName( ) );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account policies for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1593,10 +1590,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1604,6 +1599,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1618,7 +1614,6 @@ public class EuareService {
     try {
       Privileged.deleteAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1626,6 +1621,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1644,7 +1640,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getAssumeRolePolicyDocument( ), e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create role by " + ctx.getUser( ).getName( ) );
@@ -1658,6 +1653,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid role path " + request.getPath( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1676,12 +1672,12 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update role " + roleFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1719,7 +1715,6 @@ public class EuareService {
     try {
       Privileged.deleteRole( requestUser, account, roleFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role by " + ctx.getUser( ).getName( ) );
@@ -1727,6 +1722,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete role with resources attached by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1773,7 +1769,6 @@ public class EuareService {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put role policy for " + roleFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1781,6 +1776,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1804,10 +1800,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
     } catch ( EuareException e ) {
-      LOG.error( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role policy for " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1815,6 +1809,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1830,7 +1825,6 @@ public class EuareService {
     try {
       Privileged.deleteRolePolicy( requestUser, account, roleFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role policy of " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1838,6 +1832,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1859,12 +1854,12 @@ public class EuareService {
         policies.add( p.getName( ) );
       }
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list role polices for " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1880,7 +1875,6 @@ public class EuareService {
       final InstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
       reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile ) );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create instance profile by " + ctx.getUser( ).getName( ) );
@@ -1894,6 +1888,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid instance profile path " + request.getPath( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1931,15 +1926,14 @@ public class EuareService {
     try {
       Privileged.addRoleToInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add role to instance profile by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Role " + request.getRoleName( ) + " is already in the instance profile " + request.getInstanceProfileName( ) );
         }
-
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1956,13 +1950,13 @@ public class EuareService {
     try {
       Privileged.removeRoleFromInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove role from instance profile by " + ctx.getUser( ).getName( ) );
         }
 
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -2001,12 +1995,12 @@ public class EuareService {
     try {
       Privileged.deleteInstanceProfile( requestUser, account, instanceProfileFound );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete instance profile by " + ctx.getUser( ).getName( ) );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -2154,7 +2148,7 @@ public class EuareService {
       
       final String pk = EuareServerCertificateUtil.getEncryptedKey(certArn, certPem);
       result.setServerPk(pk);
-      final String msg = payload;
+      final String msg = String.format("%s&%s", serverCertPem, pk);
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);
@@ -2224,7 +2218,11 @@ public class EuareService {
     if ( delegateAccount != null ) {
       if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
         try {
-          return Accounts.lookupAccountByName( delegateAccount );
+          Account account = Accounts.lookupAccountByName( delegateAccount );
+          if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
+            throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
+          }
+          return account;
         } catch ( AuthException e ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
         }        
@@ -2246,7 +2244,6 @@ public class EuareService {
     try {
       return account.lookupUserByName( userName );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) { 
         if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + userName );
@@ -2254,6 +2251,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty user name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -2262,7 +2260,6 @@ public class EuareService {
     try {
       return account.lookupGroupByName( groupName );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + groupName );
@@ -2270,6 +2267,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty group name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -2278,7 +2276,6 @@ public class EuareService {
     try {
       return account.lookupInstanceProfileByName( instanceProfileName );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.NO_SUCH_INSTANCE_PROFILE.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find instance profile " + instanceProfileName );
@@ -2286,6 +2283,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty instance profile name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -2295,7 +2293,6 @@ public class EuareService {
     try {
       return account.lookupRoleByName( roleName );
     } catch ( Exception e ) {
-      LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.NO_SUCH_ROLE.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find role " + roleName );
@@ -2303,6 +2300,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty role name" );
         }
       }
+      LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
@@ -2315,7 +2313,6 @@ public class EuareService {
         // Try using ID
         return Accounts.lookupAccountById( accountName );
       } catch ( Exception e ) {
-        LOG.error( e, e );
         if ( e instanceof AuthException ) {
           if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
             throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + accountName );
@@ -2323,6 +2320,7 @@ public class EuareService {
             throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
           }
         }
+        LOG.error( e, e );
         throw new EucalyptusCloudException( e );
       }
     }

@@ -49,7 +49,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define BOOT_VBR                                 "boot:none:104857600:ext3:sda4:none"
+#define BOOT_VBR_FORMAT                          "boot:none:104857600:ext3:sda%d:none"
 
 #define _M                                       "* "   // mandatory
 #define _BOOT                                    "boot"
@@ -59,12 +59,16 @@
 #define _OUT                                     "out"
 #define _VBR                                     "vbr"
 #define _WORK                                    "work"
+#define _ACTION                                  "action"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#define ACTION_DOWNLOAD                          00001
+#define ACTION_CONVERT                           00002
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -88,6 +92,7 @@ typedef struct _prepare_params {
     int total_vbrs;
     virtualMachine vm;
     boolean work;
+    int action;
 } prepare_params;
 
 /*----------------------------------------------------------------------------*\
@@ -123,6 +128,7 @@ static const char *params[] = {
         "\t\t\t            size = {-1|NNNNNN} in bytes (required for 'ephemeral')\n"
         "\t\t\t          format = {none|swap|ext2|ext3} (requierd for 'ephemeral')\n" "\t\t\t guestDeviceName = x?[vhsf]d[a-z]?[1-9]*\n" "\t\t\tresourceLocation = http://...",
     _WORK, "work copy of results is required (default=false)",
+    _ACTION, "action: {download|convert} (default=download+convert)",
     NULL,
 };
 
@@ -177,6 +183,7 @@ int prepare_validate(imager_request * req)
     state->bootable = FALSE;
     state->cache = TRUE;
     state->work = FALSE;
+    state->action = ACTION_DOWNLOAD | ACTION_CONVERT;
 
     // record in 'state' all specified parameters
     for (p = req->params; p != NULL && p->key != NULL; p++) {
@@ -199,6 +206,14 @@ int prepare_validate(imager_request * req)
             if (strstr(p->val, ":sda1:") != NULL || strstr(p->val, ":sda2:") != NULL || strstr(p->val, ":sda3:") != NULL) {
                 num_sda_parts++;
             }
+        } else if (strcmp(p->key, _ACTION) == 0) {
+            if (strcmp(p->val, "download") == 0) {
+                state->action = ACTION_DOWNLOAD;
+            } else if (strcmp(p->val, "convert") == 0) {
+                state->action = ACTION_CONVERT;
+            } else {
+                err("unknown action parameter '%s' for command 'prepare'", p->val);
+            }
         } else {
             err("invalid parameter '%s' for command 'prepare'", p->key);
         }
@@ -208,10 +223,16 @@ int prepare_validate(imager_request * req)
     if (state->total_vbrs < 1)
         err("not a single VBR was specified");
 
+    LOGINFO("actions: download=%s convert=%s\n",
+            (state->action & ACTION_DOWNLOAD) ? ("yes") : ("no"),
+            (state->action & ACTION_CONVERT) ? ("yes") : ("no"))
+
     // if a bootable disk is requested and the expected number of partitions is present,
     // then add the boot VBR entry so an extra, 4th, boot partition will get created
-    if (state->bootable && num_sda_parts == 3) {
-        state->vbrs[state->total_vbrs++] = BOOT_VBR;
+    if (state->bootable && num_sda_parts > 0) {
+        char buf[1024];
+        snprintf(buf, sizeof(buf), BOOT_VBR_FORMAT, num_sda_parts+1);
+        state->vbrs[state->total_vbrs++] = strdup(buf);
     }
 
     for (i = 0; i < state->total_vbrs; i++) {
@@ -254,8 +275,9 @@ artifact *prepare_requirements(imager_request * req, artifact * prev_art)
     sentinel = vbr_alloc_tree(&(state->vm), // the struct containing the VBR
                               state->bootable,  // TRUE when hypervisors can't take a kernel/ramdisk
                               state->work,  // TRUE when disk will be used by hypervisor on this host
-                              FALSE,   // this is not a migration destination
+                              ! (state->action & ACTION_DOWNLOAD),   // migration destination => do not bother with download
                               state->sshkey,    // the SSH key
+                              NULL, // bail flag
                               state->id);   // ID is for logging
     if (sentinel == NULL)
         err("failed to prepare image %s", state->id);
@@ -263,6 +285,10 @@ artifact *prepare_requirements(imager_request * req, artifact * prev_art)
     assert(sentinel->deps[0]);
     result = sentinel->deps[0];        // result should be disk, not the dummy sentinel
     EUCA_FREE(sentinel);
+
+    // for disk, do_not_download means don't bother constructing it
+    // so, if 'convert' action wasn't requested, we'll set do_not_download
+    result->do_not_download = ! (state->action & ACTION_CONVERT); 
 
     if (state->out) {
         // specified ID trumps generated one

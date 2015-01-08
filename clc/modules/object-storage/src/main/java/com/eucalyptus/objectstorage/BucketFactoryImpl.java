@@ -105,7 +105,7 @@ public class BucketFactoryImpl implements BucketFactory {
                     throw ex;
                 }
             } catch(Exception e) {
-				LOG.error("Unknown exception caused failure of CreateBucket for bucket " + bucket.getBucketName(), e);
+				LOG.warn("Unknown exception caused failure of CreateBucket for bucket " + bucket.getBucketName(), e);
 				InternalErrorException ex = new InternalErrorException(bucket.getBucketName());
                 ex.initCause(e);
                 throw ex;
@@ -122,10 +122,10 @@ public class BucketFactoryImpl implements BucketFactory {
         try {
             deletingBucket = BucketMetadataManagers.getInstance().transitionBucketToState(bucketToDelete, BucketState.deleting);
         } catch(IllegalResourceStateException e) {
-            LOG.error("CorrelationId: " + correlationId + " Unexpected resource state on delete update.", e);
+            LOG.trace("CorrelationId: " + correlationId + " Unexpected resource state on delete update.", e);
             throw e;
         } catch(MetadataOperationFailureException e) {
-            LOG.error("CorrelationId: " + correlationId + " Could not transition bucket " + bucketToDelete.toString() + " to 'deleting' state.", e);
+            LOG.trace("CorrelationId: " + correlationId + " Could not transition bucket " + bucketToDelete.toString() + " to 'deleting' state.", e);
             throw e;
         }
 
@@ -164,7 +164,7 @@ public class BucketFactoryImpl implements BucketFactory {
                     BucketMetadataManagers.getInstance().deleteBucketMetadata(bucket);
                     return true;
                 } catch(Exception e) {
-                    LOG.warn("Error removing bucket metadata for bucket " + bucket.getBucketUuid() + " Will retry later");
+                    LOG.warn("Error removing bucket metadata for bucket " + bucket.getBucketUuid() + " Will retry later", e);
                 }
                 return false;
             }
@@ -175,7 +175,7 @@ public class BucketFactoryImpl implements BucketFactory {
         } catch(Exception e) {
             try {
                Bucket foundBucket = BucketMetadataManagers.getInstance().lookupBucket(bucketToDelete.getBucketName());
-                LOG.error("CorrelationId: " + correlationId + " Error deleting bucket " + bucketToDelete.toString(), e);
+                LOG.trace("CorrelationId: " + correlationId + " Error deleting bucket " + bucketToDelete.toString(), e);
                 throw new InternalErrorException(bucketToDelete.getBucketName());
             } catch(Exception ex) {
                 //Bucket not found. Success!

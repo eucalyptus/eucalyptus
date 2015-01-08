@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.common;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -33,7 +34,8 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "elasticloadbalancing" )
 @PolicyVendor( "elasticloadbalancing" )
 @Partition( value = LoadBalancing.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
+@Description( "ELB API service" )
 public class LoadBalancing extends ComponentId {
   private static final long serialVersionUID = 1L;
 }

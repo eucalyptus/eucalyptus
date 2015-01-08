@@ -1,6 +1,6 @@
 # Software License Agreement (BSD License)
 #
-# Copyright (c) 2013 Eucalyptus Systems, Inc.
+# Copyright (c) 2013-2014 Eucalyptus Systems, Inc.
 # All rights reserved.
 #
 # Redistribution and use of this software in source and binary forms, with or
@@ -28,13 +28,15 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.param import Param
+
 import eucadmin
 
 
 class DescribeInstances(eucadmin.EucadminRequest):
-    ServiceClass = eucadmin.EucAdmin
-    ServicePath = '/services/Eucalyptus'
+    ServiceClass = eucadmin.EC2
+    ServicePath = '/services/compute'
 
     Args = [Param(name='InstanceId', long_name='InstanceId', ptype='array',
                   optional=True)]
@@ -43,7 +45,6 @@ class DescribeInstances(eucadmin.EucadminRequest):
         eucadmin.EucadminRequest.__init__(self, **args)
         self.list_markers = ['reservationSet', 'instancesSet', 'tagSet']
         self.item_markers = ['item']
-        self.get_connection().APIVersion = '2012-07-20'  # cheap hack
 
     def main(self, **args):
         return self.send(**args)

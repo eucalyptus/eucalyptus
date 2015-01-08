@@ -82,32 +82,26 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class Privileged {
 
-  public static Account signupAccount( String accountName, String password, String email ) throws AuthException {
-    return doCreateAccount( accountName, password, email, false );
-  }
-
   public static Account createAccount( AuthContext requestUser, String accountName, String password, String email ) throws AuthException {
     if ( !requestUser.isSystemUser( ) ||
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, "", null, IAM_CREATEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    return doCreateAccount( accountName, password, email, true );
-  }
 
-  private static Account doCreateAccount( String accountName, String password, String email, boolean skipRegistration ) throws AuthException {
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
       info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
     }
-    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", skipRegistration, true/*enabled*/, info );
+    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*enabled*/, info );
     admin.resetToken( );
     admin.createConfirmationCode( );
     if ( password != null ) {
@@ -119,7 +113,7 @@ public class Privileged {
   
   public static void deleteAccount( AuthContext requestUser, Account account, boolean recursive ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNT, requestUser ) ) {
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
@@ -135,12 +129,13 @@ public class Privileged {
   
   public static boolean allowListOrReadAccountPolicy( AuthContext requestUser, Account account ) throws AuthException {
     return requestUser.isSystemUser() &&
+        RestrictedTypes.filterPrivileged( ).apply( account ) &&
         Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), Accounts.getAccountFullName(account) ) &&
         Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), Accounts.getAccountFullName(account) );
   }
   
   public static void modifyAccount( AuthContext requestUser, Account account, String newName ) throws AuthException {
-    if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+    if ( Accounts.isSystemAccount( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     try {
@@ -155,7 +150,7 @@ public class Privileged {
   }
   
   public static void deleteAccountAlias( AuthContext requestUser, Account account, String alias ) throws AuthException {
-    if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+    if ( Accounts.isSystemAccount( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
@@ -234,7 +229,7 @@ public class Privileged {
     if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_USER, "", IAM_CREATEUSER, requestUser, 1L ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
-    return account.addUser( userName, path, true, true, null );
+    return account.addUser( userName, path, true, null );
   }
   
   public static boolean allowReadUser( AuthContext requestUser, Account account, User user ) throws AuthException {
@@ -451,7 +446,8 @@ public class Privileged {
   }
 
   public static void putAccountPolicy( AuthContext requestUser, Account account, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
+    if ( !requestUser.isSystemUser( ) ||
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     // Can not add policy to system account "eucalyptus"
@@ -487,7 +483,7 @@ public class Privileged {
 
   public static void deleteAccountPolicy( AuthContext requestUser, Account account, String name ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
+        !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
@@ -653,25 +649,29 @@ public class Privileged {
     return Permissions.isAuthorized(
         requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTACCESSKEYS ),
         account.getAccountNumber( ),
-        Accounts.getUserFullName( user ) );
+        Accounts.getUserFullName( user ) ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ;
   }
 
   public static boolean allowListSigningCertificates( AuthContext requestUser, Account account, User user ) throws AuthException {
     return Permissions.isAuthorized(
         requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTSIGNINGCERTIFICATES ),
         account.getAccountNumber( ),
-        Accounts.getUserFullName( user ) );
+        Accounts.getUserFullName( user ) ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ;
   }
 
   public static AccessKey createAccessKey( AuthContext requestUser, Account account, User user ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATEACCESSKEY, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATEACCESSKEY, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return user.createKey( );
   }
 
   public static void deleteAccessKey( AuthContext requestUser, Account account, User user, String keyId ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETEACCESSKEY, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETEACCESSKEY, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.removeKey( keyId );
@@ -685,7 +685,8 @@ public class Privileged {
   }
 
   public static void modifyAccessKey( AuthContext requestUser, Account account, User user, String keyId, String status ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEACCESSKEY, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEACCESSKEY, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( keyId ) ) {
@@ -700,7 +701,8 @@ public class Privileged {
   
   public static Certificate createSigningCertificate( AuthContext requestUser, Account account, User user, KeyPair keyPair ) throws AuthException {
     // Use the official UPLOADSIGNINGCERTIFICATE action here
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) )  ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName() );
@@ -713,7 +715,8 @@ public class Privileged {
   }
 
   public static Certificate uploadSigningCertificate( AuthContext requestUser, Account account, User user, String certBody ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( certBody ) ) {
@@ -750,14 +753,16 @@ public class Privileged {
   }
 
   public static void deleteSigningCertificate( AuthContext requestUser, Account account, User user, String certId ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETESIGNINGCERTIFICATE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETESIGNINGCERTIFICATE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.removeCertificate( certId );
   }
   
   public static void modifySigningCertificate( AuthContext requestUser, Account account, User user, String certId, String status ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATESIGNINGCERTIFICATE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATESIGNINGCERTIFICATE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( status ) ) {
@@ -773,26 +778,41 @@ public class Privileged {
     cert.setActive( "Active".equalsIgnoreCase( status ) );
   }
 
+  /**
+   * Is the user allows to perform actions that should be restricted to the
+   * account administrator or a system user with appropriate permissions.
+   *
+   * An authorization check is required in addition to this check.
+   */
+  private static boolean accountAdminActionPermittedIfAuthorized( final AuthContext requestUser,
+                                                                  final User user ) {
+    return !user.isAccountAdmin( ) || requestUser.isAccountAdmin( ) || requestUser.isSystemUser( );
+  }
+
   public static void createLoginProfile( AuthContext requestUser, Account account, User user, String password ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATELOGINPROFILE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATELOGINPROFILE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     setUserPassword( user, password );
   }
   
   public static void deleteLoginProfile( AuthContext requestUser, Account account, User user ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETELOGINPROFILE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETELOGINPROFILE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.setPassword( null );
   }
 
   public static boolean allowReadLoginProfile( AuthContext requestUser, Account account, User user ) throws AuthException {
-    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETLOGINPROFILE, requestUser );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETLOGINPROFILE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user );
   }
 
   public static void updateLoginProfile( AuthContext requestUser, Account account, User user, String newPass ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATELOGINPROFILE, requestUser ) ) {
+    if ( !(Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATELOGINPROFILE, requestUser ) &&
+        accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     setUserPassword( user, newPass );

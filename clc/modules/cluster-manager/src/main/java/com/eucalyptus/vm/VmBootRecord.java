@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,11 +64,15 @@ package com.eucalyptus.vm;
 
 import java.util.Arrays;
 import java.util.Set;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -77,8 +81,9 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -88,11 +93,12 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.vmtypes.VmType;
-import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import static com.eucalyptus.compute.common.ImageMetadata.Platform;
+import static com.eucalyptus.compute.common.ImageMetadata.VirtualizationType;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -105,14 +111,27 @@ public class VmBootRecord {
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ImageInfo               machineImage;
-  @ManyToOne
+  @Column( name = "metadata_vm_machine_image_id")
+  private String                  machineImageId;
+  @ManyToOne( fetch = FetchType.LAZY )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private KernelImageInfo         kernel;
-  @ManyToOne
+  @Column( name = "metadata_vm_kernel_image_id")
+  private String                  kernelImageId;
+  @ManyToOne( fetch = FetchType.LAZY )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RamdiskImageInfo        ramdisk;
+  @Column( name = "metadata_vm_ramdisk_image_id")
+  private String                  ramdiskImageId;
   @Column( name = "metadata_vm_platform" )
-  private String                  platform;
+  @Enumerated( EnumType.STRING )
+  private Platform                platform;
+  @Column( name = "metadata_vm_virtualization_type" )
+  @Enumerated(  EnumType.STRING )
+  private VirtualizationType      virtType;
+  @Column( name = "metadata_vm_architecture" )
+  @Enumerated(  EnumType.STRING )
+  private ImageMetadata.Architecture architecture;
   @ElementCollection
   @CollectionTable( name = "metadata_instances_persistent_volumes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -120,19 +139,17 @@ public class VmBootRecord {
   @ElementCollection
   @CollectionTable( name = "metadata_instances_ephemeral_storage" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<VmEphemeralAttachment> ephmeralStorage = Sets.newHashSet( );
-  
+  private Set<VmEphemeralAttachment> ephemeralStorage = Sets.newHashSet( );
   @Column( name = "metadata_vm_monitoring")
-  private Boolean 		  monitoring;
-  
+  private Boolean                 monitoring;
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
   @Column( name = "metadata_vm_nameorarn", updatable = false, length = 2048 )
-  private String     iamInstanceProfileArn;
+  private String                  iamInstanceProfileArn;
   @Column( name = "metadata_vm_iam_instance_profile_id", updatable = false )
-  private String     iamInstanceProfileId;
+  private String                  iamInstanceProfileId;
   @Column( name = "metadata_vm_iam_role_arn", updatable = false, length =  2048 )
-  private String iamRoleArn;
+  private String                  iamRoleArn;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
@@ -141,7 +158,7 @@ public class VmBootRecord {
   @JoinColumn(name="metadata_vm_type_id")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
-  
+
   VmBootRecord( ) {
     super( );
   }
@@ -164,7 +181,9 @@ public class VmBootRecord {
     if ( bootSet.hasRamdisk( ) ) {
       this.ramdisk = bootSet.getRamdisk( );
     }
-    this.platform = bootSet.getMachine( ).getPlatform( ).name( );
+    this.architecture = (bootSet.getMachine() != null) ? bootSet.getMachine().getArchitecture() : null;
+    this.platform = bootSet.getMachine( ).getPlatform( );
+    this.virtType = getDisplayVirtualizationType( ); // requires machineImage is set
     this.userData = userData;
     this.sshKeyString = sshKeyPair.getPublicKey( );
     this.vmType = vmType;
@@ -172,6 +191,7 @@ public class VmBootRecord {
     this.iamInstanceProfileArn = iamInstanceProfileArn;
     this.iamInstanceProfileId = iamInstanceProfileId;
     this.iamRoleArn = iamRoleArn;
+    updateImageIdentifiers( );
   }
   
   @PreRemove
@@ -182,39 +202,114 @@ public class VmBootRecord {
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
-  
+
+  @Nullable
   public BootableImageInfo getMachine( ) {
     return ( BootableImageInfo ) this.machineImage;
   }
-  
+
+  public void setMachine( ) {
+    updateImageIdentifiers( );
+    this.virtType = getDisplayVirtualizationType( );
+    this.machineImage = null;
+  }
+
+  public String getMachineImageId( ) {
+    return machineImageId;
+  }
+
+  public void setMachineImageId( final String machineImageId ) {
+    this.machineImageId = machineImageId;
+  }
+
+  @Nonnull
+  public String getDisplayMachineImageId( ) {
+    return displayName( machineImageId, machineImage, ResourceIdentifiers.tryNormalize().apply( "emi-00000000" ) );
+  }
+
+  @Nullable
   public KernelImageInfo getKernel( ) {
     return this.kernel;
   }
 
   public void setKernel( KernelImageInfo kernel ) {
     this.kernel = kernel;
+    updateImageIdentifiers( );
   }
 
   public void setKernel( ) {
+    updateImageIdentifiers( );
     this.kernel = null;
   }
-  
+
+  public String getKernelImageId( ) {
+    return kernelImageId;
+  }
+
+  public void setKernelImageId( final String kernelImageId ) {
+    this.kernelImageId = kernelImageId;
+  }
+
+  @Nullable
+  public String getDisplayKernelImageId( ) {
+    return displayName( kernelImageId, getKernel( ), null );
+  }
+
+  @Nullable
   public RamdiskImageInfo getRamdisk( ) {
     return this.ramdisk;
   }
 
   public void setRamdisk( RamdiskImageInfo ramdisk )  {
     this.ramdisk = ramdisk;
+    updateImageIdentifiers( );
   }
 
   public void setRamdisk( ) {
+    updateImageIdentifiers( );
     this.ramdisk = null;
   }
-  
-  public String getPlatform( ) {
+
+  public String getRamdiskImageId( ) {
+    return ramdiskImageId;
+  }
+
+  public void setRamdiskImageId( final String ramdiskImageId ) {
+    this.ramdiskImageId = ramdiskImageId;
+  }
+
+  @Nullable
+  public String getDisplayRamdiskImageId( ) {
+    return displayName( ramdiskImageId, getRamdisk( ), null );
+  }
+
+  public Platform getPlatform( ) {
     return this.platform;
   }
-  
+
+  public VirtualizationType getVirtualizationType( ) {
+    return virtType;
+  }
+
+  public VirtualizationType getDisplayVirtualizationType( ) {
+    VirtualizationType virtType = getVirtualizationType( );
+    if ( virtType == null ) {
+      final BootableImageInfo machine = getMachine( );
+       if ( machine != null ) {
+        virtType = machine.getVirtualizationType( );
+      }
+
+      if ( virtType == null ) {
+        if( machine instanceof BlockStorageImageInfo || ImageMetadata.Platform.windows == getPlatform( ) ) {
+          virtType = ImageMetadata.VirtualizationType.hvm;
+        } else {
+          virtType = ImageMetadata.VirtualizationType.paravirtualized;
+        }
+      }
+    }
+    return virtType;
+  }
+
   public Set<VmVolumeAttachment> getPersistentVolumes( ) {
     return this.persistentVolumes;
   }
@@ -223,16 +318,16 @@ public class VmBootRecord {
     return !this.persistentVolumes.isEmpty( );
   }
   
-  public Set<VmEphemeralAttachment> getEphmeralStorage() {
-    return ephmeralStorage;
+  public Set<VmEphemeralAttachment> getEphemeralStorage() {
+    return ephemeralStorage;
   }
 
-  public void setEphmeralStorage(Set<VmEphemeralAttachment> ephmeralStorage) {
-    this.ephmeralStorage = ephmeralStorage;
+  public void setEphemeralStorage( Set<VmEphemeralAttachment> ephemeralStorage ) {
+    this.ephemeralStorage = ephemeralStorage;
   }
   
   public boolean hasEphemeralStorage( ) {
-	return !this.ephmeralStorage.isEmpty( );
+    return !this.ephemeralStorage.isEmpty( );
   }
 
   byte[] getUserData( ) {
@@ -279,10 +374,14 @@ public class VmBootRecord {
     this.vmType = vmType;
   }
   
-  void setPlatform( String platform ) {
+  void setPlatform( Platform platform ) {
     this.platform = platform;
   }
-  
+
+  void setVirtualizationType( final VirtualizationType virtType ) {
+    this.virtType = virtType;
+  }
+
   public final void setMonitoring(Boolean monitoring) {
     this.monitoring = monitoring;
   }
@@ -298,24 +397,10 @@ public class VmBootRecord {
   public boolean isLinux( ) {
     return
         this.getMachine( ) == null ||
-        this.getMachine( ).getPlatform( ) == null ||
-        ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) );
+        this.getPlatform( ) == null ||
+        Platform.linux.equals( getPlatform() );
   }
-  /*
-   //vasya: looks like this is not called
-  public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws MetadataException {
-    VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
-    if ( this.isLinux( ) ) {
-      if ( this.getKernel( ) != null ) {
-        vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
-      }
-      if ( this.getRamdisk( ) != null ) {
-        vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
-      }
-    }
-    return vmTypeInfo;
-  }
-  */
+
   private ImageInfo getMachineImage( ) {
     return this.machineImage;
   }
@@ -375,11 +460,33 @@ public class VmBootRecord {
     return true;
   }
 
+  public ImageMetadata.Architecture getArchitecture() {
+    return architecture;
+  }
+
+  public void setArchitecture(ImageMetadata.Architecture architecture) {
+    this.architecture = architecture;
+  }
+
   private String getSshKeyString( ) {
     return this.sshKeyString;
   }
 
   private void setSshKeyString( String sshKeyString ) {
     this.sshKeyString = sshKeyString;
+  }
+
+  private void updateImageIdentifiers( ) {
+    machineImageId = displayName( null, machineImage, machineImageId );
+    kernelImageId = displayName( null, kernel, kernelImageId );
+    ramdiskImageId = displayName( null, ramdisk, ramdiskImageId );
+  }
+
+  private static String displayName( @Nullable final String preferred,
+                                     @Nullable final RestrictedType restrictedType,
+                                     @Nullable final String defaultName ) {
+    return java.util.Objects.toString(
+        preferred,
+        java.util.Objects.toString( CloudMetadatas.toDisplayName().apply( restrictedType ), defaultName ) );
   }
 }

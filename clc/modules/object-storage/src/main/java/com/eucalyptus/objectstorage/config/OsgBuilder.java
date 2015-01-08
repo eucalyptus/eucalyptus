@@ -64,6 +64,7 @@ package com.eucalyptus.objectstorage.config;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.objectstorage.entities.ObjectStorageConfiguration;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Handles;
@@ -96,7 +97,7 @@ public class OsgBuilder extends AbstractServiceBuilder<ObjectStorageConfiguratio
 	
 	@Override
 	public ObjectStorageConfiguration newInstance( String partition, String name, String host, Integer port ) {
-		return new ObjectStorageConfiguration( name, host, port );
+		return new ObjectStorageConfiguration( partition, name, host, port );
 	}
 	
 	@Override

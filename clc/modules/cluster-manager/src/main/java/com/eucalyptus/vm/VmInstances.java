@@ -70,18 +70,18 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.*;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
+import static com.eucalyptus.vm.VmVolumeAttachment.deleteOnTerminateFilter;
+import static com.eucalyptus.vm.VmVolumeAttachment.volumeIdFilter;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -91,7 +91,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.address.Address;
@@ -103,7 +102,6 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
@@ -113,7 +111,6 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -124,6 +121,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -152,6 +150,7 @@ import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.DelegatingRemoteCallback;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -165,7 +164,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Collections2;
+import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -202,6 +201,12 @@ public class VmInstances {
         return VmState.RUNNING.apply( arg0 ) && ( System.currentTimeMillis( ) > arg0.getExpiration( ).getTime( ) );
       }
     },
+    UNTOUCHED( VmState.PENDING, VmState.RUNNING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return INSTANCE_TOUCH_INTERVAL;
+      }
+    },
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
       public Integer getMinutes( ) {
@@ -225,7 +230,15 @@ public class VmInstances {
       public Integer getMinutes( ) {
         return TERMINATED_TIME;
       }
-    };
+    },
+    BURIED( VmState.BURIED ) {
+      @Override
+      public Integer getMinutes( ) {
+        return BURIED_TIME;
+      }
+    },
+    ;
+
     private final List<VmState> states;
     
     private Timeout( final VmState... states ) {
@@ -312,53 +325,103 @@ public class VmInstances {
   @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
                       initial = "10" )
   public static final int TX_RETRIES                    = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
                       initial = "720" )
   public static Integer   INSTANCE_TIMEOUT              = 720;
+
+  @ConfigurableField( description = "Amount of time (in minutes) between updates for a running instance.",
+                      initial = "15" )
+  public static Integer   INSTANCE_TOUCH_INTERVAL       = 15;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   SHUT_DOWN_TIME                = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a stopping VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   STOPPING_TIME                 = 10;
+
   @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
                       initial = "60" )
   public static Integer   TERMINATED_TIME               = 60;
+
+  @ConfigurableField( description = "Amount of time (in minutes) to retain unreported terminated instance data.",
+                      initial = "60" )
+  public static Integer   BURIED_TIME                   = 60;
+
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
   public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
+
   @ConfigurableField( description = "Maximum amount of time (in seconds) that migration state will take to propagate state changes (e.g., to tags).",
                       initial = "" + 60 )
   public static Long      MIGRATION_REFRESH_TIME        = 60l;
+
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
+
   @ConfigurableField( description = "Subdomain to use for instance DNS.",
                       initial = ".eucalyptus",
                       changeListener = SubdomainListener.class )
   public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
+
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "3" )
   public static Long      VOLATILE_STATE_INTERVAL_SEC   = Long.MAX_VALUE;
+
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
                       initial = "60" )
   public static Long      VOLATILE_STATE_TIMEOUT_SEC    = 60l;
+
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
   public static Integer   MAX_STATE_THREADS             = 16;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+
   @ConfigurableField( description = "Name for root block device mapping",
                       initial = "emi" )
   public static volatile String EBS_ROOT_DEVICE_NAME    = "emi";
+
   @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
                       initial = "40" )
   public static Integer   VM_STATE_SETTLE_TIME          = 40;
+
   @ConfigurableField( description = "Amount of time (in seconds) since completion of the creating run instance operation that the new instance is treated as unreported if not... reported.",
                       initial = "300" )
   public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
-  
+
+  @ConfigurableField( description = "Instance metadata user data cache configuration.",
+      initial = "maximumSize=50, expireAfterWrite=5s, softValues",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_USER_DATA_CACHE   = "maximumSize=50, expireAfterWrite=5s, softValues";
+
+  @ConfigurableField( description = "Instance metadata cache configuration.",
+      initial = "maximumSize=250, expireAfterWrite=5s",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_INSTANCE_CACHE    = "maximumSize=250, expireAfterWrite=5s";
+
+  @ConfigurableField( description = "Instance metadata instance resolution cache configuration.",
+      initial = "maximumSize=250, expireAfterWrite=1s",
+      changeListener = CacheSpecListener.class )
+  public static volatile String VM_METADATA_REQUEST_CACHE     = "maximumSize=250, expireAfterWrite=1s";
+
+  public static class CacheSpecListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        CacheBuilderSpec.parse( String.valueOf( newValue ) );
+      } catch ( Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
+
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
@@ -370,10 +433,7 @@ public class VmInstances {
     }
   }
   
-  static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
-  static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
-  
-  private static Logger                                  LOG                    = Logger.getLogger( VmInstances.class );
+  private static final Logger LOG = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
@@ -384,12 +444,10 @@ public class VmInstances {
       final EntityTransaction db = Entities.get( VmInstance.class );
       final long i;
       try {
-        i = ((Number) Entities.createCriteria( VmInstance.class )
-                    .add( Example.create( VmInstance.named( input, null ) ) )
-                    .setReadOnly( true )
-                    .setCacheable( false )
-                    .setProjection( Projections.rowCount() )
-                    .uniqueResult()).longValue();
+        i = Entities.count(
+            VmInstance.named( input, null ),
+            Restrictions.not( criterion( VmStateSet.DONE.array() ) ),
+            Collections.<String,String>emptyMap( ) );
       } finally {
         db.rollback( );
       }
@@ -511,7 +569,7 @@ public class VmInstances {
 	  try{
 		  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
 		  final List<VmEphemeralAttachment> ephemeralDisks = 
-				  Lists.newArrayList(vm.getBootRecord().getEphmeralStorage());
+				  Lists.newArrayList(vm.getBootRecord().getEphemeralStorage());
 		  db.commit();
 		  return ephemeralDisks;
 	  }catch(NoSuchElementException ex){
@@ -543,8 +601,8 @@ public class VmInstances {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
-                                             .add( Restrictions.in( "state", new VmState[] { VmState.RUNNING, VmState.PENDING } ) )
-                                             .uniqueResult( );
+                                             .add( criterion( VmState.RUNNING, VmState.PENDING ) )
+                                             .uniqueResult();
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with public ip: " + ip );
       }
@@ -566,9 +624,12 @@ public class VmInstances {
       }
     };
   }
-  
+   static Criterion criterion( VmState... state ) {
+    return Restrictions.in( "state", state );
+  }
+
   public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
-    return Iterables.find( list( ), withBundleId( bundleId ) );
+    return Iterables.find( list( withBundleId( bundleId ) ), withBundleId( bundleId ) );
   }
 
   public static void tryCleanUp( final VmInstance vm ) {
@@ -601,7 +662,7 @@ public class VmInstances {
           }
         } catch ( final NoSuchElementException e ) {
           //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
-          if ( VmState.PENDING.equals( vmLastState ) || VmState.TERMINATED.equals( vmState ) ) {
+          if ( VmState.PENDING.equals( vmLastState ) || VmStateSet.DONE.contains( vmState ) ) {
             for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
               if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
                 unassignAddress( vm, addr, rollbackNetworkingOnFailure );
@@ -617,18 +678,36 @@ public class VmInstances {
       LOG.error( e );
       Logs.extreme( ).error( e, e );
     }
+
     try {
       VmInstances.cleanUpAttachedVolumes( vm );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }
-    try {
-      VmInstanceLifecycleHelpers.get().cleanUpInstance( vm, vmState );
+
+    try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
+      VmInstanceLifecycleHelpers.get().cleanUpInstance( Entities.merge( vm ), vmState );
+      db.commit();
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }
+
+    if ( !rollbackNetworkingOnFailure && VmStateSet.TORNDOWN.apply( vm ) ) {
+      try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
+        if ( VmStateSet.DONE.apply( vm ) ) {
+          Entities.merge( vm ).clearReferences( );
+        } else {
+          Entities.merge( vm ).clearRunReferences( );
+        }
+        db.commit();
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
+    }
+
     try {
       AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( vm.getPartition( ) );
     } catch ( Exception ex ) {
@@ -648,7 +727,7 @@ public class VmInstances {
     }
     RemoteCallback<?,?> callback = address.unassign().getCallback();
     Callback.Failure failureHander;
-    if ( rollbackNetworkingOnFailure && !wasPending && !VmState.TERMINATED.apply( vm ) ) {
+    if ( rollbackNetworkingOnFailure && !wasPending && !VmStateSet.DONE.apply( vm ) ) {
       callback = DelegatingRemoteCallback.suppressException( callback );
       failureHander = new Callback.Failure<java.lang.Object>() {
         @Override
@@ -675,84 +754,159 @@ public class VmInstances {
     } else {
       failureHander = Callbacks.noopFailure();
     }
-    AddressingDispatcher.dispatch( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition( ) );
+    AddressingDispatcher.dispatch( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
-  
+
+  private static void cleanUpAttachedVolumes( final String instanceId,
+                                              final String qualifier,
+                                              final Collection<VmVolumeAttachment> attachments,
+                                              final Predicate<? super VmVolumeAttachment> matching ) {
+    if ( attachments != null ) {
+      for ( final VmVolumeAttachment attachment : Iterables.filter( Lists.newArrayList( attachments ), matching ) ) {
+        try {
+          LOG.debug( instanceId + ": Marking " + qualifier + " volume EXTANT " + attachment.getVolumeId( ) );
+          final Volume volume = Volumes.lookup( null, attachment.getVolumeId( ) );
+          if ( State.BUSY.equals( volume.getState( ) ) ) {
+            volume.setState( State.EXTANT );
+          }
+          attachments.remove( attachment );
+        } catch ( NoSuchElementException e ) {
+          LOG.debug( instanceId + ": Unable to find " + qualifier + " volume not found for cleanup " + attachment.getVolumeId( ) );
+        } catch ( Exception ex ) {
+          LOG.error( instanceId + ": Failed to cleanup " + qualifier + " volume attachment for " + attachment.getVolumeId( ), ex );
+        }
+      }
+    }
+  }
+
+  private static void addMatchingVolumeIds( final Collection<String> volumeIds,
+                                            final Collection<VmVolumeAttachment> attachments,
+                                            final Predicate<? super VmVolumeAttachment> matching ) {
+    CollectionUtils.fluent( attachments )
+        .filter( matching )
+        .transform( VmVolumeAttachment.volumeId( ) )
+        .copyInto( volumeIds );
+  }
+
   // EUCA-6935 Changing the way attached volumes are cleaned up.
-  private static void cleanUpAttachedVolumes(final VmInstance vm) {
-    if (VmStateSet.DONE.apply(vm)) {
-	  try {
-		  
-		if(vm.getTransientVolumeState() != null && vm.getTransientVolumeState().getAttachments() != null 
-				&& !vm.getTransientVolumeState().getAttachments().isEmpty()) {
-		  Set<VmVolumeAttachment> transientVolumes = new HashSet<VmVolumeAttachment>(vm.getTransientVolumeState().getAttachments());
-		  for (VmVolumeAttachment attachment : transientVolumes) {
-		    try {
-		      final Volume volume = Volumes.lookup( null, attachment.getVolumeId());
-		      if (State.BUSY.equals(volume.getState())) {
-			    volume.setState( State.EXTANT );
-			  }
-		  	} catch (Exception ex) {
-			  LOG.error(vm.getInstanceId() + ": Failed to cleanup transient volume attachment for " + attachment.getVolumeId(), ex);
-			}
-		  }
-		}
-		
-		LOG.info("Before, persistent volumes hashcode : " + vm.getBootRecord().getPersistentVolumes().hashCode());
-		if(vm.getBootRecord() != null && vm.getBootRecord().getPersistentVolumes() != null
-				&& !vm.getBootRecord().getPersistentVolumes().isEmpty()) {
-		  Set<VmVolumeAttachment> persistentVolumes = new HashSet<VmVolumeAttachment>(vm.getBootRecord().getPersistentVolumes());
-		  final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
-		  for (VmVolumeAttachment attachment : persistentVolumes) {
-			// Check for the delete on terminate flag and fire the delete request.
-		    if (attachment.getDeleteOnTerminate()) {
-			  try {
-				Volume volume = Volumes.lookup( null, attachment.getVolumeId());
-				LOG.debug(vm.getInstanceId() + ": Firing delete request for " + attachment.getVolumeId());
-				DeleteStorageVolumeResponseType reply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType(attachment.getVolumeId()));
-	  		    if(null != reply && reply.get_return()) {
-	              Volumes.annihilateStorageVolume(volume);
-	  		    } else {
-	  		      LOG.error(vm.getInstanceId() + ": Failed to delete volume " + attachment.getVolumeId());
-	    		}
-			  } catch (Exception ex) {
-				LOG.error(vm.getInstanceId() + ": Failed to cleanup persistent volume attachment for " + attachment.getVolumeId(), ex);
-			  }
-		    }
-		  }
-		}
-		
-	  } catch (Exception ex) {
-	    LOG.error(vm.getInstanceId() + ": Failed to cleanup attached volumes", ex);
-	    LOG.info("Exception, persistent volumes hashcode : " + vm.getBootRecord().getPersistentVolumes().hashCode());
-	  }
-  	}
+  private static void cleanUpAttachedVolumes( final VmInstance vm ) {
+    if ( VmStateSet.DONE.apply( vm ) ) {
+      final Collection<String> volumesToDelete = Sets.newTreeSet();
+      try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
+        final VmInstance instance = Entities.merge( vm );
+
+        // Clean up transient volumes
+        if ( instance.getTransientVolumeState( ) != null ) {
+          cleanUpAttachedVolumes( instance.getInstanceId( ), "transient", instance.getTransientVolumeState( ).getAttachments( ), deleteOnTerminateFilter( false ) );
+          addMatchingVolumeIds( volumesToDelete, instance.getTransientVolumeState().getAttachments(), deleteOnTerminateFilter( true ) );
+        }
+
+        // Clean up persistent volumes that are not delete-on-terminate
+        if ( instance.getBootRecord() != null ) {
+          cleanUpAttachedVolumes( instance.getInstanceId( ), "persistent", instance.getBootRecord( ).getPersistentVolumes( ), deleteOnTerminateFilter( false ) );
+          addMatchingVolumeIds( volumesToDelete, instance.getBootRecord( ).getPersistentVolumes( ), deleteOnTerminateFilter( true ) );
+        }
+
+        db.commit( );
+      } catch ( Exception ex ) {
+        LOG.error( vm.getInstanceId() + ": Failed to cleanup attached volumes", ex );
+      }
+
+      try {
+        if ( !volumesToDelete.isEmpty( ) ) {
+          LOG.debug( vm.getInstanceId() + ": Cleanup for delete on terminate volumes." );
+          for ( final String volumeId : volumesToDelete ) {
+            try {
+              LOG.debug( vm.getInstanceId() + ": Firing delete request for " + volumeId );
+              AsyncRequests.newRequest( new MessageCallback<DeleteStorageVolumeType,DeleteStorageVolumeResponseType>( new DeleteStorageVolumeType( volumeId ) ){
+                @Override
+                public void initialize( final DeleteStorageVolumeType request ) { }
+
+                @Override
+                public void fire( final DeleteStorageVolumeResponseType response ) {
+                  Function<DeleteStorageVolumeResponseType,Void> deleteVolume = new Function<DeleteStorageVolumeResponseType,Void>(){
+                    @Nullable
+                    @Override
+                    public Void apply( final DeleteStorageVolumeResponseType deleteStorageVolumeResponseType ) {
+                      final Volume volume = Volumes.lookup( null, volumeId );
+                      if ( null != response && response.get_return( ) ) {
+                        Volumes.annihilateStorageVolume( volume );
+                      } else {
+                        LOG.error( vm.getInstanceId() + ": Failed to delete volume " +volumeId );
+                      }
+                      VmInstance instance = Entities.merge( vm );
+                      if ( instance.getTransientVolumeState() != null && instance.getTransientVolumeState().getAttachments() != null ) {
+                        Iterables.removeIf( instance.getTransientVolumeState().getAttachments(), volumeIdFilter( volumeId ) );
+                      }
+                      if ( instance.getBootRecord() != null && instance.getBootRecord().getPersistentVolumes() != null ) {
+                        Iterables.removeIf( instance.getBootRecord().getPersistentVolumes(), volumeIdFilter( volumeId ) );
+                      }
+                      return null;
+                    }
+                  };
+                  Entities.asTransaction( Volume.class, deleteVolume ).apply( response );
+                }
+
+                @Override
+                public void fireException( final Throwable throwable ) {
+                  LOG.error( vm.getInstanceId() + ": Failed to delete volume " + volumeId, throwable );
+                }
+              } ).dispatch( Topology.lookup( Storage.class, vm.lookupPartition() ) );
+            } catch ( NoSuchElementException e ) {
+              LOG.debug( vm.getInstanceId( ) + ": Persistent volume not found for cleanup " + volumeId );
+            } catch ( Exception ex ) {
+              LOG.error( vm.getInstanceId() + ": Failed to cleanup persistent volume attachment for " + volumeId, ex );
+            }
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( vm.getInstanceId() + ": Failed to cleanup attached volumes", ex );
+      }
+    }
   }
-  
-  public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
-    return CachedLookup.INSTANCE.apply( name );
-  }
-  
-  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+
+  /**
+   * Lookup a VM instance.
+   *
+   * @param name The instance identifier (display name)
+   * @return The instance.
+   * @throws NoSuchElementException If the instance is not found
+   */
+  @Nonnull
+  public static VmInstance lookupAny( final String name ) throws NoSuchElementException {
     return PersistentLookup.INSTANCE.apply( name );
   }
 
+  /**
+   * Lookup a non-terminated VM instance.
+   *
+   * @param name The instance identifier (display name)
+   * @return The instance.
+   * @throws NoSuchElementException If the instance is not found
+   * @throws TerminatedInstanceException If the instance is terminated.
+   */
+  @Nonnull
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+    return lookup( ).apply( name );
+  }
+
+  /**
+   * Function for lookup of non-terminated VM instances.
+   *
+   * <p>The function parameter is the instance identifier the return is the
+   * instance. The function will not return null, but may throw
+   * NoSuchElementException or TerminatedInstanceException.</p>
+   *
+   * @return The function.
+   */
   public static Function<String,VmInstance> lookup() {
-    return PersistentLookup.INSTANCE;
+    return Functions.compose( TerminatedInstanceCheck.INSTANCE, PersistentLookup.INSTANCE );
   }
 
   public static Predicate<VmInstance> initialize() {
     return InstanceInitialize.INSTANCE;
   }
 
-  public static VmInstance register( final VmInstance vm ) {
-    if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
-      return Transitions.REGISTER.apply( vm );
-    } else {
-      throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
-    }
-  }
-  
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
@@ -786,26 +940,14 @@ public class VmInstances {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }
-    terminateDescribeCache.remove( instanceId );
-    terminateCache.remove( instanceId );
-  }
-  
-  static void cache( final VmInstance vm ) {
-    if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      final RunningInstancesItemType ret = VmInstances.transform( vm );
-      terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      terminateCache.put( vm.getDisplayName( ), vm );
-      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
-    }
   }
 
-  public static void restored( final String instanceId ) {
-    terminateDescribeCache.remove( instanceId );
-    terminateCache.remove( instanceId );
+  public static void buried( final VmInstance vm ) throws TransactionException {
+    Entities.asTransaction( VmInstance.class, Transitions.BURIED, VmInstances.TX_RETRIES ).apply( vm );
   }
-  
+
   public static void terminated( final VmInstance vm ) throws TransactionException {
-    VmInstances.cache( Entities.asTransaction( VmInstance.class, Transitions.TERMINATED, VmInstances.TX_RETRIES ).apply( vm ) );
+    Entities.asTransaction( VmInstance.class, Transitions.TERMINATED, VmInstances.TX_RETRIES ).apply( vm );
   }
   
   public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
@@ -828,20 +970,38 @@ public class VmInstances {
       Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
-  
-  public static List<VmInstance> list( ) {
-    return list( null );
-  }
-  
+
+  /**
+   * List instances that are not done and match the given predicate.
+   *
+   * @param predicate The predicate to match
+   * @return The matching instances
+   * @see VmStateSet#DONE
+   */
   public static List<VmInstance> list( @Nullable Predicate<? super VmInstance> predicate ) {
-    return list( null, null, predicate );
-  }
-  
-  public static List<VmInstance> list( @Nullable OwnerFullName ownerFullName,
-                                       @Nullable Predicate<? super VmInstance> predicate ) {
-    return list( ownerFullName, null, predicate );
+    return list( (OwnerFullName) null, predicate );
   }
 
+  /**
+   * List instances that are not done and match the given owner/predicate.
+   *
+   * @param ownerFullName The owning user or account
+   * @param predicate The predicate to match
+   * @return The matching instances
+   * @see VmStateSet#DONE
+   */
+  public static List<VmInstance> list( @Nullable OwnerFullName ownerFullName,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
+    return list(
+        ownerFullName,
+        Restrictions.not( criterion( VmStateSet.DONE.array( ) ) ),
+        Collections.<String,String>emptyMap(),
+        Predicates.and( VmStateSet.DONE.not( ), predicate ) );
+  }
+
+  /**
+   * List instances in any state that match the given parameters.
+   */
   public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
                                        final Criterion criterion,
                                        final Map<String,String> aliases,
@@ -857,25 +1017,9 @@ public class VmInstances {
     ) );
   }
 
-  public static List<VmInstance> list( @Nullable String instanceId,
-                                       @Nullable Predicate<? super VmInstance> predicate ) {
-    return list( null, instanceId, predicate );
-  }
-  
-  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
-                                       @Nullable final String instanceId,
-                                       @Nullable Predicate<? super VmInstance> predicate ) {
-    return list( new Supplier<List<VmInstance>>() {
-      @Override
-      public List<VmInstance> get() {
-        return Entities.query( VmInstance.named( ownerFullName, instanceId ) );
-      }
-    }, Predicates.and(
-        RestrictedTypes.filterByOwner( ownerFullName ),
-        checkPredicate( predicate )
-    ) );
-  }
-
+  /**
+   * List instances in any state that match the given parameters.
+   */
   public static List<VmInstance> listByClientToken( @Nullable final OwnerFullName ownerFullName,
                                                     @Nullable final String clientToken,
                                                     @Nullable Predicate<? super VmInstance> predicate ) {
@@ -894,9 +1038,7 @@ public class VmInstances {
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
                                         @Nullable Predicate<? super VmInstance> predicate ) {
     predicate = checkPredicate( predicate );
-    List<VmInstance> ret = listPersistent( instancesSupplier, predicate );
-    ret.addAll( Collections2.filter( terminateCache.values( ), predicate ) );
-    return ret;
+    return listPersistent( instancesSupplier, predicate );
   }
 
   private static List<VmInstance> listPersistent( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
@@ -941,11 +1083,7 @@ public class VmInstances {
    *
    */
   public static RunningInstancesItemType transform( final VmInstance vm ) {
-    if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      return terminateDescribeCache.get( vm.getDisplayName( ) );
-    } else {
-      return VmInstance.Transform.INSTANCE.apply( vm );
-    }
+    return VmInstance.Transform.INSTANCE.apply( vm );
   }
 
   public static Function<VmInstance,String> toNodeHost() {
@@ -956,42 +1094,31 @@ public class VmInstances {
     return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
   }
 
+  @Resolver( VmInstanceMetadata.class )
   enum PersistentLookup implements Function<String, VmInstance> {
     INSTANCE;
     
     /**
      * @see com.google.common.base.Function#apply(java.lang.Object)
      */
+    @Nonnull
     @Override
     public VmInstance apply( final String name ) {
-      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
-        throw new TerminatedInstanceException( name );
-      } else {
-        return VmInstance.Lookup.INSTANCE.apply( name );
-      }
+      return VmInstance.Lookup.INSTANCE.apply( name );
     }
-    
   }
-  
-  @Resolver( VmInstanceMetadata.class )
-  public enum CachedLookup implements Function<String, VmInstance> {
+
+  enum TerminatedInstanceCheck implements Function<VmInstance,VmInstance> {
     INSTANCE;
-    
-    /**
-     * @see com.google.common.base.Function#apply(java.lang.Object)
-     */
+
+    @Nullable
     @Override
-    public VmInstance apply( final String name ) {
-      VmInstance vm = null;
-      if ( ( name != null ) ) {
-        vm = VmInstances.terminateCache.get( name );
-        if ( vm == null ) {
-          vm = PersistentLookup.INSTANCE.apply( name );
-        }
+    public VmInstance apply( final VmInstance instance ) {
+      if ( instance != null && VmStateSet.DONE.apply( instance ) ) {
+        throw new TerminatedInstanceException( instance.getDisplayName( ) );
       }
-      return vm;
+      return instance;
     }
-    
   }
 
   private enum InstanceInitialize implements Predicate<VmInstance> {
@@ -1000,6 +1127,7 @@ public class VmInstances {
     @Override
     public boolean apply( final VmInstance input ) {
       Entities.initialize( input.getNetworkGroups( ) );
+      Entities.initialize( input.getNetworkGroupIds( ) );
       Entities.initialize( input.getTags( ) );
       input.getRuntimeState( ).getReason( ); // Initializes reason details
       Entities.initialize( input.getBootRecord( ).getPersistentVolumes( ) );
@@ -1012,11 +1140,7 @@ public class VmInstances {
    *
    */
   public static RunningInstancesItemType transform( final String name ) {
-    if ( terminateDescribeCache.containsKey( name ) ) {
-      return terminateDescribeCache.get( name );
-    } else {
-      return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
-    }
+    return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
   }
 
   public static Function<VmInstance,VmBundleTask> bundleTask() {
@@ -1132,8 +1256,8 @@ public class VmInstances {
           .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
           .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
           .withStringProperty( "instance-type", VmInstanceFilterFunctions.INSTANCE_TYPE )
-          .withUnsupportedProperty( "instance.group-id" )
-          .withUnsupportedProperty( "instance.group-name" )
+          .withStringSetProperty( "instance.group-id", VmInstanceStringSetFilterFunctions.GROUP_ID )
+          .withStringSetProperty( "instance.group-name", VmInstanceStringSetFilterFunctions.GROUP_NAME )
           .withStringProperty( "ip-address", VmInstanceFilterFunctions.IP_ADDRESS )
           .withStringProperty( "kernel-id", VmInstanceFilterFunctions.KERNEL_ID )
           .withStringProperty( "key-name", VmInstanceFilterFunctions.KEY_NAME )
@@ -1158,7 +1282,7 @@ public class VmInstances {
           .withUnsupportedProperty( "state-reason-code" )
           .withUnsupportedProperty( "state-reason-message" )
           .withUnsupportedProperty( "subnet-id" )
-          .withUnsupportedProperty( "virtualization-type" )
+          .withStringProperty( "virtualization-type", VmInstanceFilterFunctions.VIRTUALIZATION_TYPE )
           .withUnsupportedProperty( "vpc-id" )
           .withUnsupportedProperty( "hypervisor" )
           .withUnsupportedProperty( "network-interface.description" )
@@ -1195,18 +1319,21 @@ public class VmInstances {
           .withPersistenceAlias( "bootRecord.vmType", "vmType" )
           .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
-          .withPersistenceFilter( "client-token", "vmId.clientToken" )
+          .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
           .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "instance-id", "displayName" )
           .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet("bootRecord.vmType")  )
+          .withPersistenceFilter( "instance.group-id", "networkGroups.groupId" )
+          .withPersistenceFilter( "instance.group-name", "networkGroups.displayName" )
           .withPersistenceFilter( "kernel-id", "image.kernelId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "launch-index", "launchRecord.launchIndex", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "launch-time", "launchRecord.launchTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
+          .withPersistenceFilter( "virtualization-type", "bootRecord.virtType", Collections.<String>emptySet(), ImageMetadata.VirtualizationType.fromString( ) )
       );
     }
   }
@@ -1591,6 +1718,12 @@ public class VmInstances {
       public String apply( final VmInstance instance ) {
         final BootableImageInfo imageInfo = instance.getBootRecord().getMachine();
         return imageInfo == null ? null : imageInfo.getRootDeviceType();
+      }
+    },
+    VIRTUALIZATION_TYPE {
+      @Override
+      public String apply( final VmInstance vmInstance ) {
+        return vmInstance.getVirtualizationType( );
       }
     },
   }

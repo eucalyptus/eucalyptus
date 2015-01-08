@@ -109,6 +109,26 @@
 
 #define FILENAME                                 512    //!< Maximum filename length
 
+#ifndef IV_LENGTH
+#define IV_LENGTH                                 12
+#endif /* ! IV_LENGTH */
+
+#ifndef SYMMETRIC_KEY_LENGTH
+#define SYMMETRIC_KEY_LENGTH                      32
+#endif /* ! SYMMETRIC_KEY_LENGTH */
+
+#ifndef MAX_ENCRYPTED_STRING_LEN
+#define MAX_ENCRYPTED_STRING_LEN                8192
+#endif /* ! MAX_ENCRYPTED_STRING_LEN */
+
+#ifndef TAG_LENGTH
+#define TAG_LENGTH                                16
+#endif /* ! TAG_LENGTH */
+
+#ifndef MAX_DECRYPTED_STRING_LEN
+#define MAX_DECRYPTED_STRING_LEN                8192
+#endif /* ! MAX_DECRYPTED_STRING_LEN */
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -203,6 +223,7 @@ int euca_init_cert(void)
 {                                              \
 	if ((fd = open((_n), O_RDONLY)) < 0) {     \
 		LOGERROR(ERR_MSG, (_n));               \
+		pthread_mutex_unlock(&init_mutex);     \
 		return (EUCA_ERROR);                   \
 	} else {                                   \
 		close(fd);                             \
@@ -223,7 +244,7 @@ int euca_init_cert(void)
     if (initialized) {
         //Previous holder of lock initialized, so this thread can skip
         pthread_mutex_unlock(&init_mutex);
-        return 0;
+        return (EUCA_OK);
     }
 
     if ((euca_home = getenv("EUCALYPTUS")) == NULL) {
@@ -262,12 +283,6 @@ int euca_init_cert(void)
 #undef CHK_FILE
 }
 
-#ifndef IV_LENGTH
-#define IV_LENGTH 12
-#endif
-#ifndef SYMMETRIC_KEY_LENGTH
-#define SYMMETRIC_KEY_LENGTH 32
-#endif
 //! At first, decrypt the symmetric key in key_buffer using NC private key and use the symmetric key to decrypt the input string
 //! Note the first 32 bytes of input string contains iv string (the remaining string is actual cipher text)
 //!
@@ -283,38 +298,47 @@ int euca_init_cert(void)
 //! @post *out_buffer points to the base64 decoded, decrypted string in plain text
 int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer, char **out_buffer, int *out_len)
 {
-    char *symm_key = NULL;
-    char *dec64_in = NULL;
-    char *enc64_key = NULL;
-    char iv_buffer[IV_LENGTH + 1];
-    char *cipher_text = NULL;
-    char *enc64_cipher_text = NULL;
     int cipher_len = -1;
     int ret = EUCA_ERROR;
     int len = -1;
+    char *symm_key = NULL;
+    char *dec64_in = NULL;
+    char *enc64_key = NULL;
+    char iv_buffer[IV_LENGTH + 1] = "";
+    char *cipher_text = NULL;
+    char *enc64_cipher_text = NULL;
 
     if (in_buffer == NULL || strlen(in_buffer) <= 0) {
         LOGERROR("No string to decrypt is given\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     if (key_buffer == NULL || strlen(key_buffer) <= 0) {
         LOGERROR("No key string is given\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
+
     if (decrypt_string_with_node(key_buffer, &symm_key) != EUCA_OK) {
         LOGERROR("Failed to decrypt the symmetric key\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
 
-    enc64_key = base64_enc((unsigned char *)symm_key, SYMMETRIC_KEY_LENGTH);
-    if (enc64_key == NULL) {
+    if ((enc64_key = base64_enc((unsigned char *)symm_key, SYMMETRIC_KEY_LENGTH)) == NULL) {
         LOGERROR("Failed to encode the key string\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &len);
     if (dec64_in == NULL || len <= 0) {
         LOGERROR("Failed to decode the input string\n");
@@ -329,6 +353,7 @@ int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     if ((cipher_text = EUCA_ZALLOC(cipher_len + 1, sizeof(char))) == NULL) {
         LOGERROR("Calloc failed \n");
         ret = EUCA_ERROR;
@@ -336,6 +361,7 @@ int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer
     } else {
         bzero(cipher_text, cipher_len + 1);
     }
+
     memcpy(cipher_text, dec64_in + IV_LENGTH, cipher_len);
     enc64_cipher_text = base64_enc((unsigned char *)cipher_text, cipher_len);
     if (enc64_cipher_text == NULL) {
@@ -349,32 +375,21 @@ int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     ret = EUCA_OK;
+
 cleanup:
-    if (symm_key != NULL) {
-        EUCA_FREE(symm_key);
-    }
-    if (dec64_in != NULL) {
-        EUCA_FREE(dec64_in);
-    }
-    if (enc64_key != NULL) {
-        EUCA_FREE(enc64_key);
-    }
-    if (cipher_text != NULL) {
-        EUCA_FREE(cipher_text);
-    }
-    if (enc64_cipher_text != NULL) {
-        EUCA_FREE(enc64_cipher_text);
-    }
-    if (ret != EUCA_OK && *out_buffer != NULL) {
+    EUCA_FREE(symm_key);
+    EUCA_FREE(dec64_in);
+    EUCA_FREE(enc64_key);
+    EUCA_FREE(cipher_text);
+    EUCA_FREE(enc64_cipher_text);
+    if (ret != EUCA_OK) {
         EUCA_FREE(*out_buffer);
     }
     return ret;
 }
 
-#ifndef MAX_ENCRYPTED_STRING_LEN
-#define MAX_ENCRYPTED_STRING_LEN 8192
-#endif
 //! Encrypt the buffer using the symmetric key passed in key_buffer. in_buffer must be a null-terminated string.
 //! Result is placed in *out_buffer on the heap and the caller is responsible for freeing.
 //!
@@ -392,14 +407,21 @@ cleanup:
 //! WARNING: symmetric encryption is not fully tested with decrypt_string_symmetric(..). May need to consider tag stream
 int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len)
 {
-    EVP_CIPHER_CTX ctx;
-    char *dec64_key = NULL;
-    char *dec64_in = NULL;
     int len = -1;
     int key_len = -1;
     int in_len = -1;
     int ret = -1;
-    char encrypted[MAX_ENCRYPTED_STRING_LEN];
+    char *dec64_key = NULL;
+    char *dec64_in = NULL;
+    char encrypted[MAX_ENCRYPTED_STRING_LEN] = "";
+    EVP_CIPHER_CTX ctx = { 0 };
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
 
     dec64_key = base64_dec2((unsigned char *)key_buffer, strlen(key_buffer), &len);
     if (dec64_key == NULL || len <= 0) {
@@ -407,6 +429,7 @@ int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     key_len = len;
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &len);
     if (dec64_in == NULL || len <= 0) {
@@ -427,38 +450,31 @@ int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     if (!EVP_EncryptFinal_ex(&ctx, (unsigned char *)encrypted + IV_LENGTH, &len)) {
         ERR_print_errors_fp(stderr);
         ret = EUCA_ERROR;
         LOGERROR("Cipher final failed\n");
         goto cleanup;
     }
+
     memcpy(encrypted, iv_buffer, IV_LENGTH);
     *out_len += len;
     *out_len += IV_LENGTH;
     *out_buffer = base64_enc((unsigned char *)encrypted, *out_len);
 
     ret = EUCA_OK;
+
 cleanup:
-    if (dec64_key != NULL) {
-        EUCA_FREE(dec64_key);
-    }
-    if (dec64_in != NULL) {
-        EUCA_FREE(dec64_in);
-    }
-    if (ret != EUCA_OK && *out_buffer != NULL) {
+    EUCA_FREE(dec64_key);
+    EUCA_FREE(dec64_in);
+    if (ret != EUCA_OK) {
         EUCA_FREE(*out_buffer);
     }
     EVP_CIPHER_CTX_cleanup(&ctx);
     return ret;
 }
 
-#ifndef TAG_LENGTH
-#define TAG_LENGTH 16
-#endif
-#ifndef MAX_DECRYPTED_STRING_LEN
-#define MAX_DECRYPTED_STRING_LEN 8192
-#endif
 //! Decrypt the buffer using the symmetric key passed in key_buffer. in_buffer must be a null-terminated string.
 //! Result is placed in *out_buffer on the heap and the caller is responsible for freeing.
 //!
@@ -475,29 +491,38 @@ cleanup:
 //! @post *out_buffer points to the base64 decoded, decrypted string in plain text
 int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len)
 {
-    EVP_CIPHER_CTX ctx;
-    char *dec64_in = NULL;
-    char *dec64_key = NULL;
     int ret = EUCA_ERROR;
     int len = -1;
     int in_len = -1;
     int key_len = -1;
     int cipher_init = FALSE;
-    char decrypted_str[MAX_DECRYPTED_STRING_LEN];   // MAX encrypted data length
+    int cipher_len = -1;
+    char *dec64_in = NULL;
+    char *dec64_key = NULL;
+    char decrypted_str[MAX_DECRYPTED_STRING_LEN] = "";  // MAX encrypted data length
     char *cipher_text = NULL;
     char *tag = NULL;
-    int cipher_len = -1;
+    EVP_CIPHER_CTX ctx = { 0 };
 
     if (in_buffer == NULL || strlen(in_buffer) <= 0) {
         LOGERROR("No input string to decrypt\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
     if (key_buffer == NULL || strlen(key_buffer) <= 0) {
         LOGERROR("No key string\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
+    }
+
     //Base64 decode the string inbuffer, null terminator deducted from buffer size
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &in_len);
     if (dec64_in == NULL) {
@@ -533,6 +558,7 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         LOGERROR("Cipher update failed\n");
         goto cleanup;
     }
+
     if (!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_TAG, TAG_LENGTH, tag)) {
         ret = EUCA_ERROR;
         LOGERROR("Failed to set tag\n");
@@ -545,6 +571,7 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         LOGERROR("Cipher final failed\n");
         goto cleanup;
     }
+
     *out_len += len;
     if (*out_len > MAX_DECRYPTED_STRING_LEN) {
         ret = EUCA_ERROR;
@@ -563,15 +590,12 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     ret = EUCA_OK;
 
 cleanup:
-    if (dec64_in != NULL) {
-        EUCA_FREE(dec64_in);
-    }
-    if (dec64_key != NULL) {
-        EUCA_FREE(dec64_key);
-    }
-    if (ret != EUCA_OK && *out_buffer != NULL) {
+    EUCA_FREE(dec64_in);
+    EUCA_FREE(dec64_key);
+    if (ret != EUCA_OK) {
         EUCA_FREE(*out_buffer);
     }
+
     if (cipher_init)
         EVP_CIPHER_CTX_cleanup(&ctx);
     return ret;
@@ -593,17 +617,24 @@ cleanup:
 //!
 int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
 {
-    FILE *PKFP = NULL;
-    RSA *pr = NULL;
-    char *dec64 = NULL;
     int ret = -1;
     int in_buffer_str_size = -1;
+    char *dec64 = NULL;
+    int out_size = 0;
+    FILE *PKFP = NULL;
+    RSA *pr = NULL;
 
     // Make sure we have valid parameters
     if ((in_buffer == NULL) || (pk_file == NULL) || (*pk_file == '\0') || (out_buffer == NULL)) {
         LOGERROR("Cannot decrypt buffer: invalid parameters\n");
-        ret = EUCA_ERROR;
-        goto cleanup;
+        return (EUCA_ERROR);
+    }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
     }
 
     in_buffer_str_size = (int)strlen(in_buffer);    //! the length of the string, not including the null-terminator
@@ -627,8 +658,7 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
     PKFP = NULL;
 
     //Base64 decode the string, null terminator deducted from buffer size
-    dec64 = base64_dec((unsigned char *)in_buffer, in_buffer_str_size);
-    if (dec64 == NULL) {
+    if ((dec64 = base64_dec((unsigned char *)in_buffer, in_buffer_str_size)) == NULL) {
         LOGERROR("Base64 decrypt failed\n");
         ret = EUCA_ERROR;
         goto cleanup;
@@ -642,9 +672,7 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
         bzero(*out_buffer, in_buffer_str_size + 1);
     }
 
-    int out_size = RSA_private_decrypt(RSA_size(pr), ((unsigned char *)dec64), ((unsigned char *)*out_buffer), pr, RSA_PKCS1_PADDING);
-
-    if (out_size == -1) {
+    if ((out_size = RSA_private_decrypt(RSA_size(pr), ((unsigned char *)dec64), ((unsigned char *)*out_buffer), pr, RSA_PKCS1_PADDING)) == -1) {
         LOGERROR("private decrypt failed\n");
         ret = EUCA_ERROR;
         goto cleanup;
@@ -653,11 +681,8 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
     ret = EUCA_OK;
 
 cleanup:
-    if (dec64 != NULL) {
-        EUCA_FREE(dec64);
-    }
-
-    if (ret == EUCA_ERROR && *out_buffer != NULL) {
+    EUCA_FREE(dec64);
+    if (ret == EUCA_ERROR) {
         EUCA_FREE(*out_buffer);
     }
 
@@ -680,22 +705,30 @@ cleanup:
 //!
 int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
 {
-    char *enc64 = NULL;
     int rc = -1;
-    RSA *pr = NULL;
-    BIO *cert_bio = NULL;
-    BIO *out_bio = NULL;
-    X509 *cert = NULL;
     int key_bits = -1;
     int ret = -1;
     int in_buffer_str_size = -1;
     int encrypt_size = -1;
+    char *enc64 = NULL;
+    RSA *pr = NULL;
+    BIO *cert_bio = NULL;
+    BIO *out_bio = NULL;
+    X509 *cert = NULL;
+    EVP_PKEY *pubkey = NULL;
 
     // Make sure we have valid parameters
     if ((in_buffer == NULL) || (cert_file == NULL) || (*cert_file == '\0') || (out_buffer == NULL)) {
         LOGERROR("Invalid input\n");
         ret = EUCA_ERROR;
         goto cleanup;
+    }
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            ret = EUCA_ERROR;
+            goto cleanup;
+        }
     }
 
     in_buffer_str_size = (int)strlen(in_buffer);
@@ -719,8 +752,7 @@ int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
         goto cleanup;
     }
     //Get the public key and populate the RSA struct
-    EVP_PKEY *pubkey = X509_get_pubkey(cert);
-    if (pubkey == NULL) {
+    if ((pubkey = X509_get_pubkey(cert)) == NULL) {
         LOGERROR("ERROR getting pub key\n");
         ret = EUCA_ERROR;
         goto cleanup;
@@ -745,15 +777,13 @@ int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
         }
     }
 
-    pr = EVP_PKEY_get1_RSA(pubkey);
-    if (pr == NULL) {
+    if ((pr = EVP_PKEY_get1_RSA(pubkey)) == NULL) {
         LOGERROR("Could not get public RSA key for encrypting\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
 
-    encrypt_size = RSA_size(pr);
-    if (encrypt_size <= 0) {
+    if ((encrypt_size = RSA_size(pr)) <= 0) {
         LOGERROR("Failed to read expected encryption size from RSA based on key\n");
         ret = EUCA_ERROR;
         goto cleanup;
@@ -789,9 +819,7 @@ cleanup:
         BIO_free(cert_bio);
     }
 
-    if (enc64 != NULL) {
-        EUCA_FREE(enc64);
-    }
+    EUCA_FREE(enc64);
 
     if (cert != NULL) {
         X509_free(cert);
@@ -802,7 +830,6 @@ cleanup:
     }
 
     return ret;
-
 }
 
 //! Encrypts and base64 encodes the buffer using the public key in the cloud certificate.
@@ -971,6 +998,15 @@ char *base64_enc(u8 * sIn, int size)
     return (sEncVal);
 }
 
+//!
+//!
+//!
+//! @param[in] sIn
+//! @param[in] size
+//! @param[in] decoded_length
+//!
+//! @return
+//!
 char *base64_dec2(u8 * sIn, int size, int *decoded_length)
 {
     BIO *pBio64 = NULL;
@@ -1120,6 +1156,12 @@ char *calc_fingerprint(const char *cert_filename)
     X509 *x509_cert = NULL;
     struct stat cert_file_stats = { 0 };    // file stat structure for getting the size of the file
     const EVP_MD *digest_function = NULL;   // digest of the cert
+
+    if (!initialized) {
+        if (euca_init_cert() != EUCA_OK) {
+            return (NULL);
+        }
+    }
 
     if (cert_filename == NULL) {
         LOGERROR("got a null filename, returning null");
@@ -2003,8 +2045,9 @@ static void init_url_regex(void)
 
         case REG_BADBR:
             LOGERROR
-                ("init_url_regex: There was an invalid ���������\\{...\\}��������� construct in the regular expression. A valid ���������\\{...\\}��������� construct must contain either a"
-                 " single number, or two numbers in increasing order separated by a comma.\n");
+                ("There was an invalid ���������������������������\\{...\\}��������������������������� construct "
+                 "in the regular expression. A valid ���������������������������\\{...\\}��������������������������� construct "
+                 "must contain either a single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
         case REG_BADPAT:
@@ -2013,49 +2056,55 @@ static void init_url_regex(void)
 
         case REG_BADRPT:
             LOGERROR
-                ("init_url_regex: A repetition operator such as ���������?��������� or ���������*��������� appeared in a bad position (with no preceding subexpression to act on).\n");
+                ("A repetition operator such as ���������������������������?��������������������������� or "
+                 "���������������������������*��������������������������� appeared in a bad position (with no preceding "
+                 "subexpression to act on).\n");
             break;
 
         case REG_ECOLLATE:
-            LOGERROR("init_url_regex: The regular expression referred to an invalid collating element (one not defined in the current locale for string collation).\n");
+            LOGERROR("The regular expression referred to an invalid collating element (one not defined in the current locale for string collation).\n");
             break;
 
         case REG_ECTYPE:
-            LOGERROR("init_url_regex: The regular expression referred to an invalid character class name.\n");
+            LOGERROR("The regular expression referred to an invalid character class name.\n");
             break;
 
         case REG_EESCAPE:
-            LOGERROR("init_url_regex: The regular expression ended with ���������\\���������.\n");
+            LOGERROR
+                ("The regular expression ended with ���������������������������\\���������������������������.\n");
             break;
 
         case REG_ESUBREG:
-            LOGERROR("init_url_regex: There was an invalid number in the ���������\\digit��������� construct.\n");
+            LOGERROR
+                ("There was an invalid number in the ���������������������������\\digit��������������������������� construct.\n");
             break;
 
         case REG_EBRACK:
-            LOGERROR("init_url_regex: There were unbalanced square brackets in the regular expression.\n");
+            LOGERROR("There were unbalanced square brackets in the regular expression.\n");
             break;
 
         case REG_EPAREN:
-            LOGERROR
-                ("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���������\\(��������� and ���������\\)���������.\n");
+            LOGERROR("An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced "
+                     "���������������������������\\(��������������������������� and ���������������������������\\)"
+                     "���������������������������.\n");
             break;
 
         case REG_EBRACE:
             LOGERROR
-                ("init_url_regex: The regular expression had unbalanced ���������\\{��������� and ���������\\}���������.\n");
+                ("The regular expression had unbalanced ���������������������������\\{��������������������������� and "
+                 "���������������������������\\}���������������������������.\n");
             break;
 
         case REG_ERANGE:
-            LOGERROR("init_url_regex: One of the endpoints in a range expression was invalid.\n");
+            LOGERROR("One of the endpoints in a range expression was invalid.\n");
             break;
 
         case REG_ESPACE:
-            LOGERROR("init_url_regex: regcomp ran out of memory.\n");
+            LOGERROR("regcomp ran out of memory.\n");
             break;
 
         default:
-            LOGERROR("init_url_regex: Regex compile failed. Code = %d\n", comp_result);
+            LOGERROR("Regex compile failed. Code = %d\n", comp_result);
             break;
         }
 
@@ -2166,7 +2215,7 @@ void print_key_value_pair_array(const struct key_value_pair_array *kv_array)
 //!
 int main(int argc, char **argv)
 {
-#define TEST_COUNT     0
+#define TEST_COUNT          0
 #define REGEX_COUNT         5
 #define URL_COUNT          20
 

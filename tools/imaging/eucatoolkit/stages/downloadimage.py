@@ -35,24 +35,25 @@ from io import BytesIO
 from downloadmanifest import DownloadManifest
 from processutils import close_all_fds, open_pipe_fileobjs, spawn_process
 from processutils import monitor_subprocess_io, wait_process_in_thread
-from eucatoolkit import stages
+from    eucatoolkit import stages
 
 
 class DownloadImage(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, dest_file=None, **kwargs):
         parser = argparse.ArgumentParser(description=
                                          "Download parts from manifest")
         parser.add_argument('-m', '--manifest', dest='manifest', required=True,
                             help='''Path to 'download-manifest. Use '-' to read
                             manifest from stdin''')
-        parser.add_argument('-d', '--dest', dest='destination', required=True,
+        parser.add_argument('-d', '--dest', dest='destination',
                             help='''Destination path to write image to.
                             Use '-' for stdout.''')
         parser.add_argument('-k', '--privatekey', dest='privatekey',
                             help='''file containing the private key to decrypt
                             the bundle with.''')
         parser.add_argument('-c', '--cloudcert', dest='cloudcert',
+                            required=True,
                             help='''file containing the cloud cert used
                             to verify manifest signature.''')
         parser.add_argument('-x', '--xsd', dest='xsd', default=None,
@@ -60,15 +61,9 @@ class DownloadImage(object):
                             to validate manfiest xml.''')
         parser.add_argument('--toolspath', dest='toolspath', default=None,
                             help='''Local path to euca2ools.''')
-        parser.add_argument('--maxbytes', dest='maxbytes', default=0,
-                            help='''Maximum bytes allowed to be written to the
-                            destination.''')
-        parser.add_argument('--euca_prefix', dest='euca_prefix', default=None,
-                            help='''Path to eucalyptus install.
-                            ie: /opt/eucalyptus/''')
         parser.add_argument('--debug', dest='debug', default=False,
                             action='store_true',
-                            help='''Enable debug to stderr''')
+                            help='''Enable debug to a log file''')
         parser.add_argument('--logfile', dest='logfile', default=None,
                             help='''log file path to write to''')
         parser.add_argument('--loglevel', dest='loglevel', default='INFO',
@@ -78,8 +73,11 @@ class DownloadImage(object):
                             help='''Get and show manifest then exit''')
         parser.add_argument('--reportprogress', dest='reportprogress',
                             default=False, action='store_true',
-                            help='''Output bytes transfered to stderr.
-                            Can be used only without --debug flag''')
+                            help='''Output progress information to stderr''')
+        parser.add_argument('--destispipe', dest='destispipe',
+                            default=False, action='store_true',
+                            help='''Indicate that destination is a pipe''')
+
         #Set any kwargs from init to default values for parsed args
         #Handle the cli arguments...
         if not kwargs:
@@ -98,6 +96,8 @@ class DownloadImage(object):
                         arg_value.append(kwargs[kwarg])
                     arg_list.extend(arg_value)
         self.args = parser.parse_args(arg_list)
+        if dest_file is not None:
+            self.args.destination = dest_file
         if self.args.destination == "-":
             force_stderr = True
         else:
@@ -125,24 +125,6 @@ class DownloadImage(object):
             if not isinstance(xsd_file, file):
                 xsd_file = os.path.expanduser(os.path.abspath(xsd_file))
                 self.args.xsd = xsd_file
-        if self.args.euca_prefix is None:
-            self.args.euca_prefix = ""
-            for path in ['/opt/eucalyptus/', '/']:
-                if os.path.exists(path):
-                    self.args.euca_prefix = path
-                    break
-        #if private key was not provided try to find it
-        if not self.args.privatekey:
-            keypath = os.path.join(self.args.euca_prefix,
-                                   'var/lib/eucalyptus/keys/node-pk.pem')
-            if os.path.isfile(keypath):
-                self.args.privatekey = keypath
-        #if mandatory cloudcert was not provided try to find it
-        if not self.args.cloudcert:
-            certpath = os.path.join(self.args.euca_prefix,
-                                    'var/lib/eucalyptus/keys/cloud-cert.pem')
-            if os.path.isfile(certpath):
-                self.args.cloudcert = certpath
         if not self.args.cloudcert:
             raise argparse.ArgumentError(self.args.cloudcert,
                                          "Cloud cert must be provided to "
@@ -230,8 +212,8 @@ class DownloadImage(object):
                     if not parsed_url or not parsed_url.scheme:
                         self.args.manifest = self._read_manifest_from_file()
                     else:
-                        self.log.debug('Reading from remote manifest from url')
-                        #For now limit urls to http(s)...
+                        # Reading from remote manifest from url
+                        # For now limit urls to http(s)...
                         if not parsed_url.scheme in ['http', 'https']:
                             raise ArgumentTypeError('Manifest url only '
                                                     'supports http, https at '
@@ -254,13 +236,13 @@ class DownloadImage(object):
         bytes = 0
         for part_index in xrange(0, manifest.part_count):
             part = manifest.get_part_by_index(part_index)
-            self.log.debug('Downloading part:' + str(part.get_url))
+            self.log.debug('Downloading part#:' + str(part.part_index))
             bytes += part.download(dest_fileobj=dest_fileobj) or 0
             self.log.debug('Wrote bytes:' + str(bytes) + "/"
                            + str(manifest.download_image_size) + ", digest:"
                            + str(part.written_digest))
-        if not self.args.debug and self.args.reportprogress:
-                sys.stderr.write('Downloaded:%d\n' % bytes)
+            if self.args.reportprogress:
+                stages.report_status('"bytes_downloaded":%d' % bytes)
         if manifest.download_image_size is not None:
             if bytes != manifest.download_image_size:
                 raise ValueError('Bytes Downloaded:"{0}" does not equal '
@@ -281,7 +263,7 @@ class DownloadImage(object):
                                     dest_fileobj,
                                     manifest=None,
                                     tools_path=None,
-                                    inactivity_timeout=30):
+                                    inactivity_timeout=120):
         '''
         Attempts to iterate through all parts contained in 'manifest' and
         download and concatenate each part to euca2ools unbundle stream.
@@ -304,10 +286,8 @@ class DownloadImage(object):
         unbundle_tool_path = tools_path+'euca-unbundle-stream'
 
         unbundle_ps_args = [unbundle_tool_path,
-                            '-e', str(manifest.enc_key),
-                            '-v', str(manifest.enc_iv),
-                            '-d', "-",  # write to process's stdout
-                            '--maxbytes', str(self.args.maxbytes)]
+                            '--enc-key', str(manifest.enc_key),
+                            '--enc-iv', str(manifest.enc_iv)]
 
         #Enable debug on this subprocess if local arg is set
         if self.args.debug:
@@ -343,6 +323,8 @@ class DownloadImage(object):
                                           log_method=self.log.debug,
                                           inactivity_timeout=inactivity_timeout)
             self.log.debug('Done with unbundle pipeline...')
+            if self.args.reportprogress:
+                stages.report_status('"bytes_unbundled":%d' % bytes)
             #Do some final wait/cleanup...
             for ps in [unbundle_ps, download_ps]:
                 if ps:
@@ -355,7 +337,8 @@ class DownloadImage(object):
                 if wait_thread:
                     wait_thread.join(timeout=inactivity_timeout)
         except Exception, UBE:
-            traceback.print_exc()
+            if not self.args.reportprogress:
+                traceback.print_exc()
             for ps in [unbundle_ps, download_ps]:
                 if ps:
                     try:
@@ -372,66 +355,62 @@ class DownloadImage(object):
                         pass
         return bytes
 
-    def _validate_written_image_size(self, expected_size, filepath):
-        '''
-        Attempts to compare an expected file size with the size found on disk.
-        :param expected_size: size in bytes
-        :param filepath: path to local file to read and compare size to
-        :raises ValueError
-        '''
-        self.log.debug('Validating size:"{0}", for file:{1}:'
-                       .format(expected_size, filepath))
-        #Check size raise os.error if file is not accessible...
-        file_size = os.path.getsize(filepath)
-        if file_size != expected_size:
-            raise ValueError('Written Image size:{0} does not equal expected '
-                             'size:{1}'.format(file_size, expected_size))
-
     def main(self):
         manifest = self.args.manifest
         #Dump manifest obj to screen and exit, if debug arg given.
         if self.args.dumpmanifest:
             print str(manifest)
             os.sys.exit(0)
-        self.log.debug('\nMANIFEST:' + str(manifest))
         dest_file = self.args.destination
         dest_file_name = self.args.destination
         bytes = 0
         #If this image is bundled, download parts to unbundle stream
         #All other formats can be downloaded directly to destination
-        expected_size = manifest.download_image_size
-        if dest_file == "-":
-            dest_file_name = '<stdout>'
-            dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
-        else:
-            dest_file_name = str(dest_file)
-            dest_fileobj = open(dest_file, 'w')
-        if manifest.file_format == 'BUNDLE':
-            expected_size = manifest.unbundled_image_size
-            if not self.args.privatekey:
-                raise ArgumentError(self.args.privatekey,
+        try:
+            expected_size = manifest.download_image_size
+            if isinstance(dest_file, file):
+                dest_file_name = '<stdout>'
+                dest_fileobj = dest_file
+            elif dest_file == "-":
+                dest_file_name = '<stdout>'
+                dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
+            else:
+                dest_file_name = str(dest_file)
+                dest_fileobj = open(dest_file, 'w')
+            if manifest.file_format == 'BUNDLE':
+                expected_size = manifest.unbundled_image_size
+                if not self.args.privatekey:
+                    raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
-            bytes = self._download_to_unbundlestream(dest_fileobj=dest_fileobj,
-                                                     manifest=manifest)
-        else:
-            with dest_fileobj:
-                bytes = self._download_parts_to_fileobj(
-                    manifest=manifest, dest_fileobj=dest_fileobj)
-        #Done with the download, now check the resulting image size.
-        self.log.debug('Downloaded bytes:"{0}"'.format(str(bytes)))
-        self.log.debug('manifest download image size:'
+                #Download and unbundle...
+                bytes = self._download_to_unbundlestream(
+                    dest_fileobj=dest_fileobj,
+                    manifest=manifest)
+            else:
+                #Download raw parts...
+                with dest_fileobj:
+                    bytes = self._download_parts_to_fileobj(
+                        manifest=manifest, dest_fileobj=dest_fileobj)
+            #Done with the download, now check the resulting image size.
+            self.log.debug('Downloaded bytes:"{0}"'.format(str(bytes)))
+            self.log.debug('manifest download image size:'
                        + str(manifest.download_image_size))
-        self.log.debug('manifest unbundled size:'
+            self.log.debug('manifest unbundled size:'
                        + str(manifest.unbundled_image_size))
-        #If destination was not stdout, check dest file size.
-        if dest_file != "-":
-            self._validate_written_image_size(expected_size=expected_size,
-                                              filepath=dest_file)
-            self.log.info('Download Image wrote "{0}" bytes to: {1}'
+            if bytes != expected_size:
+                raise ValueError('Bytes written:"{0}" does not equal '
+                                 'expected:"{1}"'.format(bytes, expected_size))
+            if dest_file != "-" and not self.args.destispipe:
+                self.log.info('Download Image wrote "{0}" bytes to: {1}'
                           .format(str(bytes), str(dest_file_name)))
-        else:
-            self.log.debug('Download Image wrote "{0}" bytes to: {1}'
+            else:
+                self.log.debug('Download Image wrote "{0}" bytes to: {1}'
                            .format(str(bytes), str(dest_file_name)))
+        except Exception, E:
+            if self.args.reportprogress:
+                stages.report_error(str(E))
+            else:
+                raise E
 
 if __name__ == '__main__':
     try:

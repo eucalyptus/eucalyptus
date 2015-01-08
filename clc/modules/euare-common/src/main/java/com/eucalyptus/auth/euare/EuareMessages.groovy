@@ -288,7 +288,7 @@ public class ListGroupsResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListGroupsResponseType() {  }
 }
-public class ServerCertificateType extends EuareMessage {
+public class ServerCertificateType extends EucalyptusData {
   @HttpEmbedded
   ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   String certificateBody;
@@ -737,8 +737,16 @@ public class ListServerCertificatesType extends EuareMessage {
 public class ErrorResponseType extends EuareMessage {
   String requestId;
   HttpResponseStatus httpStatus;
-  public ErrorResponseType() {  }
-  ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
+  ArrayList<ErrorType> errorList = new ArrayList<ErrorType>( );
+
+  ErrorResponseType( ) {
+    set_return( false )
+  }
+
+  @Override
+  String toSimpleString( ) {
+    "${errorList?.getAt(0)?.type} error (${errorList?.getAt(0)?.code}): ${errorList?.getAt(0)?.message}"
+  }
 }
 public class GetGroupResponseType extends EuareMessage {
   GetGroupResultType getGroupResult = new GetGroupResultType( );

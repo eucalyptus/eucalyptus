@@ -25,7 +25,6 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -124,7 +123,6 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		
 		//Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
 		User requestUser = null;
-		String securityToken = null;
 		Account requestAccount = null;
 		AuthContextSupplier authContext = null;
 		try {
@@ -132,12 +130,10 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			try {
 				Context ctx = Contexts.lookup(request.getCorrelationId());
 				requestUser = ctx.getUser();
-				securityToken = ctx.getSecurityToken();
 				requestAccount = requestUser.getAccount();
 				authContext = ctx.getAuthContext();
 			} catch(NoSuchContextException e) {
 				requestUser = null;
-				securityToken = null;
 				requestAccount = null;
 				authContext = null;
 			}
@@ -149,25 +145,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			}
 			
 			if(requestUser == null) {
-				if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
-					if(securityToken != null) {
-						requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
-					}
-					else {
-						requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
-					}
-					requestAccount = requestUser.getAccount();
-				} else {
-					//Set to anonymous user since all else failed
-					requestUser = Principals.nobodyUser();
-					requestAccount = requestUser.getAccount();
-				}
+                //Set to anonymous user since all else failed
+                requestUser = Principals.nobodyUser();
+                requestAccount = requestUser.getAccount();
 			}
 		} catch (AuthException e) {
 			LOG.error("Failed to get user for request, cannot verify authorization: " + e.getMessage(), e);				
 			return false;
 		}
-		
 		
 		if(allowAdmin && requestUser.isSystemAdmin()) {
 			//Admin override
@@ -265,9 +250,9 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		 * OwnerOnly should be only used for operations not covered by the other Permissions (e.g. logging, or versioning)
 		 */
 		aclAllow = (allowOwnerOnly ? resourceOwnerAccount.getAccountNumber().equals(requestAccount.getAccountNumber()) : aclAllow);
-		if(aclAllow && isUserAnonymous(requestUser)) {
+		if(isUserAnonymous(requestUser)) {
 			//Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
-			return true;
+			return aclAllow;
 		} else {
 			Boolean iamAllow = iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize );
 			//Must have both acl and iam allow (account & user)

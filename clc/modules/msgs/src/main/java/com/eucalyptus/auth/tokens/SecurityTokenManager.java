@@ -144,20 +144,7 @@ public class SecurityTokenManager {
     return instance.doLookupAccessKey(accessKeyId, token);
   }
 
-    /**
-     * Returns the user corresponding to a role using the specified accessKeyId and security token
-     * @param accessKeyId
-     * @param token
-     * @return
-     * @throws AuthException
-     */
-    @Nonnull
-  public static User lookupUser( @Nonnull final String accessKeyId,
-                                                    @Nonnull final String token ) throws AuthException {
-     return instance.doLookupUser(accessKeyId, token);
-  }
-
-    /**
+  /**
    *
    */
   @Nonnull
@@ -327,25 +314,7 @@ public class SecurityTokenManager {
     };
   }
 
-  @Nonnull
-  protected User doLookupUser( @Nonnull final String accessKeyId,
-                                                  @Nonnull final String token ) throws AuthException {
-      Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
-      Preconditions.checkNotNull( token, "Token is required" );
-      final EncryptedSecurityToken encryptedToken;
-      try {
-        encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
-      } catch ( GeneralSecurityException e ) {
-          log.debug( e, e );
-          throw new AuthException("Invalid security token");
-      }
-
-      final Role role = lookupRoleById(encryptedToken.getRoleId());
-      User user = roleAsUser( role );
-      return user;
-   }
-
-    protected long getCurrentTimeMillis() {
+  protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
   }
 
@@ -369,13 +338,11 @@ public class SecurityTokenManager {
     return SystemIds.securityTokenPassword();
   }
 
-  private long restrictDuration( final int requestedMaximumDurationHours,
+  private long restrictDuration( final int maximumDurationHours,
                                  final boolean isAdmin,
                                  final int durationSeconds ) throws SecurityTokenValidationException {
-    final int maximumDurationHours = isAdmin ? 1 : requestedMaximumDurationHours;
-
     long durationMillis = durationSeconds == 0 ?
-        TimeUnit.HOURS.toMillis( Math.min( 12, maximumDurationHours ) ) : // use default
+        TimeUnit.HOURS.toMillis( 12 ) : // use default
         TimeUnit.SECONDS.toMillis( durationSeconds );
 
     if ( durationMillis > TimeUnit.HOURS.toMillis( maximumDurationHours ) ) {
@@ -386,6 +353,10 @@ public class SecurityTokenManager {
 
     if ( durationMillis < TimeUnit.MINUTES.toMillis( 15 ) ) {
       validationFailure( "Invalid duration requested, minimum permitted duration is 900 seconds." );
+    }
+
+    if ( isAdmin && durationMillis > TimeUnit.HOURS.toMillis( 1 ) ) {
+      durationMillis = TimeUnit.HOURS.toMillis( 1 );
     }
 
     return durationMillis;
