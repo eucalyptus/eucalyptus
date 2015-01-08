@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
+import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.workflow.StackActivity
 import com.netflix.glisten.WorkflowOperations
@@ -48,6 +49,13 @@ class DeleteMultiStepPromise extends MultiStepPromise {
   Promise<String> getDeletePromise( String resourceId, String stackId, String accountId, String effectiveUserId ) {
     getPromise( "Resource ${resourceId} deletion failed for stack ${stackId}" as String) { String stepId ->
       activities.performDeleteStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+    }
+  }
+
+  @Override
+  def <T> Promise<T> invoke(final Closure<Promise<T>> activity) {
+    retry( new ExponentialRetryPolicy( 1L ).withMaximumAttempts( 6 ) ) {
+      activity.call( )
     }
   }
 }
