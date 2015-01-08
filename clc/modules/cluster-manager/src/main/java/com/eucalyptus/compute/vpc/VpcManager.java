@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -967,7 +967,7 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId() );
     try {
-      networkAcls.updateByExample(
+      networkAcls.withRetries( ).updateByExample(
           NetworkAcl.exampleWithName( accountFullName, networkAclId ),
           accountFullName,
           request.getNetworkAclId(),
@@ -1038,7 +1038,7 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     try {
-      routeTables.updateByExample(
+      routeTables.withRetries( ).updateByExample(
           RouteTable.exampleWithName( accountFullName, routeTableId ),
           accountFullName,
           request.getRouteTableId( ),

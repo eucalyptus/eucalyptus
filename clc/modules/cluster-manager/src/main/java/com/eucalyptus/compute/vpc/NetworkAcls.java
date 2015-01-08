@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
+import static com.eucalyptus.compute.common.CloudMetadata.NetworkAclMetadata;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
-import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.NetworkAclAssociationType;
 import com.eucalyptus.compute.common.NetworkAclEntryType;
 import com.eucalyptus.compute.common.NetworkAclType;
+import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -69,7 +70,7 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
   <T> T lookupDefault( String vpcId,
                        Function<? super NetworkAcl,T> transform ) throws VpcMetadataException;
 
-  boolean delete( final CloudMetadata.NetworkAclMetadata metadata ) throws VpcMetadataException;
+  boolean delete( final NetworkAclMetadata metadata ) throws VpcMetadataException;
 
   NetworkAcl save( NetworkAcl networkAcl ) throws VpcMetadataException;
 
@@ -77,6 +78,9 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
                               OwnerFullName ownerFullName,
                               String key,
                               Callback<NetworkAcl> updateCallback ) throws VpcMetadataException;
+
+  AbstractPersistentSupport<NetworkAclMetadata,NetworkAcl,VpcMetadataException> withRetries( );
+
   @TypeMapper
   public enum NetworkAclToNetworkAclTypeTransform implements Function<NetworkAcl,NetworkAclType> {
     INSTANCE;
